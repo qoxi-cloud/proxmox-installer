@@ -1,0 +1,20 @@
+### Navigation
+
+**[🏠 Home](Home)**
+
+---
+
+**Getting Started**
+- [📦 Installation Guide](Installation-Guide)
+- [⚙️ Configuration Reference](Configuration-Reference)
+
+**Setup**
+- [🌐 Network Modes](Network-Modes)
+- [🔧 Post-Installation](Post-Installation)
+- [🔐 Tailscale Setup](Tailscale-Setup)
+
+---
+
+**Links**
+- [📋 GitHub Repo](https://github.com/qoxi-cloud/proxmox-hetzner)
+- [🐛 Report Issue](https://github.com/qoxi-cloud/proxmox-hetzner/issues)
