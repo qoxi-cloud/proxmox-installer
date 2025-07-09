@@ -37,14 +37,24 @@ reboot_to_main_os() {
         summary+="[OK]|Tailscale VPN|installed"$'\n'
         if [[ -n "$TAILSCALE_AUTH_KEY" ]]; then
             summary+="[OK]|Tailscale IP|${TAILSCALE_IP:-pending}"$'\n'
+            if [[ "$TAILSCALE_SSH" == "yes" && "$TAILSCALE_DISABLE_SSH" == "yes" ]]; then
+                summary+="[WARN]|OpenSSH|will be disabled on boot"$'\n'
+            fi
         else
             summary+="[WARN]|Tailscale|needs auth after reboot"$'\n'
         fi
     fi
 
     summary+="|--- Access ---|"$'\n'
-    summary+="[OK]|Web UI|https://${MAIN_IPV4_CIDR%/*}:8006"$'\n'
-    summary+="[OK]|SSH|root@${MAIN_IPV4_CIDR%/*}"
+
+    # Show access methods based on OpenSSH status
+    if [[ "$TAILSCALE_DISABLE_SSH" == "yes" ]]; then
+        summary+="[OK]|Web UI|https://${MAIN_IPV4_CIDR%/*}:8006"$'\n'
+        summary+="[WARN]|SSH (public)|DISABLED after first boot"
+    else
+        summary+="[OK]|Web UI|https://${MAIN_IPV4_CIDR%/*}:8006"$'\n'
+        summary+="[OK]|SSH|root@${MAIN_IPV4_CIDR%/*}"
+    fi
 
     if [[ "$INSTALL_TAILSCALE" == "yes" && -n "$TAILSCALE_AUTH_KEY" && "$TAILSCALE_IP" != "pending" && "$TAILSCALE_IP" != "not authenticated" ]]; then
         summary+=$'\n'"[OK]|Tailscale SSH|root@${TAILSCALE_IP}"
