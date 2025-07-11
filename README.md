@@ -23,6 +23,7 @@ Automated Proxmox VE installer for Hetzner dedicated servers **without console a
 - SSH hardening with key-only auth
 - Automatic security updates
 - Optional Tailscale VPN integration
+- Stealth firewall mode (blocks all incoming on public IP when Tailscale is enabled)
 
 **Compatible:** [AX](https://www.hetzner.com/dedicated-rootserver/matrix-ax), [EX](https://www.hetzner.com/dedicated-rootserver/matrix-ex), [SX](https://www.hetzner.com/dedicated-rootserver/matrix-sx) series servers
 

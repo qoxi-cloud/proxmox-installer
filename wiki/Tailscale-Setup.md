@@ -102,18 +102,58 @@ When enabled (`TAILSCALE_WEBUI=yes`), the Proxmox web interface is served over H
 - Accessible at `https://hostname.tailnet.ts.net`
 - Only accessible from your Tailscale network
 
-## Disabling OpenSSH
+## Security Hardening
 
-When Tailscale SSH is enabled with an auth key, you can optionally disable OpenSSH entirely. This prevents any SSH access via the public IP address.
+When Tailscale is enabled with an auth key, the installer automatically configures security features to protect your server.
 
-### How It Works
+### Stealth Firewall Mode
+
+When you choose to disable OpenSSH, **stealth firewall mode is automatically enabled**. This makes your server invisible from the public internet:
+
+| Traffic | Allowed |
+|---------|---------|
+| Outgoing connections | Yes (internet access works) |
+| Incoming on public IP | Blocked (all ports) |
+| Incoming on Tailscale | Allowed |
+| Incoming on vmbr0/vmbr1 | Allowed (VM traffic) |
+| Established connections | Allowed (responses to outgoing) |
+
+#### How It Works
+
+- A systemd service (`stealth-firewall.service`) runs on every boot
+- Sets iptables INPUT policy to DROP
+- Allows loopback, established connections, Tailscale, and bridge interfaces
+- VMs still have full internet access via NAT
+
+#### Disabling Stealth Mode
+
+If you need to disable stealth mode temporarily:
+
+```bash
+# Stop the firewall (until next reboot)
+systemctl stop stealth-firewall
+
+# Disable permanently
+systemctl disable stealth-firewall
+```
+
+#### Re-enabling Stealth Mode
+
+```bash
+systemctl enable stealth-firewall
+systemctl start stealth-firewall
+```
+
+### Disabling OpenSSH
+
+Optionally, you can also disable OpenSSH entirely. This prevents any SSH access via the public IP address (only Tailscale SSH will work).
 
 - A systemd service (`disable-openssh.service`) runs once on first boot
 - It waits for Tailscale to come online and authenticate
 - Once Tailscale is connected, it disables and masks `ssh.service` and `ssh.socket`
 - The service then removes itself (runs only once)
 
-### Enabling This Feature
+#### Enabling This Feature
 
 **Interactive mode:** Select "Disable OpenSSH" when prompted after entering Tailscale auth key.
 
@@ -127,11 +167,11 @@ export TAILSCALE_DISABLE_SSH="yes"
 bash pve-install.sh -n
 ```
 
-### Warning
+#### Warning
 
 > **Important:** Once OpenSSH is disabled, you can ONLY access the server via Tailscale SSH. If Tailscale becomes unavailable (e.g., account issues, network problems), you will need to use Hetzner Rescue Mode to regain access.
 
-### Re-enabling OpenSSH
+#### Re-enabling OpenSSH
 
 If you need to re-enable OpenSSH:
 
