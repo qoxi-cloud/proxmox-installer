@@ -486,29 +486,12 @@ get_inputs_interactive() {
             fi
 
             if [[ -n "$TAILSCALE_AUTH_KEY" ]]; then
+                # Auto-enable security features when auth key is provided
+                TAILSCALE_DISABLE_SSH="yes"
+                STEALTH_MODE="yes"
                 print_success "Tailscale will be installed (auto-connect)"
-
-                # Ask about disabling OpenSSH when Tailscale SSH is enabled
-                local disable_ssh_header="Tailscale SSH provides secure access via Tailscale network."$'\n'
-                disable_ssh_header+="Disabling OpenSSH prevents access from public internet."$'\n'
-                disable_ssh_header+=$'\n'
-                disable_ssh_header+="WARNING: You will ONLY be able to SSH via Tailscale!"
-
-                interactive_menu \
-                    "Disable OpenSSH on first boot? (↑/↓ select, Enter confirm)" \
-                    "$disable_ssh_header" \
-                    "Disable OpenSSH|Access ONLY via Tailscale SSH (more secure)" \
-                    "Keep OpenSSH enabled|Access via both public IP and Tailscale"
-
-                if [[ $MENU_SELECTED -eq 0 ]]; then
-                    TAILSCALE_DISABLE_SSH="yes"
-                    STEALTH_MODE="yes"
-                    print_success "OpenSSH will be disabled on first boot"
-                    print_success "Stealth firewall will be enabled (server hidden from internet)"
-                else
-                    STEALTH_MODE="no"
-                    print_success "OpenSSH will remain enabled"
-                fi
+                print_success "OpenSSH will be disabled on first boot"
+                print_success "Stealth firewall will be enabled (server hidden from internet)"
             else
                 print_success "Tailscale will be installed (manual auth required)"
                 STEALTH_MODE="no"
