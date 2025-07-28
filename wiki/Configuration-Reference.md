@@ -90,6 +90,23 @@ You can pre-configure any setting via environment variables.
 |----------|-------------|---------|
 | `DEFAULT_SHELL` | Default shell for root: `zsh`, `bash` | `zsh` |
 
+### Repository Settings
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PVE_REPO_TYPE` | Repository type: `no-subscription`, `enterprise`, `test` | `no-subscription` |
+| `PVE_SUBSCRIPTION_KEY` | Proxmox subscription key (only for enterprise) | - |
+
+> **Note:** When using `enterprise` repository, you can provide your subscription key to register it automatically. Without a key, the enterprise repo will be enabled but you'll see a subscription warning in the UI.
+
+### SSL Certificate Settings
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SSL_TYPE` | SSL certificate type: `self-signed`, `letsencrypt` | `self-signed` |
+
+> **Note:** Let's Encrypt requires your domain (FQDN) to resolve to the server's IP address. The SSL menu is only shown if Tailscale is not enabled (Tailscale provides its own HTTPS via `tailscale serve`).
+
 ### Tailscale Settings
 
 | Variable | Description | Default |
@@ -165,6 +182,15 @@ BRIDGE_MODE=internal
 PRIVATE_SUBNET=10.0.0.0/24
 ZFS_RAID=raid1
 DEFAULT_SHELL=zsh
+
+# Repository (no-subscription, enterprise, test)
+PVE_REPO_TYPE=no-subscription
+# PVE_SUBSCRIPTION_KEY=pve1c-xxxxxxxxxx  # Only for enterprise
+
+# SSL certificate (self-signed, letsencrypt)
+SSL_TYPE=self-signed
+
+# Tailscale
 INSTALL_TAILSCALE=no
 ```
 
@@ -172,4 +198,4 @@ INSTALL_TAILSCALE=no
 
 ---
 
-**Next:** [Network Modes](Network-Modes) | [Post-Installation](Post-Installation)
+**Next:** [Network Modes](Network-Modes) | [SSL Certificates](SSL-Certificates) | [Post-Installation](Post-Installation)

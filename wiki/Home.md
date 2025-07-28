@@ -11,6 +11,7 @@ This project provides an automated solution for installing Proxmox VE on Hetzner
 | [Installation Guide](Installation-Guide) | Step-by-step installation instructions |
 | [Configuration Reference](Configuration-Reference) | CLI options, environment variables, config files |
 | [Network Modes](Network-Modes) | Bridge configurations explained |
+| [SSL Certificates](SSL-Certificates) | Let's Encrypt and self-signed certificates |
 | [Post-Installation](Post-Installation) | Packages, security hardening, optimizations |
 | [Tailscale Setup](Tailscale-Setup) | Remote access via Tailscale VPN |
 

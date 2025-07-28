@@ -110,11 +110,41 @@ ntp3.hetzner.net
 
 ## Proxmox-Specific Changes
 
-| Change | Purpose |
-|--------|---------|
-| Enterprise repo | Disabled (no subscription required) |
-| No-subscription repo | Enabled |
-| Subscription notice | Removed from web UI |
+### Repository Configuration
+
+The installer supports three repository types:
+
+| Repository | Description | Subscription Notice |
+|------------|-------------|---------------------|
+| `no-subscription` | Free community repository (default) | Removed |
+| `enterprise` | Production-ready, requires subscription key | Kept (unless key provided) |
+| `test` | Latest packages, may be unstable | Removed |
+
+**When using Enterprise repository:**
+- If you provide a subscription key, it will be registered automatically via `pvesubscription set`
+- The subscription notice in the web UI is **not** removed (you have a valid subscription)
+- Updates come from the stable enterprise repository
+
+**When using No-Subscription or Test:**
+- Enterprise repository is disabled
+- Subscription notice is removed from web UI
+- Updates come from the community repository
+
+### SSL Certificates
+
+| Option | Description |
+|--------|-------------|
+| `self-signed` | Default Proxmox certificate (no external dependencies) |
+| `letsencrypt` | Free auto-renewing certificate via certbot |
+
+**Let's Encrypt requirements:**
+- Domain (FQDN) must resolve to the server's public IP
+- Port 80 must be accessible during certificate issuance
+- Auto-renewal is configured via systemd timer
+
+> **Note:** SSL certificate option is only shown if Tailscale is not enabled. Tailscale provides its own HTTPS via `tailscale serve`.
+
+For more details, see [SSL Certificates](SSL-Certificates).
 
 ## Verifying Optimizations
 
@@ -135,8 +165,14 @@ sysctl net.netfilter.nf_conntrack_max
 
 # Check NTP sync
 chronyc tracking
+
+# Check SSL certificate
+openssl x509 -in /etc/pve/local/pveproxy-ssl.pem -noout -issuer -dates
+
+# Check repository
+cat /etc/apt/sources.list.d/proxmox.sources
 ```
 
 ---
 
-**Next:** [Tailscale Setup](Tailscale-Setup) | [Home](Home)
+**Next:** [SSL Certificates](SSL-Certificates) | [Tailscale Setup](Tailscale-Setup) | [Home](Home)

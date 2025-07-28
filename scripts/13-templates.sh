@@ -9,12 +9,20 @@ make_templates() {
     local interfaces_template="interfaces.${BRIDGE_MODE:-internal}"
     log "Using interfaces template: $interfaces_template"
 
+    # Select Proxmox repository template based on PVE_REPO_TYPE
+    local proxmox_sources_template="proxmox.sources"
+    case "${PVE_REPO_TYPE:-no-subscription}" in
+        enterprise) proxmox_sources_template="proxmox-enterprise.sources" ;;
+        test)       proxmox_sources_template="proxmox-test.sources" ;;
+    esac
+    log "Using repository template: $proxmox_sources_template"
+
     # Download template files in background with progress
     (
         download_file "./templates/99-proxmox.conf" "https://github.com/qoxi-cloud/proxmox-hetzner/raw/refs/heads/main/templates/99-proxmox.conf"
         download_file "./templates/hosts" "https://github.com/qoxi-cloud/proxmox-hetzner/raw/refs/heads/main/templates/hosts"
         download_file "./templates/debian.sources" "https://github.com/qoxi-cloud/proxmox-hetzner/raw/refs/heads/main/templates/debian.sources"
-        download_file "./templates/proxmox.sources" "https://github.com/qoxi-cloud/proxmox-hetzner/raw/refs/heads/main/templates/proxmox.sources"
+        download_file "./templates/proxmox.sources" "https://github.com/qoxi-cloud/proxmox-hetzner/raw/refs/heads/main/templates/${proxmox_sources_template}"
         download_file "./templates/sshd_config" "https://github.com/qoxi-cloud/proxmox-hetzner/raw/refs/heads/main/templates/sshd_config"
         download_file "./templates/zshrc" "https://github.com/qoxi-cloud/proxmox-hetzner/raw/refs/heads/main/templates/zshrc"
         download_file "./templates/p10k.zsh" "https://github.com/qoxi-cloud/proxmox-hetzner/raw/refs/heads/main/templates/p10k.zsh"

@@ -19,6 +19,8 @@ Automated Proxmox VE installer for Hetzner dedicated servers **without console a
 - Interactive menus with arrow key navigation
 - Network bridge modes: Internal NAT, External bridged, or both
 - ZFS RAID selection: RAID-1, RAID-0, or single drive
+- Repository selection: No-Subscription, Enterprise, or Test
+- SSL certificates: Self-signed or Let's Encrypt with auto-renewal
 - Default shell selection: ZSH with plugins or Bash
 - SSH hardening with key-only auth
 - Automatic security updates
@@ -54,6 +56,7 @@ Full documentation available in the **[Wiki](../../wiki)**:
 - [Installation Guide](../../wiki/Installation-Guide) - Step-by-step instructions
 - [Configuration Reference](../../wiki/Configuration-Reference) - All options and env vars
 - [Network Modes](../../wiki/Network-Modes) - Bridge configurations explained
+- [SSL Certificates](../../wiki/SSL-Certificates) - Let's Encrypt setup
 - [Post-Installation](../../wiki/Post-Installation) - Packages and optimizations
 - [Tailscale Setup](../../wiki/Tailscale-Setup) - Remote access via VPN
 

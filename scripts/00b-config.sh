@@ -47,6 +47,13 @@ TAILSCALE_WEBUI="${TAILSCALE_WEBUI}"
 
 # ZFS RAID mode (single, raid0, raid1)
 ZFS_RAID="${ZFS_RAID}"
+
+# Proxmox repository (no-subscription, enterprise, test)
+PVE_REPO_TYPE="${PVE_REPO_TYPE}"
+PVE_SUBSCRIPTION_KEY="${PVE_SUBSCRIPTION_KEY}"
+
+# SSL certificate (self-signed, letsencrypt)
+SSL_TYPE="${SSL_TYPE}"
 EOF
     chmod 600 "$file"
     echo -e "${CLR_GREEN}✓ Configuration saved to: $file${CLR_RESET}"

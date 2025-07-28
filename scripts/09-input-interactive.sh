@@ -245,6 +245,44 @@ get_inputs_interactive() {
         fi
     fi
 
+    # --- Proxmox Repository ---
+    if [[ -n "$PVE_REPO_TYPE" ]]; then
+        print_success "Repository: ${PVE_REPO_TYPE} (from env)"
+        if [[ "$PVE_REPO_TYPE" == "enterprise" && -n "$PVE_SUBSCRIPTION_KEY" ]]; then
+            print_success "Subscription key: configured"
+        fi
+    else
+        local repo_options=("no-subscription" "enterprise" "test")
+
+        interactive_menu \
+            "Proxmox Repository (↑/↓ select, Enter confirm)" \
+            "Select which repository to use for updates" \
+            "No-Subscription|Free community repository (default)" \
+            "Enterprise|Production-ready, requires subscription key" \
+            "Test|Latest packages, may be unstable"
+
+        PVE_REPO_TYPE="${repo_options[$MENU_SELECTED]}"
+
+        if [[ "$PVE_REPO_TYPE" == "enterprise" ]]; then
+            local key_content="Enterprise repository requires a valid subscription key."$'\n'
+            key_content+="Get your key from: https://www.proxmox.com/proxmox-ve/pricing"$'\n'
+            key_content+=$'\n'
+            key_content+="Format: pve1c-XXXXXXXXXX or pve2c-XXXXXXXXXX"
+
+            input_box "Proxmox Subscription Key" "$key_content" "Subscription Key: " ""
+            PVE_SUBSCRIPTION_KEY="$INPUT_VALUE"
+
+            if [[ -n "$PVE_SUBSCRIPTION_KEY" ]]; then
+                print_success "Repository: enterprise (key configured)"
+            else
+                print_warning "Repository: enterprise (no key - will show warning in UI)"
+            fi
+        else
+            PVE_SUBSCRIPTION_KEY=""
+            print_success "Repository: ${PVE_REPO_TYPE}"
+        fi
+    fi
+
     # --- Default Shell ---
     if [[ -n "$DEFAULT_SHELL" ]]; then
         print_success "Default shell: ${DEFAULT_SHELL} (from env)"
@@ -390,5 +428,33 @@ get_inputs_interactive() {
             STEALTH_MODE="no"
             print_success "Tailscale installation skipped"
         fi
+    fi
+
+    # --- SSL Certificate (only if Tailscale is not installed) ---
+    if [[ "$INSTALL_TAILSCALE" != "yes" ]]; then
+        if [[ -n "$SSL_TYPE" ]]; then
+            print_success "SSL certificate: ${SSL_TYPE} (from env)"
+        else
+            local ssl_options=("self-signed" "letsencrypt")
+            local ssl_header="Configure SSL certificate for Proxmox Web UI."$'\n'
+            ssl_header+="Let's Encrypt requires domain to resolve to this server."
+
+            interactive_menu \
+                "SSL Certificate (↑/↓ select, Enter confirm)" \
+                "$ssl_header" \
+                "Self-signed|Default Proxmox certificate (recommended)" \
+                "Let's Encrypt|Free auto-renewing certificate"
+
+            SSL_TYPE="${ssl_options[$MENU_SELECTED]}"
+
+            if [[ "$SSL_TYPE" == "letsencrypt" ]]; then
+                print_success "SSL: Let's Encrypt (will use ${FQDN:-$PVE_HOSTNAME.$DOMAIN_SUFFIX})"
+            else
+                print_success "SSL: Self-signed certificate"
+            fi
+        fi
+    else
+        # Tailscale provides its own HTTPS via serve
+        SSL_TYPE="self-signed"
     fi
 }
