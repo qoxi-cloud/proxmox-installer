@@ -55,15 +55,30 @@ display_info_table() {
 }
 
 # Colorize the output of boxes (post-process)
+# Adds cyan frame and colors for [OK], [WARN], [ERROR]
 colorize_status() {
+    local cyan=$'\033[1;36m'
     local green=$'\033[1;32m'
     local yellow=$'\033[1;33m'
     local red=$'\033[1;31m'
     local reset=$'\033[m'
 
-    sed -e "s/\[OK\]/${green}[OK]${reset}/g" \
-        -e "s/\[WARN\]/${yellow}[WARN]${reset}/g" \
-        -e "s/\[ERROR\]/${red}[ERROR]${reset}/g"
+    while IFS= read -r line; do
+        # Top/bottom border
+        if [[ "$line" =~ ^\+[-+]+\+$ ]]; then
+            echo "${cyan}${line}${reset}"
+        # Content line with | borders
+        elif [[ "$line" =~ ^(\|)(.*)\|$ ]]; then
+            local content="${BASH_REMATCH[2]}"
+            # Color status markers
+            content="${content//\[OK\]/${green}[OK]${reset}}"
+            content="${content//\[WARN\]/${yellow}[WARN]${reset}}"
+            content="${content//\[ERROR\]/${red}[ERROR]${reset}}"
+            echo "${cyan}|${reset}${content}${cyan}|${reset}"
+        else
+            echo "$line"
+        fi
+    done
 }
 
 # Print success message with checkmark
