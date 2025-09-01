@@ -457,25 +457,53 @@ get_inputs_interactive() {
             if [[ "$SSL_TYPE" == "letsencrypt" ]]; then
                 local le_fqdn="${FQDN:-$PVE_HOSTNAME.$DOMAIN_SUFFIX}"
                 local expected_ip="${MAIN_IPV4_CIDR%/*}"
+                local max_attempts=3
+                local attempt=1
+                local dns_result=1
+                local dns_tmp="/tmp/dns_check_$$"
 
-                # Use wait_with_progress: 30 sec timeout, check every 10 sec (3 attempts)
-                if wait_with_progress \
-                    "Checking DNS: ${le_fqdn} → ${expected_ip}" \
-                    30 \
-                    "validate_dns_resolution '$le_fqdn' '$expected_ip'" \
-                    10 \
-                    "SSL: Let's Encrypt (DNS verified: ${le_fqdn} → ${expected_ip})"; then
-                    : # Success - message already printed by wait_with_progress
-                else
-                    # Show detailed error
-                    echo ""
-                    validate_dns_resolution "$le_fqdn" "$expected_ip"
-                    local dns_result=$?
-                    if [[ $dns_result -eq 1 ]]; then
-                        print_error "${le_fqdn} does not resolve to any IP address"
+                while [[ $attempt -le $max_attempts ]]; do
+                    # Run DNS check in background, save result to temp file
+                    (
+                        validate_dns_resolution "$le_fqdn" "$expected_ip"
+                        echo "$?:$DNS_RESOLVED_IP" > "$dns_tmp"
+                    ) &
+                    local check_pid=$!
+                    show_progress $check_pid "Checking DNS: ${le_fqdn} → ${expected_ip} (attempt ${attempt}/${max_attempts})" --silent
+
+                    # Read result from temp file
+                    if [[ -f "$dns_tmp" ]]; then
+                        dns_result=$(cut -d: -f1 < "$dns_tmp")
+                        DNS_RESOLVED_IP=$(cut -d: -f2 < "$dns_tmp")
+                        rm -f "$dns_tmp"
                     else
-                        print_error "${le_fqdn} resolves to ${DNS_RESOLVED_IP}, expected ${expected_ip}"
+                        dns_result=1
                     fi
+
+                    if [[ $dns_result -eq 0 ]]; then
+                        print_success "SSL: Let's Encrypt (DNS verified: ${le_fqdn} → ${expected_ip})"
+                        break
+                    fi
+
+                    # Show error for this attempt
+                    if [[ $dns_result -eq 1 ]]; then
+                        print_error "DNS check failed: ${le_fqdn} does not resolve"
+                    else
+                        print_error "DNS mismatch: ${le_fqdn} → ${DNS_RESOLVED_IP} (expected: ${expected_ip})"
+                    fi
+
+                    if [[ $attempt -lt $max_attempts ]]; then
+                        print_info "Retrying in 10 seconds... (Press Ctrl+C to cancel)"
+                        sleep 10
+                    fi
+                    ((attempt++))
+                done
+
+                rm -f "$dns_tmp" 2>/dev/null
+
+                if [[ $dns_result -ne 0 ]]; then
+                    echo ""
+                    print_error "DNS validation failed after ${max_attempts} attempts"
                     echo ""
                     print_info "To fix this:"
                     print_info "  1. Go to your DNS provider"
