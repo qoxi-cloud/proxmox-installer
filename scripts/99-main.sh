@@ -223,7 +223,6 @@ install_proxmox
 log "Step: boot_proxmox_with_port_forwarding"
 boot_proxmox_with_port_forwarding || {
     log "ERROR: Failed to boot Proxmox with port forwarding"
-    print_error "Failed to boot Proxmox with port forwarding. Exiting."
     exit 1
 }
 

@@ -226,12 +226,12 @@ show_system_status() {
 
     # Check for errors
     if [[ $PREFLIGHT_ERRORS -gt 0 ]]; then
-        print_error "Pre-flight checks failed with $PREFLIGHT_ERRORS error(s). Exiting."
+        log "ERROR: Pre-flight checks failed with $PREFLIGHT_ERRORS error(s)"
         exit 1
     fi
 
     if [[ $no_drives -eq 1 ]]; then
-        print_error "No drives detected! Exiting."
+        log "ERROR: No drives detected"
         exit 1
     fi
 

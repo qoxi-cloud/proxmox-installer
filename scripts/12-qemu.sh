@@ -122,8 +122,9 @@ install_proxmox() {
     # Check if QEMU is still running
     if ! kill -0 $qemu_pid 2>/dev/null; then
         printf "\r\e[K"
-        print_error "QEMU failed to start! Check qemu_install.log:"
-        cat qemu_install.log
+        log "ERROR: QEMU failed to start"
+        log "QEMU install log:"
+        cat qemu_install.log >> "$LOG_FILE" 2>&1
         exit 1
     fi
 
@@ -133,9 +134,9 @@ install_proxmox() {
     wait $qemu_pid
     local exit_code=$?
     if [[ $exit_code -ne 0 ]]; then
-        print_error "QEMU installation failed with exit code $exit_code"
-        print_error "Check qemu_install.log for details"
-        cat qemu_install.log
+        log "ERROR: QEMU installation failed with exit code $exit_code"
+        log "QEMU install log:"
+        cat qemu_install.log >> "$LOG_FILE" 2>&1
         exit 1
     fi
 }
@@ -159,7 +160,9 @@ boot_proxmox_with_port_forwarding() {
 
     # Wait for SSH to be fully ready (handles key exchange timing)
     wait_for_ssh_ready 120 || {
-        print_error "SSH connection failed. Check qemu_output.log for details."
+        log "ERROR: SSH connection failed"
+        log "QEMU output log:"
+        cat qemu_output.log >> "$LOG_FILE" 2>&1
         return 1
     }
 }

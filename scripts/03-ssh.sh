@@ -65,8 +65,7 @@ run_remote() {
     local done_message="${3:-$message}"
 
     if ! remote_exec_with_progress "$message" "$script" "$done_message"; then
-        print_error "$message failed"
-        echo "Check log file: $LOG_FILE"
+        log "ERROR: $message failed"
         exit 1
     fi
 }
