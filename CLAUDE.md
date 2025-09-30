@@ -71,7 +71,7 @@ Scripts are numbered and concatenated in order:
 
 #### Installation (11-12)
 
-- `11-packages.sh` - Package installation, ISO download (aria2c with 8 parallel connections), answer.toml generation
+- `11-packages.sh` - Package installation, ISO download (with fallback chain), answer.toml generation
 - `12-qemu.sh` - QEMU VM management for installation and boot, drive release with findmnt
 
 #### Post-Install Configuration (13-16)
@@ -122,9 +122,9 @@ The installer automatically installs required utilities in `06-system-check.sh`:
 | `ip` | iproute2 | Network interface detection |
 | `udevadm` | udev | Predictable interface name detection |
 | `timeout` | coreutils | Command timeouts |
-| `curl` | curl | HTTP requests |
+| `curl` | curl | HTTP requests and ISO downloads |
 | `jq` | jq | JSON parsing (network info, Tailscale status) |
-| `aria2c` | aria2 | Parallel ISO downloads (8 connections) |
+| `aria2c` | aria2 | Optional multi-connection downloads (fallback: curl, wget) |
 | `findmnt` | util-linux | Efficient mount point detection |
 
 ### Templates
@@ -214,7 +214,17 @@ findmnt (efficient) → mount | grep (fallback)
 
 #### ISO Download (11-packages.sh)
 
-Uses `aria2c` with 8 parallel connections and automatic checksum verification for faster downloads.
+```text
+aria2c (2 connections) → curl (single, resume) → wget (single, resume)
+```
+
+Uses a fallback chain for reliability. aria2c is tried first with conservative settings (2 connections to avoid rate limiting), then falls back to curl or wget. All methods support resume and retry.
+
+Helper functions:
+
+- `_download_iso_aria2c()` - Multi-connection download with checksum verification
+- `_download_iso_curl()` - Single connection with retry and resume support
+- `_download_iso_wget()` - Single connection fallback
 
 ### Helper Function Patterns
 

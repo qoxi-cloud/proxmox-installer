@@ -67,7 +67,7 @@ The interactive installer will guide you through:
 
 The script will:
 
-1. Download the latest Proxmox VE ISO (using 8 parallel connections for faster downloads)
+1. Download the latest Proxmox VE ISO (with automatic retry and fallback)
 2. Create an auto-installation configuration
 3. Install Proxmox VE using QEMU
 4. Configure networking and security

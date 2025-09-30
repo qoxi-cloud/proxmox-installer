@@ -32,7 +32,7 @@ collect_system_info() {
     # boxes: table display, column: alignment, iproute2: ip command
     # udev: udevadm for interface detection, timeout: command timeouts
     # jq: JSON parsing for API responses
-    # aria2c: parallel multi-connection downloads (faster ISO downloads)
+    # aria2c: optional multi-connection downloads (fallback: curl, wget)
     # findmnt: efficient mount point queries
     update_progress
     local packages_to_install=""

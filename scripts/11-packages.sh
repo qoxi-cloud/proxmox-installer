@@ -98,6 +98,72 @@ get_iso_version() {
     echo "$iso_filename" | sed -E 's/proxmox-ve_([0-9]+\.[0-9]+-[0-9]+)\.iso/\1/'
 }
 
+# Download ISO using curl with retry support (most stable)
+_download_iso_curl() {
+    local url="$1"
+    local output="$2"
+    local max_retries="${DOWNLOAD_RETRY_COUNT:-3}"
+    local retry_delay="${DOWNLOAD_RETRY_DELAY:-5}"
+
+    log "Downloading with curl (single connection, resume-enabled)"
+    curl -fSL \
+        --retry "$max_retries" \
+        --retry-delay "$retry_delay" \
+        --retry-connrefused \
+        -C - \
+        -o "$output" \
+        "$url" >> "$LOG_FILE" 2>&1
+}
+
+# Download ISO using wget with retry support
+_download_iso_wget() {
+    local url="$1"
+    local output="$2"
+    local max_retries="${DOWNLOAD_RETRY_COUNT:-3}"
+
+    log "Downloading with wget (single connection, resume-enabled)"
+    wget -q \
+        --tries="$max_retries" \
+        --continue \
+        --timeout=60 \
+        --waitretry=5 \
+        -O "$output" \
+        "$url" >> "$LOG_FILE" 2>&1
+}
+
+# Download ISO using aria2c with conservative settings
+_download_iso_aria2c() {
+    local url="$1"
+    local output="$2"
+    local checksum="$3"
+    local max_retries="${DOWNLOAD_RETRY_COUNT:-3}"
+
+    log "Downloading with aria2c (2 connections, with retries)"
+    local aria2_args=(
+        -x 2                    # 2 connections (conservative to avoid rate limiting)
+        -s 2                    # 2 splits
+        -k 4M                   # 4MB minimum split size
+        --max-tries="$max_retries"
+        --retry-wait=5
+        --timeout=60
+        --connect-timeout=30
+        --max-connection-per-server=2
+        --allow-overwrite=true
+        --auto-file-renaming=false
+        -o "$output"
+        --console-log-level=error
+        --summary-interval=0
+    )
+
+    # Add checksum verification if available
+    if [[ -n "$checksum" ]]; then
+        aria2_args+=(--checksum=sha-256="$checksum")
+        log "aria2c will verify checksum automatically"
+    fi
+
+    aria2c "${aria2_args[@]}" "$url" >> "$LOG_FILE" 2>&1
+}
+
 download_proxmox_iso() {
     log "Starting Proxmox ISO download"
 
@@ -124,7 +190,7 @@ download_proxmox_iso() {
 
     ISO_FILENAME=$(basename "$PROXMOX_ISO_URL")
 
-    # Download checksum first (needed for aria2c verification)
+    # Download checksum first
     log "Downloading checksum file"
     curl -sS -o SHA256SUMS "$PROXMOX_CHECKSUM_URL" >> "$LOG_FILE" 2>&1 || true
     local expected_checksum=""
@@ -133,52 +199,77 @@ download_proxmox_iso() {
         log "Expected checksum: $expected_checksum"
     fi
 
-    # Download ISO using aria2c (parallel connections for faster download)
-    log "Downloading ISO: $ISO_FILENAME using aria2c"
-    local aria2_args=(
-        -x 8                    # 8 connections per server
-        -s 8                    # 8 splits
-        -k 1M                   # 1MB minimum split size
-        --allow-overwrite=true
-        --auto-file-renaming=false
-        -o pve.iso
-        --console-log-level=error
-        --summary-interval=0
-    )
+    # Download with fallback chain: aria2c (conservative) -> curl -> wget
+    log "Downloading ISO: $ISO_FILENAME"
+    local download_success=false
 
-    # Add checksum verification if available
-    if [[ -n "$expected_checksum" ]]; then
-        aria2_args+=(--checksum=sha-256="$expected_checksum")
-        log "aria2c will verify checksum automatically"
+    # Try aria2c first with conservative settings (2 connections instead of 8)
+    local exit_code
+    if command -v aria2c &>/dev/null; then
+        log "Attempting download with aria2c (conservative mode)"
+        _download_iso_aria2c "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum" &
+        show_progress $! "Downloading $ISO_FILENAME (aria2c)" "$ISO_FILENAME downloaded"
+        wait $!
+        exit_code=$?
+        if [[ $exit_code -eq 0 ]] && [[ -s "pve.iso" ]]; then
+            download_success=true
+            log "aria2c download successful"
+        else
+            log "aria2c failed (exit code: $exit_code), trying curl fallback"
+            rm -f pve.iso
+        fi
     fi
 
-    aria2c "${aria2_args[@]}" "$PROXMOX_ISO_URL" >> "$LOG_FILE" 2>&1 &
-    show_progress $! "Downloading $ISO_FILENAME (8 connections)" "$ISO_FILENAME downloaded"
-    wait $!
-    local exit_code=$?
+    # Fallback to curl (most stable, single connection)
+    if [[ "$download_success" != "true" ]]; then
+        log "Attempting download with curl"
+        _download_iso_curl "$PROXMOX_ISO_URL" "pve.iso" &
+        show_progress $! "Downloading $ISO_FILENAME (curl)" "$ISO_FILENAME downloaded"
+        wait $!
+        exit_code=$?
+        if [[ $exit_code -eq 0 ]] && [[ -s "pve.iso" ]]; then
+            download_success=true
+            log "curl download successful"
+        else
+            log "curl failed (exit code: $exit_code), trying wget fallback"
+            rm -f pve.iso
+        fi
+    fi
 
-    if [[ $exit_code -ne 0 ]]; then
-        log "ERROR: Failed to download Proxmox ISO (aria2c exit code: $exit_code)"
+    # Final fallback to wget
+    if [[ "$download_success" != "true" ]] && command -v wget &>/dev/null; then
+        log "Attempting download with wget"
+        _download_iso_wget "$PROXMOX_ISO_URL" "pve.iso" &
+        show_progress $! "Downloading $ISO_FILENAME (wget)" "$ISO_FILENAME downloaded"
+        wait $!
+        exit_code=$?
+        if [[ $exit_code -eq 0 ]] && [[ -s "pve.iso" ]]; then
+            download_success=true
+            log "wget download successful"
+        else
+            rm -f pve.iso
+        fi
+    fi
+
+    if [[ "$download_success" != "true" ]]; then
+        log "ERROR: All download methods failed for Proxmox ISO"
         rm -f pve.iso SHA256SUMS
         exit 1
     fi
-    log "ISO downloaded successfully"
 
-    if [[ ! -s "pve.iso" ]]; then
-        log "ERROR: Downloaded ISO file is empty or corrupted"
-        rm -f pve.iso SHA256SUMS
-        exit 1
-    fi
-    log "ISO file size: $(stat -c%s pve.iso | awk '{printf "%.1fG", $1/1024/1024/1024}')"
+    log "ISO file size: $(stat -c%s pve.iso 2>/dev/null | awk '{printf "%.1fG", $1/1024/1024/1024}')"
 
-    # Verify checksum if aria2c didn't do it (checksum wasn't available)
-    if [[ -z "$expected_checksum" ]] && [[ -f "SHA256SUMS" ]]; then
-        expected_checksum=$(grep "$ISO_FILENAME" SHA256SUMS | awk '{print $1}')
-    fi
-
+    # Verify checksum (if not already verified by aria2c)
     if [[ -n "$expected_checksum" ]]; then
-        # aria2c already verified if checksum was provided, but double-check if needed
-        log "Checksum verification passed (verified by aria2c)"
+        log "Verifying ISO checksum"
+        local actual_checksum
+        actual_checksum=$(sha256sum pve.iso | awk '{print $1}')
+        if [[ "$actual_checksum" != "$expected_checksum" ]]; then
+            log "ERROR: Checksum mismatch! Expected: $expected_checksum, Got: $actual_checksum"
+            rm -f pve.iso SHA256SUMS
+            exit 1
+        fi
+        log "Checksum verification passed"
     else
         log "WARNING: Could not find checksum for $ISO_FILENAME"
         print_warning "Could not find checksum for $ISO_FILENAME"
