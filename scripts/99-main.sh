@@ -174,6 +174,7 @@ log "TEST_MODE=$TEST_MODE"
 log "NON_INTERACTIVE=$NON_INTERACTIVE"
 log "CONFIG_FILE=$CONFIG_FILE"
 log "VALIDATE_ONLY=$VALIDATE_ONLY"
+log "DRY_RUN=$DRY_RUN"
 log "QEMU_RAM_OVERRIDE=$QEMU_RAM_OVERRIDE"
 log "QEMU_CORES_OVERRIDE=$QEMU_CORES_OVERRIDE"
 log "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
@@ -223,6 +224,119 @@ if [[ "$VALIDATE_ONLY" == true ]]; then
     fi
     echo ""
     echo -e "${CLR_CYAN}Run without --validate to start installation${CLR_RESET}"
+    exit 0
+fi
+
+# Dry-run mode: simulate installation without actual changes
+if [[ "$DRY_RUN" == true ]]; then
+    log "DRY-RUN MODE: Simulating installation"
+    echo ""
+    echo -e "${CLR_CYAN}═══════════════════════════════════════════════════════════${CLR_RESET}"
+    echo -e "${CLR_CYAN}                    DRY-RUN MODE                            ${CLR_RESET}"
+    echo -e "${CLR_CYAN}═══════════════════════════════════════════════════════════${CLR_RESET}"
+    echo ""
+    echo -e "${CLR_YELLOW}The following steps would be performed:${CLR_RESET}"
+    echo ""
+
+    # Simulate prepare_packages
+    echo -e "${CLR_GREEN}[1/7]${CLR_RESET} prepare_packages"
+    echo "      - Add Proxmox repository to apt sources"
+    echo "      - Download Proxmox GPG key"
+    echo "      - Update package lists"
+    echo "      - Install: proxmox-auto-install-assistant xorriso ovmf wget sshpass"
+    echo ""
+
+    # Simulate download_proxmox_iso
+    echo -e "${CLR_GREEN}[2/7]${CLR_RESET} download_proxmox_iso"
+    if [[ -n "$PROXMOX_ISO_VERSION" ]]; then
+        echo "      - Download ISO: ${PROXMOX_ISO_VERSION}"
+    else
+        echo "      - Download latest Proxmox VE ISO"
+    fi
+    echo "      - Verify SHA256 checksum"
+    echo ""
+
+    # Simulate make_answer_toml
+    echo -e "${CLR_GREEN}[3/7]${CLR_RESET} make_answer_toml"
+    echo "      - Generate answer.toml with:"
+    echo "        FQDN:     $FQDN"
+    echo "        Email:    $EMAIL"
+    echo "        Timezone: $TIMEZONE"
+    echo "        ZFS RAID: ${ZFS_RAID:-raid1}"
+    echo ""
+
+    # Simulate make_autoinstall_iso
+    echo -e "${CLR_GREEN}[4/7]${CLR_RESET} make_autoinstall_iso"
+    echo "      - Create pve-autoinstall.iso with embedded answer.toml"
+    echo ""
+
+    # Simulate install_proxmox
+    echo -e "${CLR_GREEN}[5/7]${CLR_RESET} install_proxmox"
+    echo "      - Release drives: ${DRIVES[*]}"
+    echo "      - Start QEMU with:"
+    dry_run_cores=$(($(nproc) / 2))
+    [[ $dry_run_cores -lt $MIN_CPU_CORES ]] && dry_run_cores=$MIN_CPU_CORES
+    [[ $dry_run_cores -gt $MAX_QEMU_CORES ]] && dry_run_cores=$MAX_QEMU_CORES
+    dry_run_ram=$DEFAULT_QEMU_RAM
+    [[ -n "$QEMU_RAM_OVERRIDE" ]] && dry_run_ram=$QEMU_RAM_OVERRIDE
+    [[ -n "$QEMU_CORES_OVERRIDE" ]] && dry_run_cores=$QEMU_CORES_OVERRIDE
+    echo "        vCPUs: ${dry_run_cores}"
+    echo "        RAM:   ${dry_run_ram}MB"
+    echo "      - Boot from autoinstall ISO"
+    echo "      - Install Proxmox to drives"
+    echo ""
+
+    # Simulate boot_proxmox_with_port_forwarding
+    echo -e "${CLR_GREEN}[6/7]${CLR_RESET} boot_proxmox_with_port_forwarding"
+    echo "      - Boot installed system in QEMU"
+    echo "      - Forward SSH port 5555 -> 22"
+    echo "      - Wait for SSH to be ready"
+    echo ""
+
+    # Simulate configure_proxmox_via_ssh
+    echo -e "${CLR_GREEN}[7/7]${CLR_RESET} configure_proxmox_via_ssh"
+    echo "      - Configure network interfaces (bridge mode: $BRIDGE_MODE)"
+    echo "      - Configure ZFS ARC limits"
+    echo "      - Install system utilities: ${SYSTEM_UTILITIES}"
+    echo "      - Configure shell: ${DEFAULT_SHELL:-zsh}"
+    echo "      - Configure repository: ${PVE_REPO_TYPE:-no-subscription}"
+    echo "      - Configure SSL: ${SSL_TYPE:-self-signed}"
+    if [[ "$INSTALL_TAILSCALE" == "yes" ]]; then
+        echo "      - Install and configure Tailscale VPN"
+        [[ "$STEALTH_MODE" == "yes" ]] && echo "      - Enable stealth mode (block public IP)"
+    fi
+    echo "      - Harden SSH configuration"
+    echo "      - Deploy SSH public key"
+    echo ""
+
+    echo -e "${CLR_CYAN}═══════════════════════════════════════════════════════════${CLR_RESET}"
+    echo ""
+    echo -e "${CLR_GREEN}Configuration Summary:${CLR_RESET}"
+    echo "  Hostname:     $HOSTNAME"
+    echo "  FQDN:         $FQDN"
+    echo "  Email:        $EMAIL"
+    echo "  Timezone:     $TIMEZONE"
+    echo "  IPv4:         $MAIN_IPV4_CIDR"
+    echo "  Gateway:      $MAIN_IPV4_GW"
+    echo "  Interface:    $INTERFACE_NAME"
+    echo "  ZFS Mode:     ${ZFS_RAID_MODE:-auto}"
+    echo "  Drives:       ${DRIVES[*]}"
+    echo "  Bridge Mode:  $BRIDGE_MODE"
+    if [[ "$BRIDGE_MODE" != "external" ]]; then
+        echo "  Private Net:  $PRIVATE_SUBNET"
+    fi
+    echo "  Tailscale:    ${INSTALL_TAILSCALE:-no}"
+    echo "  Repository:   ${PVE_REPO_TYPE:-no-subscription}"
+    echo "  SSL:          ${SSL_TYPE:-self-signed}"
+    echo ""
+    echo -e "${CLR_CYAN}═══════════════════════════════════════════════════════════${CLR_RESET}"
+    echo ""
+    echo -e "${CLR_GREEN}✓ Dry-run completed successfully${CLR_RESET}"
+    echo -e "${CLR_YELLOW}Run without --dry-run to perform actual installation${CLR_RESET}"
+    echo ""
+
+    # Mark as completed (prevents error handler)
+    INSTALL_COMPLETED=true
     exit 0
 fi
 

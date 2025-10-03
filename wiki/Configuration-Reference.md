@@ -12,6 +12,7 @@ Complete reference for all configuration options available in the installer.
 | `-s, --save-config FILE` | Save configuration to file after input |
 | `-n, --non-interactive` | Run without prompts (requires `--config`) |
 | `-t, --test` | Test mode (TCG emulation, no KVM required) |
+| `-d, --dry-run` | Simulate installation without making changes |
 | `--validate` | Validate configuration only, do not install |
 | `--qemu-ram MB` | Set QEMU RAM in MB (default: auto 4096-8192) |
 | `--qemu-cores N` | Set QEMU CPU cores (default: auto, max 16) |
@@ -34,6 +35,12 @@ bash pve-install.sh -c proxmox.conf -n
 
 # Test mode (for systems without KVM support)
 bash pve-install.sh -t
+
+# Dry-run mode (simulate without making changes)
+bash pve-install.sh -d
+
+# Dry-run with config file
+bash pve-install.sh -c proxmox.conf -n -d
 
 # Validate configuration without installing
 bash pve-install.sh -c proxmox.conf --validate

@@ -176,6 +176,7 @@ Post-install configuration runs via SSH into QEMU VM on port 5555:
 | `-s, --save-config FILE` | Save configuration to file |
 | `-n, --non-interactive` | Automated mode (requires config) |
 | `-t, --test` | Test mode (TCG emulation, no KVM) |
+| `-d, --dry-run` | Simulate installation without making changes |
 | `--validate` | Validate config only, do not install |
 | `--qemu-ram MB` | Override QEMU RAM (default: auto 4096-8192) |
 | `--qemu-cores N` | Override QEMU CPU cores (default: auto, max 16) |

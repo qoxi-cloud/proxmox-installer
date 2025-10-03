@@ -61,6 +61,7 @@ One command replaces hours of manual configuration with battle-tested defaults.
 | `-s, --save-config FILE` | Save configuration to file |
 | `-n, --non-interactive` | Automated mode (requires config/env vars) |
 | `-t, --test` | Test mode (no KVM required) |
+| `-d, --dry-run` | Simulate installation without making changes |
 | `--validate` | Validate configuration only, do not install |
 | `--qemu-ram MB` | Set QEMU RAM in MB (default: auto 4096-8192) |
 | `--qemu-cores N` | Set QEMU CPU cores (default: auto, max 16) |

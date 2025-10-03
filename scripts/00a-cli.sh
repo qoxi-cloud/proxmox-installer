@@ -14,6 +14,7 @@ Options:
   -s, --save-config FILE  Save configuration to file after input
   -n, --non-interactive   Run without prompts (requires --config)
   -t, --test              Test mode (use TCG emulation, no KVM required)
+  -d, --dry-run           Dry-run mode (simulate without actual installation)
   --validate              Validate configuration only, do not install
   --qemu-ram MB           Set QEMU RAM in MB (default: auto, 4096-8192)
   --qemu-cores N          Set QEMU CPU cores (default: auto, max 16)
@@ -26,6 +27,7 @@ Examples:
   $0 -c proxmox.conf           # Load config, prompt for missing values
   $0 -c proxmox.conf -n        # Fully automated installation
   $0 -c proxmox.conf --validate  # Validate config without installing
+  $0 -d                        # Dry-run mode (simulate installation)
   $0 --qemu-ram 16384 --qemu-cores 8  # Custom QEMU resources
   $0 --iso-version proxmox-ve_8.2-1.iso  # Use specific Proxmox version
 
@@ -56,6 +58,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -t|--test)
             TEST_MODE=true
+            shift
+            ;;
+        -d|--dry-run)
+            DRY_RUN=true
             shift
             ;;
         --validate)

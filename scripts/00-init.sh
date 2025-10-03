@@ -161,6 +161,7 @@ CONFIG_FILE=""
 SAVE_CONFIG=""
 TEST_MODE=false
 VALIDATE_ONLY=false
+DRY_RUN=false
 
 # QEMU resource overrides (empty = auto-detect)
 QEMU_RAM_OVERRIDE=""
