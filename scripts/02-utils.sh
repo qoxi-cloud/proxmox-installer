@@ -102,12 +102,14 @@ apply_common_template_vars() {
 # Download template from GitHub repository
 # Usage: download_template LOCAL_PATH [REMOTE_FILENAME]
 # REMOTE_FILENAME defaults to basename of LOCAL_PATH
+# All templates have .tmpl extension on GitHub, but are saved locally without it
 # Returns: 0 on success, 1 on failure
 # Note: Caller should handle the error (exit or continue)
 download_template() {
     local local_path="$1"
     local remote_file="${2:-$(basename "$local_path")}"
-    local url="${GITHUB_BASE_URL}/templates/${remote_file}"
+    # Add .tmpl extension for remote file (all templates use .tmpl on GitHub)
+    local url="${GITHUB_BASE_URL}/templates/${remote_file}.tmpl"
 
     if ! download_file "$local_path" "$url"; then
         return 1

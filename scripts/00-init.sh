@@ -84,7 +84,7 @@ DEFAULT_REPO_TYPE="no-subscription"
 DEFAULT_SSL_TYPE="self-signed"
 
 # System utilities to install on Proxmox
-SYSTEM_UTILITIES="btop iotop ncdu tmux pigz smartmontools jq bat"
+SYSTEM_UTILITIES="btop iotop ncdu tmux pigz smartmontools jq bat neofetch"
 OPTIONAL_PACKAGES="libguestfs-tools"
 
 # Log file

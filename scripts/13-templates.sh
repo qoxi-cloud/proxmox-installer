@@ -41,6 +41,8 @@ make_templates() {
         download_template "./templates/letsencrypt-deploy-hook.sh" || exit 1
         download_template "./templates/letsencrypt-firstboot.sh" || exit 1
         download_template "./templates/letsencrypt-firstboot.service" || exit 1
+        # Shell startup
+        download_template "./templates/neofetch.sh" || exit 1
     ) > /dev/null 2>&1 &
     if ! show_progress $! "Downloading template files"; then
         log "ERROR: Failed to download template files"

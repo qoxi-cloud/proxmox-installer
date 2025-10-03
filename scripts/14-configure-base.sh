@@ -129,6 +129,13 @@ configure_base_system() {
         remote_copy "templates/environment" "/etc/environment"
     ) > /dev/null 2>&1 &
     show_progress $! "Installing locale configuration files" "Locale files installed"
+
+    # Configure neofetch to run on shell login
+    (
+        remote_copy "templates/neofetch.sh" "/etc/profile.d/neofetch.sh"
+        remote_exec "chmod +x /etc/profile.d/neofetch.sh"
+    ) > /dev/null 2>&1 &
+    show_progress $! "Configuring neofetch" "Neofetch configured"
 }
 
 configure_shell() {

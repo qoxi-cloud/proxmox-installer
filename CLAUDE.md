@@ -129,16 +129,18 @@ The installer automatically installs required utilities in `06-system-check.sh`:
 
 ### Templates
 
-Configuration files in `templates/` are downloaded at runtime from GitHub raw URLs and customized with placeholder substitution:
+Configuration files in `templates/` are downloaded at runtime from GitHub raw URLs and customized with placeholder substitution.
+
+**All template files use `.tmpl` extension** (e.g., `hosts.tmpl`, `zshrc.tmpl`). The `download_template()` function automatically adds `.tmpl` when fetching from GitHub, so scripts reference templates without the extension.
 
 #### Template Categories
 
 | Category | Files |
 |----------|-------|
 | Network config | `interfaces.internal`, `interfaces.external`, `interfaces.both`, `resolv.conf` |
-| System config | `hosts`, `sshd_config`, `chrony`, `debian.sources`, `proxmox.sources` |
+| System config | `hosts`, `sshd_config`, `chrony`, `debian.sources`, `proxmox.sources`, `99-proxmox.conf` |
 | Locale | `locale.sh`, `default-locale`, `environment` |
-| Shell | `zshrc`, `p10k.zsh` |
+| Shell | `zshrc`, `p10k.zsh`, `neofetch.sh` |
 | Scripts | `configure-zfs-arc.sh`, `remove-subscription-nag.sh` |
 | Services | `cpufrequtils`, `50unattended-upgrades`, `20auto-upgrades` |
 | SSL | `letsencrypt-deploy-hook.sh`, `letsencrypt-firstboot.sh`, `letsencrypt-firstboot.service` |
