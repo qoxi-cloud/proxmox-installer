@@ -23,6 +23,17 @@ The installer automatically installs these useful packages:
 
 ## Security Hardening
 
+### Fail2Ban (Without Tailscale)
+
+When Tailscale is **not** installed, the installer automatically configures Fail2Ban to protect against brute-force attacks:
+
+| Service | Protection |
+|---------|------------|
+| SSH (port 22) | 3 failed attempts = 1 hour ban |
+| Proxmox API (port 8006) | 3 failed attempts = 2 hour ban |
+
+For full details, see [Security](Security).
+
 ### SSH Configuration
 
 | Feature | Configuration |
@@ -175,4 +186,4 @@ cat /etc/apt/sources.list.d/proxmox.sources
 
 ---
 
-**Next:** [SSL Certificates](SSL-Certificates) | [Tailscale Setup](Tailscale-Setup) | [Home](Home)
+**Next:** [Security](Security) | [SSL Certificates](SSL-Certificates) | [Tailscale Setup](Tailscale-Setup) | [Home](Home)

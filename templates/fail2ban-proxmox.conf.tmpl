@@ -1,0 +1,22 @@
+# Fail2Ban filter for Proxmox VE API (PVE 8+)
+# Based on: https://pve.proxmox.com/wiki/Fail2ban
+#
+# Catches failed authentication attempts to the Proxmox web interface and API
+#
+# Log format examples (from journalctl):
+# pvedaemon[1234]: authentication failure; rhost=1.2.3.4 user=root@pam msg=...
+# pvedaemon[1234]: authentication verification failure; rhost=1.2.3.4 user=admin@pve msg=...
+#
+# Test with: fail2ban-regex systemd-journal /etc/fail2ban/filter.d/proxmox.conf
+
+[Definition]
+
+# Match authentication failures in Proxmox logs
+# Covers both "authentication failure" and "authentication verification failure"
+failregex = pvedaemon\[.*authentication (verification )?failure; rhost=<HOST> user=.* msg=.*
+
+# Ignore successful authentications
+ignoreregex =
+
+# Use systemd journal for log source (Debian 12+)
+journalmatch = _SYSTEMD_UNIT=pvedaemon.service

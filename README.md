@@ -24,6 +24,7 @@ Automated Proxmox VE installer for Hetzner dedicated servers **without console a
 - Default shell selection: ZSH with plugins or Bash
 - SSH hardening with key-only auth
 - Automatic security updates
+- Fail2Ban brute-force protection (when Tailscale not used)
 - Optional Tailscale VPN integration
 - Stealth firewall mode (blocks all incoming on public IP when Tailscale is enabled)
 
@@ -75,6 +76,7 @@ Full documentation available in the **[Wiki](../../wiki)**:
 - [Configuration Reference](../../wiki/Configuration-Reference) - All options and env vars
 - [Network Modes](../../wiki/Network-Modes) - Bridge configurations explained
 - [SSL Certificates](../../wiki/SSL-Certificates) - Let's Encrypt setup
+- [Security](../../wiki/Security) - Fail2Ban and security hardening
 - [Post-Installation](../../wiki/Post-Installation) - Packages and optimizations
 - [Tailscale Setup](../../wiki/Tailscale-Setup) - Remote access via VPN
 

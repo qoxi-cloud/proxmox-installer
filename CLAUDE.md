@@ -74,12 +74,14 @@ Scripts are numbered and concatenated in order:
 - `11-packages.sh` - Package installation, ISO download (with fallback chain), answer.toml generation
 - `12-qemu.sh` - QEMU VM management for installation and boot, drive release with findmnt
 
-#### Post-Install Configuration (13-16)
+#### Post-Install Configuration (13-17)
 
 - `13-templates.sh` - Template download and preparation
 - `14-configure-base.sh` - Base system configuration (ZFS, packages, shell)
 - `15-configure-tailscale.sh` - Tailscale VPN configuration (uses jq for JSON parsing)
-- `16-configure-finalize.sh` - SSH hardening and VM finalization
+- `15a-configure-fail2ban.sh` - Fail2Ban brute-force protection (when Tailscale not used)
+- `16-configure-ssl.sh` - SSL certificate configuration (self-signed or Let's Encrypt)
+- `17-configure-finalize.sh` - SSH hardening and VM finalization
 
 #### Main Flow (99)
 
@@ -145,6 +147,7 @@ Configuration files in `templates/` are downloaded at runtime from GitHub raw UR
 | Services | `cpufrequtils`, `50unattended-upgrades`, `20auto-upgrades` |
 | SSL | `letsencrypt-deploy-hook.sh`, `letsencrypt-firstboot.sh`, `letsencrypt-firstboot.service` |
 | Tailscale | `disable-openssh.service`, `stealth-firewall.service` |
+| Security | `fail2ban-jail.local`, `fail2ban-proxmox.conf` |
 | Installation | `answer.toml` |
 
 #### Template Placeholders

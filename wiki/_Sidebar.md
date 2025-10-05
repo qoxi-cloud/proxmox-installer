@@ -11,6 +11,7 @@
 **Setup**
 - [🌐 Network Modes](Network-Modes)
 - [🔒 SSL Certificates](SSL-Certificates)
+- [🛡️ Security](Security)
 - [🔧 Post-Installation](Post-Installation)
 - [🔐 Tailscale Setup](Tailscale-Setup)
 

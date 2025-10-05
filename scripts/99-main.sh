@@ -86,6 +86,11 @@ reboot_to_main_os() {
         else
             summary+="[WARN]|Tailscale|needs auth after reboot"$'\n'
         fi
+    else
+        # Fail2Ban is installed when Tailscale is not used
+        if [[ "$FAIL2BAN_INSTALLED" == "yes" ]]; then
+            summary+="[OK]|Fail2Ban|SSH + Proxmox API protected"$'\n'
+        fi
     fi
 
     summary+="|--- Access ---|"$'\n'
@@ -304,6 +309,8 @@ if [[ "$DRY_RUN" == true ]]; then
     if [[ "$INSTALL_TAILSCALE" == "yes" ]]; then
         echo "      - Install and configure Tailscale VPN"
         [[ "$STEALTH_MODE" == "yes" ]] && echo "      - Enable stealth mode (block public IP)"
+    else
+        echo "      - Install Fail2Ban (SSH + Proxmox API brute-force protection)"
     fi
     echo "      - Harden SSH configuration"
     echo "      - Deploy SSH public key"

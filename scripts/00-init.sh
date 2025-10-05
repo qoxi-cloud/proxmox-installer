@@ -176,3 +176,7 @@ PVE_SUBSCRIPTION_KEY=""
 
 # SSL certificate (self-signed, letsencrypt)
 SSL_TYPE=""
+
+# Fail2Ban installation flag (set by configure_fail2ban)
+# shellcheck disable=SC2034
+FAIL2BAN_INSTALLED=""
