@@ -1,0 +1,5 @@
+# shellcheck shell=sh
+# Run fastfetch on interactive shell login (neofetch replacement)
+if [ -t 0 ] && command -v fastfetch >/dev/null 2>&1; then
+    fastfetch
+fi

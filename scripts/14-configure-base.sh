@@ -130,12 +130,12 @@ configure_base_system() {
     ) > /dev/null 2>&1 &
     show_progress $! "Installing locale configuration files" "Locale files installed"
 
-    # Configure neofetch to run on shell login
+    # Configure fastfetch to run on shell login
     (
-        remote_copy "templates/neofetch.sh" "/etc/profile.d/neofetch.sh"
-        remote_exec "chmod +x /etc/profile.d/neofetch.sh"
+        remote_copy "templates/fastfetch.sh" "/etc/profile.d/fastfetch.sh"
+        remote_exec "chmod +x /etc/profile.d/fastfetch.sh"
     ) > /dev/null 2>&1 &
-    show_progress $! "Configuring neofetch" "Neofetch configured"
+    show_progress $! "Configuring fastfetch" "Fastfetch configured"
 }
 
 configure_shell() {

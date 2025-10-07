@@ -143,7 +143,7 @@ Configuration files in `templates/` are downloaded at runtime from GitHub raw UR
 | Network config | `interfaces.internal`, `interfaces.external`, `interfaces.both`, `resolv.conf` |
 | System config | `hosts`, `sshd_config`, `chrony`, `debian.sources`, `proxmox.sources`, `99-proxmox.conf` |
 | Locale | `locale.sh`, `default-locale`, `environment` |
-| Shell | `zshrc`, `p10k.zsh`, `neofetch.sh` |
+| Shell | `zshrc`, `p10k.zsh`, `fastfetch.sh` |
 | Scripts | `configure-zfs-arc.sh`, `remove-subscription-nag.sh` |
 | Services | `cpufrequtils`, `50unattended-upgrades`, `20auto-upgrades` |
 | SSL | `letsencrypt-deploy-hook.sh`, `letsencrypt-firstboot.sh`, `letsencrypt-firstboot.service` |
