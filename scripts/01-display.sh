@@ -85,9 +85,9 @@ print_error() {
     echo -e "${CLR_RED}✗${CLR_RESET} $1"
 }
 
-# Print warning message
+# Print warning message (with indent for sub-status display)
 print_warning() {
-    echo -e "${CLR_YELLOW}⚠${CLR_RESET} $1"
+    echo -e "  ${CLR_YELLOW}⚠️${CLR_RESET}  $1"
 }
 
 # Print info message
