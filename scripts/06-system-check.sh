@@ -24,8 +24,8 @@ collect_system_info() {
         printf -v bar_empty '%*s' "$empty" ''
         bar_empty="${bar_empty// /░}"
 
-        printf "\r${CLR_YELLOW}${SPINNER_CHARS:i++%${#SPINNER_CHARS}:1} Checking system... [${CLR_GREEN}%s${CLR_RESET}${CLR_BLUE}%s${CLR_RESET}${CLR_YELLOW}] %3d%%${CLR_RESET}" \
-            "$bar_filled" "$bar_empty" "$pct"
+        printf "\r${CLR_YELLOW}%s Checking system... [${CLR_GREEN}%s${CLR_RESET}${CLR_BLUE}%s${CLR_RESET}${CLR_YELLOW}] %3d%%${CLR_RESET}" \
+            "${SPINNER_CHARS[i++ % ${#SPINNER_CHARS[@]}]}" "$bar_filled" "$bar_empty" "$pct"
     }
 
     # Install required tools and display utilities

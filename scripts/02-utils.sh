@@ -222,8 +222,8 @@ prompt_validated() {
 # Progress indicators
 # =============================================================================
 
-# Spinner characters for progress display
-SPINNER_CHARS='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+# Spinner characters for progress display (filling circle animation)
+SPINNER_CHARS=('○' '◔' '◑' '◕' '●' '◕' '◑' '◔')
 
 # Progress indicator with spinner
 # Waits for process to complete, shows success or failure
@@ -239,7 +239,7 @@ show_progress() {
     local i=0
 
     while kill -0 "$pid" 2>/dev/null; do
-        printf "\r\e[K${CLR_YELLOW}${SPINNER_CHARS:i++%${#SPINNER_CHARS}:1} %s${CLR_RESET}" "$message"
+        printf "\r\e[K${CLR_YELLOW}%s %s${CLR_RESET}" "${SPINNER_CHARS[i++ % ${#SPINNER_CHARS[@]}]}" "$message"
         sleep 0.2
     done
 
@@ -284,7 +284,7 @@ wait_with_progress() {
             return 1
         fi
 
-        printf "\r\e[K${CLR_YELLOW}${SPINNER_CHARS:i++%${#SPINNER_CHARS}:1} %s${CLR_RESET}" "$message"
+        printf "\r\e[K${CLR_YELLOW}%s %s${CLR_RESET}" "${SPINNER_CHARS[i++ % ${#SPINNER_CHARS[@]}]}" "$message"
         sleep "$interval"
     done
 }
