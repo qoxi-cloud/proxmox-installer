@@ -155,6 +155,8 @@ configure_base_system() {
     (
         remote_copy "templates/fastfetch.sh" "/etc/profile.d/fastfetch.sh"
         remote_exec "chmod +x /etc/profile.d/fastfetch.sh"
+        # Also source from bash.bashrc for non-login interactive shells
+        remote_exec "grep -q 'profile.d/fastfetch.sh' /etc/bash.bashrc || echo '[ -f /etc/profile.d/fastfetch.sh ] && . /etc/profile.d/fastfetch.sh' >> /etc/bash.bashrc"
     ) > /dev/null 2>&1 &
     show_progress $! "Configuring fastfetch" "Fastfetch configured"
 }

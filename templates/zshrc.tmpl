@@ -75,3 +75,8 @@ ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=8'
 
 # Load Powerlevel10k config
 [[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh
+
+# Run fastfetch on interactive shell login
+if [[ -o interactive ]] && command -v fastfetch &>/dev/null; then
+    fastfetch
+fi
