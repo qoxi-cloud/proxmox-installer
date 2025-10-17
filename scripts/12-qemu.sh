@@ -239,7 +239,7 @@ install_proxmox() {
 
     # Show message immediately so user knows installation is starting
     local install_msg="Installing Proxmox VE (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)"
-    printf "${CLR_YELLOW}⠋ %s${CLR_RESET}" "$install_msg"
+    printf "${CLR_YELLOW}%s %s${CLR_RESET}" "${SPINNER_CHARS[0]}" "$install_msg"
 
     # Release any locks on drives before QEMU starts
     release_drives
