@@ -88,6 +88,7 @@ apply_common_template_vars() {
         "MAIN_IPV4_GW=${MAIN_IPV4_GW:-}" \
         "MAIN_IPV6=${MAIN_IPV6:-}" \
         "FIRST_IPV6_CIDR=${FIRST_IPV6_CIDR:-}" \
+        "IPV6_GATEWAY=${IPV6_GATEWAY:-${DEFAULT_IPV6_GATEWAY:-fe80::1}}" \
         "FQDN=${FQDN:-}" \
         "HOSTNAME=${PVE_HOSTNAME:-}" \
         "INTERFACE_NAME=${INTERFACE_NAME:-}" \
@@ -97,7 +98,9 @@ apply_common_template_vars() {
         "DNS_PRIMARY=${DNS_PRIMARY:-1.1.1.1}" \
         "DNS_SECONDARY=${DNS_SECONDARY:-1.0.0.1}" \
         "DNS_TERTIARY=${DNS_TERTIARY:-8.8.8.8}" \
-        "DNS_QUATERNARY=${DNS_QUATERNARY:-8.8.4.4}"
+        "DNS_QUATERNARY=${DNS_QUATERNARY:-8.8.4.4}" \
+        "DNS6_PRIMARY=${DNS6_PRIMARY:-2606:4700:4700::1111}" \
+        "DNS6_SECONDARY=${DNS6_SECONDARY:-2606:4700:4700::1001}"
 }
 
 # Download template from GitHub repository

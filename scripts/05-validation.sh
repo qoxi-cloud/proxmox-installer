@@ -81,6 +81,131 @@ validate_subnet() {
     [[ "$octet1" -le 255 && "$octet2" -le 255 && "$octet3" -le 255 && "$octet4" -le 255 ]]
 }
 
+# =============================================================================
+# IPv6 validation functions
+# =============================================================================
+
+# Validate IPv6 address (without prefix)
+# Supports full, compressed (::), and mixed (::ffff:192.0.2.1) formats
+# Usage: validate_ipv6 "2001:db8::1"
+validate_ipv6() {
+    local ipv6="$1"
+
+    # Empty check
+    [[ -z "$ipv6" ]] && return 1
+
+    # Remove zone ID if present (e.g., %eth0)
+    ipv6="${ipv6%%\%*}"
+
+    # Check for valid characters
+    [[ ! "$ipv6" =~ ^[0-9a-fA-F:]+$ ]] && return 1
+
+    # Cannot start or end with single colon (but :: is valid)
+    [[ "$ipv6" =~ ^:[^:] ]] && return 1
+    [[ "$ipv6" =~ [^:]:$ ]] && return 1
+
+    # Cannot have more than one :: sequence
+    local double_colon_count
+    double_colon_count=$(grep -o '::' <<< "$ipv6" | wc -l)
+    [[ "$double_colon_count" -gt 1 ]] && return 1
+
+    # Count groups (split by :, accounting for ::)
+    local groups
+    if [[ "$ipv6" == *"::"* ]]; then
+        # With :: compression, count actual groups
+        local left="${ipv6%%::*}"
+        local right="${ipv6##*::}"
+        local left_count=0 right_count=0
+        [[ -n "$left" ]] && left_count=$(tr ':' '\n' <<< "$left" | grep -c .)
+        [[ -n "$right" ]] && right_count=$(tr ':' '\n' <<< "$right" | grep -c .)
+        groups=$((left_count + right_count))
+        # Total groups must be less than 8 (:: fills the rest)
+        [[ "$groups" -ge 8 ]] && return 1
+    else
+        # Without compression, must have exactly 8 groups
+        groups=$(tr ':' '\n' <<< "$ipv6" | grep -c .)
+        [[ "$groups" -ne 8 ]] && return 1
+    fi
+
+    # Validate each group (1-4 hex digits)
+    local group
+    for group in $(tr ':' ' ' <<< "$ipv6"); do
+        [[ -z "$group" ]] && continue
+        [[ ${#group} -gt 4 ]] && return 1
+        [[ ! "$group" =~ ^[0-9a-fA-F]+$ ]] && return 1
+    done
+
+    return 0
+}
+
+# Validate IPv6 address with CIDR prefix
+# Usage: validate_ipv6_cidr "2001:db8::1/64"
+validate_ipv6_cidr() {
+    local ipv6_cidr="$1"
+
+    # Check for CIDR format
+    [[ ! "$ipv6_cidr" =~ ^.+/[0-9]+$ ]] && return 1
+
+    local ipv6="${ipv6_cidr%/*}"
+    local prefix="${ipv6_cidr##*/}"
+
+    # Validate prefix length (0-128)
+    [[ ! "$prefix" =~ ^[0-9]+$ ]] && return 1
+    [[ "$prefix" -lt 0 || "$prefix" -gt 128 ]] && return 1
+
+    # Validate IPv6 address
+    validate_ipv6 "$ipv6"
+}
+
+# Validate IPv6 gateway address
+# Gateway can be a full IPv6 address or link-local (fe80::)
+# Usage: validate_ipv6_gateway "fe80::1"
+validate_ipv6_gateway() {
+    local gateway="$1"
+
+    # Empty is valid (no IPv6 gateway)
+    [[ -z "$gateway" ]] && return 0
+
+    # Special value "auto" means use link-local
+    [[ "$gateway" == "auto" ]] && return 0
+
+    # Validate as IPv6 address
+    validate_ipv6 "$gateway"
+}
+
+# Validate IPv6 prefix length (for VM subnet allocation)
+# Usage: validate_ipv6_prefix_length "80"
+validate_ipv6_prefix_length() {
+    local prefix="$1"
+
+    [[ ! "$prefix" =~ ^[0-9]+$ ]] && return 1
+    # Typical values: 48 (site), 56 (organization), 64 (subnet), 80 (small subnet)
+    [[ "$prefix" -lt 48 || "$prefix" -gt 128 ]] && return 1
+
+    return 0
+}
+
+# Check if IPv6 address is link-local (fe80::/10)
+# Usage: is_ipv6_link_local "fe80::1"
+is_ipv6_link_local() {
+    local ipv6="$1"
+    [[ "$ipv6" =~ ^[fF][eE]8[0-9a-fA-F]: ]] || [[ "$ipv6" =~ ^[fF][eE][89aAbB][0-9a-fA-F]: ]]
+}
+
+# Check if IPv6 address is ULA (fc00::/7)
+# Usage: is_ipv6_ula "fd00::1"
+is_ipv6_ula() {
+    local ipv6="$1"
+    [[ "$ipv6" =~ ^[fF][cCdD] ]]
+}
+
+# Check if IPv6 address is global unicast (2000::/3)
+# Usage: is_ipv6_global "2001:db8::1"
+is_ipv6_global() {
+    local ipv6="$1"
+    [[ "$ipv6" =~ ^[23] ]]
+}
+
 validate_timezone() {
     local tz="$1"
     # Check if timezone file exists (preferred validation)

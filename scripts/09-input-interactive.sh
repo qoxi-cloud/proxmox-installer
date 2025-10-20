@@ -211,6 +211,93 @@ get_inputs_interactive() {
         fi
     fi
 
+    # --- IPv6 Configuration ---
+    if [[ -n "$IPV6_MODE" ]]; then
+        # Apply IPv6 settings from environment
+        if [[ "$IPV6_MODE" == "disabled" ]]; then
+            MAIN_IPV6=""
+            IPV6_GATEWAY=""
+            FIRST_IPV6_CIDR=""
+            print_success "IPv6: disabled (from env)"
+        elif [[ "$IPV6_MODE" == "manual" ]]; then
+            IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
+            if [[ -n "$IPV6_ADDRESS" ]]; then
+                MAIN_IPV6="${IPV6_ADDRESS%/*}"
+            fi
+            print_success "IPv6: ${MAIN_IPV6:-auto} (gateway: ${IPV6_GATEWAY}, from env)"
+        else
+            IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
+            if [[ -n "$MAIN_IPV6" ]]; then
+                print_success "IPv6: ${MAIN_IPV6} (gateway: ${IPV6_GATEWAY}, from env)"
+            else
+                print_warning "IPv6: not detected"
+            fi
+        fi
+    else
+        # Interactive IPv6 configuration
+        local ipv6_options=("auto" "manual" "disabled")
+        local ipv6_header="Configure IPv6 networking for dual-stack support."$'\n'
+        if [[ -n "$MAIN_IPV6" ]]; then
+            ipv6_header+="Detected: ${MAIN_IPV6}"
+        else
+            ipv6_header+="No IPv6 address detected on interface."
+        fi
+
+        interactive_menu \
+            "IPv6 Configuration (↑/↓ select, Enter confirm)" \
+            "$ipv6_header" \
+            "Auto|Use detected IPv6 address (recommended)" \
+            "Manual|Enter IPv6 address and gateway manually" \
+            "Disabled|IPv4-only configuration"
+
+        IPV6_MODE="${ipv6_options[$MENU_SELECTED]}"
+
+        if [[ "$IPV6_MODE" == "disabled" ]]; then
+            MAIN_IPV6=""
+            IPV6_GATEWAY=""
+            FIRST_IPV6_CIDR=""
+            print_success "IPv6: disabled"
+        elif [[ "$IPV6_MODE" == "manual" ]]; then
+            # Manual IPv6 address entry
+            local ipv6_content="Enter your IPv6 address in CIDR notation."$'\n'
+            ipv6_content+="Example: 2001:db8::1/64"
+
+            input_box "IPv6 Address" "$ipv6_content" "IPv6 Address: " "${MAIN_IPV6:+${MAIN_IPV6}/64}"
+
+            while [[ -n "$INPUT_VALUE" ]] && ! validate_ipv6_cidr "$INPUT_VALUE"; do
+                print_error "Invalid IPv6 CIDR notation. Use format like: 2001:db8::1/64"
+                input_box "IPv6 Address" "$ipv6_content" "IPv6 Address: " "$INPUT_VALUE"
+            done
+
+            if [[ -n "$INPUT_VALUE" ]]; then
+                IPV6_ADDRESS="$INPUT_VALUE"
+                MAIN_IPV6="${INPUT_VALUE%/*}"
+            fi
+
+            # Manual IPv6 gateway entry
+            local gw_content="Enter your IPv6 gateway address."$'\n'
+            gw_content+="Default for Hetzner: fe80::1 (link-local)"
+
+            input_box "IPv6 Gateway" "$gw_content" "Gateway: " "${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
+
+            while [[ -n "$INPUT_VALUE" ]] && ! validate_ipv6_gateway "$INPUT_VALUE"; do
+                print_error "Invalid IPv6 gateway address."
+                input_box "IPv6 Gateway" "$gw_content" "Gateway: " "$INPUT_VALUE"
+            done
+
+            IPV6_GATEWAY="${INPUT_VALUE:-$DEFAULT_IPV6_GATEWAY}"
+            print_success "IPv6: ${MAIN_IPV6:-none} (gateway: ${IPV6_GATEWAY})"
+        else
+            # Auto mode
+            IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
+            if [[ -n "$MAIN_IPV6" ]]; then
+                print_success "IPv6: ${MAIN_IPV6} (gateway: ${IPV6_GATEWAY})"
+            else
+                print_warning "IPv6: not detected (will be IPv4-only)"
+            fi
+        fi
+    fi
+
     # --- ZFS RAID mode ---
     if [[ "${DRIVE_COUNT:-0}" -ge 2 ]]; then
         if [[ -n "$ZFS_RAID" ]]; then

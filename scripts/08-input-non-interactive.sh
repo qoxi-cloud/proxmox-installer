@@ -37,6 +37,24 @@ get_inputs_non_interactive() {
     PRIVATE_SUBNET="${PRIVATE_SUBNET:-$DEFAULT_SUBNET}"
     DEFAULT_SHELL="${DEFAULT_SHELL:-zsh}"
 
+    # IPv6 configuration
+    IPV6_MODE="${IPV6_MODE:-$DEFAULT_IPV6_MODE}"
+    if [[ "$IPV6_MODE" == "disabled" ]]; then
+        # Clear IPv6 settings when disabled
+        MAIN_IPV6=""
+        IPV6_GATEWAY=""
+        FIRST_IPV6_CIDR=""
+    elif [[ "$IPV6_MODE" == "manual" ]]; then
+        # Use manually specified values
+        IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
+        if [[ -n "$IPV6_ADDRESS" ]]; then
+            MAIN_IPV6="${IPV6_ADDRESS%/*}"
+        fi
+    else
+        # auto mode: use detected values, set gateway to default if not specified
+        IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
+    fi
+
     # Display configuration
     print_success "Network interface: ${INTERFACE_NAME}"
     print_success "Hostname: ${PVE_HOSTNAME}"
@@ -49,6 +67,15 @@ get_inputs_non_interactive() {
         print_success "Private subnet: ${PRIVATE_SUBNET}"
     fi
     print_success "Default shell: ${DEFAULT_SHELL}"
+
+    # Display IPv6 configuration
+    if [[ "$IPV6_MODE" == "disabled" ]]; then
+        print_success "IPv6: disabled"
+    elif [[ -n "$MAIN_IPV6" ]]; then
+        print_success "IPv6: ${MAIN_IPV6} (gateway: ${IPV6_GATEWAY})"
+    else
+        print_warning "IPv6: not detected"
+    fi
 
     # ZFS RAID mode
     if [[ -z "$ZFS_RAID" ]]; then

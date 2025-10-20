@@ -33,12 +33,18 @@ GITHUB_BASE_URL="https://github.com/${GITHUB_REPO}/raw/refs/heads/${GITHUB_BRANC
 PROXMOX_ISO_BASE_URL="https://enterprise.proxmox.com/iso/"
 PROXMOX_CHECKSUM_URL="https://enterprise.proxmox.com/iso/SHA256SUMS"
 
-# DNS servers for connectivity checks and resolution
+# DNS servers for connectivity checks and resolution (IPv4)
 DNS_SERVERS=("1.1.1.1" "8.8.8.8" "9.9.9.9")
 DNS_PRIMARY="1.1.1.1"
 DNS_SECONDARY="1.0.0.1"
 DNS_TERTIARY="8.8.8.8"
 DNS_QUATERNARY="8.8.4.4"
+
+# DNS servers (IPv6) - Cloudflare, Google, Quad9
+DNS6_PRIMARY="2606:4700:4700::1111"
+DNS6_SECONDARY="2606:4700:4700::1001"
+DNS6_TERTIARY="2001:4860:4860::8888"
+DNS6_QUATERNARY="2001:4860:4860::8844"
 
 # Resource requirements
 MIN_DISK_SPACE_MB=3000
@@ -83,6 +89,14 @@ DEFAULT_BRIDGE_MTU=9000
 DEFAULT_SHELL="zsh"
 DEFAULT_REPO_TYPE="no-subscription"
 DEFAULT_SSL_TYPE="self-signed"
+
+# IPv6 configuration defaults
+# IPV6_MODE: auto (detect from interface), manual (user-specified), disabled
+DEFAULT_IPV6_MODE="auto"
+# Default gateway for IPv6 (fe80::1 is standard for Hetzner)
+DEFAULT_IPV6_GATEWAY="fe80::1"
+# VM subnet prefix length (80 allows 65536 /96 subnets within a /64)
+DEFAULT_IPV6_VM_PREFIX=80
 
 # System utilities to install on Proxmox
 SYSTEM_UTILITIES="btop iotop ncdu tmux pigz smartmontools jq bat fastfetch"

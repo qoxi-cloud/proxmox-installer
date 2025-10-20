@@ -105,10 +105,12 @@ Centralized constants in `00-init.sh` (can be overridden via environment variabl
 |----------------|----------|
 | GitHub URLs | `GITHUB_REPO`, `GITHUB_BRANCH`, `GITHUB_BASE_URL` |
 | Proxmox URLs | `PROXMOX_ISO_BASE_URL`, `PROXMOX_CHECKSUM_URL` |
-| DNS servers | `DNS_SERVERS[]`, `DNS_PRIMARY`, `DNS_SECONDARY`, etc. |
+| DNS servers (IPv4) | `DNS_SERVERS[]`, `DNS_PRIMARY`, `DNS_SECONDARY`, etc. |
+| DNS servers (IPv6) | `DNS6_PRIMARY`, `DNS6_SECONDARY`, `DNS6_TERTIARY`, `DNS6_QUATERNARY` |
 | Resource limits | `MIN_DISK_SPACE_MB`, `MIN_RAM_MB`, `MIN_CPU_CORES` |
 | QEMU defaults | `DEFAULT_QEMU_RAM`, `MIN_QEMU_RAM`, `MAX_QEMU_CORES`, `QEMU_MIN_RAM_RESERVE` |
 | Default values | `DEFAULT_HOSTNAME`, `DEFAULT_TIMEZONE`, `DEFAULT_SUBNET`, `DEFAULT_BRIDGE_MTU`, etc. |
+| IPv6 defaults | `DEFAULT_IPV6_MODE`, `DEFAULT_IPV6_GATEWAY`, `DEFAULT_IPV6_VM_PREFIX` |
 | Packages | `SYSTEM_UTILITIES`, `OPTIONAL_PACKAGES` |
 | Timeouts | `DNS_LOOKUP_TIMEOUT`, `SSH_CONNECT_TIMEOUT`, `SSH_READY_TIMEOUT`, `QEMU_BOOT_TIMEOUT` |
 | Retry settings | `DNS_RETRY_DELAY`, `DOWNLOAD_RETRY_COUNT`, `DOWNLOAD_RETRY_DELAY` |
@@ -153,9 +155,11 @@ Configuration files in `templates/` are downloaded at runtime from GitHub raw UR
 
 #### Template Placeholders
 
-- `{{MAIN_IPV4}}`, `{{FQDN}}`, `{{HOSTNAME}}` - Network/host values
+- `{{MAIN_IPV4}}`, `{{MAIN_IPV4_GW}}`, `{{FQDN}}`, `{{HOSTNAME}}` - IPv4 and host values
+- `{{MAIN_IPV6}}`, `{{IPV6_GATEWAY}}`, `{{FIRST_IPV6_CIDR}}` - IPv6 configuration
 - `{{INTERFACE_NAME}}`, `{{PRIVATE_IP_CIDR}}`, `{{PRIVATE_SUBNET}}`, `{{BRIDGE_MTU}}` - Bridge config
-- `{{DNS_PRIMARY}}`, `{{DNS_SECONDARY}}`, etc. - DNS servers
+- `{{DNS_PRIMARY}}`, `{{DNS_SECONDARY}}`, etc. - IPv4 DNS servers
+- `{{DNS6_PRIMARY}}`, `{{DNS6_SECONDARY}}` - IPv6 DNS servers
 
 #### Template Utility Functions
 
@@ -321,6 +325,21 @@ The `validate_config()` function validates configuration values:
 - `SSL_TYPE` - must be: `self-signed` or `letsencrypt`
 - `DEFAULT_SHELL` - must be: `bash` or `zsh`
 - `INSTALL_AUDITD` - must be: `yes` or `no`
+- `IPV6_MODE` - must be: `auto`, `manual`, or `disabled`
+- `IPV6_GATEWAY` - must be valid IPv6 address or `auto`
+- `IPV6_ADDRESS` - must be valid IPv6 CIDR notation (e.g., `2001:db8::1/64`)
+
+### IPv6 Validation Functions (05-validation.sh)
+
+IPv6 validation functions for dual-stack support:
+
+- `validate_ipv6()` - Validate IPv6 address (full, compressed, or mixed format)
+- `validate_ipv6_cidr()` - Validate IPv6 with CIDR prefix (e.g., `2001:db8::1/64`)
+- `validate_ipv6_gateway()` - Validate IPv6 gateway (accepts empty, `auto`, or valid IPv6)
+- `validate_ipv6_prefix_length()` - Validate prefix length (48-128)
+- `is_ipv6_link_local()` - Check if address is link-local (fe80::/10)
+- `is_ipv6_ula()` - Check if address is ULA (fc00::/7)
+- `is_ipv6_global()` - Check if address is global unicast (2000::/3)
 
 ### Password Validation (05-validation.sh)
 

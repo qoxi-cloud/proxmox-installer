@@ -17,6 +17,7 @@ Automated Proxmox VE installer for Hetzner dedicated servers **without console a
 ### Features
 
 - Interactive menus with arrow key navigation
+- Full dual-stack IPv6 support (auto-detect, manual, or disabled)
 - Network bridge modes: Internal NAT, External bridged, or both
 - ZFS RAID selection: RAID-1, RAID-0, or single drive
 - Repository selection: No-Subscription, Enterprise, or Test

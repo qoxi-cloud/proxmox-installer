@@ -164,6 +164,72 @@ Private bridges (vmbr0 in internal mode, vmbr1 in both mode) are configured with
 
 **Note:** External bridges keep the default MTU (1500) since Hetzner's network may not support jumbo frames. VMs connected to internal bridges should also configure MTU 9000 for optimal performance.
 
+## IPv6 Configuration
+
+The installer supports full dual-stack (IPv4 + IPv6) networking. IPv6 is automatically detected from your network interface.
+
+### IPv6 Modes
+
+| Mode | Description |
+|------|-------------|
+| `auto` | Automatically detect IPv6 from interface (default) |
+| `manual` | Manually specify IPv6 address and gateway |
+| `disabled` | IPv4-only configuration |
+
+### IPv6 Network Layout
+
+```text
+Internet (IPv4 + IPv6)
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│  Proxmox Host                           │
+│  IPv4: x.x.x.x/32                       │
+│  IPv6: 2001:db8::1/128                  │
+│  Gateway (IPv6): fe80::1                │
+│                                         │
+│  ┌─────────────────────────────────┐    │
+│  │ vmbr0 (NAT bridge)              │    │
+│  │ IPv4: 10.0.0.1/24               │    │
+│  │ IPv6: 2001:db8:0:1::1/80        │    │
+│  └──────────┬──────────────────────┘    │
+│             │                           │
+│        ┌────┴────┐                      │
+│        ▼         ▼                      │
+│      ┌───┐     ┌───┐                    │
+│      │VM1│     │VM2│                    │
+│      │.10│     │.20│                    │
+│      └───┘     └───┘                    │
+└─────────────────────────────────────────┘
+```
+
+### Hetzner IPv6 Gateway
+
+Hetzner uses link-local gateway `fe80::1` for IPv6 routing. This is the default value configured by the installer.
+
+### IPv6 for VMs
+
+VMs on internal bridges can use IPv6 addresses from the allocated subnet. The installer calculates a /80 prefix for VM networks, allowing up to 65536 /96 subnets.
+
+Example allocation:
+
+- Host: `2001:db8:85a3::1234/64` (your Hetzner IPv6)
+- VM bridge: `2001:db8:85a3:0:1::1/80`
+- VM networks: `2001:db8:85a3:0:2::/96`, `2001:db8:85a3:0:3::/96`, etc.
+
+### Disabling IPv6
+
+If you prefer IPv4-only configuration:
+
+```bash
+# Via environment variable
+export IPV6_MODE=disabled
+bash pve-install.sh
+
+# Or in config file
+IPV6_MODE=disabled
+```
+
 ---
 
 **Next:** [Post-Installation](Post-Installation) | [Tailscale Setup](Tailscale-Setup)

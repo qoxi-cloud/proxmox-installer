@@ -86,6 +86,16 @@ You can pre-configure any setting via environment variables.
 | `PRIVATE_SUBNET` | NAT subnet (CIDR notation) | `10.0.0.0/24` |
 | `DEFAULT_BRIDGE_MTU` | MTU for private bridges (jumbo frames) | `9000` |
 
+### IPv6 Settings
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `IPV6_MODE` | IPv6 mode: `auto`, `manual`, `disabled` | `auto` |
+| `IPV6_GATEWAY` | IPv6 gateway address | `fe80::1` (Hetzner default) |
+| `IPV6_ADDRESS` | Manual IPv6 address (CIDR notation) | Auto-detected |
+
+> **Note:** The installer automatically detects IPv6 address from the network interface. Use `IPV6_MODE=manual` to override with custom settings, or `IPV6_MODE=disabled` for IPv4-only configuration.
+
 ### Storage Settings
 
 | Variable | Description | Default |
@@ -270,6 +280,9 @@ When loading a configuration file (`-c` option), the installer validates all val
 | `SSL_TYPE` | `self-signed`, `letsencrypt` |
 | `DEFAULT_SHELL` | `bash`, `zsh` |
 | `INSTALL_AUDITD` | `yes`, `no` |
+| `IPV6_MODE` | `auto`, `manual`, `disabled` |
+| `IPV6_GATEWAY` | Valid IPv6 address or `auto` |
+| `IPV6_ADDRESS` | Valid IPv6 CIDR notation (e.g., `2001:db8::1/64`) |
 
 Invalid values will cause the installer to exit with an error message.
 
