@@ -11,16 +11,13 @@ show_banner() {
     local show_info=true
     [[ "$1" == "--no-info" ]] && show_info=false
 
-    echo -e "${CLR_CYAN}"
-    cat << 'BANNER'
-         ____
-        |  _ \ _ __ _____  ___ __ ___   _____  __
-        | |_) | '__/ _ \ \/ / '_ ` _ \ / _ \ \/ /
-        |  __/| | | (_) >  <| | | | | | (_) >  <
-        |_|   |_|  \___/_/\_\_| |_| |_|\___/_/\_\
-
-            Hetzner Automated Installer
-BANNER
+    echo -e "${CLR_CYAN}         ____"
+    echo -e "        |  _ \\ _ __ _____  ___ __ ___   _____  __"
+    echo -e "        | |_) | '__/ _ \\ \\/ / '\`_ \` _ \\ / _ \\ \\/ /"
+    echo -e "        |  __/| | | (_) ${CLR_YELLOW}>${CLR_CYAN}  ${CLR_YELLOW}<${CLR_CYAN}| | | | | | (_) ${CLR_YELLOW}>${CLR_CYAN}  ${CLR_YELLOW}<${CLR_CYAN}"
+    echo -e "        |_|   |_|  \\___/_/${CLR_YELLOW}\\${CLR_CYAN}_${CLR_YELLOW}\\${CLR_CYAN}_| |_| |_|\\___/_/${CLR_YELLOW}\\${CLR_CYAN}_${CLR_YELLOW}\\${CLR_CYAN}"
+    echo -e ""
+    echo -e "            Hetzner Automated Installer"
     echo -e "${CLR_RESET}"
 
     if [[ "$show_info" == true ]]; then
