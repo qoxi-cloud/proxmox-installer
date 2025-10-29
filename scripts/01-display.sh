@@ -10,7 +10,7 @@ display_box() {
     local content="$2"
     local box_style="${3:-stone}"
 
-    echo -e "${CLR_BLUE}"
+    echo -e "${CLR_GRAY}"
     {
         echo "$title"
         echo ""
