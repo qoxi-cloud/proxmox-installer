@@ -48,6 +48,11 @@ validate_config() {
         has_errors=true
     fi
 
+    if [[ -n "$CPU_GOVERNOR" ]] && [[ ! "$CPU_GOVERNOR" =~ ^(performance|ondemand|powersave|schedutil|conservative)$ ]]; then
+        echo -e "${CLR_RED}Invalid CPU_GOVERNOR: $CPU_GOVERNOR (must be: performance, ondemand, powersave, schedutil, or conservative)${CLR_RESET}"
+        has_errors=true
+    fi
+
     # IPv6 configuration validation
     if [[ -n "$IPV6_MODE" ]] && [[ ! "$IPV6_MODE" =~ ^(auto|manual|disabled)$ ]]; then
         echo -e "${CLR_RED}Invalid IPV6_MODE: $IPV6_MODE (must be: auto, manual, or disabled)${CLR_RESET}"
@@ -135,6 +140,9 @@ SSL_TYPE="${SSL_TYPE}"
 
 # Audit logging (yes, no)
 INSTALL_AUDITD="${INSTALL_AUDITD}"
+
+# CPU governor / power profile (performance, ondemand, powersave, schedutil, conservative)
+CPU_GOVERNOR="${CPU_GOVERNOR:-performance}"
 
 # IPv6 configuration (auto, manual, disabled)
 IPV6_MODE="${IPV6_MODE:-auto}"

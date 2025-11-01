@@ -91,6 +91,10 @@ DEFAULT_SHELL="zsh"
 DEFAULT_REPO_TYPE="no-subscription"
 DEFAULT_SSL_TYPE="self-signed"
 
+# CPU governor / power profile
+# Options: performance, ondemand, powersave, schedutil, conservative
+DEFAULT_CPU_GOVERNOR="performance"
+
 # IPv6 configuration defaults
 # IPV6_MODE: auto (detect from interface), manual (user-specified), disabled
 DEFAULT_IPV6_MODE="auto"
@@ -199,6 +203,9 @@ FAIL2BAN_INSTALLED=""
 
 # Auditd installation setting (yes/no, default: no)
 INSTALL_AUDITD=""
+
+# CPU governor setting
+CPU_GOVERNOR=""
 
 # Auditd installation flag (set by configure_auditd)
 # shellcheck disable=SC2034

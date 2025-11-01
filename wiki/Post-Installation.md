@@ -86,8 +86,18 @@ Kernel updates require a reboot to take effect. Automatic reboots could disrupt 
 
 | Setting | Configuration |
 |---------|---------------|
-| CPU governor | `performance` |
+| CPU governor | Selectable during installation (default: `performance`) |
 | NTP sync | Chrony with Hetzner NTP servers |
+
+**Available CPU governors (power profiles):**
+
+| Governor | Description | Use Case |
+|----------|-------------|----------|
+| `performance` | Maximum CPU speed, highest power consumption | Servers requiring consistent performance (default) |
+| `ondemand` | Scales frequency based on load | Balanced power/performance |
+| `powersave` | Minimum CPU speed, lowest power consumption | Power-saving priority |
+| `schedutil` | Kernel scheduler-driven scaling | Modern alternative to ondemand |
+| `conservative` | Gradual frequency scaling | Slower response than ondemand |
 
 **Hetzner NTP servers used:**
 ```

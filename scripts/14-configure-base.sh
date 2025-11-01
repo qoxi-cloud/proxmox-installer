@@ -232,21 +232,22 @@ configure_system_services() {
         fi
     ' "nf_conntrack configured"
 
-    # Configure CPU governor for maximum performance using template
+    # Configure CPU governor using template
+    local governor="${CPU_GOVERNOR:-performance}"
     (
         remote_copy "templates/cpufrequtils" "/tmp/cpufrequtils"
-        remote_exec '
+        remote_exec "
             apt-get update -qq && apt-get install -yqq cpufrequtils 2>/dev/null || true
             mv /tmp/cpufrequtils /etc/default/cpufrequtils
             systemctl enable cpufrequtils 2>/dev/null || true
             if [ -d /sys/devices/system/cpu/cpu0/cpufreq ]; then
                 for cpu in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
-                    [ -f "$cpu" ] && echo "performance" > "$cpu" 2>/dev/null || true
+                    [ -f \"\$cpu\" ] && echo '$governor' > \"\$cpu\" 2>/dev/null || true
                 done
             fi
-        '
+        "
     ) > /dev/null 2>&1 &
-    show_progress $! "Configuring CPU governor" "CPU governor configured"
+    show_progress $! "Configuring CPU governor (${governor})" "CPU governor configured"
 
     # Remove Proxmox subscription notice (only for non-enterprise)
     if [[ "${PVE_REPO_TYPE:-no-subscription}" != "enterprise" ]]; then

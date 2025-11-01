@@ -382,6 +382,27 @@ get_inputs_interactive() {
         print_success "Default shell: ${DEFAULT_SHELL}"
     fi
 
+    # --- CPU Governor / Power Profile ---
+    if [[ -n "$CPU_GOVERNOR" ]]; then
+        print_success "Power profile: ${CPU_GOVERNOR} (from env)"
+    else
+        local governor_options=("performance" "ondemand" "powersave" "schedutil" "conservative")
+        local governor_header="Select CPU frequency scaling governor (power profile)."$'\n'
+        governor_header+="Affects power consumption, heat, and performance."
+
+        interactive_menu \
+            "Power Profile (↑/↓ select, Enter confirm)" \
+            "$governor_header" \
+            "Performance|Maximum speed, highest power (recommended for servers)" \
+            "On-demand|Scales frequency based on load" \
+            "Powersave|Minimum speed, lowest power consumption" \
+            "Schedutil|Kernel scheduler-driven scaling (modern)" \
+            "Conservative|Gradual frequency scaling"
+
+        CPU_GOVERNOR="${governor_options[$MENU_SELECTED]}"
+        print_success "Power profile: ${CPU_GOVERNOR}"
+    fi
+
     # --- SSH Public Key ---
     if [[ -n "$SSH_PUBLIC_KEY" ]]; then
         parse_ssh_key "$SSH_PUBLIC_KEY"

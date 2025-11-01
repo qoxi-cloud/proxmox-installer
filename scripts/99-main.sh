@@ -46,7 +46,7 @@ reboot_to_main_os() {
     fi
 
     summary+="|--- Configuration ---|"$'\n'
-    summary+="[OK]|CPU governor|performance"$'\n'
+    summary+="[OK]|CPU governor|${CPU_GOVERNOR:-performance}"$'\n'
     summary+="[OK]|Kernel params|optimized"$'\n'
     summary+="[OK]|nf_conntrack|optimized"$'\n'
     summary+="[OK]|Security updates|unattended"$'\n'

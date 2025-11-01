@@ -111,6 +111,7 @@ Centralized constants in `00-init.sh` (can be overridden via environment variabl
 | Resource limits | `MIN_DISK_SPACE_MB`, `MIN_RAM_MB`, `MIN_CPU_CORES` |
 | QEMU defaults | `DEFAULT_QEMU_RAM`, `MIN_QEMU_RAM`, `MAX_QEMU_CORES`, `QEMU_MIN_RAM_RESERVE` |
 | Default values | `DEFAULT_HOSTNAME`, `DEFAULT_TIMEZONE`, `DEFAULT_SUBNET`, `DEFAULT_BRIDGE_MTU`, etc. |
+| CPU governor | `DEFAULT_CPU_GOVERNOR` (performance, ondemand, powersave, schedutil, conservative) |
 | IPv6 defaults | `DEFAULT_IPV6_MODE`, `DEFAULT_IPV6_GATEWAY`, `DEFAULT_IPV6_VM_PREFIX` |
 | Packages | `SYSTEM_UTILITIES`, `OPTIONAL_PACKAGES` |
 | Timeouts | `DNS_LOOKUP_TIMEOUT`, `SSH_CONNECT_TIMEOUT`, `SSH_READY_TIMEOUT`, `QEMU_BOOT_TIMEOUT` |
@@ -161,6 +162,7 @@ Configuration files in `templates/` are downloaded at runtime from GitHub raw UR
 - `{{INTERFACE_NAME}}`, `{{PRIVATE_IP_CIDR}}`, `{{PRIVATE_SUBNET}}`, `{{BRIDGE_MTU}}` - Bridge config
 - `{{DNS_PRIMARY}}`, `{{DNS_SECONDARY}}`, etc. - IPv4 DNS servers
 - `{{DNS6_PRIMARY}}`, `{{DNS6_SECONDARY}}` - IPv6 DNS servers
+- `{{CPU_GOVERNOR}}` - CPU frequency scaling governor
 
 #### Template Utility Functions
 
@@ -338,6 +340,7 @@ The `validate_config()` function validates configuration values:
 - `SSL_TYPE` - must be: `self-signed` or `letsencrypt`
 - `DEFAULT_SHELL` - must be: `bash` or `zsh`
 - `INSTALL_AUDITD` - must be: `yes` or `no`
+- `CPU_GOVERNOR` - must be: `performance`, `ondemand`, `powersave`, `schedutil`, or `conservative`
 - `IPV6_MODE` - must be: `auto`, `manual`, or `disabled`
 - `IPV6_GATEWAY` - must be valid IPv6 address or `auto`
 - `IPV6_ADDRESS` - must be valid IPv6 CIDR notation (e.g., `2001:db8::1/64`)

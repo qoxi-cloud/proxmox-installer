@@ -36,6 +36,7 @@ get_inputs_non_interactive() {
     BRIDGE_MODE="${BRIDGE_MODE:-$DEFAULT_BRIDGE_MODE}"
     PRIVATE_SUBNET="${PRIVATE_SUBNET:-$DEFAULT_SUBNET}"
     DEFAULT_SHELL="${DEFAULT_SHELL:-zsh}"
+    CPU_GOVERNOR="${CPU_GOVERNOR:-$DEFAULT_CPU_GOVERNOR}"
 
     # IPv6 configuration
     IPV6_MODE="${IPV6_MODE:-$DEFAULT_IPV6_MODE}"
@@ -67,6 +68,7 @@ get_inputs_non_interactive() {
         print_success "Private subnet: ${PRIVATE_SUBNET}"
     fi
     print_success "Default shell: ${DEFAULT_SHELL}"
+    print_success "Power profile: ${CPU_GOVERNOR}"
 
     # Display IPv6 configuration
     if [[ "$IPV6_MODE" == "disabled" ]]; then

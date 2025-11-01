@@ -54,6 +54,7 @@ make_templates() {
         apply_common_template_vars "./templates/hosts"
         apply_common_template_vars "./templates/interfaces"
         apply_common_template_vars "./templates/resolv.conf"
+        apply_template_vars "./templates/cpufrequtils" "CPU_GOVERNOR=${CPU_GOVERNOR:-performance}"
     ) &
     show_progress $! "Modifying template files"
 }
