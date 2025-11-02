@@ -8,7 +8,6 @@ collect_system_info() {
     local errors=0
     local checks=7
     local current=0
-    local i=0
 
     # Progress update helper (optimized: no subprocess spawning)
     update_progress() {
@@ -24,8 +23,8 @@ collect_system_info() {
         printf -v bar_empty '%*s' "$empty" ''
         bar_empty="${bar_empty// /░}"
 
-        printf "\r${CLR_YELLOW}%s Checking system... [${CLR_GREEN}%s${CLR_RESET}${CLR_GRAY}%s${CLR_RESET}${CLR_YELLOW}] %3d%%${CLR_RESET}" \
-            "${SPINNER_CHARS[i++ % ${#SPINNER_CHARS[@]}]}" "$bar_filled" "$bar_empty" "$pct"
+        printf "\r${CLR_ORANGE}Checking system... [${CLR_ORANGE}%s${CLR_RESET}${CLR_GRAY}%s${CLR_RESET}${CLR_ORANGE}] %3d%%${CLR_RESET}" \
+            "$bar_filled" "$bar_empty" "$pct"
     }
 
     # Install required tools and display utilities

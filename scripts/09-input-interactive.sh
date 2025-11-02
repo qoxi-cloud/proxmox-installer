@@ -165,14 +165,14 @@ get_inputs_interactive() {
         local bridge_options=("internal" "external" "both")
         local bridge_header="Configure network bridges for VMs and containers"$'\n'
         bridge_header+="vmbr0 = external (bridged to physical NIC)"$'\n'
-        bridge_header+="vmbr1 = internal (NAT with private subnet)"
+        bridge_header+="vmbr1 = internal (NAT with private subnet)"$'\n'
 
         interactive_menu \
             "Network Bridge Mode (↑/↓ select, Enter confirm)" \
             "$bridge_header" \
-            "Internal only (NAT)|VMs use private IPs with NAT to internet" \
-            "External only (Bridged)|VMs get IPs from your router/DHCP" \
-            "Both bridges|Internal NAT + External bridged network"
+            "Internal only (NAT)|VMs use private IPs with NAT" \
+            "External only (Bridged)|VMs get IPs from router/DHCP" \
+            "Both bridges|Internal NAT + External bridged"
 
         BRIDGE_MODE="${bridge_options[$MENU_SELECTED]}"
         case "$BRIDGE_MODE" in
@@ -238,9 +238,9 @@ get_inputs_interactive() {
         local ipv6_options=("auto" "manual" "disabled")
         local ipv6_header="Configure IPv6 networking for dual-stack support."$'\n'
         if [[ -n "$MAIN_IPV6" ]]; then
-            ipv6_header+="Detected: ${MAIN_IPV6}"
+            ipv6_header+="Detected: ${MAIN_IPV6}"$'\n'
         else
-            ipv6_header+="No IPv6 address detected on interface."
+            ipv6_header+="No IPv6 address detected on interface."$'\n'
         fi
 
         interactive_menu \
@@ -310,8 +310,8 @@ get_inputs_interactive() {
                 "ZFS Storage Mode (↑/↓ select, Enter confirm)" \
                 "" \
                 "${zfs_labels[0]}|Survives 1 disk failure" \
-                "${zfs_labels[1]}|2x space & speed, data loss if any disk fails" \
-                "${zfs_labels[2]}|Uses first drive only, ignores other drives"
+                "${zfs_labels[1]}|2x space & speed, no redundancy" \
+                "${zfs_labels[2]}|Uses first drive only"
 
             ZFS_RAID="${zfs_options[$MENU_SELECTED]}"
             print_success "ZFS mode: ${zfs_labels[$MENU_SELECTED]}"
@@ -339,7 +339,7 @@ get_inputs_interactive() {
             "Proxmox Repository (↑/↓ select, Enter confirm)" \
             "Select which repository to use for updates" \
             "No-Subscription|Free community repository (default)" \
-            "Enterprise|Production-ready, requires subscription key" \
+            "Enterprise|Stable, requires subscription key" \
             "Test|Latest packages, may be unstable"
 
         PVE_REPO_TYPE="${repo_options[$MENU_SELECTED]}"
@@ -370,7 +370,7 @@ get_inputs_interactive() {
     else
         local shell_options=("zsh" "bash")
         local shell_header="Select the default shell for root user."$'\n'
-        shell_header+="ZSH includes autosuggestions and syntax highlighting."
+        shell_header+="ZSH includes autosuggestions and syntax highlighting."$'\n'
 
         interactive_menu \
             "Default Shell (↑/↓ select, Enter confirm)" \
@@ -388,15 +388,15 @@ get_inputs_interactive() {
     else
         local governor_options=("performance" "ondemand" "powersave" "schedutil" "conservative")
         local governor_header="Select CPU frequency scaling governor (power profile)."$'\n'
-        governor_header+="Affects power consumption, heat, and performance."
+        governor_header+="Affects power consumption, heat, and performance."$'\n'
 
         interactive_menu \
             "Power Profile (↑/↓ select, Enter confirm)" \
             "$governor_header" \
-            "Performance|Maximum speed, highest power (recommended for servers)" \
+            "Performance|Max speed, highest power (recommended)" \
             "On-demand|Scales frequency based on load" \
-            "Powersave|Minimum speed, lowest power consumption" \
-            "Schedutil|Kernel scheduler-driven scaling (modern)" \
+            "Powersave|Min speed, lowest power consumption" \
+            "Schedutil|Kernel scheduler-driven scaling" \
             "Conservative|Gradual frequency scaling"
 
         CPU_GOVERNOR="${governor_options[$MENU_SELECTED]}"
@@ -426,7 +426,7 @@ get_inputs_interactive() {
             interactive_menu \
                 "SSH Public Key (↑/↓ select, Enter confirm)" \
                 "$ssh_header" \
-                "Use detected key|Recommended - already configured in Hetzner" \
+                "Use detected key|Already configured in Hetzner" \
                 "Enter different key|Paste your own SSH public key"
 
             if [[ $MENU_SELECTED -eq 0 ]]; then
@@ -486,7 +486,7 @@ get_inputs_interactive() {
         fi
     else
         local ts_header="Tailscale provides secure remote access to your server."$'\n'
-        ts_header+="Auth key: https://login.tailscale.com/admin/settings/keys"
+        ts_header+="Auth key: https://login.tailscale.com/admin/settings/keys"$'\n'
 
         interactive_menu \
             "Tailscale VPN - Optional (↑/↓ select, Enter confirm)" \
@@ -641,7 +641,7 @@ get_inputs_interactive() {
         fi
     else
         local audit_header="Auditd tracks administrative actions for security compliance."$'\n'
-        audit_header+="Monitors: user changes, Proxmox CLI, SSH, firewall, ZFS, etc."
+        audit_header+="Monitors: user changes, Proxmox CLI, SSH, firewall, ZFS, etc."$'\n'
 
         interactive_menu \
             "Audit Logging - Optional (↑/↓ select, Enter confirm)" \

@@ -35,7 +35,6 @@ interactive_menu() {
         # Add header content if provided
         if [[ -n "$header" ]]; then
             content+="$header"$'\n'
-            content+=""$'\n'
         fi
 
         # Add options
@@ -79,6 +78,8 @@ interactive_menu() {
                 # Yellow for warnings and info lines (apply BEFORE checkbox colors)
                 if [[ "$content" == *"! "* ]]; then
                     content="${content//! /${CLR_YELLOW}⚠️ }"
+                    # Remove one trailing space to compensate for emoji width
+                    content="${content% }"
                     content="${content}${CLR_RESET}"
                 fi
                 # Lines starting with "  - " should be entirely yellow
@@ -92,7 +93,7 @@ interactive_menu() {
                 content="${content//Key:/${CLR_YELLOW}Key:${CLR_RESET}}"
                 content="${content//Comment:/${CLR_YELLOW}Comment:${CLR_RESET}}"
                 # Checkbox colors (apply AFTER yellow to ensure correct colors)
-                content="${content//\[\*\]/${CLR_GREEN}[●]${CLR_RESET}}"
+                content="${content//\[\*\]/${CLR_ORANGE}[●]${CLR_RESET}}"
                 content="${content//\[ \]/${CLR_GRAY}[○]${CLR_RESET}}"
                 echo "${CLR_GRAY}|${CLR_RESET}${content}${CLR_GRAY}|${CLR_RESET}"
             else
