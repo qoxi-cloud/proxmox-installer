@@ -422,6 +422,7 @@ get_inputs_interactive() {
             if [[ -n "$SSH_KEY_COMMENT" ]]; then
                 ssh_header+=$'\n'"  Comment: ${SSH_KEY_COMMENT}"
             fi
+            ssh_header+=$'\n'
 
             interactive_menu \
                 "SSH Public Key (↑/↓ select, Enter confirm)" \
