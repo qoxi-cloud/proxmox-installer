@@ -521,7 +521,7 @@ get_inputs_interactive() {
                 print_success "OpenSSH will be disabled on first boot"
                 print_success "Stealth firewall will be enabled (server hidden from internet)"
             else
-                print_success "Tailscale will be installed (manual auth required)"
+                print_warning "Tailscale: installed (no key - manual auth required)"
                 STEALTH_MODE="no"
             fi
         else
