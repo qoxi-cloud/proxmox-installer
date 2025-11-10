@@ -113,7 +113,7 @@ get_inputs_interactive() {
 
             interactive_menu \
                 "Proxmox VE Version (↑/↓ select, Enter confirm)" \
-                "Select which Proxmox VE version to install" \
+                "Select which Proxmox VE version to install"$'\n' \
                 "${iso_menu_items[@]}"
 
             PROXMOX_ISO_VERSION="${iso_array[$MENU_SELECTED]}"
