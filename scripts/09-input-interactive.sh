@@ -135,7 +135,7 @@ get_inputs_interactive() {
 
         interactive_menu \
             "Timezone (↑/↓ select, Enter confirm)" \
-            "" \
+            "Select your server timezone"$'\n' \
             "Europe/Kyiv|Ukraine" \
             "Europe/London|United Kingdom (GMT/BST)" \
             "Europe/Berlin|Germany, Central Europe (CET/CEST)" \
