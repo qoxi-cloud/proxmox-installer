@@ -255,7 +255,7 @@ show_progress() {
         if [[ "$silent" == true ]]; then
             printf "\r\e[K"
         else
-            printf "\r\e[K${CLR_GREEN}✓ %s${CLR_RESET}\n" "$done_message"
+            printf "\r\e[K${CLR_CYAN}✓ %s${CLR_RESET}\n" "$done_message"
         fi
     else
         printf "\r\e[K${CLR_RED}✗ %s${CLR_RESET}\n" "$message"
@@ -279,7 +279,7 @@ wait_with_progress() {
         local elapsed=$(($(date +%s) - start_time))
 
         if eval "$check_cmd" 2>/dev/null; then
-            printf "\r\e[K${CLR_GREEN}✓ %s${CLR_RESET}\n" "$done_message"
+            printf "\r\e[K${CLR_CYAN}✓ %s${CLR_RESET}\n" "$done_message"
             return 0
         fi
 

@@ -28,7 +28,7 @@ configure_base_system() {
     wait $pid6 || exit_code=1
     
     if [[ $exit_code -eq 0 ]]; then
-        printf "\r\e[K${CLR_GREEN}✓ Configuration files copied${CLR_RESET}\n"
+        printf "\r\e[K${CLR_CYAN}✓ Configuration files copied${CLR_RESET}\n"
     else
         printf "\r\e[K${CLR_RED}✗ Copying configuration files${CLR_RESET}\n"
         log "ERROR: Failed to copy some configuration files"

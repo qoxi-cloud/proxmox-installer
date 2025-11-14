@@ -12,7 +12,7 @@ get_inputs_interactive() {
     print_warning "Use the predictable name (enp*, eno*) for bare metal, not eth0"
     local iface_prompt="Interface name (options: ${AVAILABLE_ALTNAMES}): "
     read -e -p "$iface_prompt" -i "$INTERFACE_NAME" INTERFACE_NAME
-    printf "\033[A\r${CLR_GREEN}✓${CLR_RESET} ${iface_prompt}${INTERFACE_NAME}\033[K\n"
+    printf "\033[A\r${CLR_CYAN}✓${CLR_RESET} ${iface_prompt}${INTERFACE_NAME}\033[K\n"
 
     # Hostname
     if [[ -n "$PVE_HOSTNAME" ]]; then
@@ -32,7 +32,7 @@ get_inputs_interactive() {
     else
         local domain_prompt="Enter domain suffix: "
         read -e -p "$domain_prompt" -i "local" DOMAIN_SUFFIX
-        printf "\033[A\r${CLR_GREEN}✓${CLR_RESET} ${domain_prompt}${DOMAIN_SUFFIX}\033[K\n"
+        printf "\033[A\r${CLR_CYAN}✓${CLR_RESET} ${domain_prompt}${DOMAIN_SUFFIX}\033[K\n"
     fi
 
     # Email

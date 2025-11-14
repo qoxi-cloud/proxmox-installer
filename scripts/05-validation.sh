@@ -238,7 +238,7 @@ prompt_with_validation() {
     while true; do
         read -e -p "$prompt" -i "$default" result
         if $validator "$result"; then
-            printf "\033[A\r%s✓%s %s%s\033[K\n" "${CLR_GREEN}" "${CLR_RESET}" "$prompt" "$result"
+            printf "\033[A\r%s✓%s %s%s\033[K\n" "${CLR_CYAN}" "${CLR_RESET}" "$prompt" "$result"
             # Use printf -v for safe variable assignment (avoids eval)
             printf -v "$var_name" '%s' "$result"
             return 0
@@ -338,7 +338,7 @@ prompt_password() {
         password=$(read_password "$prompt")
         error=$(get_password_error "$password")
     done
-    printf "\033[A\r%s✓%s %s********\033[K\n" "${CLR_GREEN}" "${CLR_RESET}" "$prompt"
+    printf "\033[A\r%s✓%s %s********\033[K\n" "${CLR_CYAN}" "${CLR_RESET}" "$prompt"
     # Use printf -v for safe variable assignment (avoids eval)
     printf -v "$var_name" '%s' "$password"
 }

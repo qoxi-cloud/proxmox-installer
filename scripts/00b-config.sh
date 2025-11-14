@@ -81,7 +81,7 @@ validate_config() {
 load_config() {
     local file="$1"
     if [[ -f "$file" ]]; then
-        echo -e "${CLR_GREEN}✓ Loading configuration from: $file${CLR_RESET}"
+        echo -e "${CLR_CYAN}✓ Loading configuration from: $file${CLR_RESET}"
         # shellcheck source=/dev/null
         source "$file"
 
@@ -150,7 +150,7 @@ IPV6_GATEWAY="${IPV6_GATEWAY}"
 IPV6_ADDRESS="${IPV6_ADDRESS}"
 EOF
     chmod 600 "$file"
-    echo -e "${CLR_GREEN}✓ Configuration saved to: $file${CLR_RESET}"
+    echo -e "${CLR_CYAN}✓ Configuration saved to: $file${CLR_RESET}"
 }
 
 # Load config if specified

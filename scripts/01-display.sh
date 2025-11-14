@@ -65,7 +65,7 @@ colorize_status() {
         elif [[ "$line" =~ ^(\|)(.*)\|$ ]]; then
             local content="${BASH_REMATCH[2]}"
             # Color status markers
-            content="${content//\[OK\]/${CLR_GREEN}[OK]${CLR_RESET}}"
+            content="${content//\[OK\]/${CLR_CYAN}[OK]${CLR_RESET}}"
             content="${content//\[WARN\]/${CLR_YELLOW}[WARN]${CLR_RESET}}"
             content="${content//\[ERROR\]/${CLR_RED}[ERROR]${CLR_RESET}}"
             echo "${CLR_GRAY}|${CLR_RESET}${content}${CLR_GRAY}|${CLR_RESET}"
@@ -77,7 +77,7 @@ colorize_status() {
 
 # Print success message with checkmark
 print_success() {
-    echo -e "${CLR_GREEN}✓${CLR_RESET} $1"
+    echo -e "${CLR_CYAN}✓${CLR_RESET} $1"
 }
 
 # Print error message with cross

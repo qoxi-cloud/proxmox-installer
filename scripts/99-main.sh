@@ -208,7 +208,7 @@ get_system_inputs
 if [[ "$VALIDATE_ONLY" == true ]]; then
     log "Validate-only mode: showing configuration summary"
     echo ""
-    echo -e "${CLR_GREEN}✓ Configuration validated successfully${CLR_RESET}"
+    echo -e "${CLR_CYAN}✓ Configuration validated successfully${CLR_RESET}"
     echo ""
     echo "Configuration Summary:"
     echo "  Hostname:     $HOSTNAME"
@@ -256,7 +256,7 @@ if [[ "$DRY_RUN" == true ]]; then
     echo ""
 
     # Simulate prepare_packages
-    echo -e "${CLR_GREEN}[1/7]${CLR_RESET} prepare_packages"
+    echo -e "${CLR_CYAN}[1/7]${CLR_RESET} prepare_packages"
     echo "      - Add Proxmox repository to apt sources"
     echo "      - Download Proxmox GPG key"
     echo "      - Update package lists"
@@ -264,7 +264,7 @@ if [[ "$DRY_RUN" == true ]]; then
     echo ""
 
     # Simulate download_proxmox_iso
-    echo -e "${CLR_GREEN}[2/7]${CLR_RESET} download_proxmox_iso"
+    echo -e "${CLR_CYAN}[2/7]${CLR_RESET} download_proxmox_iso"
     if [[ -n "$PROXMOX_ISO_VERSION" ]]; then
         echo "      - Download ISO: ${PROXMOX_ISO_VERSION}"
     else
@@ -274,7 +274,7 @@ if [[ "$DRY_RUN" == true ]]; then
     echo ""
 
     # Simulate make_answer_toml
-    echo -e "${CLR_GREEN}[3/7]${CLR_RESET} make_answer_toml"
+    echo -e "${CLR_CYAN}[3/7]${CLR_RESET} make_answer_toml"
     echo "      - Generate answer.toml with:"
     echo "        FQDN:     $FQDN"
     echo "        Email:    $EMAIL"
@@ -283,12 +283,12 @@ if [[ "$DRY_RUN" == true ]]; then
     echo ""
 
     # Simulate make_autoinstall_iso
-    echo -e "${CLR_GREEN}[4/7]${CLR_RESET} make_autoinstall_iso"
+    echo -e "${CLR_CYAN}[4/7]${CLR_RESET} make_autoinstall_iso"
     echo "      - Create pve-autoinstall.iso with embedded answer.toml"
     echo ""
 
     # Simulate install_proxmox
-    echo -e "${CLR_GREEN}[5/7]${CLR_RESET} install_proxmox"
+    echo -e "${CLR_CYAN}[5/7]${CLR_RESET} install_proxmox"
     echo "      - Release drives: ${DRIVES[*]}"
     echo "      - Start QEMU with:"
     dry_run_cores=$(($(nproc) / 2))
@@ -304,14 +304,14 @@ if [[ "$DRY_RUN" == true ]]; then
     echo ""
 
     # Simulate boot_proxmox_with_port_forwarding
-    echo -e "${CLR_GREEN}[6/7]${CLR_RESET} boot_proxmox_with_port_forwarding"
+    echo -e "${CLR_CYAN}[6/7]${CLR_RESET} boot_proxmox_with_port_forwarding"
     echo "      - Boot installed system in QEMU"
     echo "      - Forward SSH port 5555 -> 22"
     echo "      - Wait for SSH to be ready"
     echo ""
 
     # Simulate configure_proxmox_via_ssh
-    echo -e "${CLR_GREEN}[7/7]${CLR_RESET} configure_proxmox_via_ssh"
+    echo -e "${CLR_CYAN}[7/7]${CLR_RESET} configure_proxmox_via_ssh"
     echo "      - Configure network interfaces (bridge mode: $BRIDGE_MODE)"
     echo "      - Configure ZFS ARC limits"
     echo "      - Install system utilities: ${SYSTEM_UTILITIES}"
@@ -333,7 +333,7 @@ if [[ "$DRY_RUN" == true ]]; then
 
     echo -e "${CLR_GRAY}═══════════════════════════════════════════════════════════${CLR_RESET}"
     echo ""
-    echo -e "${CLR_GREEN}Configuration Summary:${CLR_RESET}"
+    echo -e "${CLR_CYAN}Configuration Summary:${CLR_RESET}"
     echo "  Hostname:     $HOSTNAME"
     echo "  FQDN:         $FQDN"
     echo "  Email:        $EMAIL"
@@ -354,7 +354,7 @@ if [[ "$DRY_RUN" == true ]]; then
     echo ""
     echo -e "${CLR_GRAY}═══════════════════════════════════════════════════════════${CLR_RESET}"
     echo ""
-    echo -e "${CLR_GREEN}✓ Dry-run completed successfully${CLR_RESET}"
+    echo -e "${CLR_CYAN}✓ Dry-run completed successfully${CLR_RESET}"
     echo -e "${CLR_YELLOW}Run without --dry-run to perform actual installation${CLR_RESET}"
     echo ""
 

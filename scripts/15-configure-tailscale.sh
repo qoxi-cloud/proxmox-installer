@@ -44,7 +44,7 @@ configure_tailscale() {
         TAILSCALE_IP=$(cat "$tmp_ip" 2>/dev/null || echo "pending")
         TAILSCALE_HOSTNAME=$(cat "$tmp_hostname" 2>/dev/null || echo "")
         # Overwrite completion line with IP
-        printf "\033[1A\r%s✓ Tailscale authenticated. IP: %s%s                              \n" "${CLR_GREEN}" "${TAILSCALE_IP}" "${CLR_RESET}"
+        printf "\033[1A\r%s✓ Tailscale authenticated. IP: %s%s                              \n" "${CLR_CYAN}" "${TAILSCALE_IP}" "${CLR_RESET}"
 
         # Configure Tailscale Serve for Proxmox Web UI
         if [[ "$TAILSCALE_WEBUI" == "yes" ]]; then
