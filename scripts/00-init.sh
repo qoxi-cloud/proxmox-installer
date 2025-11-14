@@ -11,7 +11,7 @@ export LC_ALL=en_US.UTF-8
 # Colors and configuration
 # =============================================================================
 CLR_RED=$'\033[1;31m'
-CLR_CYAN=$'\033[38;5;45m'
+CLR_CYAN=$'\033[38;2;0;177;255m'
 CLR_YELLOW=$'\033[1;33m'
 CLR_ORANGE=$'\033[38;5;208m'
 CLR_GRAY=$'\033[38;5;240m'
