@@ -243,7 +243,7 @@ show_progress() {
     local i=0
 
     while kill -0 "$pid" 2>/dev/null; do
-        printf "\r\e[K${CLR_YELLOW}%s %s${CLR_RESET}" "${SPINNER_CHARS[i++ % ${#SPINNER_CHARS[@]}]}" "$message"
+        printf "\r\e[K${CLR_TEAL}%s %s${CLR_RESET}" "${SPINNER_CHARS[i++ % ${#SPINNER_CHARS[@]}]}" "$message"
         sleep 0.2
     done
 
@@ -255,10 +255,10 @@ show_progress() {
         if [[ "$silent" == true ]]; then
             printf "\r\e[K"
         else
-            printf "\r\e[K${CLR_CYAN}✓ %s${CLR_RESET}\n" "$done_message"
+            printf "\r\e[K${CLR_CYAN}✓${CLR_RESET} %s\n" "$done_message"
         fi
     else
-        printf "\r\e[K${CLR_RED}✗ %s${CLR_RESET}\n" "$message"
+        printf "\r\e[K${CLR_RED}✗${CLR_RESET} %s\n" "$message"
     fi
 
     return $exit_code
@@ -279,16 +279,16 @@ wait_with_progress() {
         local elapsed=$(($(date +%s) - start_time))
 
         if eval "$check_cmd" 2>/dev/null; then
-            printf "\r\e[K${CLR_CYAN}✓ %s${CLR_RESET}\n" "$done_message"
+            printf "\r\e[K${CLR_CYAN}✓${CLR_RESET} %s\n" "$done_message"
             return 0
         fi
 
         if [ $elapsed -ge $timeout ]; then
-            printf "\r\e[K${CLR_RED}✗ %s timed out${CLR_RESET}\n" "$message"
+            printf "\r\e[K${CLR_RED}✗${CLR_RESET} %s timed out\n" "$message"
             return 1
         fi
 
-        printf "\r\e[K${CLR_YELLOW}%s %s${CLR_RESET}" "${SPINNER_CHARS[i++ % ${#SPINNER_CHARS[@]}]}" "$message"
+        printf "\r\e[K${CLR_TEAL}%s %s${CLR_RESET}" "${SPINNER_CHARS[i++ % ${#SPINNER_CHARS[@]}]}" "$message"
         sleep "$interval"
     done
 }
