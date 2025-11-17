@@ -12,7 +12,9 @@ get_inputs_interactive() {
     print_warning "Use the predictable name (enp*, eno*) for bare metal, not eth0"
     local iface_prompt="Interface name (options: ${AVAILABLE_ALTNAMES}): "
     read -e -p "$iface_prompt" -i "$INTERFACE_NAME" INTERFACE_NAME
-    printf "\033[A\r${CLR_CYAN}✓${CLR_RESET} ${iface_prompt}${INTERFACE_NAME}\033[K\n"
+    # Clear detection message, warning, and input line (4 lines up), then show success
+    printf "\033[4A\033[J"
+    print_success "Interface: ${INTERFACE_NAME}"
 
     # Hostname
     if [[ -n "$PVE_HOSTNAME" ]]; then
