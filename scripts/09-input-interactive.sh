@@ -14,11 +14,11 @@ get_inputs_interactive() {
     read -e -p "$iface_prompt" -i "$INTERFACE_NAME" INTERFACE_NAME
     # Clear detection message, warning, and input line (4 lines up), then show success
     printf "\033[4A\033[J"
-    print_success "Interface: ${INTERFACE_NAME}"
+    print_success "Interface:" "${INTERFACE_NAME}"
 
     # Hostname
     if [[ -n "$PVE_HOSTNAME" ]]; then
-        print_success "Hostname: ${PVE_HOSTNAME} (from env)"
+        print_success "Hostname:" "${PVE_HOSTNAME} (from env)"
     else
         prompt_with_validation \
             "Enter your hostname (e.g., pve, proxmox): " \
@@ -30,16 +30,17 @@ get_inputs_interactive() {
 
     # Domain
     if [[ -n "$DOMAIN_SUFFIX" ]]; then
-        print_success "Domain: ${DOMAIN_SUFFIX} (from env)"
+        print_success "Domain:" "${DOMAIN_SUFFIX} (from env)"
     else
         local domain_prompt="Enter domain suffix: "
         read -e -p "$domain_prompt" -i "local" DOMAIN_SUFFIX
-        printf "\033[A\r${CLR_CYAN}✓${CLR_RESET} ${domain_prompt}${DOMAIN_SUFFIX}\033[K\n"
+        printf "\033[A\033[2K"
+        print_success "Domain:" "${DOMAIN_SUFFIX}"
     fi
 
     # Email
     if [[ -n "$EMAIL" ]]; then
-        print_success "Email: ${EMAIL} (from env)"
+        print_success "Email:" "${EMAIL} (from env)"
     else
         prompt_with_validation \
             "Enter your email address: " \
@@ -54,7 +55,7 @@ get_inputs_interactive() {
         if ! validate_password_with_error "$NEW_ROOT_PASSWORD"; then
             exit 1
         fi
-        print_success "Password: ******** (from env)"
+        print_success "Password:" "******** (from env)"
     else
         echo -n "Enter root password (or press Enter to auto-generate): "
         local input_password
@@ -65,7 +66,7 @@ get_inputs_interactive() {
         if [[ -z "$input_password" ]]; then
             NEW_ROOT_PASSWORD=$(generate_password "$DEFAULT_PASSWORD_LENGTH")
             PASSWORD_GENERATED="yes"
-            print_success "Password: auto-generated (will be shown at the end)"
+            print_success "Password:" "auto-generated (will be shown at the end)"
         else
             password_error=$(get_password_error "$input_password")
             while [[ -n "$password_error" ]]; do
@@ -74,7 +75,7 @@ get_inputs_interactive() {
                 password_error=$(get_password_error "$input_password")
             done
             NEW_ROOT_PASSWORD="$input_password"
-            print_success "Password: ********"
+            print_success "Password:" "********"
         fi
     fi
 
@@ -84,7 +85,7 @@ get_inputs_interactive() {
 
     # --- Proxmox ISO Version ---
     if [[ -n "$PROXMOX_ISO_VERSION" ]]; then
-        print_success "Proxmox ISO: ${PROXMOX_ISO_VERSION} (from env/cli)"
+        print_success "Proxmox ISO:" "${PROXMOX_ISO_VERSION} (from env/cli)"
     else
         # Fetch available ISO versions
         local iso_list
@@ -122,16 +123,16 @@ get_inputs_interactive() {
             local selected_version
             selected_version=$(get_iso_version "$PROXMOX_ISO_VERSION")
             if [[ $MENU_SELECTED -eq 0 ]]; then
-                print_success "Proxmox VE: ${selected_version} (latest)"
+                print_success "Proxmox VE:" "${selected_version} (latest)"
             else
-                print_success "Proxmox VE: ${selected_version}"
+                print_success "Proxmox VE:" "${selected_version}"
             fi
         fi
     fi
 
     # --- Timezone ---
     if [[ -n "$TIMEZONE" ]]; then
-        print_success "Timezone: ${TIMEZONE} (from env)"
+        print_success "Timezone:" "${TIMEZONE} (from env)"
     else
         local tz_options=("Europe/Kyiv" "Europe/London" "Europe/Berlin" "America/New_York" "America/Los_Angeles" "Asia/Tokyo" "UTC" "custom")
 
@@ -156,13 +157,13 @@ get_inputs_interactive() {
                 "TIMEZONE"
         else
             TIMEZONE="${tz_options[$MENU_SELECTED]}"
-            print_success "Timezone: ${TIMEZONE}"
+            print_success "Timezone:" "${TIMEZONE}"
         fi
     fi
 
     # --- Bridge mode ---
     if [[ -n "$BRIDGE_MODE" ]]; then
-        print_success "Bridge mode: ${BRIDGE_MODE} (from env)"
+        print_success "Bridge mode:" "${BRIDGE_MODE} (from env)"
     else
         local bridge_options=("internal" "external" "both")
         local bridge_header="Configure network bridges for VMs and containers"$'\n'
@@ -178,16 +179,16 @@ get_inputs_interactive() {
 
         BRIDGE_MODE="${bridge_options[$MENU_SELECTED]}"
         case "$BRIDGE_MODE" in
-            internal) print_success "Bridge mode: Internal NAT only (vmbr0)" ;;
-            external) print_success "Bridge mode: External bridged only (vmbr0)" ;;
-            both)     print_success "Bridge mode: Both (vmbr0=external, vmbr1=internal)" ;;
+            internal) print_success "Bridge mode:" "Internal NAT only (vmbr0)" ;;
+            external) print_success "Bridge mode:" "External bridged only (vmbr0)" ;;
+            both)     print_success "Bridge mode:" "Both (vmbr0=external, vmbr1=internal)" ;;
         esac
     fi
 
     # --- Private subnet ---
     if [[ "$BRIDGE_MODE" == "internal" || "$BRIDGE_MODE" == "both" ]]; then
         if [[ -n "$PRIVATE_SUBNET" ]]; then
-            print_success "Private subnet: ${PRIVATE_SUBNET} (from env)"
+            print_success "Private subnet:" "${PRIVATE_SUBNET} (from env)"
         else
             local subnet_options=("10.0.0.0/24" "192.168.1.0/24" "172.16.0.0/24" "custom")
 
@@ -208,7 +209,7 @@ get_inputs_interactive() {
                     "PRIVATE_SUBNET"
             else
                 PRIVATE_SUBNET="${subnet_options[$MENU_SELECTED]}"
-                print_success "Private subnet: ${PRIVATE_SUBNET}"
+                print_success "Private subnet:" "${PRIVATE_SUBNET}"
             fi
         fi
     fi
@@ -220,17 +221,17 @@ get_inputs_interactive() {
             MAIN_IPV6=""
             IPV6_GATEWAY=""
             FIRST_IPV6_CIDR=""
-            print_success "IPv6: disabled (from env)"
+            print_success "IPv6:" "disabled (from env)"
         elif [[ "$IPV6_MODE" == "manual" ]]; then
             IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
             if [[ -n "$IPV6_ADDRESS" ]]; then
                 MAIN_IPV6="${IPV6_ADDRESS%/*}"
             fi
-            print_success "IPv6: ${MAIN_IPV6:-auto} (gateway: ${IPV6_GATEWAY}, from env)"
+            print_success "IPv6:" "${MAIN_IPV6:-auto} (gateway: ${IPV6_GATEWAY}, from env)"
         else
             IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
             if [[ -n "$MAIN_IPV6" ]]; then
-                print_success "IPv6: ${MAIN_IPV6} (gateway: ${IPV6_GATEWAY}, from env)"
+                print_success "IPv6:" "${MAIN_IPV6} (gateway: ${IPV6_GATEWAY}, from env)"
             else
                 print_warning "IPv6: not detected"
             fi
@@ -258,7 +259,7 @@ get_inputs_interactive() {
             MAIN_IPV6=""
             IPV6_GATEWAY=""
             FIRST_IPV6_CIDR=""
-            print_success "IPv6: disabled"
+            print_success "IPv6:" "disabled"
         elif [[ "$IPV6_MODE" == "manual" ]]; then
             # Manual IPv6 address entry
             local ipv6_content="Enter your IPv6 address in CIDR notation."$'\n'
@@ -288,12 +289,12 @@ get_inputs_interactive() {
             done
 
             IPV6_GATEWAY="${INPUT_VALUE:-$DEFAULT_IPV6_GATEWAY}"
-            print_success "IPv6: ${MAIN_IPV6:-none} (gateway: ${IPV6_GATEWAY})"
+            print_success "IPv6:" "${MAIN_IPV6:-none} (gateway: ${IPV6_GATEWAY})"
         else
             # Auto mode
             IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
             if [[ -n "$MAIN_IPV6" ]]; then
-                print_success "IPv6: ${MAIN_IPV6} (gateway: ${IPV6_GATEWAY})"
+                print_success "IPv6:" "${MAIN_IPV6} (gateway: ${IPV6_GATEWAY})"
             else
                 print_warning "IPv6: not detected (will be IPv4-only)"
             fi
@@ -303,7 +304,7 @@ get_inputs_interactive() {
     # --- ZFS RAID mode ---
     if [[ "${DRIVE_COUNT:-0}" -ge 2 ]]; then
         if [[ -n "$ZFS_RAID" ]]; then
-            print_success "ZFS mode: ${ZFS_RAID} (from env)"
+            print_success "ZFS mode:" "${ZFS_RAID} (from env)"
         else
             local zfs_options=("raid1" "raid0" "single")
             local zfs_labels=("RAID-1 (mirror) - Recommended" "RAID-0 (stripe) - No redundancy" "Single drive - No redundancy")
@@ -316,23 +317,23 @@ get_inputs_interactive() {
                 "${zfs_labels[2]}|Uses first drive only"
 
             ZFS_RAID="${zfs_options[$MENU_SELECTED]}"
-            print_success "ZFS mode: ${zfs_labels[$MENU_SELECTED]}"
+            print_success "ZFS mode:" "${zfs_labels[$MENU_SELECTED]}"
         fi
     else
         # Single drive - no RAID options available
         if [[ -n "$ZFS_RAID" ]]; then
-            print_success "ZFS mode: ${ZFS_RAID} (from env)"
+            print_success "ZFS mode:" "${ZFS_RAID} (from env)"
         else
             ZFS_RAID="single"
-            print_success "ZFS mode: single (1 drive detected)"
+            print_success "ZFS mode:" "single (1 drive detected)"
         fi
     fi
 
     # --- Proxmox Repository ---
     if [[ -n "$PVE_REPO_TYPE" ]]; then
-        print_success "Repository: ${PVE_REPO_TYPE} (from env)"
+        print_success "Repository:" "${PVE_REPO_TYPE} (from env)"
         if [[ "$PVE_REPO_TYPE" == "enterprise" && -n "$PVE_SUBSCRIPTION_KEY" ]]; then
-            print_success "Subscription key: configured"
+            print_success "Subscription key:" "configured"
         fi
     else
         local repo_options=("no-subscription" "enterprise" "test")
@@ -357,19 +358,19 @@ get_inputs_interactive() {
             PVE_SUBSCRIPTION_KEY="$INPUT_VALUE"
 
             if [[ -n "$PVE_SUBSCRIPTION_KEY" ]]; then
-                print_success "Repository: enterprise (key configured)"
+                print_success "Repository:" "enterprise (key configured)"
             else
                 print_warning "Repository: enterprise (no key - will show warning in UI)"
             fi
         else
             PVE_SUBSCRIPTION_KEY=""
-            print_success "Repository: ${PVE_REPO_TYPE}"
+            print_success "Repository:" "${PVE_REPO_TYPE}"
         fi
     fi
 
     # --- Default Shell ---
     if [[ -n "$DEFAULT_SHELL" ]]; then
-        print_success "Default shell: ${DEFAULT_SHELL} (from env)"
+        print_success "Default shell:" "${DEFAULT_SHELL} (from env)"
     else
         local shell_options=("zsh" "bash")
         local shell_header="Select the default shell for root user."$'\n'
@@ -382,12 +383,12 @@ get_inputs_interactive() {
             "Bash|Default system shell"
 
         DEFAULT_SHELL="${shell_options[$MENU_SELECTED]}"
-        print_success "Default shell: ${DEFAULT_SHELL}"
+        print_success "Default shell:" "${DEFAULT_SHELL}"
     fi
 
     # --- CPU Governor / Power Profile ---
     if [[ -n "$CPU_GOVERNOR" ]]; then
-        print_success "Power profile: ${CPU_GOVERNOR} (from env)"
+        print_success "Power profile:" "${CPU_GOVERNOR} (from env)"
     else
         local governor_options=("performance" "ondemand" "powersave" "schedutil" "conservative")
         local governor_header="Select CPU frequency scaling governor (power profile)."$'\n'
@@ -403,13 +404,13 @@ get_inputs_interactive() {
             "Conservative|Gradual frequency scaling"
 
         CPU_GOVERNOR="${governor_options[$MENU_SELECTED]}"
-        print_success "Power profile: ${CPU_GOVERNOR}"
+        print_success "Power profile:" "${CPU_GOVERNOR}"
     fi
 
     # --- SSH Public Key ---
     if [[ -n "$SSH_PUBLIC_KEY" ]]; then
         parse_ssh_key "$SSH_PUBLIC_KEY"
-        print_success "SSH key: ${SSH_KEY_TYPE} (from env)"
+        print_success "SSH key:" "${SSH_KEY_TYPE} (from env)"
     else
         local DETECTED_SSH_KEY
         DETECTED_SSH_KEY=$(get_rescue_ssh_key)
@@ -435,7 +436,7 @@ get_inputs_interactive() {
 
             if [[ $MENU_SELECTED -eq 0 ]]; then
                 SSH_PUBLIC_KEY="$DETECTED_SSH_KEY"
-                print_success "SSH key configured (${SSH_KEY_TYPE})"
+                print_success "SSH key:" "configured (${SSH_KEY_TYPE})"
             else
                 SSH_PUBLIC_KEY=""
             fi
@@ -468,7 +469,7 @@ get_inputs_interactive() {
 
             SSH_PUBLIC_KEY="$INPUT_VALUE"
             parse_ssh_key "$SSH_PUBLIC_KEY"
-            print_success "SSH key configured (${SSH_KEY_TYPE})"
+            print_success "SSH key:" "configured (${SSH_KEY_TYPE})"
         fi
     fi
 
@@ -478,15 +479,15 @@ get_inputs_interactive() {
             TAILSCALE_SSH="${TAILSCALE_SSH:-yes}"
             TAILSCALE_WEBUI="${TAILSCALE_WEBUI:-yes}"
             if [[ -n "$TAILSCALE_AUTH_KEY" ]]; then
-                print_success "Tailscale: yes (auto-connect, from env)"
+                print_success "Tailscale:" "yes (auto-connect, from env)"
             else
-                print_success "Tailscale: yes (manual auth, from env)"
+                print_success "Tailscale:" "yes (manual auth, from env)"
             fi
         else
             TAILSCALE_AUTH_KEY=""
             TAILSCALE_SSH="no"
             TAILSCALE_WEBUI="no"
-            print_success "Tailscale: skipped (from env)"
+            print_success "Tailscale:" "skipped (from env)"
         fi
     else
         local ts_header="Tailscale provides secure remote access to your server."$'\n'
@@ -519,9 +520,9 @@ get_inputs_interactive() {
                 # Auto-enable security features when auth key is provided
                 TAILSCALE_DISABLE_SSH="yes"
                 STEALTH_MODE="yes"
-                print_success "Tailscale will be installed (auto-connect)"
-                print_success "OpenSSH will be disabled on first boot"
-                print_success "Stealth firewall will be enabled (server hidden from internet)"
+                print_success "Tailscale:" "will be installed (auto-connect)"
+                print_success "OpenSSH:" "will be disabled on first boot"
+                print_success "Stealth firewall:" "enabled (server hidden from internet)"
             else
                 print_warning "Tailscale: enabled (no key - manual auth required)"
                 STEALTH_MODE="no"
@@ -533,14 +534,14 @@ get_inputs_interactive() {
             TAILSCALE_WEBUI="no"
             TAILSCALE_DISABLE_SSH="no"
             STEALTH_MODE="no"
-            print_success "Tailscale installation skipped"
+            print_success "Tailscale:" "installation skipped"
         fi
     fi
 
     # --- SSL Certificate (only if Tailscale is not installed) ---
     if [[ "$INSTALL_TAILSCALE" != "yes" ]]; then
         if [[ -n "$SSL_TYPE" ]]; then
-            print_success "SSL certificate: ${SSL_TYPE} (from env)"
+            print_success "SSL certificate:" "${SSL_TYPE} (from env)"
         else
             local ssl_options=("self-signed" "letsencrypt")
             local le_fqdn="${FQDN:-$PVE_HOSTNAME.$DOMAIN_SUFFIX}"
@@ -595,7 +596,7 @@ get_inputs_interactive() {
                     fi
 
                     if [[ $dns_result -eq 0 ]]; then
-                        print_success "SSL: Let's Encrypt (DNS verified: ${le_fqdn} → ${expected_ip})"
+                        print_success "SSL:" "Let's Encrypt (DNS verified: ${le_fqdn} → ${expected_ip})"
                         break
                     fi
 
@@ -628,7 +629,7 @@ get_inputs_interactive() {
                     exit 1
                 fi
             else
-                print_success "SSL: Self-signed certificate"
+                print_success "SSL:" "Self-signed certificate"
             fi
         fi
     else
@@ -639,9 +640,9 @@ get_inputs_interactive() {
     # --- Audit Logging (auditd) ---
     if [[ -n "$INSTALL_AUDITD" ]]; then
         if [[ "$INSTALL_AUDITD" == "yes" ]]; then
-            print_success "Audit logging: enabled (from env)"
+            print_success "Audit logging:" "enabled (from env)"
         else
-            print_success "Audit logging: skipped (from env)"
+            print_success "Audit logging:" "skipped (from env)"
         fi
     else
         local audit_header="Auditd tracks administrative actions for security compliance."$'\n'
@@ -655,10 +656,10 @@ get_inputs_interactive() {
 
         if [[ $MENU_SELECTED -eq 1 ]]; then
             INSTALL_AUDITD="yes"
-            print_success "Audit logging enabled"
+            print_success "Audit logging:" "enabled"
         else
             INSTALL_AUDITD="no"
-            print_success "Audit logging skipped"
+            print_success "Audit logging:" "skipped"
         fi
     fi
 }

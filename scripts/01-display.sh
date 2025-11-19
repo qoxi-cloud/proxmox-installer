@@ -76,8 +76,14 @@ colorize_status() {
 }
 
 # Print success message with checkmark
+# Usage: print_success "label: value" or print_success "label" "value"
+# When 2 args provided, value is highlighted in cyan
 print_success() {
-    echo -e "${CLR_CYAN}✓${CLR_RESET} $1"
+    if [[ $# -eq 2 ]]; then
+        echo -e "${CLR_CYAN}✓${CLR_RESET} $1 ${CLR_CYAN}$2${CLR_RESET}"
+    else
+        echo -e "${CLR_CYAN}✓${CLR_RESET} $1"
+    fi
 }
 
 # Print error message with cross

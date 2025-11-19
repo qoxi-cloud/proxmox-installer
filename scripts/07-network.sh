@@ -54,7 +54,7 @@ detect_network_interface() {
     # Use predictable name if found
     if [[ -n "$PREDICTABLE_NAME" ]]; then
         DEFAULT_INTERFACE="$PREDICTABLE_NAME"
-        print_success "Detected predictable interface name: ${PREDICTABLE_NAME} (current: ${CURRENT_INTERFACE})"
+        print_success "Detected predictable interface name:" "${PREDICTABLE_NAME} (current: ${CURRENT_INTERFACE})"
     else
         DEFAULT_INTERFACE="$CURRENT_INTERFACE"
         print_warning "Could not detect predictable interface name"

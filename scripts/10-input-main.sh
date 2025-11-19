@@ -8,7 +8,7 @@ get_system_inputs() {
     collect_network_info
 
     if [[ "$NON_INTERACTIVE" == true ]]; then
-        print_success "Network interface: ${INTERFACE_NAME}"
+        print_success "Network interface:" "${INTERFACE_NAME}"
         get_inputs_non_interactive
     else
         get_inputs_interactive

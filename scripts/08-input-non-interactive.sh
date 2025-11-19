@@ -57,24 +57,24 @@ get_inputs_non_interactive() {
     fi
 
     # Display configuration
-    print_success "Network interface: ${INTERFACE_NAME}"
-    print_success "Hostname: ${PVE_HOSTNAME}"
-    print_success "Domain: ${DOMAIN_SUFFIX}"
-    print_success "Timezone: ${TIMEZONE}"
-    print_success "Email: ${EMAIL}"
-    print_success "Bridge mode: ${BRIDGE_MODE}"
+    print_success "Network interface:" "${INTERFACE_NAME}"
+    print_success "Hostname:" "${PVE_HOSTNAME}"
+    print_success "Domain:" "${DOMAIN_SUFFIX}"
+    print_success "Timezone:" "${TIMEZONE}"
+    print_success "Email:" "${EMAIL}"
+    print_success "Bridge mode:" "${BRIDGE_MODE}"
 
     if [[ "$BRIDGE_MODE" == "internal" || "$BRIDGE_MODE" == "both" ]]; then
-        print_success "Private subnet: ${PRIVATE_SUBNET}"
+        print_success "Private subnet:" "${PRIVATE_SUBNET}"
     fi
-    print_success "Default shell: ${DEFAULT_SHELL}"
-    print_success "Power profile: ${CPU_GOVERNOR}"
+    print_success "Default shell:" "${DEFAULT_SHELL}"
+    print_success "Power profile:" "${CPU_GOVERNOR}"
 
     # Display IPv6 configuration
     if [[ "$IPV6_MODE" == "disabled" ]]; then
-        print_success "IPv6: disabled"
+        print_success "IPv6:" "disabled"
     elif [[ -n "$MAIN_IPV6" ]]; then
-        print_success "IPv6: ${MAIN_IPV6} (gateway: ${IPV6_GATEWAY})"
+        print_success "IPv6:" "${MAIN_IPV6} (gateway: ${IPV6_GATEWAY})"
     else
         print_warning "IPv6: not detected"
     fi
@@ -87,18 +87,18 @@ get_inputs_non_interactive() {
             ZFS_RAID="single"
         fi
     fi
-    print_success "ZFS mode: ${ZFS_RAID}"
+    print_success "ZFS mode:" "${ZFS_RAID}"
 
     # Password - generate if not provided
     if [[ -z "$NEW_ROOT_PASSWORD" ]]; then
         NEW_ROOT_PASSWORD=$(generate_password 16)
         PASSWORD_GENERATED="yes"
-        print_success "Password: auto-generated (will be shown at the end)"
+        print_success "Password:" "auto-generated (will be shown at the end)"
     else
         if ! validate_password_with_error "$NEW_ROOT_PASSWORD"; then
             exit 1
         fi
-        print_success "Password: ******** (from env)"
+        print_success "Password:" "******** (from env)"
     fi
 
     # SSH Public Key
@@ -110,13 +110,13 @@ get_inputs_non_interactive() {
         exit 1
     fi
     parse_ssh_key "$SSH_PUBLIC_KEY"
-    print_success "SSH key configured (${SSH_KEY_TYPE})"
+    print_success "SSH key:" "configured (${SSH_KEY_TYPE})"
 
     # Proxmox repository
     PVE_REPO_TYPE="${PVE_REPO_TYPE:-no-subscription}"
-    print_success "Repository: ${PVE_REPO_TYPE}"
+    print_success "Repository:" "${PVE_REPO_TYPE}"
     if [[ "$PVE_REPO_TYPE" == "enterprise" && -n "$PVE_SUBSCRIPTION_KEY" ]]; then
-        print_success "Subscription key: configured"
+        print_success "Subscription key:" "configured"
     fi
 
     # SSL certificate
@@ -130,7 +130,7 @@ get_inputs_non_interactive() {
 
         case $dns_result in
             0)
-                print_success "SSL certificate: letsencrypt (DNS verified: ${le_fqdn} → ${expected_ip})"
+                print_success "SSL certificate:" "letsencrypt (DNS verified: ${le_fqdn} → ${expected_ip})"
                 ;;
             1)
                 log "ERROR: DNS validation failed - ${le_fqdn} does not resolve"
@@ -151,15 +151,15 @@ get_inputs_non_interactive() {
                 ;;
         esac
     else
-        print_success "SSL certificate: ${SSL_TYPE}"
+        print_success "SSL certificate:" "${SSL_TYPE}"
     fi
 
     # Audit logging (auditd)
     INSTALL_AUDITD="${INSTALL_AUDITD:-no}"
     if [[ "$INSTALL_AUDITD" == "yes" ]]; then
-        print_success "Audit logging: enabled"
+        print_success "Audit logging:" "enabled"
     else
-        print_success "Audit logging: disabled"
+        print_success "Audit logging:" "disabled"
     fi
 
     # Tailscale
@@ -169,24 +169,24 @@ get_inputs_non_interactive() {
         TAILSCALE_WEBUI="${TAILSCALE_WEBUI:-yes}"
         TAILSCALE_DISABLE_SSH="${TAILSCALE_DISABLE_SSH:-no}"
         if [[ -n "$TAILSCALE_AUTH_KEY" ]]; then
-            print_success "Tailscale will be installed (auto-connect)"
+            print_success "Tailscale:" "will be installed (auto-connect)"
         else
-            print_success "Tailscale will be installed (manual auth required)"
+            print_success "Tailscale:" "will be installed (manual auth required)"
         fi
-        print_success "Tailscale SSH: ${TAILSCALE_SSH}"
-        print_success "Tailscale WebUI: ${TAILSCALE_WEBUI}"
+        print_success "Tailscale SSH:" "${TAILSCALE_SSH}"
+        print_success "Tailscale WebUI:" "${TAILSCALE_WEBUI}"
         if [[ "$TAILSCALE_SSH" == "yes" && "$TAILSCALE_DISABLE_SSH" == "yes" ]]; then
-            print_success "OpenSSH: will be disabled on first boot"
+            print_success "OpenSSH:" "will be disabled on first boot"
             # Enable stealth mode when OpenSSH is disabled
             STEALTH_MODE="${STEALTH_MODE:-yes}"
             if [[ "$STEALTH_MODE" == "yes" ]]; then
-                print_success "Stealth firewall: enabled"
+                print_success "Stealth firewall:" "enabled"
             fi
         else
             STEALTH_MODE="${STEALTH_MODE:-no}"
         fi
     else
         STEALTH_MODE="${STEALTH_MODE:-no}"
-        print_success "Tailscale: skipped"
+        print_success "Tailscale:" "skipped"
     fi
 }

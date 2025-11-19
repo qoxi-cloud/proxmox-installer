@@ -169,7 +169,7 @@ download_proxmox_iso() {
 
     if [[ -f "pve.iso" ]]; then
         log "Proxmox ISO already exists, skipping download"
-        print_success "Proxmox ISO already exists, skipping download"
+        print_success "Proxmox ISO:" "already exists, skipping download"
         return 0
     fi
 

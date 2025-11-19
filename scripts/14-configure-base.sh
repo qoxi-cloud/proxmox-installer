@@ -191,7 +191,7 @@ configure_shell() {
         ) > /dev/null 2>&1 &
         show_progress $! "Configuring ZSH" "ZSH with Powerlevel10k configured"
     else
-        print_success "Bash configured as default shell"
+        print_success "Default shell:" "Bash"
     fi
 }
 
