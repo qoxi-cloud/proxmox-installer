@@ -226,19 +226,21 @@ validate_timezone() {
 # =============================================================================
 
 # Prompt for input with validation, showing success checkmark when valid
-# Usage: prompt_with_validation "prompt" "default" "validator" "error_msg" "var_name"
+# Usage: prompt_with_validation "prompt" "default" "validator" "error_msg" "var_name" ["confirm_label"]
+# confirm_label: Optional short label for confirmation (e.g., "Hostname:" instead of full prompt)
 prompt_with_validation() {
     local prompt="$1"
     local default="$2"
     local validator="$3"
     local error_msg="$4"
     local var_name="$5"
+    local confirm_label="${6:-$prompt}"
 
     local result
     while true; do
         read -e -p "$prompt" -i "$default" result
         if $validator "$result"; then
-            printf "\033[A\r%s✓%s %s%s%s%s\033[K\n" "${CLR_CYAN}" "${CLR_RESET}" "$prompt" "${CLR_CYAN}" "$result" "${CLR_RESET}"
+            printf "\033[A\r%s✓%s %s%s%s%s\033[K\n" "${CLR_CYAN}" "${CLR_RESET}" "$confirm_label" "${CLR_CYAN}" "$result" "${CLR_RESET}"
             # Use printf -v for safe variable assignment (avoids eval)
             printf -v "$var_name" '%s' "$result"
             return 0

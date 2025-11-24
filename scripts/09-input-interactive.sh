@@ -22,10 +22,11 @@ get_inputs_interactive() {
     else
         prompt_with_validation \
             "Enter your hostname (e.g., pve, proxmox): " \
-            "pve-qoxi-cloud" \
+            "pve" \
             "validate_hostname" \
             "Invalid hostname. Use only letters, numbers, and hyphens (1-63 chars)." \
-            "PVE_HOSTNAME"
+            "PVE_HOSTNAME" \
+            "Hostname: "
     fi
 
     # Domain
@@ -47,7 +48,8 @@ get_inputs_interactive() {
             "admin@qoxi.cloud" \
             "validate_email" \
             "Invalid email address format." \
-            "EMAIL"
+            "EMAIL" \
+            "Email: "
     fi
 
     # Password
@@ -156,7 +158,8 @@ get_inputs_interactive() {
                 "Europe/Kyiv" \
                 "validate_timezone" \
                 "Invalid timezone. Use format like: Europe/London, America/New_York" \
-                "TIMEZONE"
+                "TIMEZONE" \
+                "Timezone: "
         else
             TIMEZONE="${tz_options[$MENU_SELECTED]}"
             print_success "Timezone:" "${TIMEZONE}"
@@ -208,7 +211,8 @@ get_inputs_interactive() {
                     "10.0.0.0/24" \
                     "validate_subnet" \
                     "Invalid subnet. Use CIDR format like: 10.0.0.0/24" \
-                    "PRIVATE_SUBNET"
+                    "PRIVATE_SUBNET" \
+                    "Private subnet: "
             else
                 PRIVATE_SUBNET="${subnet_options[$MENU_SELECTED]}"
                 print_success "Private subnet:" "${PRIVATE_SUBNET}"
