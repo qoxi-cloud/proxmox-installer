@@ -281,8 +281,8 @@ checkbox_menu() {
             # Content line with | borders
             elif [[ "$line" =~ ^(\|)(.*)\|$ ]]; then
                 local content="${BASH_REMATCH[2]}"
-                # Cursor indicator
-                content="${content//> />${CLR_ORANGE} ${CLR_RESET}}"
+                # Cursor indicator - cyan
+                content="${content//> />${CLR_CYAN} ${CLR_RESET}}"
                 # Checked checkbox - green
                 content="${content//\[x\]/${CLR_CYAN}[✓]${CLR_RESET}}"
                 # Unchecked checkbox - gray
