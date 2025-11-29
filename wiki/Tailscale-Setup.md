@@ -104,11 +104,14 @@ When enabled (`TAILSCALE_WEBUI=yes`), the Proxmox web interface is served over H
 
 ## Security Hardening
 
-When Tailscale is enabled with an auth key, the installer automatically configures security features to protect your server.
+When Tailscale is enabled with an auth key, the installer **automatically** configures security features to protect your server:
+
+- **OpenSSH is disabled** on first boot
+- **Stealth firewall mode is enabled** - server is invisible from public internet
 
 ### Stealth Firewall Mode
 
-When you choose to disable OpenSSH, **stealth firewall mode is automatically enabled**. This makes your server invisible from the public internet:
+This makes your server invisible from the public internet:
 
 | Traffic | Allowed |
 |---------|---------|
@@ -144,28 +147,16 @@ systemctl enable stealth-firewall
 systemctl start stealth-firewall
 ```
 
-### Disabling OpenSSH
+### OpenSSH Disabled
 
-Optionally, you can also disable OpenSSH entirely. This prevents any SSH access via the public IP address (only Tailscale SSH will work).
+OpenSSH is automatically disabled when you provide a Tailscale auth key. This prevents any SSH access via the public IP address (only Tailscale SSH will work).
+
+How it works:
 
 - A systemd service (`disable-openssh.service`) runs once on first boot
 - It waits for Tailscale to come online and authenticate
 - Once Tailscale is connected, it disables and masks `ssh.service` and `ssh.socket`
 - The service then removes itself (runs only once)
-
-#### Enabling This Feature
-
-**Interactive mode:** Select "Disable OpenSSH" when prompted after entering Tailscale auth key.
-
-**Non-interactive mode:**
-
-```bash
-export INSTALL_TAILSCALE="yes"
-export TAILSCALE_AUTH_KEY="tskey-auth-xxxxx"
-export TAILSCALE_SSH="yes"
-export TAILSCALE_DISABLE_SSH="yes"
-bash pve-install.sh -n
-```
 
 #### Warning
 
