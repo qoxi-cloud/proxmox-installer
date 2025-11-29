@@ -47,21 +47,32 @@ reboot_to_main_os() {
 
     summary+="|--- Access ---|"$'\n'
 
-    # Show access methods based on OpenSSH status
-    if [[ "$TAILSCALE_DISABLE_SSH" == "yes" ]]; then
-        summary+="[OK]|Web UI|https://${MAIN_IPV4_CIDR%/*}:8006"$'\n'
-        summary+="[WARN]|SSH (public)|DISABLED after first boot"
+    # Show access methods based on stealth mode and OpenSSH status
+    if [[ "$STEALTH_MODE" == "yes" ]]; then
+        # Stealth mode: only Tailscale access shown
+        summary+="[WARN]|Public IP|BLOCKED (stealth mode)"$'\n'
+        if [[ "$TAILSCALE_DISABLE_SSH" == "yes" ]]; then
+            summary+="[WARN]|OpenSSH|DISABLED after first boot"
+        fi
+        if [[ "$INSTALL_TAILSCALE" == "yes" && -n "$TAILSCALE_AUTH_KEY" && "$TAILSCALE_IP" != "pending" && "$TAILSCALE_IP" != "not authenticated" ]]; then
+            summary+=$'\n'"[OK]|Tailscale SSH|root@${TAILSCALE_IP}"
+            if [[ -n "$TAILSCALE_HOSTNAME" ]]; then
+                summary+=$'\n'"[OK]|Tailscale Web|https://${TAILSCALE_HOSTNAME}"
+            else
+                summary+=$'\n'"[OK]|Tailscale Web|https://${TAILSCALE_IP}:8006"
+            fi
+        fi
     else
+        # Normal mode: public IP access
         summary+="[OK]|Web UI|https://${MAIN_IPV4_CIDR%/*}:8006"$'\n'
         summary+="[OK]|SSH|root@${MAIN_IPV4_CIDR%/*}"
-    fi
-
-    if [[ "$INSTALL_TAILSCALE" == "yes" && -n "$TAILSCALE_AUTH_KEY" && "$TAILSCALE_IP" != "pending" && "$TAILSCALE_IP" != "not authenticated" ]]; then
-        summary+=$'\n'"[OK]|Tailscale SSH|root@${TAILSCALE_IP}"
-        if [[ -n "$TAILSCALE_HOSTNAME" ]]; then
-            summary+=$'\n'"[OK]|Tailscale Web|https://${TAILSCALE_HOSTNAME}"
-        else
-            summary+=$'\n'"[OK]|Tailscale Web|https://${TAILSCALE_IP}:8006"
+        if [[ "$INSTALL_TAILSCALE" == "yes" && -n "$TAILSCALE_AUTH_KEY" && "$TAILSCALE_IP" != "pending" && "$TAILSCALE_IP" != "not authenticated" ]]; then
+            summary+=$'\n'"[OK]|Tailscale SSH|root@${TAILSCALE_IP}"
+            if [[ -n "$TAILSCALE_HOSTNAME" ]]; then
+                summary+=$'\n'"[OK]|Tailscale Web|https://${TAILSCALE_HOSTNAME}"
+            else
+                summary+=$'\n'"[OK]|Tailscale Web|https://${TAILSCALE_IP}:8006"
+            fi
         fi
     fi
 

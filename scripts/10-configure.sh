@@ -296,6 +296,16 @@ ENVEOF
                 ) > /dev/null 2>&1 &
                 show_progress $! "Configuring OpenSSH disable on boot" "OpenSSH will be disabled after first reboot"
             fi
+
+            # Deploy stealth firewall if requested
+            if [[ "$STEALTH_MODE" == "yes" ]]; then
+                (
+                    download_file "./templates/stealth-firewall.service" "https://github.com/qoxi-cloud/proxmox-hetzner/raw/refs/heads/main/templates/stealth-firewall.service"
+                    remote_copy "templates/stealth-firewall.service" "/etc/systemd/system/stealth-firewall.service"
+                    remote_exec "systemctl daemon-reload && systemctl enable stealth-firewall.service"
+                ) > /dev/null 2>&1 &
+                show_progress $! "Configuring stealth firewall" "Server will be hidden from internet after reboot"
+            fi
         else
             TAILSCALE_IP="not authenticated"
             TAILSCALE_HOSTNAME=""

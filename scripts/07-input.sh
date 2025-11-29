@@ -166,8 +166,16 @@ get_inputs_non_interactive() {
         print_success "Tailscale WebUI: ${TAILSCALE_WEBUI}"
         if [[ "$TAILSCALE_SSH" == "yes" && "$TAILSCALE_DISABLE_SSH" == "yes" ]]; then
             print_success "OpenSSH: will be disabled on first boot"
+            # Enable stealth mode when OpenSSH is disabled
+            STEALTH_MODE="${STEALTH_MODE:-yes}"
+            if [[ "$STEALTH_MODE" == "yes" ]]; then
+                print_success "Stealth firewall: enabled"
+            fi
+        else
+            STEALTH_MODE="${STEALTH_MODE:-no}"
         fi
     else
+        STEALTH_MODE="${STEALTH_MODE:-no}"
         print_success "Tailscale: skipped"
     fi
 }
@@ -494,12 +502,16 @@ get_inputs_interactive() {
 
                 if [[ $MENU_SELECTED -eq 1 ]]; then
                     TAILSCALE_DISABLE_SSH="yes"
+                    STEALTH_MODE="yes"
                     print_success "OpenSSH will be disabled on first boot"
+                    print_success "Stealth firewall will be enabled (server hidden from internet)"
                 else
+                    STEALTH_MODE="no"
                     print_success "OpenSSH will remain enabled"
                 fi
             else
                 print_success "Tailscale will be installed (manual auth required)"
+                STEALTH_MODE="no"
             fi
         else
             INSTALL_TAILSCALE="no"
@@ -507,6 +519,7 @@ get_inputs_interactive() {
             TAILSCALE_SSH="no"
             TAILSCALE_WEBUI="no"
             TAILSCALE_DISABLE_SSH="no"
+            STEALTH_MODE="no"
             print_success "Tailscale installation skipped"
         fi
     fi
