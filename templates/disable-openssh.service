@@ -1,0 +1,18 @@
+[Unit]
+Description=Disable OpenSSH when Tailscale SSH is active
+After=tailscaled.service network-online.target
+Wants=network-online.target
+ConditionPathExists=/run/tailscale/tailscaled.sock
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/bin/sleep 10
+ExecStartPre=/bin/sh -c 'tailscale status --json | grep -q "\"Online\":true"'
+ExecStart=/bin/systemctl disable --now ssh.service ssh.socket sshd.service sshd.socket
+ExecStartPost=/bin/systemctl mask ssh.service ssh.socket sshd.service sshd.socket
+ExecStartPost=/bin/systemctl disable disable-openssh.service
+ExecStartPost=/bin/rm -f /etc/systemd/system/disable-openssh.service
+
+[Install]
+WantedBy=multi-user.target

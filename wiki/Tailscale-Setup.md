@@ -18,6 +18,7 @@ The installer offers Tailscale as an optional component:
 | Auth Key | Your Tailscale auth key | - |
 | Enable SSH | `yes` / `no` | `yes` |
 | Enable Web UI | `yes` / `no` | `yes` |
+| Disable OpenSSH | `yes` / `no` | `no` |
 
 ### Environment Variables
 
@@ -26,6 +27,7 @@ export INSTALL_TAILSCALE="yes"
 export TAILSCALE_AUTH_KEY="tskey-auth-xxxxx"
 export TAILSCALE_SSH="yes"
 export TAILSCALE_WEBUI="yes"
+export TAILSCALE_DISABLE_SSH="no"
 bash pve-install.sh
 ```
 
@@ -99,6 +101,46 @@ When enabled (`TAILSCALE_WEBUI=yes`), the Proxmox web interface is served over H
 - Valid TLS certificate (no browser warnings)
 - Accessible at `https://hostname.tailnet.ts.net`
 - Only accessible from your Tailscale network
+
+## Disabling OpenSSH
+
+When Tailscale SSH is enabled with an auth key, you can optionally disable OpenSSH entirely. This prevents any SSH access via the public IP address.
+
+### How It Works
+
+- A systemd service (`disable-openssh.service`) runs once on first boot
+- It waits for Tailscale to come online and authenticate
+- Once Tailscale is connected, it disables and masks `ssh.service` and `ssh.socket`
+- The service then removes itself (runs only once)
+
+### Enabling This Feature
+
+**Interactive mode:** Select "Disable OpenSSH" when prompted after entering Tailscale auth key.
+
+**Non-interactive mode:**
+
+```bash
+export INSTALL_TAILSCALE="yes"
+export TAILSCALE_AUTH_KEY="tskey-auth-xxxxx"
+export TAILSCALE_SSH="yes"
+export TAILSCALE_DISABLE_SSH="yes"
+bash pve-install.sh -n
+```
+
+### Warning
+
+> **Important:** Once OpenSSH is disabled, you can ONLY access the server via Tailscale SSH. If Tailscale becomes unavailable (e.g., account issues, network problems), you will need to use Hetzner Rescue Mode to regain access.
+
+### Re-enabling OpenSSH
+
+If you need to re-enable OpenSSH:
+
+```bash
+# Unmask and enable SSH
+systemctl unmask ssh.service ssh.socket
+systemctl enable ssh.service ssh.socket
+systemctl start ssh.service
+```
 
 ## Security Benefits
 

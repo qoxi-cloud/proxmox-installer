@@ -156,6 +156,7 @@ get_inputs_non_interactive() {
     if [[ "$INSTALL_TAILSCALE" == "yes" ]]; then
         TAILSCALE_SSH="${TAILSCALE_SSH:-yes}"
         TAILSCALE_WEBUI="${TAILSCALE_WEBUI:-yes}"
+        TAILSCALE_DISABLE_SSH="${TAILSCALE_DISABLE_SSH:-no}"
         if [[ -n "$TAILSCALE_AUTH_KEY" ]]; then
             print_success "Tailscale will be installed (auto-connect)"
         else
@@ -163,6 +164,9 @@ get_inputs_non_interactive() {
         fi
         print_success "Tailscale SSH: ${TAILSCALE_SSH}"
         print_success "Tailscale WebUI: ${TAILSCALE_WEBUI}"
+        if [[ "$TAILSCALE_SSH" == "yes" && "$TAILSCALE_DISABLE_SSH" == "yes" ]]; then
+            print_success "OpenSSH: will be disabled on first boot"
+        fi
     else
         print_success "Tailscale: skipped"
     fi
@@ -460,6 +464,7 @@ get_inputs_interactive() {
             INSTALL_TAILSCALE="yes"
             TAILSCALE_SSH="yes"
             TAILSCALE_WEBUI="yes"
+            TAILSCALE_DISABLE_SSH="no"
 
             if [[ -z "$TAILSCALE_AUTH_KEY" ]]; then
                 local auth_content="Auth key enables automatic configuration."$'\n'
@@ -474,6 +479,25 @@ get_inputs_interactive() {
 
             if [[ -n "$TAILSCALE_AUTH_KEY" ]]; then
                 print_success "Tailscale will be installed (auto-connect)"
+
+                # Ask about disabling OpenSSH when Tailscale SSH is enabled
+                local disable_ssh_header="Tailscale SSH provides secure access via Tailscale network."$'\n'
+                disable_ssh_header+="Disabling OpenSSH prevents access from public internet."$'\n'
+                disable_ssh_header+=$'\n'
+                disable_ssh_header+="WARNING: You will ONLY be able to SSH via Tailscale!"
+
+                interactive_menu \
+                    "Disable OpenSSH on first boot? (↑/↓ select, Enter confirm)" \
+                    "$disable_ssh_header" \
+                    "Keep OpenSSH enabled|Access via both public IP and Tailscale" \
+                    "Disable OpenSSH|Access ONLY via Tailscale SSH (more secure)"
+
+                if [[ $MENU_SELECTED -eq 1 ]]; then
+                    TAILSCALE_DISABLE_SSH="yes"
+                    print_success "OpenSSH will be disabled on first boot"
+                else
+                    print_success "OpenSSH will remain enabled"
+                fi
             else
                 print_success "Tailscale will be installed (manual auth required)"
             fi
@@ -482,6 +506,7 @@ get_inputs_interactive() {
             TAILSCALE_AUTH_KEY=""
             TAILSCALE_SSH="no"
             TAILSCALE_WEBUI="no"
+            TAILSCALE_DISABLE_SSH="no"
             print_success "Tailscale installation skipped"
         fi
     fi

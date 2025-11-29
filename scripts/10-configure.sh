@@ -286,6 +286,16 @@ ENVEOF
                 remote_exec "tailscale serve --bg --https=443 https://127.0.0.1:8006" > /dev/null 2>&1 &
                 show_progress $! "Configuring Tailscale Serve" "Proxmox Web UI available via Tailscale Serve"
             fi
+
+            # Deploy OpenSSH disable service if requested
+            if [[ "$TAILSCALE_SSH" == "yes" && "$TAILSCALE_DISABLE_SSH" == "yes" ]]; then
+                (
+                    download_file "./templates/disable-openssh.service" "https://github.com/qoxi-cloud/proxmox-hetzner/raw/refs/heads/main/templates/disable-openssh.service"
+                    remote_copy "templates/disable-openssh.service" "/etc/systemd/system/disable-openssh.service"
+                    remote_exec "systemctl daemon-reload && systemctl enable disable-openssh.service"
+                ) > /dev/null 2>&1 &
+                show_progress $! "Configuring OpenSSH disable on boot" "OpenSSH will be disabled after first reboot"
+            fi
         else
             TAILSCALE_IP="not authenticated"
             TAILSCALE_HOSTNAME=""

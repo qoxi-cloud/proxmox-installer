@@ -83,6 +83,7 @@ You can pre-configure any setting via environment variables.
 | `TAILSCALE_AUTH_KEY` | Tailscale auth key | - |
 | `TAILSCALE_SSH` | Enable Tailscale SSH | `yes` |
 | `TAILSCALE_WEBUI` | Enable Tailscale Web UI | `yes` |
+| `TAILSCALE_DISABLE_SSH` | Disable OpenSSH on first boot: `yes`, `no` | `no` |
 
 ## Examples with Environment Variables
 
