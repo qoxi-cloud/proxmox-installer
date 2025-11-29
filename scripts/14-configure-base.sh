@@ -47,19 +47,43 @@ configure_base_system() {
         echo "options zfs zfs_arc_max=$ARC_MAX" >> /etc/modprobe.d/zfs.conf
     ' "ZFS ARC memory limits configured"
 
-    # Disable enterprise repositories
-    remote_exec_with_progress "Disabling enterprise repositories" '
-        for repo_file in /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
-            [ -f "$repo_file" ] || continue
-            if grep -q "enterprise.proxmox.com" "$repo_file" 2>/dev/null; then
-                mv "$repo_file" "${repo_file}.disabled"
-            fi
-        done
+    # Configure Proxmox repository
+    log "configure_base_system: PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
+    if [[ "${PVE_REPO_TYPE:-no-subscription}" == "enterprise" ]]; then
+        log "configure_base_system: configuring enterprise repository"
+        # Enterprise: disable default no-subscription repo (template already has enterprise)
+        remote_exec_with_progress "Configuring enterprise repository" '
+            for repo_file in /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+                [ -f "$repo_file" ] || continue
+                if grep -q "pve-no-subscription\|pvetest" "$repo_file" 2>/dev/null; then
+                    mv "$repo_file" "${repo_file}.disabled"
+                fi
+            done
+        ' "Enterprise repository configured"
 
-        if [ -f /etc/apt/sources.list ] && grep -q "enterprise.proxmox.com" /etc/apt/sources.list 2>/dev/null; then
-            sed -i "s|^deb.*enterprise.proxmox.com|# &|g" /etc/apt/sources.list
+        # Register subscription key if provided
+        if [[ -n "$PVE_SUBSCRIPTION_KEY" ]]; then
+            log "configure_base_system: registering subscription key"
+            remote_exec_with_progress "Registering subscription key" \
+                "pvesubscription set '${PVE_SUBSCRIPTION_KEY}' 2>/dev/null || true" \
+                "Subscription key registered"
         fi
-    ' "Enterprise repositories disabled"
+    else
+        # No-subscription or test: disable enterprise repo
+        log "configure_base_system: configuring ${PVE_REPO_TYPE:-no-subscription} repository"
+        remote_exec_with_progress "Configuring ${PVE_REPO_TYPE:-no-subscription} repository" '
+            for repo_file in /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+                [ -f "$repo_file" ] || continue
+                if grep -q "enterprise.proxmox.com" "$repo_file" 2>/dev/null; then
+                    mv "$repo_file" "${repo_file}.disabled"
+                fi
+            done
+
+            if [ -f /etc/apt/sources.list ] && grep -q "enterprise.proxmox.com" /etc/apt/sources.list 2>/dev/null; then
+                sed -i "s|^deb.*enterprise.proxmox.com|# &|g" /etc/apt/sources.list
+            fi
+        ' "Repository configured"
+    fi
 
     # Update all system packages
     remote_exec_with_progress "Updating system packages" '
@@ -199,11 +223,14 @@ configure_system_services() {
         fi
     ' "CPU governor configured"
 
-    # Remove Proxmox subscription notice
-    remote_exec_with_progress "Removing Proxmox subscription notice" '
-        if [ -f /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js ]; then
-            sed -Ezi.bak "s/(Ext.Msg.show\(\{\s+title: gettext\('"'"'No valid sub)/void\(\{ \/\/\1/g" /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
-            systemctl restart pveproxy.service
-        fi
-    ' "Subscription notice removed"
+    # Remove Proxmox subscription notice (only for non-enterprise)
+    if [[ "${PVE_REPO_TYPE:-no-subscription}" != "enterprise" ]]; then
+        log "configure_system_services: removing subscription notice (non-enterprise)"
+        remote_exec_with_progress "Removing Proxmox subscription notice" '
+            if [ -f /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js ]; then
+                sed -Ezi.bak "s/(Ext.Msg.show\(\{\s+title: gettext\('"'"'No valid sub)/void\(\{ \/\/\1/g" /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+                systemctl restart pveproxy.service
+            fi
+        ' "Subscription notice removed"
+    fi
 }

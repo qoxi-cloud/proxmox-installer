@@ -88,6 +88,17 @@ get_inputs_non_interactive() {
     parse_ssh_key "$SSH_PUBLIC_KEY"
     print_success "SSH key configured (${SSH_KEY_TYPE})"
 
+    # Proxmox repository
+    PVE_REPO_TYPE="${PVE_REPO_TYPE:-no-subscription}"
+    print_success "Repository: ${PVE_REPO_TYPE}"
+    if [[ "$PVE_REPO_TYPE" == "enterprise" && -n "$PVE_SUBSCRIPTION_KEY" ]]; then
+        print_success "Subscription key: configured"
+    fi
+
+    # SSL certificate
+    SSL_TYPE="${SSL_TYPE:-self-signed}"
+    print_success "SSL certificate: ${SSL_TYPE}"
+
     # Tailscale
     INSTALL_TAILSCALE="${INSTALL_TAILSCALE:-no}"
     if [[ "$INSTALL_TAILSCALE" == "yes" ]]; then

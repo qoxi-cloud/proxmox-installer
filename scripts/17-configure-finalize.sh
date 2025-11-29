@@ -33,6 +33,7 @@ configure_proxmox_via_ssh() {
     configure_shell
     configure_system_services
     configure_tailscale
+    configure_ssl_certificate
     configure_ssh_hardening
     finalize_vm
 }

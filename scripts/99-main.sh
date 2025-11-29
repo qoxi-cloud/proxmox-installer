@@ -22,7 +22,35 @@ reboot_to_main_os() {
     summary+="[OK]|Password auth|DISABLED"$'\n'
     summary+="[OK]|CPU governor|performance"$'\n'
     summary+="[OK]|Kernel params|optimized"$'\n'
-    summary+="[OK]|Subscription notice|removed"$'\n'
+
+    # Repository info
+    case "${PVE_REPO_TYPE:-no-subscription}" in
+        enterprise)
+            summary+="[OK]|Repository|enterprise"$'\n'
+            if [[ -n "$PVE_SUBSCRIPTION_KEY" ]]; then
+                summary+="[OK]|Subscription|registered"$'\n'
+            else
+                summary+="[WARN]|Subscription|key not provided"$'\n'
+            fi
+            ;;
+        test)
+            summary+="[WARN]|Repository|test (unstable)"$'\n'
+            summary+="[OK]|Subscription notice|removed"$'\n'
+            ;;
+        *)
+            summary+="[OK]|Repository|no-subscription"$'\n'
+            summary+="[OK]|Subscription notice|removed"$'\n'
+            ;;
+    esac
+
+    # SSL certificate info
+    if [[ "$SSL_TYPE" == "letsencrypt" ]]; then
+        summary+="[OK]|SSL certificate|Let's Encrypt"$'\n'
+        summary+="[OK]|SSL auto-renewal|enabled"$'\n'
+    else
+        summary+="[OK]|SSL certificate|self-signed"$'\n'
+    fi
+
     summary+="|--- Optimizations ---|"$'\n'
     summary+="[OK]|Monitoring tools|btop, iotop, ncdu, tmux..."$'\n'
     summary+="[OK]|VM image tools|libguestfs-tools"$'\n'
@@ -130,6 +158,8 @@ log "CONFIG_FILE=$CONFIG_FILE"
 log "VALIDATE_ONLY=$VALIDATE_ONLY"
 log "QEMU_RAM_OVERRIDE=$QEMU_RAM_OVERRIDE"
 log "QEMU_CORES_OVERRIDE=$QEMU_CORES_OVERRIDE"
+log "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
+log "SSL_TYPE=${SSL_TYPE:-self-signed}"
 
 # Collect system info and display status
 log "Step: collect_system_info"
@@ -160,6 +190,8 @@ if [[ "$VALIDATE_ONLY" == true ]]; then
         echo "  Private Net:  $PRIVATE_SUBNET"
     fi
     echo "  Tailscale:    $INSTALL_TAILSCALE"
+    echo "  Repository:   ${PVE_REPO_TYPE:-no-subscription}"
+    echo "  SSL:          ${SSL_TYPE:-self-signed}"
     if [[ -n "$PROXMOX_ISO_VERSION" ]]; then
         echo "  Proxmox ISO:  ${PROXMOX_ISO_VERSION}"
     else

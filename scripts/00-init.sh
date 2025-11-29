@@ -34,3 +34,10 @@ QEMU_CORES_OVERRIDE=""
 
 # Proxmox ISO version (empty = show menu in interactive, use latest in non-interactive)
 PROXMOX_ISO_VERSION=""
+
+# Proxmox repository type (no-subscription, enterprise, test)
+PVE_REPO_TYPE=""
+PVE_SUBSCRIPTION_KEY=""
+
+# SSL certificate (self-signed, letsencrypt)
+SSL_TYPE=""
