@@ -115,8 +115,6 @@ create_server() {
         --location hel1 \
         2>&1)
 
-    echo "$output"
-
     # Parse server ID
     SERVER_ID=$(echo "$output" | grep -oE "Server [0-9]+" | grep -oE "[0-9]+")
     if [[ -z "$SERVER_ID" ]]; then
