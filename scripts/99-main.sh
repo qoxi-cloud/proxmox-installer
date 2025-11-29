@@ -56,13 +56,15 @@ reboot_to_main_os() {
     fi
 
     # Display ASCII art header (centered for MENU_BOX_WIDTH=60)
-    echo ""
-    echo '      ___                      _      _         _ _'
-    echo '     / __|___ _ __  _ __  ___ | |__ _| |_ ___  | | |'
-    echo '    | (__/ _ \  _ \|  _ \/ _ \| / _` |  _/ -_) |_|_|'
-    echo '     \___\___/_|_|_|| .__/\___/|_\__,_|\__\___|(_|_)'
-    echo '                    |_|'
-    echo ""
+    echo -e "${CLR_CYAN}"
+    cat << 'BANNER'
+         ____
+        / ___| _   _  ___ ___ ___  ___ ___
+        \___ \| | | |/ __/ __/ _ \/ __/ __|
+         ___) | |_| | (_| (_|  __/\__ \__ \
+        |____/ \__,_|\___\___\___||___/___/
+BANNER
+    echo -e "${CLR_RESET}"
 
     # Display with boxes
     {
