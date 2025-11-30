@@ -76,18 +76,19 @@ interactive_menu() {
             elif [[ "$line" =~ ^(\|)(.*)\|$ ]]; then
                 local content="${BASH_REMATCH[2]}"
                 # Apply content colors
-                content="${content//\[\*\]/${CLR_GREEN}[●]${CLR_RESET}}"
-                content="${content//\[ \]/${CLR_CYAN}[○]${CLR_RESET}}"
-                # Yellow for warnings and key info
+                # Yellow for warnings and key info (apply BEFORE checkbox colors)
                 if [[ "$content" == *"! "* ]]; then
                     content="${content//! /${CLR_YELLOW}! }"
                     content="${content}${CLR_RESET}"
                 fi
-                content="${content//  - /${CLR_YELLOW}  - }"
-                content="${content//Detected key/${CLR_YELLOW}Detected key}"
-                content="${content//Type:/${CLR_YELLOW}Type:}"
-                content="${content//Key:/${CLR_YELLOW}Key:}"
-                content="${content//Comment:/${CLR_YELLOW}Comment:}"
+                content="${content//  - /${CLR_YELLOW}  - ${CLR_RESET}}"
+                content="${content//Detected key/${CLR_YELLOW}Detected key${CLR_RESET}}"
+                content="${content//Type:/${CLR_YELLOW}Type:${CLR_RESET}}"
+                content="${content//Key:/${CLR_YELLOW}Key:${CLR_RESET}}"
+                content="${content//Comment:/${CLR_YELLOW}Comment:${CLR_RESET}}"
+                # Checkbox colors (apply AFTER yellow to ensure correct colors)
+                content="${content//\[\*\]/${CLR_GREEN}[●]${CLR_RESET}}"
+                content="${content//\[ \]/${CLR_CYAN}[○]${CLR_RESET}}"
                 echo "${CLR_CYAN}|${CLR_RESET}${content}${CLR_CYAN}|${CLR_RESET}"
             else
                 echo "$line"
