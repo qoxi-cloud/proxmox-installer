@@ -68,16 +68,37 @@ interactive_menu() {
     # - Box frame in cyan (like logo), text white, [●] green, [○] blue
     # - Lines with "! " and key info are warnings (yellow)
     _colorize_menu() {
-        sed -e $'s/^\\(+[-+]*+\\)$/\033[1;36m\\1\033[m/' \
-            -e $'s/^|\\(.*\\)|$/\033[1;36m|\033[m\\1\033[1;36m|\033[m/' \
-            -e $'s/\\[\\*\\]/\033[1;32m[●]\033[m/g' \
-            -e $'s/\\[ \\]/\033[1;34m[○]\033[m/g' \
-            -e $'s/! \\(.*\\)/\033[1;33m! \\1\033[m/g' \
-            -e $'s/Detected key/\033[1;33mDetected key/g' \
-            -e $'s/Type:/\033[1;33mType:/g' \
-            -e $'s/Key:/\033[1;33mKey:/g' \
-            -e $'s/Comment:/\033[1;33mComment:/g' \
-            -e $'s/  - /\033[1;33m  - /g'
+        local cyan=$'\033[1;36m'
+        local green=$'\033[1;32m'
+        local blue=$'\033[1;34m'
+        local yellow=$'\033[1;33m'
+        local reset=$'\033[m'
+
+        while IFS= read -r line; do
+            # Top/bottom border
+            if [[ "$line" =~ ^\+[-+]+\+$ ]]; then
+                echo "${cyan}${line}${reset}"
+            # Content line with | borders
+            elif [[ "$line" =~ ^(\|)(.*)\|$ ]]; then
+                local content="${BASH_REMATCH[2]}"
+                # Apply content colors
+                content="${content//\[\*\]/${green}[●]${reset}}"
+                content="${content//\[ \]/${blue}[○]${reset}}"
+                # Yellow for warnings and key info
+                if [[ "$content" == *"! "* ]]; then
+                    content="${content//! /${yellow}! }"
+                    content="${content}${reset}"
+                fi
+                content="${content//  - /${yellow}  - }"
+                content="${content//Detected key/${yellow}Detected key}"
+                content="${content//Type:/${yellow}Type:}"
+                content="${content//Key:/${yellow}Key:}"
+                content="${content//Comment:/${yellow}Comment:}"
+                echo "${cyan}|${reset}${content}${cyan}|${reset}"
+            else
+                echo "$line"
+            fi
+        done
     }
 
     # Draw initial menu
