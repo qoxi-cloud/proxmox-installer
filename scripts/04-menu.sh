@@ -87,7 +87,7 @@ interactive_menu() {
                     local rest="${BASH_REMATCH[2]}"
                     content="${prefix}${CLR_YELLOW}  - ${rest}${CLR_RESET}"
                 fi
-                content="${content//Detected key/${CLR_YELLOW}Detected key${CLR_RESET}}"
+                content="${content//Detected key from Rescue System:/${CLR_YELLOW}Detected key from Rescue System:${CLR_RESET}}"
                 content="${content//Type:/${CLR_YELLOW}Type:${CLR_RESET}}"
                 content="${content//Key:/${CLR_YELLOW}Key:${CLR_RESET}}"
                 content="${content//Comment:/${CLR_YELLOW}Comment:${CLR_RESET}}"
