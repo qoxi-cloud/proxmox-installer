@@ -66,6 +66,7 @@ run_remote() {
 
     if ! remote_exec_with_progress "$message" "$script" "$done_message"; then
         log "ERROR: $message failed"
+        echo "[DEBUG] run_remote: about to exit 1" >&2
         exit 1
     fi
 }
