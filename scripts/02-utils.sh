@@ -24,7 +24,7 @@ download_file() {
         [ $retry_count -lt $max_retries ] && sleep 2
     done
 
-    print_error "Failed to download $url after $max_retries attempts. Exiting."
+    log "ERROR: Failed to download $url after $max_retries attempts"
     exit 1
 }
 

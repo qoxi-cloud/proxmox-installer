@@ -16,7 +16,6 @@ prepare_packages() {
     wait $!
     if [[ $? -ne 0 ]]; then
         log "ERROR: Failed to download Proxmox GPG key"
-        print_error "Failed to download Proxmox GPG key! Exiting."
         exit 1
     fi
     log "Proxmox GPG key downloaded successfully"
@@ -29,7 +28,6 @@ prepare_packages() {
     wait $!
     if [[ $? -ne 0 ]]; then
         log "ERROR: Failed to update package lists"
-        print_error "Failed to update package lists! Exiting."
         exit 1
     fi
     log "Package lists updated successfully"
@@ -41,7 +39,6 @@ prepare_packages() {
     wait $!
     if [[ $? -ne 0 ]]; then
         log "ERROR: Failed to install required packages"
-        print_error "Failed to install required packages! Exiting."
         exit 1
     fi
     log "Required packages installed successfully"
@@ -102,7 +99,6 @@ download_proxmox_iso() {
 
     if [[ -z "$PROXMOX_ISO_URL" ]]; then
         log "ERROR: Failed to retrieve Proxmox ISO URL"
-        print_error "Failed to retrieve Proxmox ISO URL! Exiting."
         exit 1
     fi
     log "Found ISO URL: $PROXMOX_ISO_URL"
@@ -117,14 +113,12 @@ download_proxmox_iso() {
     wait $!
     if [[ $? -ne 0 ]]; then
         log "ERROR: Failed to download Proxmox ISO"
-        print_error "Failed to download Proxmox ISO! Exiting."
         exit 1
     fi
     log "ISO downloaded successfully"
 
     if [[ ! -s "pve.iso" ]]; then
         log "ERROR: Downloaded ISO file is empty or corrupted"
-        print_error "Downloaded ISO file is empty or corrupted! Exiting."
         rm -f pve.iso
         exit 1
     fi
@@ -147,9 +141,8 @@ download_proxmox_iso() {
 
             if [[ "$EXPECTED_CHECKSUM" != "$ACTUAL_CHECKSUM" ]]; then
                 log "ERROR: ISO checksum verification FAILED"
-                print_error "ISO checksum verification FAILED!"
-                print_error "Expected: $EXPECTED_CHECKSUM"
-                print_error "Actual:   $ACTUAL_CHECKSUM"
+                log "Expected: $EXPECTED_CHECKSUM"
+                log "Actual:   $ACTUAL_CHECKSUM"
                 rm -f pve.iso SHA256SUMS
                 exit 1
             fi
@@ -236,8 +229,6 @@ make_autoinstall_iso() {
         log "ERROR: Autoinstall ISO not found after creation attempt"
         log "Files in current directory after attempt:"
         ls -la >> "$LOG_FILE" 2>&1
-        print_error "Autoinstall ISO not found!"
-        print_error "Check log file: $LOG_FILE"
         exit 1
     fi
 

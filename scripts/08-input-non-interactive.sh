@@ -109,6 +109,7 @@ get_inputs_non_interactive() {
                 print_success "SSL certificate: letsencrypt (DNS verified: ${le_fqdn} → ${expected_ip})"
                 ;;
             1)
+                log "ERROR: DNS validation failed - ${le_fqdn} does not resolve"
                 print_error "SSL certificate: letsencrypt (DNS FAILED)"
                 print_error "${le_fqdn} does not resolve"
                 echo ""
@@ -117,6 +118,7 @@ get_inputs_non_interactive() {
                 exit 1
                 ;;
             2)
+                log "ERROR: DNS validation failed - ${le_fqdn} resolves to ${DNS_RESOLVED_IP}, expected ${expected_ip}"
                 print_error "SSL certificate: letsencrypt (DNS MISMATCH)"
                 print_error "${le_fqdn} resolves to ${DNS_RESOLVED_IP}, expected ${expected_ip}"
                 echo ""
