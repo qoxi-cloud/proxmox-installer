@@ -79,7 +79,7 @@ Scripts are numbered and concatenated in order:
 ## Code Conventions
 
 - All scripts share global variables
-- Progress indicators: `SPINNER_CHARS='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'`
+- Progress indicators: `SPINNER_CHARS=('○' '◔' '◑' '◕' '●' '◕' '◑' '◔')`
 - Menu width: `MENU_BOX_WIDTH=60`
 - Helper functions prefixed with `_` for internal use
 - Use `printf -v` instead of `eval` for safe variable assignment
