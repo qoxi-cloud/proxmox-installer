@@ -1,0 +1,39 @@
+name: Cleanup PR Build
+
+on:
+  pull_request_target:
+    branches:
+      - main
+    types: [closed]
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+
+      - name: Remove PR script
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          FILENAME="pve-install-pr.${PR_NUMBER}.sh"
+
+          if [[ -f "${FILENAME}" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+
+            git rm "${FILENAME}"
+            git commit -m "Remove PR #${PR_NUMBER} test script"
+            git push origin gh-pages
+
+            echo "Removed ${FILENAME}"
+          else
+            echo "File ${FILENAME} not found, nothing to remove"
+          fi

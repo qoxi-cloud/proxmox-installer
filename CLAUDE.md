@@ -14,6 +14,54 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Log messages and user-facing strings
 - Branch names
 
+## Commit Message Format
+
+Use emoji conventional commit format:
+
+```text
+<emoji> <type>: <short description>
+
+<detailed explanation of changes>
+
+Changes:
+- Bullet point list of specific changes
+- Each change on its own line
+- Focus on "what" and "why"
+
+<additional context if needed>
+```
+
+**Emoji Reference:**
+
+| Emoji | Type | Description |
+|-------|------|-------------|
+| ✨ | `feat` | New features |
+| 🐛 | `fix` | Bug fixes |
+| 🔒️ | `security` | Security fixes |
+| ♻️ | `refactor` | Code restructuring |
+| 📝 | `docs` | Documentation |
+| 🔧 | `chore` | Configuration, tooling |
+| ⚡️ | `perf` | Performance improvements |
+| 🩹 | `fix` | Simple non-critical fixes |
+| 🚑️ | `hotfix` | Critical hotfixes |
+| ✅ | `test` | Adding or updating tests |
+| 🏗️ | `build` | Build system changes |
+| 👷 | `ci` | CI/CD changes |
+
+**Example:**
+
+```text
+✨ feat: add IPv6 dual-stack support for network bridges
+
+Added full IPv6 support with automatic detection, manual configuration,
+and disable options.
+
+Changes:
+- Added validate_ipv6() and validate_ipv6_cidr() functions
+- Added IPV6_MODE config option (auto/manual/disabled)
+- Updated network templates with IPv6 placeholders
+```
+
 ## Project Overview
 
 Automated Proxmox VE installer for Hetzner dedicated servers without console access. The installer runs in Hetzner Rescue System and uses QEMU to install Proxmox on NVMe drives.
@@ -35,6 +83,104 @@ chmod +x pve-install.sh
 shellcheck scripts/*.sh
 # Ignored warnings: SC1091 (sourced files), SC2034 (unused vars), SC2086 (word splitting)
 ```
+
+**Run unit tests:**
+
+```bash
+./tests/run-all-tests.sh
+```
+
+## Unit Tests
+
+The project includes comprehensive unit tests in the `tests/` directory:
+
+| Test File | Module | Tests | Description |
+|-----------|--------|-------|-------------|
+| `test-validation.sh` | 05-validation.sh | 103 | Hostname, FQDN, email, password, subnet, IPv6 validation |
+| `test-config.sh` | 00b-config.sh | 42 | Config validation (BRIDGE_MODE, ZFS_RAID, SSL_TYPE, etc.) |
+| `test-ssh.sh` | 03-ssh.sh | 16 | SSH key validation and parsing |
+| `test-main.sh` | 99-main.sh | 8 | String truncation utilities |
+| `test-utils.sh` | 02-utils.sh | 7 | Duration formatting |
+| `run-all-tests.sh` | - | - | Test runner aggregating all tests |
+
+**Test structure:**
+
+Each test file uses a simple assertion framework:
+
+```bash
+assert_true "description" command args...   # Expects command to succeed
+assert_false "description" command args...  # Expects command to fail
+assert_equals "description" "expected" "actual"
+assert_not_empty "description" "$value"
+```
+
+**Function extraction pattern:**
+
+Tests extract individual functions using `sed` to avoid loading entire scripts with dependencies:
+
+```bash
+eval "$(sed -n '/^function_name()/,/^}/p' "$SCRIPT_DIR/scripts/module.sh")"
+```
+
+**Cross-platform notes:**
+
+- Tests are designed to work on both macOS and Linux
+- Some functions (e.g., `apply_template_vars` using `sed -i`) are not tested due to platform differences
+- Tests run in CI on Ubuntu runners
+
+## CI/CD Workflow
+
+The project uses multiple GitHub Actions workflows:
+
+### Build Workflow (`build.yml`)
+
+**Build Job** - Runs on every push and pull request:
+
+1. Checkout code (including fork PRs)
+2. Run ShellCheck linting
+3. Run unit tests (`./tests/run-all-tests.sh`)
+4. Concatenate scripts into `pve-install.sh`
+5. Calculate and inject version number
+6. Upload artifact and PR metadata
+
+**Deploy Job** - Runs only on push to main:
+
+1. Download build artifact
+2. Deploy to GitHub Pages as `pve-install.sh`
+
+### Deploy PR Workflow (`deploy-pr.yml`)
+
+Runs after build completes for PRs (including forks):
+
+1. Download build artifact and PR metadata
+2. Deploy to GitHub Pages as `pve-install-pr.{number}.sh`
+3. Post/update comment on PR with test link
+
+Uses `workflow_run` trigger for secure fork PR deployments.
+
+**PR builds include:**
+
+- Version suffix: `1.2.5-pr.42`
+- Updated `GITHUB_BRANCH` to load templates from PR branch
+- For forks: Updated `GITHUB_REPO` to load templates from fork
+- Auto-generated comment with download link
+
+### Cleanup PR Workflow (`cleanup-pr.yml`)
+
+Runs when PR is closed (merged or rejected):
+
+1. Remove `pve-install-pr.{number}.sh` from GitHub Pages
+
+Uses `pull_request_target` for secure access to close events from forks.
+
+### Commit Lint Workflow (`commit-lint.yml`)
+
+Runs on every PR to validate:
+
+1. All commit messages follow emoji conventional format
+2. PR title follows the same format
+
+Skips merge commits and bot commits automatically.
 
 ## Versioning
 
@@ -61,6 +207,17 @@ The project uses **Semantic Versioning** with automatic MINOR and PATCH calculat
 | MAJOR=1, tag `v1.0.0`, 0 commits after | `1.1.0` |
 | MAJOR=1, tag `v1.0.0`, 10 commits after | `1.1.10` |
 | MAJOR=1, tags `v1.0.0` + `v1.1.0`, 5 commits after | `1.2.5` |
+| PR #42 build | `1.2.5-pr.42` |
+
+**PR version suffix:**
+
+Pull request builds include a `-pr.{number}` suffix to distinguish them from main branch builds:
+
+- Main branch: `1.2.5`
+- PR #42: `1.2.5-pr.42`
+- PR #123: `1.2.5-pr.123`
+
+This allows testing PR artifacts without confusion with release versions.
 
 **Creating a release:**
 

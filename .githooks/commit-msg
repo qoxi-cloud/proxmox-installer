@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# =============================================================================
+# Git commit-msg hook - validates commit message format
+# =============================================================================
+
+set -euo pipefail
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(head -1 "$COMMIT_MSG_FILE")
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+NC='\033[0m'
+
+# Skip merge commits
+if [[ "$COMMIT_MSG" =~ ^Merge ]]; then
+    exit 0
+fi
+
+# Skip fixup/squash commits
+if [[ "$COMMIT_MSG" =~ ^(fixup|squash)! ]]; then
+    exit 0
+fi
+
+# Valid emoji prefixes (with and without variation selector)
+VALID_EMOJIS="✨|🐛|🔒️|🔒|♻️|📝|🔧|⚡️|⚡|🩹|🚑️|🚑|✅|🏗️|🏗|👷"
+
+# Valid types
+VALID_TYPES="feat|fix|security|refactor|docs|chore|perf|hotfix|test|build|ci"
+
+# Pattern: <emoji> <type>: <description>
+PATTERN="^($VALID_EMOJIS) ($VALID_TYPES): .+"
+
+if [[ "$COMMIT_MSG" =~ $PATTERN ]]; then
+    echo -e "${GREEN}✓${NC} Commit message format is valid"
+    exit 0
+else
+    echo -e "${RED}✗${NC} Invalid commit message format"
+    echo ""
+    echo -e "${YELLOW}Your message:${NC}"
+    echo "  $COMMIT_MSG"
+    echo ""
+    echo -e "${YELLOW}Expected format:${NC}"
+    echo "  <emoji> <type>: <short description>"
+    echo ""
+    echo -e "${YELLOW}Valid emojis:${NC}"
+    echo "  ✨ feat      - New features"
+    echo "  🐛 fix       - Bug fixes"
+    echo "  🔒️ security  - Security fixes"
+    echo "  ♻️ refactor  - Code restructuring"
+    echo "  📝 docs      - Documentation"
+    echo "  🔧 chore     - Configuration, tooling"
+    echo "  ⚡️ perf      - Performance improvements"
+    echo "  🩹 fix       - Simple non-critical fixes"
+    echo "  🚑️ hotfix    - Critical hotfixes"
+    echo "  ✅ test      - Adding or updating tests"
+    echo "  🏗️ build     - Build system changes"
+    echo "  👷 ci        - CI/CD changes"
+    echo ""
+    echo -e "${YELLOW}Examples:${NC}"
+    echo "  ✨ feat: add IPv6 support for network bridges"
+    echo "  🐛 fix: correct DNS resolution timeout"
+    echo "  📝 docs: update installation guide"
+    echo ""
+    echo "See CONTRIBUTING.md for full guidelines."
+    exit 1
+fi

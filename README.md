@@ -84,6 +84,17 @@ Full documentation available in the **[Wiki](../../wiki)**:
 - [Post-Installation](../../wiki/Post-Installation) - Packages and optimizations
 - [Tailscale Setup](../../wiki/Tailscale-Setup) - Remote access via VPN
 
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
+
+- Development setup
+- Code style guidelines
+- Pull request process
+- Testing instructions
+
+PRs are automatically tested and deployed for easy verification.
+
 ## Support
 
 <div align="center">

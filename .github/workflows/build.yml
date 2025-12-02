@@ -4,22 +4,25 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: read
-      pages: write
-      id-token: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full history for version calculation
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Calculate version
         id: version
@@ -39,6 +42,12 @@ jobs:
           fi
 
           VERSION="${MAJOR}.${MINOR}.${PATCH}"
+
+          # Add PR suffix for pull request builds
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            VERSION="${VERSION}-pr.${{ github.event.pull_request.number }}"
+          fi
+
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "Generated version: ${VERSION}"
 
@@ -65,9 +74,81 @@ jobs:
           # Replace version placeholder with calculated version
           sed -i "s/^VERSION=\"[0-9]*\"$/VERSION=\"${VERSION}\"/" pve-install.sh
 
+          # For PR builds, update GITHUB_BRANCH to use PR branch for templates
+          # For fork PRs, templates will come from fork's branch
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PR_BRANCH="${{ github.event.pull_request.head.ref }}"
+            PR_REPO="${{ github.event.pull_request.head.repo.full_name }}"
+
+            # Update GITHUB_BRANCH
+            sed -i "s|^GITHUB_BRANCH=\"\${GITHUB_BRANCH:-main}\"|GITHUB_BRANCH=\"\${GITHUB_BRANCH:-${PR_BRANCH}}\"|" pve-install.sh
+
+            # For forks, also update GITHUB_REPO
+            if [[ "$PR_REPO" != "${{ github.repository }}" ]]; then
+              sed -i "s|^GITHUB_REPO=\"\${GITHUB_REPO:-[^}]*}\"|GITHUB_REPO=\"\${GITHUB_REPO:-${PR_REPO}}\"|" pve-install.sh
+            fi
+          fi
+
           chmod +x pve-install.sh
 
-          # Prepare for GitHub Pages
+      - name: Lint with ShellCheck
+        run: shellcheck -e SC1091,SC2034,SC2086 scripts/*.sh
+
+      - name: Run unit tests
+        run: |
+          chmod +x tests/*.sh
+          ./tests/run-all-tests.sh
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pve-install
+          path: pve-install.sh
+
+      - name: Save PR metadata
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p pr-metadata
+          echo "${{ github.event.pull_request.number }}" > pr-metadata/pr_number
+          echo "${{ github.event.pull_request.head.ref }}" > pr-metadata/pr_branch
+          echo "${{ github.event.pull_request.head.repo.full_name }}" > pr-metadata/pr_repo
+
+      - name: Upload PR metadata
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-metadata
+          path: pr-metadata/
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pve-install
+
+      - name: Calculate version for badge
+        id: version
+        run: |
+          VERSION=$(grep -oP 'VERSION="\K[^"]+' pve-install.sh)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Prepare GitHub Pages
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
           mkdir -p _site
           cp pve-install.sh _site/
 
@@ -87,4 +168,5 @@ jobs:
           path: _site
 
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4

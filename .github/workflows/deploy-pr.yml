@@ -1,0 +1,152 @@
+name: Deploy PR Build
+
+# This workflow runs in the context of the base repository,
+# allowing it to deploy PR builds from forks securely.
+# It triggers after the build workflow completes.
+
+on:
+  workflow_run:
+    workflows: ["Build pve-install.sh"]
+    types:
+      - completed
+
+jobs:
+  deploy-pr:
+    runs-on: ubuntu-latest
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+
+    steps:
+      - name: Download PR metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: pr-metadata
+          path: /tmp/pr-metadata
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pve-install
+          path: /tmp/build
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read PR metadata
+        id: pr
+        run: |
+          PR_NUMBER=$(cat /tmp/pr-metadata/pr_number)
+          PR_BRANCH=$(cat /tmp/pr-metadata/pr_branch)
+          PR_REPO=$(cat /tmp/pr-metadata/pr_repo)
+          VERSION=$(grep -oP 'VERSION="\K[^"]+' /tmp/build/pve-install.sh)
+
+          echo "number=${PR_NUMBER}" >> $GITHUB_OUTPUT
+          echo "branch=${PR_BRANCH}" >> $GITHUB_OUTPUT
+          echo "repo=${PR_REPO}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "filename=pve-install-pr.${PR_NUMBER}.sh" >> $GITHUB_OUTPUT
+
+          # Check if this is a fork PR
+          if [[ "$PR_REPO" != "${{ github.repository }}" ]]; then
+            echo "is_fork=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_fork=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+
+      - name: Deploy PR script
+        run: |
+          FILENAME="${{ steps.pr.outputs.filename }}"
+
+          # Copy PR script with unique name
+          cp /tmp/build/pve-install.sh "${FILENAME}"
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Add and commit
+          git add "${FILENAME}"
+          git commit -m "Deploy PR #${{ steps.pr.outputs.number }} test script" || echo "No changes to commit"
+          git push origin gh-pages
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ steps.pr.outputs.number }};
+            const version = '${{ steps.pr.outputs.version }}';
+            const filename = '${{ steps.pr.outputs.filename }}';
+            const prBranch = '${{ steps.pr.outputs.branch }}';
+            const prRepo = '${{ steps.pr.outputs.repo }}';
+            const isFork = ${{ steps.pr.outputs.is_fork }};
+            const repoOwner = context.repo.owner;
+            const repoName = context.repo.repo;
+            const scriptUrl = `https://${repoOwner}.github.io/${repoName}/${filename}`;
+
+            const forkNote = isFork
+              ? `\n\n🍴 **Fork PR:** Templates will be loaded from [\`${prRepo}\`](https://github.com/${prRepo}/tree/${prBranch}).`
+              : '';
+
+            const body = `## 🧪 Test Build Available
+
+| Property | Value |
+|----------|-------|
+| **Version** | \`${version}\` |
+| **Branch** | \`${prBranch}\` |
+| **Source** | ${isFork ? `Fork: \`${prRepo}\`` : 'Same repo'} |
+
+### Quick Install (for testing)
+
+\`\`\`bash
+bash <(curl -sSL ${scriptUrl})
+\`\`\`
+
+### Direct Link
+
+📥 [${filename}](${scriptUrl})
+
+---
+⚠️ **Note:** This is a test build. Templates will be loaded from the \`${prBranch}\` branch.${forkNote}
+
+🤖 *This comment is automatically updated on each push to this PR.*`;
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('🧪 Test Build Available')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: body
+              });
+            }
