@@ -23,9 +23,9 @@ CLR_RESET=$'\033[m'
 # shellcheck disable=SC2034
 MENU_BOX_WIDTH=60
 
-# Spinner characters for progress display (Braille filling animation)
+# Spinner characters for progress display (filling circle animation)
 # shellcheck disable=SC2034
-SPINNER_CHARS=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+SPINNER_CHARS=('○' '◔' '◑' '◕' '●' '◕' '◑' '◔')
 
 # Disables all color output variables by setting them to empty strings.
 # Called when --no-color flag is used to ensure accessible terminal output.
