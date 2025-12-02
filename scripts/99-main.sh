@@ -180,7 +180,11 @@ reboot_to_main_os() {
     read -r -e -p "Do you want to reboot the system? (y/n): " -i "y" REBOOT
     if [[ "$REBOOT" == "y" ]]; then
         print_info "Rebooting the system..."
-        reboot
+        if ! reboot; then
+            log "ERROR: Failed to reboot - system may require manual restart"
+            print_error "Failed to reboot the system"
+            exit 1
+        fi
     else
         print_info "Exiting..."
         exit 0
