@@ -81,6 +81,10 @@ while [[ $# -gt 0 ]]; do
                 echo -e "${CLR_RED}Error: --qemu-ram must be a number >= 2048 MB${CLR_RESET}"
                 exit 1
             fi
+            if [[ "$2" -gt 131072 ]]; then
+                echo -e "${CLR_RED}Error: --qemu-ram must be <= 131072 MB (128 GB)${CLR_RESET}"
+                exit 1
+            fi
             QEMU_RAM_OVERRIDE="$2"
             shift 2
             ;;
@@ -91,6 +95,10 @@ while [[ $# -gt 0 ]]; do
             fi
             if ! [[ "$2" =~ ^[0-9]+$ ]] || [[ "$2" -lt 1 ]]; then
                 echo -e "${CLR_RED}Error: --qemu-cores must be a positive number${CLR_RESET}"
+                exit 1
+            fi
+            if [[ "$2" -gt 256 ]]; then
+                echo -e "${CLR_RED}Error: --qemu-cores must be <= 256${CLR_RESET}"
                 exit 1
             fi
             QEMU_CORES_OVERRIDE="$2"
