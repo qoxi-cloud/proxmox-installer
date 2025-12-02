@@ -137,9 +137,9 @@ display_config_preview() {
             printf "%-${inner_width}s\n" "$line"
         done
         echo ""
-        echo "Press ENTER_KEY to start installation"
-        echo "Press E_KEY to edit configuration"
-        echo "Press Q_KEY to quit"
+        printf "%-${inner_width}s\n" "Press ENTER_KEY to start installation"
+        printf "%-${inner_width}s\n" "Press E_KEY to edit configuration"
+        printf "%-${inner_width}s\n" "Press Q_KEY to quit"
     } | boxes -d stone -p a1 -s $MENU_BOX_WIDTH | _colorize_preview
 }
 
