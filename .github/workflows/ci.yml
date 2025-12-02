@@ -1,4 +1,4 @@
-name: Build pve-install.sh
+name: CI
 
 on:
   push:

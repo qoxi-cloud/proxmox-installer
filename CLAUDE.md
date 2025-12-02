@@ -132,7 +132,7 @@ eval "$(sed -n '/^function_name()/,/^}/p' "$SCRIPT_DIR/scripts/module.sh")"
 
 The project uses multiple GitHub Actions workflows:
 
-### Build Workflow (`build.yml`)
+### CI Workflow (`ci.yml`)
 
 **Build Job** - Runs on every push and pull request:
 

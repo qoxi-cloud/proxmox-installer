@@ -6,7 +6,7 @@ name: Deploy PR Build
 
 on:
   workflow_run:
-    workflows: ["Build pve-install.sh"]
+    workflows: ["CI"]
     types:
       - completed
 
