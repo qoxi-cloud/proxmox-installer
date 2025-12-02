@@ -4,6 +4,7 @@
 # =============================================================================
 
 # --- 00-init.sh ---
+# Proxmox VE Automated Installer for Hetzner Dedicated Servers
 # Note: NOT using set -e because it interferes with trap EXIT handler
 # All error handling is done explicitly with exit 1
 cd /root || exit 1
@@ -23,7 +24,16 @@ CLR_GRAY=$'\033[38;5;240m'
 CLR_HETZNER=$'\033[38;5;160m'
 CLR_RESET=$'\033[m'
 
-# Disable all colors (called when --no-color flag is used)
+# Menu box width for consistent UI rendering across all scripts
+# shellcheck disable=SC2034
+MENU_BOX_WIDTH=60
+
+# Spinner characters for progress display (filling circle animation)
+# shellcheck disable=SC2034
+SPINNER_CHARS=('○' '◔' '◑' '◕' '●' '◕' '◑' '◔')
+
+# Disables all color output variables by setting them to empty strings.
+# Called when --no-color flag is used to ensure accessible terminal output.
 disable_colors() {
     CLR_RED=''
     CLR_CYAN=''
@@ -35,7 +45,7 @@ disable_colors() {
 }
 
 # Version (MAJOR only - MINOR.PATCH added by CI from git tags/commits)
-VERSION="1.17.5"
+VERSION="1.17.8"
 
 # =============================================================================
 # Configuration constants
@@ -129,7 +139,10 @@ LOG_FILE="/root/pve-install-$(date +%Y%m%d-%H%M%S).log"
 # Track if installation completed successfully
 INSTALL_COMPLETED=false
 
-# Cleanup temporary files on exit
+# Cleans up temporary files created during installation.
+# Removes ISO files, password files, logs, and other temporary artifacts.
+# Behavior depends on INSTALL_COMPLETED flag - preserves files if installation succeeded.
+# Uses secure deletion for password files when available.
 cleanup_temp_files() {
     # Clean up standard temporary files
     rm -f /tmp/tailscale_*.txt /tmp/iso_checksum.txt /tmp/*.tmp 2>/dev/null || true
@@ -145,7 +158,10 @@ cleanup_temp_files() {
     find /dev/shm /tmp -name "*passfile*" -type f -delete 2>/dev/null || true
 }
 
-# Cleanup handler - restore cursor and show error if needed
+# Cleanup handler invoked on script exit via trap.
+# Performs graceful shutdown of background processes, drive cleanup, cursor restoration.
+# Displays error message if installation failed (INSTALL_COMPLETED != true).
+# Returns: Exit code from the script
 cleanup_and_error_handler() {
     local exit_code=$?
 
@@ -242,6 +258,9 @@ INSTALL_UNATTENDED_UPGRADES=""
 # =============================================================================
 # Command line argument parsing
 # =============================================================================
+
+# Displays command-line help message with usage, options, and examples.
+# Prints to stdout and exits with code 0.
 show_help() {
     cat << EOF
 Proxmox VE Automated Installer for Hetzner v${VERSION}
@@ -318,6 +337,10 @@ while [[ $# -gt 0 ]]; do
                 echo -e "${CLR_RED}Error: --qemu-ram must be a number >= 2048 MB${CLR_RESET}"
                 exit 1
             fi
+            if [[ "$2" -gt 131072 ]]; then
+                echo -e "${CLR_RED}Error: --qemu-ram must be <= 131072 MB (128 GB)${CLR_RESET}"
+                exit 1
+            fi
             QEMU_RAM_OVERRIDE="$2"
             shift 2
             ;;
@@ -328,6 +351,10 @@ while [[ $# -gt 0 ]]; do
             fi
             if ! [[ "$2" =~ ^[0-9]+$ ]] || [[ "$2" -lt 1 ]]; then
                 echo -e "${CLR_RED}Error: --qemu-cores must be a positive number${CLR_RESET}"
+                exit 1
+            fi
+            if [[ "$2" -gt 256 ]]; then
+                echo -e "${CLR_RED}Error: --qemu-cores must be <= 256${CLR_RESET}"
                 exit 1
             fi
             QEMU_CORES_OVERRIDE="$2"
@@ -369,8 +396,10 @@ fi
 # Config file functions
 # =============================================================================
 
-# Validate required configuration variables for non-interactive mode
-# Returns: 0 if valid, 1 if missing required variables
+# Validates configuration variables for correctness and completeness.
+# Checks format and allowed values for bridge mode, ZFS RAID, repository type, etc.
+# In non-interactive mode, ensures all required variables are set.
+# Returns: 0 if valid, 1 if validation errors found
 validate_config() {
     local has_errors=false
 
@@ -454,6 +483,12 @@ validate_config() {
     return 0
 }
 
+# Loads configuration from specified file and validates it.
+# Sources the config file and runs validation checks.
+# Parameters:
+#   $1 - Path to configuration file
+# Returns: 0 on success, 1 on failure
+# Side effects: Sets global configuration variables
 load_config() {
     local file="$1"
     if [[ -f "$file" ]]; then
@@ -474,6 +509,12 @@ load_config() {
     fi
 }
 
+# Saves current configuration to specified file.
+# Writes all configuration variables to file in bash-compatible format.
+# Sets file permissions to 600 for security.
+# Parameters:
+#   $1 - Path to output configuration file
+# Side effects: Creates/overwrites configuration file
 save_config() {
     local file="$1"
     cat > "$file" << EOF
@@ -546,19 +587,27 @@ fi
 # Logging setup
 # =============================================================================
 
-# Log silently to file only (not shown to user)
+# Logs message to file with timestamp (not shown to user).
+# Parameters:
+#   $* - Message to log
+# Side effects: Appends to LOG_FILE
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
 }
 
-# Log debug info (only to file)
+# Logs debug message to file with [DEBUG] prefix.
+# Parameters:
+#   $* - Debug message to log
+# Side effects: Appends to LOG_FILE
 log_debug() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [DEBUG] $*" >> "$LOG_FILE"
 }
 
-# Log command output to file
-# Usage: log_cmd command [args...]
-# Example: log_cmd apt-get update
+# Executes command and logs its output to file.
+# Parameters:
+#   $* - Command and arguments to execute
+# Returns: Exit code of the command
+# Side effects: Logs command, output, and exit code to LOG_FILE
 log_cmd() {
     log_debug "Running: $*"
     "$@" >> "$LOG_FILE" 2>&1
@@ -567,7 +616,11 @@ log_cmd() {
     return $exit_code
 }
 
-# Run command silently, log output to file, return exit code
+# Executes command silently, logging output to file only.
+# Parameters:
+#   $* - Command and arguments to execute
+# Returns: Exit code of the command
+# Side effects: Redirects output to LOG_FILE
 run_logged() {
     log_debug "Executing: $*"
     "$@" >> "$LOG_FILE" 2>&1
@@ -626,8 +679,11 @@ show_banner
 # Display utilities
 # =============================================================================
 
-# Display a boxed section with title using 'boxes'
-# Usage: display_box "title" "content"
+# Displays a boxed section with title using 'boxes' utility.
+# Parameters:
+#   $1 - Title text
+#   $2 - Content text
+#   $3 - Box style (default: stone)
 display_box() {
     local title="$1"
     local content="$2"
@@ -642,9 +698,10 @@ display_box() {
     echo -e "${CLR_RESET}"
 }
 
-# Display system info table using boxes and column
-# Takes associative array-like pairs: "label|value|status"
-# status: ok=green, warn=yellow, error=red
+# Displays system info table using boxes and column.
+# Parameters:
+#   $1 - Table title
+#   $@ - Items in format "label|value|status" (status: ok, warn, error)
 display_info_table() {
     local title="$1"
     shift
@@ -677,8 +734,9 @@ display_info_table() {
     echo ""
 }
 
-# Colorize the output of boxes (post-process)
-# Adds cyan frame and colors for [OK], [WARN], [ERROR]
+# Colorizes the output of boxes (post-process).
+# Adds cyan frame and colors for [OK], [WARN], [ERROR] markers.
+# Reads from stdin, writes to stdout.
 colorize_status() {
     while IFS= read -r line; do
         # Top/bottom border
@@ -698,9 +756,10 @@ colorize_status() {
     done
 }
 
-# Print success message with checkmark
-# Usage: print_success "label: value" or print_success "label" "value"
-# When 2 args provided, value is highlighted in cyan
+# Prints success message with checkmark.
+# Parameters:
+#   $1 - Label or full message
+#   $2 - Optional value (highlighted in cyan)
 print_success() {
     if [[ $# -eq 2 ]]; then
         echo -e "${CLR_CYAN}✓${CLR_RESET} $1 ${CLR_CYAN}$2${CLR_RESET}"
@@ -709,15 +768,17 @@ print_success() {
     fi
 }
 
-# Print error message with cross
+# Prints error message with red cross icon.
+# Parameters:
+#   $1 - Error message to display
 print_error() {
     echo -e "${CLR_RED}✗${CLR_RESET} $1"
 }
 
-# Print warning message
-# Usage: print_warning "message" [nested] OR print_warning "label" "value"
-# When 2 args provided and second is not "true", value is highlighted in cyan
-# If nested=true, adds indent before the warning icon
+# Prints warning message with yellow warning icon.
+# Parameters:
+#   $1 - Warning message or label
+#   $2 - Optional: "true" for nested indent, or value to highlight in cyan
 print_warning() {
     local message="$1"
     local second="${2:-false}"
@@ -736,9 +797,11 @@ print_warning() {
     fi
 }
 
-# Print info message
+# Prints informational message with cyan info symbol.
+# Parameters:
+#   $1 - Informational message to display
 print_info() {
-    echo -e "${CLR_GRAY}ℹ${CLR_RESET} $1"
+    echo -e "${CLR_CYAN}ℹ${CLR_RESET} $1"
 }
 
 # --- 02-utils.sh ---
@@ -747,9 +810,11 @@ print_info() {
 # General utilities
 # =============================================================================
 
-# Download files with retry
+# Downloads file with retry logic and integrity verification.
+# Parameters:
+#   $1 - Output file path
+#   $2 - URL to download from
 # Returns: 0 on success, 1 on failure
-# Note: Caller should handle the error (exit or continue)
 download_file() {
     local output_file="$1"
     local url="$2"
@@ -790,8 +855,11 @@ download_file() {
 # Template processing utilities
 # =============================================================================
 
-# Apply template variable substitutions to a file
-# Usage: apply_template_vars FILE [VAR1=VALUE1] [VAR2=VALUE2] ...
+# Applies template variable substitutions to a file.
+# Parameters:
+#   $1 - File path to modify
+#   $@ - VAR=VALUE pairs for substitution (replaces {{VAR}} with VALUE)
+# Returns: 0 on success, 1 if file not found
 apply_template_vars() {
     local file="$1"
     shift
@@ -822,8 +890,10 @@ apply_template_vars() {
     fi
 }
 
-# Apply common template variables to a file using global variables
-# Usage: apply_common_template_vars FILE
+# Applies common template variables to a file using global variables.
+# Substitutes placeholders for IP, hostname, DNS, network settings.
+# Parameters:
+#   $1 - File path to modify
 apply_common_template_vars() {
     local file="$1"
 
@@ -847,12 +917,12 @@ apply_common_template_vars() {
         "DNS6_SECONDARY=${DNS6_SECONDARY:-2606:4700:4700::1001}"
 }
 
-# Download template from GitHub repository
-# Usage: download_template LOCAL_PATH [REMOTE_FILENAME]
-# REMOTE_FILENAME defaults to basename of LOCAL_PATH
-# All templates have .tmpl extension on GitHub, but are saved locally without it
+# Downloads template from GitHub repository with validation.
+# Parameters:
+#   $1 - Local path to save template
+#   $2 - Optional remote filename (defaults to basename of $1)
 # Returns: 0 on success, 1 on failure
-# Note: Caller should handle the error (exit or continue)
+# Note: Templates have .tmpl extension on GitHub but saved locally without it
 download_template() {
     local local_path="$1"
     local remote_file="${2:-$(basename "$local_path")}"
@@ -910,15 +980,20 @@ download_template() {
     return 0
 }
 
-# Generate a secure random password
-# Usage: generate_password [length]
+# Generates a secure random password.
+# Parameters:
+#   $1 - Password length (default: 16)
+# Returns: Random password via stdout
 generate_password() {
     local length="${1:-16}"
     # Use /dev/urandom with base64, filter to alphanumeric + some special chars
     tr -dc 'A-Za-z0-9!@#$%^&*' < /dev/urandom | head -c "$length"
 }
 
-# Function to read password with asterisks shown for each character
+# Reads password from user with asterisks shown for each character.
+# Parameters:
+#   $1 - Prompt text
+# Returns: Password via stdout
 read_password() {
     local prompt="$1"
     local password=""
@@ -948,7 +1023,13 @@ read_password() {
     echo "$password"
 }
 
-# Prompt with validation loop
+# Prompts for input with validation loop until valid value provided.
+# Parameters:
+#   $1 - Prompt text
+#   $2 - Default value
+#   $3 - Validator function name
+#   $4 - Error message for invalid input
+# Returns: Validated input value via stdout
 prompt_validated() {
     local prompt="$1"
     local default="$2"
@@ -970,13 +1051,13 @@ prompt_validated() {
 # Progress indicators
 # =============================================================================
 
-# Spinner characters for progress display (filling circle animation)
-SPINNER_CHARS=('○' '◔' '◑' '◕' '●' '◕' '◑' '◔')
-
-# Progress indicator with spinner
-# Waits for process to complete, shows success or failure
-# Usage: show_progress PID "message" ["done_message"] [--silent]
-# --silent: clear line on success instead of showing done message
+# Shows progress indicator with spinner while process runs.
+# Parameters:
+#   $1 - PID of process to wait for
+#   $2 - Progress message
+#   $3 - Optional done message or "--silent" to clear line on success
+#   $4 - Optional "--silent" flag
+# Returns: Exit code of the waited process
 show_progress() {
     local pid=$1
     local message="${2:-Processing}"
@@ -1008,7 +1089,14 @@ show_progress() {
     return $exit_code
 }
 
-# Wait for condition with progress
+# Waits for condition to become true within timeout period, showing progress.
+# Parameters:
+#   $1 - Progress message
+#   $2 - Timeout in seconds
+#   $3 - Check command (evaluated)
+#   $4 - Check interval in seconds (default: 5)
+#   $5 - Success message (default: same as $1)
+# Returns: 0 if condition met, 1 on timeout
 wait_with_progress() {
     local message="$1"
     local timeout="$2"
@@ -1037,9 +1125,10 @@ wait_with_progress() {
     done
 }
 
-# Show timed progress bar
-# Usage: show_timed_progress "message" [duration_seconds]
-# Duration defaults to 5-7 seconds (random for visual effect)
+# Shows timed progress bar with visual animation.
+# Parameters:
+#   $1 - Progress message
+#   $2 - Duration in seconds (default: 5-7 random)
 show_timed_progress() {
     local message="$1"
     local duration="${2:-$((5 + RANDOM % 3))}"  # 5-7 seconds default
@@ -1073,7 +1162,10 @@ show_timed_progress() {
     printf "\r\e[K"
 }
 
-# Format time duration
+# Formats time duration in seconds to human-readable string.
+# Parameters:
+#   $1 - Duration in seconds
+# Returns: Formatted duration (e.g., "1h 30m 45s") via stdout
 format_duration() {
     local seconds="$1"
     local hours=$((seconds / 3600))
@@ -1098,7 +1190,10 @@ format_duration() {
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=${SSH_CONNECT_TIMEOUT:-10}"
 SSH_PORT="5555"
 
-# Check if port is available before use
+# Checks if specified port is available (not in use).
+# Parameters:
+#   $1 - Port number to check
+# Returns: 0 if available, 1 if in use
 check_port_available() {
     local port="$1"
     if command -v ss &>/dev/null; then
@@ -1113,10 +1208,11 @@ check_port_available() {
     return 0
 }
 
-# Create secure temporary file for password
-# Uses /dev/shm if available (RAM-based, faster and more secure)
-# Falls back to regular /tmp if /dev/shm is not available
-# Returns: path to temporary file
+# Creates secure temporary file for password storage.
+# Uses /dev/shm if available (RAM-based, faster and more secure).
+# Falls back to regular /tmp if /dev/shm is not available.
+# Returns: Path to temporary file via stdout
+# Side effects: Creates file with NEW_ROOT_PASSWORD content
 create_passfile() {
     local passfile
     # Try /dev/shm first (RAM-based, not on disk)
@@ -1132,8 +1228,10 @@ create_passfile() {
     echo "$passfile"
 }
 
-# Securely clean up password file
-# Uses shred if available, otherwise overwrites with zeros before deletion
+# Securely cleans up password file.
+# Uses shred if available, otherwise overwrites with zeros before deletion.
+# Parameters:
+#   $1 - Path to password file
 secure_cleanup_passfile() {
     local passfile="$1"
     if [[ -f "$passfile" ]]; then
@@ -1152,7 +1250,12 @@ secure_cleanup_passfile() {
     fi
 }
 
-# Wait for SSH to be fully ready (not just port open)
+# Waits for SSH service to be fully ready on localhost:SSH_PORT.
+# Performs port check followed by SSH connection test.
+# Parameters:
+#   $1 - Timeout in seconds (default: 120)
+# Returns: 0 if SSH ready, 1 on timeout or failure
+# Side effects: Uses NEW_ROOT_PASSWORD for authentication
 wait_for_ssh_ready() {
     local timeout="${1:-120}"
 
@@ -1189,6 +1292,11 @@ wait_for_ssh_ready() {
     return $exit_code
 }
 
+# Executes command on remote VM via SSH with retry logic.
+# Parameters:
+#   $* - Command to execute remotely
+# Returns: Exit code from remote command
+# Side effects: Uses SSH_PORT and NEW_ROOT_PASSWORD
 remote_exec() {
     # Use secure temporary file for password
     local passfile
@@ -1223,6 +1331,9 @@ remote_exec() {
     return $exit_code
 }
 
+# Executes bash script on remote VM via SSH (reads from stdin).
+# Returns: Exit code from remote script
+# Side effects: Uses SSH_PORT and NEW_ROOT_PASSWORD
 remote_exec_script() {
     # Use secure temporary file for password
     local passfile
@@ -1236,7 +1347,14 @@ remote_exec_script() {
     return $exit_code
 }
 
-# Execute remote script with progress indicator (logs output to file, shows spinner)
+# Executes remote script with progress indicator.
+# Logs output to file, shows spinner to user.
+# Parameters:
+#   $1 - Progress message
+#   $2 - Script content to execute
+#   $3 - Done message (optional, defaults to $1)
+# Returns: Exit code from remote script
+# Side effects: Logs output to LOG_FILE
 remote_exec_with_progress() {
     local message="$1"
     local script="$2"
@@ -1282,8 +1400,12 @@ remote_exec_with_progress() {
     return $exit_code
 }
 
-# Execute remote script with progress, exit on failure
-# Usage: run_remote "message" 'script' ["done_message"]
+# Executes remote script with progress, exits on failure.
+# Parameters:
+#   $1 - Progress message
+#   $2 - Script content to execute
+#   $3 - Done message (optional, defaults to $1)
+# Side effects: Exits with code 1 on failure
 run_remote() {
     local message="$1"
     local script="$2"
@@ -1295,6 +1417,12 @@ run_remote() {
     fi
 }
 
+# Copies file to remote VM via SCP.
+# Parameters:
+#   $1 - Source file path (local)
+#   $2 - Destination path (remote)
+# Returns: Exit code from scp
+# Side effects: Uses SSH_PORT and NEW_ROOT_PASSWORD
 remote_copy() {
     local src="$1"
     local dst="$2"
@@ -1315,8 +1443,11 @@ remote_copy() {
 # SSH key utilities
 # =============================================================================
 
-# Parse SSH public key into components
-# Sets: SSH_KEY_TYPE, SSH_KEY_DATA, SSH_KEY_COMMENT, SSH_KEY_SHORT
+# Parses SSH public key into components.
+# Parameters:
+#   $1 - SSH public key string
+# Returns: 0 on success, 1 if key is empty
+# Side effects: Sets SSH_KEY_TYPE, SSH_KEY_DATA, SSH_KEY_COMMENT, SSH_KEY_SHORT globals
 parse_ssh_key() {
     local key="$1"
 
@@ -1345,13 +1476,17 @@ parse_ssh_key() {
     return 0
 }
 
-# Validate SSH public key format
+# Validates SSH public key format (rsa, ed25519, ecdsa).
+# Parameters:
+#   $1 - SSH public key string
+# Returns: 0 if valid format, 1 otherwise
 validate_ssh_key() {
     local key="$1"
     [[ "$key" =~ ^ssh-(rsa|ed25519|ecdsa)[[:space:]] ]]
 }
 
-# Get SSH key from rescue system authorized_keys
+# Retrieves SSH public key from rescue system's authorized_keys.
+# Returns: First valid SSH public key via stdout, empty if none found
 get_rescue_ssh_key() {
     if [[ -f /root/.ssh/authorized_keys ]]; then
         grep -E "^ssh-(rsa|ed25519|ecdsa)" /root/.ssh/authorized_keys 2>/dev/null | head -1
@@ -1369,9 +1504,12 @@ get_rescue_ssh_key() {
 
 MENU_BOX_WIDTH=60
 
-# Wrap text to fit within box width
-# Usage: _wrap_text "text" "prefix" max_width
-# prefix is added to continuation lines
+# Internal helper: wraps text to fit within box width.
+# Parameters:
+#   $1 - Text to wrap
+#   $2 - Prefix for continuation lines
+#   $3 - Maximum width
+# Returns: Wrapped text via stdout
 _wrap_text() {
     local text="$1"
     local prefix="$2"
@@ -1409,6 +1547,12 @@ _wrap_text() {
     echo "$result"
 }
 
+# Displays interactive radio menu for single selection.
+# Parameters:
+#   $1 - Menu title
+#   $2 - Header content
+#   $@ - Items in format "label|description"
+# Side effects: Sets MENU_SELECTED global (0-based index)
 radio_menu() {
     local title="$1"
     local header="$2"
@@ -1571,8 +1715,13 @@ radio_menu() {
     MENU_SELECTED=$selected
 }
 
-# Display an input box and prompt for value
-# Usage: input_box "title" "content" "prompt" "default" -> result in INPUT_VALUE
+# Displays input box and prompts for value.
+# Parameters:
+#   $1 - Box title
+#   $2 - Content/description
+#   $3 - Input prompt text
+#   $4 - Default value
+# Side effects: Sets INPUT_VALUE global
 input_box() {
     local title="$1"
     local content="$2"
@@ -1619,11 +1768,14 @@ input_box() {
 # =============================================================================
 # Interactive checkbox menu (multi-select)
 # =============================================================================
-# Usage: checkbox_menu "Title" "header_content" "label1|desc1|default1" "label2|desc2|default2" ...
-# - default: 1 = checked, 0 = unchecked
-# - Space toggles selection, Enter confirms
-# Sets: CHECKBOX_RESULTS array (1=selected, 0=not selected for each item)
 
+# Displays interactive checkbox menu for multiple selection.
+# Parameters:
+#   $1 - Menu title
+#   $2 - Header content
+#   $@ - Items in format "label|description|default" (default: 1=checked, 0=unchecked)
+# Navigation: Space toggles selection, Enter confirms
+# Side effects: Sets CHECKBOX_RESULTS array (1=selected, 0=not selected)
 checkbox_menu() {
     local title="$1"
     local header="$2"
@@ -1790,40 +1942,58 @@ checkbox_menu() {
 # Input validation functions
 # =============================================================================
 
+# Validates hostname format (alphanumeric, hyphens, 1-63 chars).
+# Parameters:
+#   $1 - Hostname to validate
+# Returns: 0 if valid, 1 otherwise
 validate_hostname() {
     local hostname="$1"
     # Hostname: alphanumeric and hyphens, 1-63 chars, cannot start/end with hyphen
     [[ "$hostname" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]]
 }
 
+# Validates fully qualified domain name format.
+# Parameters:
+#   $1 - FQDN to validate
+# Returns: 0 if valid, 1 otherwise
 validate_fqdn() {
     local fqdn="$1"
     # FQDN: valid hostname labels separated by dots
     [[ "$fqdn" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$ ]]
 }
 
+# Validates email address format (basic check).
+# Parameters:
+#   $1 - Email address to validate
+# Returns: 0 if valid, 1 otherwise
 validate_email() {
     local email="$1"
     # Basic email validation
     [[ "$email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]
 }
 
+# Validates password meets minimum requirements (8+ chars, ASCII).
+# Parameters:
+#   $1 - Password to validate
+# Returns: 0 if valid, 1 otherwise
 validate_password() {
     local password="$1"
     # Password must be at least 8 characters (Proxmox requirement)
     [[ ${#password} -ge 8 ]] && is_ascii_printable "$password"
 }
 
-# Check if password contains only ASCII printable characters
-# Usage: is_ascii_printable PASSWORD
-# Returns: 0 if valid, 1 if contains non-ASCII
+# Checks if string contains only ASCII printable characters.
+# Parameters:
+#   $1 - String to check
+# Returns: 0 if all ASCII printable, 1 otherwise
 is_ascii_printable() {
     LC_ALL=C bash -c '[[ "$1" =~ ^[[:print:]]+$ ]]' _ "$1"
 }
 
-# Get password validation error message
-# Usage: get_password_error PASSWORD
-# Returns: error message string, empty if password is valid
+# Returns descriptive error message for invalid password.
+# Parameters:
+#   $1 - Password to check
+# Returns: Error message via stdout, empty if valid
 get_password_error() {
     local password="$1"
     if [[ -z "$password" ]]; then
@@ -1835,8 +2005,9 @@ get_password_error() {
     fi
 }
 
-# Validate password and print error if invalid
-# Usage: validate_password_with_error PASSWORD
+# Validates password and prints error if invalid.
+# Parameters:
+#   $1 - Password to validate
 # Returns: 0 if valid, 1 if invalid (with error printed)
 validate_password_with_error() {
     local password="$1"
@@ -1849,6 +2020,10 @@ validate_password_with_error() {
     return 0
 }
 
+# Validates subnet in CIDR notation (e.g., 10.0.0.0/24).
+# Parameters:
+#   $1 - Subnet to validate
+# Returns: 0 if valid, 1 otherwise
 validate_subnet() {
     local subnet="$1"
     # Validate CIDR notation (e.g., 10.0.0.0/24)
@@ -1872,9 +2047,10 @@ validate_subnet() {
 # IPv6 validation functions
 # =============================================================================
 
-# Validate IPv6 address (without prefix)
-# Supports full, compressed (::), and mixed (::ffff:192.0.2.1) formats
-# Usage: validate_ipv6 "2001:db8::1"
+# Validates IPv6 address (full, compressed, or mixed format).
+# Parameters:
+#   $1 - IPv6 address to validate (without prefix)
+# Returns: 0 if valid, 1 otherwise
 validate_ipv6() {
     local ipv6="$1"
 
@@ -1925,8 +2101,10 @@ validate_ipv6() {
     return 0
 }
 
-# Validate IPv6 address with CIDR prefix
-# Usage: validate_ipv6_cidr "2001:db8::1/64"
+# Validates IPv6 address with CIDR prefix (e.g., 2001:db8::1/64).
+# Parameters:
+#   $1 - IPv6 with CIDR notation
+# Returns: 0 if valid, 1 otherwise
 validate_ipv6_cidr() {
     local ipv6_cidr="$1"
 
@@ -1944,9 +2122,10 @@ validate_ipv6_cidr() {
     validate_ipv6 "$ipv6"
 }
 
-# Validate IPv6 gateway address
-# Gateway can be a full IPv6 address or link-local (fe80::)
-# Usage: validate_ipv6_gateway "fe80::1"
+# Validates IPv6 gateway address (accepts empty, "auto", or valid IPv6).
+# Parameters:
+#   $1 - Gateway address to validate
+# Returns: 0 if valid, 1 otherwise
 validate_ipv6_gateway() {
     local gateway="$1"
 
@@ -1960,8 +2139,10 @@ validate_ipv6_gateway() {
     validate_ipv6 "$gateway"
 }
 
-# Validate IPv6 prefix length (for VM subnet allocation)
-# Usage: validate_ipv6_prefix_length "80"
+# Validates IPv6 prefix length (48-128).
+# Parameters:
+#   $1 - Prefix length to validate
+# Returns: 0 if valid, 1 otherwise
 validate_ipv6_prefix_length() {
     local prefix="$1"
 
@@ -1972,27 +2153,37 @@ validate_ipv6_prefix_length() {
     return 0
 }
 
-# Check if IPv6 address is link-local (fe80::/10)
-# Usage: is_ipv6_link_local "fe80::1"
+# Checks if IPv6 address is link-local (fe80::/10).
+# Parameters:
+#   $1 - IPv6 address to check
+# Returns: 0 if link-local, 1 otherwise
 is_ipv6_link_local() {
     local ipv6="$1"
     [[ "$ipv6" =~ ^[fF][eE]8[0-9a-fA-F]: ]] || [[ "$ipv6" =~ ^[fF][eE][89aAbB][0-9a-fA-F]: ]]
 }
 
-# Check if IPv6 address is ULA (fc00::/7)
-# Usage: is_ipv6_ula "fd00::1"
+# Checks if IPv6 address is ULA (fc00::/7).
+# Parameters:
+#   $1 - IPv6 address to check
+# Returns: 0 if ULA, 1 otherwise
 is_ipv6_ula() {
     local ipv6="$1"
     [[ "$ipv6" =~ ^[fF][cCdD] ]]
 }
 
-# Check if IPv6 address is global unicast (2000::/3)
-# Usage: is_ipv6_global "2001:db8::1"
+# Checks if IPv6 address is global unicast (2000::/3).
+# Parameters:
+#   $1 - IPv6 address to check
+# Returns: 0 if global unicast, 1 otherwise
 is_ipv6_global() {
     local ipv6="$1"
     [[ "$ipv6" =~ ^[23] ]]
 }
 
+# Validates timezone string format and existence.
+# Parameters:
+#   $1 - Timezone to validate (e.g., Europe/London)
+# Returns: 0 if valid, 1 otherwise
 validate_timezone() {
     local tz="$1"
     # Check if timezone file exists (preferred validation)
@@ -2012,9 +2203,15 @@ validate_timezone() {
 # Input prompt helpers with validation
 # =============================================================================
 
-# Prompt for input with validation, showing success checkmark when valid
-# Usage: prompt_with_validation "prompt" "default" "validator" "error_msg" "var_name" ["confirm_label"]
-# confirm_label: Optional short label for confirmation (e.g., "Hostname:" instead of full prompt)
+# Prompts for input with validation, showing success checkmark when valid.
+# Parameters:
+#   $1 - Prompt text
+#   $2 - Default value
+#   $3 - Validator function name
+#   $4 - Error message for invalid input
+#   $5 - Variable name to store result
+#   $6 - Optional confirmation label
+# Side effects: Sets variable named by $5
 prompt_with_validation() {
     local prompt="$1"
     local default="$2"
@@ -2036,12 +2233,12 @@ prompt_with_validation() {
     done
 }
 
-# Prompt for password with validation
-# Usage: prompt_password "prompt" "var_name"
-# Validate that FQDN resolves to expected IP using public DNS servers
-# Usage: validate_dns_resolution "fqdn" "expected_ip"
+# Validates that FQDN resolves to expected IP using public DNS servers.
+# Parameters:
+#   $1 - FQDN to resolve
+#   $2 - Expected IP address
 # Returns: 0 if matches, 1 if no resolution, 2 if wrong IP
-# Sets: DNS_RESOLVED_IP with the resolved IP (empty if no resolution)
+# Side effects: Sets DNS_RESOLVED_IP global
 validate_dns_resolution() {
     local fqdn="$1"
     local expected_ip="$2"
@@ -2114,6 +2311,11 @@ validate_dns_resolution() {
     fi
 }
 
+# Prompts for password with validation and masked display.
+# Parameters:
+#   $1 - Prompt text
+#   $2 - Variable name to store result
+# Side effects: Sets variable named by $2
 prompt_password() {
     local prompt="$1"
     local var_name="$2"
@@ -2138,7 +2340,10 @@ prompt_password() {
 # System checks and hardware detection
 # =============================================================================
 
-# Collect system info with progress indicator
+# Collects and validates system information with progress indicator.
+# Checks: root access, internet connectivity, disk space, RAM, CPU, KVM.
+# Installs required packages if missing.
+# Side effects: Sets PREFLIGHT_* global variables, may install packages
 collect_system_info() {
     local errors=0
     local checks=7
@@ -2289,7 +2494,9 @@ collect_system_info() {
     PREFLIGHT_ERRORS=$errors
 }
 
-# Detect drives (NVMe preferred, falls back to any disk)
+# Detects available drives (NVMe preferred, fallback to any disk).
+# Excludes loop devices and partitions.
+# Side effects: Sets DRIVES, DRIVE_COUNT, DRIVE_NAMES, DRIVE_SIZES, DRIVE_MODELS globals
 detect_drives() {
     # Find all NVMe drives (excluding partitions)
     mapfile -t DRIVES < <(lsblk -d -n -o NAME,TYPE | grep nvme | grep disk | awk '{print "/dev/"$1}' | sort)
@@ -2322,7 +2529,9 @@ detect_drives() {
 
 }
 
-# Display system status
+# Displays system status summary in formatted table.
+# Shows preflight checks and detected storage drives.
+# Exits with error if critical checks failed or no drives detected.
 show_system_status() {
     detect_drives
 
@@ -2403,6 +2612,11 @@ show_system_status() {
 # Network interface detection
 # =============================================================================
 
+# Detects network interface name with predictable naming support.
+# Attempts to find predictable name (enp*, eno*) for bare metal servers.
+# Falls back to current interface name if predictable name not found.
+# Side effects: Sets CURRENT_INTERFACE, PREDICTABLE_NAME, DEFAULT_INTERFACE,
+#               AVAILABLE_ALTNAMES, INTERFACE_NAME globals
 detect_network_interface() {
     # Get default interface name (the one with default route)
     # Prefer JSON output with jq for more reliable parsing
@@ -2475,9 +2689,9 @@ detect_network_interface() {
 # Network info collection helper functions
 # =============================================================================
 
-# Get IPv4 info using ip command with JSON output (most reliable)
+# Internal: gets IPv4 info using ip JSON output (most reliable).
 # Returns: 0 on success, 1 on failure
-# Sets: MAIN_IPV4_CIDR, MAIN_IPV4, MAIN_IPV4_GW
+# Side effects: Sets MAIN_IPV4_CIDR, MAIN_IPV4, MAIN_IPV4_GW globals
 _get_ipv4_via_ip_json() {
     MAIN_IPV4_CIDR=$(ip -j address show "$CURRENT_INTERFACE" 2>/dev/null | jq -r '.[0].addr_info[] | select(.family == "inet" and .scope == "global") | "\(.local)/\(.prefixlen)"' | head -n1)
     MAIN_IPV4="${MAIN_IPV4_CIDR%/*}"
@@ -2485,9 +2699,9 @@ _get_ipv4_via_ip_json() {
     [[ -n "$MAIN_IPV4" ]] && [[ -n "$MAIN_IPV4_GW" ]]
 }
 
-# Get IPv4 info using ip command with text parsing
+# Internal: gets IPv4 info using ip text parsing.
 # Returns: 0 on success, 1 on failure
-# Sets: MAIN_IPV4_CIDR, MAIN_IPV4, MAIN_IPV4_GW
+# Side effects: Sets MAIN_IPV4_CIDR, MAIN_IPV4, MAIN_IPV4_GW globals
 _get_ipv4_via_ip_text() {
     MAIN_IPV4_CIDR=$(ip address show "$CURRENT_INTERFACE" 2>/dev/null | grep global | grep "inet " | awk '{print $2}' | head -n1)
     MAIN_IPV4="${MAIN_IPV4_CIDR%/*}"
@@ -2495,9 +2709,9 @@ _get_ipv4_via_ip_text() {
     [[ -n "$MAIN_IPV4" ]] && [[ -n "$MAIN_IPV4_GW" ]]
 }
 
-# Get IPv4 info using legacy ifconfig/route commands
+# Internal: gets IPv4 info using legacy ifconfig/route commands.
 # Returns: 0 on success, 1 on failure
-# Sets: MAIN_IPV4_CIDR, MAIN_IPV4, MAIN_IPV4_GW
+# Side effects: Sets MAIN_IPV4_CIDR, MAIN_IPV4, MAIN_IPV4_GW globals
 _get_ipv4_via_ifconfig() {
     MAIN_IPV4=$(ifconfig "$CURRENT_INTERFACE" 2>/dev/null | awk '/inet / {print $2}' | sed 's/addr://')
     local netmask
@@ -2527,8 +2741,8 @@ _get_ipv4_via_ifconfig() {
     [[ -n "$MAIN_IPV4" ]] && [[ -n "$MAIN_IPV4_GW" ]]
 }
 
-# Get MAC address and IPv6 info from current interface
-# Sets: MAC_ADDRESS, IPV6_CIDR, MAIN_IPV6
+# Internal: gets MAC address and IPv6 info from current interface.
+# Side effects: Sets MAC_ADDRESS, IPV6_CIDR, MAIN_IPV6 globals
 _get_mac_and_ipv6() {
     if command -v ip &>/dev/null && command -v jq &>/dev/null; then
         MAC_ADDRESS=$(ip -j link show "$CURRENT_INTERFACE" 2>/dev/null | jq -r '.[0].address // empty')
@@ -2543,8 +2757,10 @@ _get_mac_and_ipv6() {
     MAIN_IPV6="${IPV6_CIDR%/*}"
 }
 
-# Validate network configuration
-# Returns: 0 on success, exits with error message on failure
+# Internal: validates network configuration completeness.
+# Parameters:
+#   $1 - Max attempts count (for error message)
+# Side effects: Exits on validation failure with detailed error message
 _validate_network_config() {
     local max_attempts="$1"
 
@@ -2597,11 +2813,10 @@ _validate_network_config() {
     fi
 }
 
-# Calculate IPv6 prefix for VM network
-# IPv6 prefix extraction: Get first 4 groups (network portion) for /80 CIDR assignment
-# Example: 2001:db8:85a3:0:8a2e:370:7334:1234 → 2001:db8:85a3:0:1::1/80
-# This allows assigning /80 subnets to VMs within the /64 allocation
-# Sets: FIRST_IPV6_CIDR
+# Internal: calculates IPv6 prefix for VM network allocation.
+# Extracts first 4 groups for /80 CIDR assignment to VMs.
+# Example: 2001:db8:85a3:0:... → 2001:db8:85a3:0:1::1/80
+# Side effects: Sets FIRST_IPV6_CIDR global
 _calculate_ipv6_prefix() {
     if [[ -n "$IPV6_CIDR" ]]; then
         # Extract first 4 groups of IPv6 using parameter expansion
@@ -2624,11 +2839,10 @@ _calculate_ipv6_prefix() {
 # Main network info collection function
 # =============================================================================
 
-# Get network information from current interface
-# Tries multiple detection methods with fallback chain:
-# 1. ip -j (JSON) + jq - most reliable
-# 2. ip (text parsing) - common fallback
-# 3. ifconfig + route - legacy systems
+# Collects network information from current interface.
+# Uses fallback chain: ip JSON → ip text → ifconfig/route.
+# Side effects: Sets MAIN_IPV4*, MAC_ADDRESS, IPV6* globals
+# Exits on failure to detect valid network configuration.
 collect_network_info() {
     local max_attempts=3
     local attempt=0
@@ -2668,7 +2882,12 @@ collect_network_info() {
 # Non-interactive input collection
 # =============================================================================
 
-# Helper to prompt or use existing value
+# Helper to return existing value or default based on interactive mode.
+# Parameters:
+#   $1 - Prompt text (unused in non-interactive mode)
+#   $2 - Default value
+#   $3 - Variable name to check
+# Returns: Current value or default via stdout
 prompt_or_default() {
     local prompt="$1"
     local default="$2"
@@ -2692,6 +2911,10 @@ prompt_or_default() {
 # Input collection - Non-interactive mode
 # =============================================================================
 
+# Collects all inputs from environment/config in non-interactive mode.
+# Uses default values where config values are not provided.
+# Validates required fields (SSH key).
+# Side effects: Sets all configuration global variables
 get_inputs_non_interactive() {
     # Use defaults or config values (referencing global constants)
     PVE_HOSTNAME="${PVE_HOSTNAME:-$DEFAULT_HOSTNAME}"
@@ -2878,6 +3101,11 @@ get_inputs_non_interactive() {
 # Interactive input collection
 # =============================================================================
 
+# Collects all inputs through interactive prompts and menus.
+# Handles: hostname, domain, email, password, timezone, network, storage,
+# Proxmox options, SSL, Tailscale, SSH.
+# Validates inputs and provides user-friendly error messages.
+# Side effects: Sets all configuration global variables
 get_inputs_interactive() {
     # =========================================================================
     # SECTION 1: Text inputs
@@ -3592,6 +3820,10 @@ get_inputs_interactive() {
 # Main input collection function
 # =============================================================================
 
+# Main entry point for input collection.
+# Detects network, collects inputs (interactive or non-interactive mode),
+# calculates derived values, and optionally saves configuration.
+# Side effects: Sets all configuration globals, may save config file
 get_system_inputs() {
     detect_network_interface
     collect_network_info
@@ -3627,7 +3859,7 @@ get_system_inputs() {
 # =============================================================================
 
 # Display configuration summary box
-# Usage: display_config_preview
+# display_config_preview builds and prints a boxed, human-readable summary of the current configuration settings for review.
 display_config_preview() {
     local inner_width=$((MENU_BOX_WIDTH - 6))
     local content=""
@@ -3760,14 +3992,18 @@ display_config_preview() {
             printf "%-${inner_width}s\n" "$line"
         done
         echo ""
-        echo "Press Enter to start installation"
-        echo "Press 'e' to edit configuration"
-        echo "Press 'q' to quit"
-    } | boxes -d stone -p a1 -s $MENU_BOX_WIDTH | _colorize_preview
+        printf "%-${inner_width}s\n" "Press ENTER_KEY to start installation"
+        printf "%-${inner_width}s\n" "Press E_KEY to edit configuration"
+        printf "%-${inner_width}s\n" "Press Q_KEY to quit"
+    } | boxes -d stone -p a1 -s "$MENU_BOX_WIDTH" | _colorize_preview
 }
 
-# Colorize preview output
+# _colorize_preview applies color styling to box-formatted preview lines read from stdin, highlighting borders, section headers, and the action key hints.
+# It colors top/bottom box borders gray, wraps section header lines containing '---' in cyan, and transforms the bottom "Press" line by replacing ENTER_KEY/E_KEY/Q_KEY placeholders with colored key labels (Enter, e, q), padding the content to the box inner width so the hints align.
 _colorize_preview() {
+    local box_width=$MENU_BOX_WIDTH
+    local inner_width=$((box_width - 1))  # Width between | borders (boxes adds padding)
+
     while IFS= read -r line; do
         # Top/bottom border
         if [[ "$line" =~ ^\+[-+]+\+$ ]]; then
@@ -3775,13 +4011,26 @@ _colorize_preview() {
         # Content line with | borders
         elif [[ "$line" =~ ^(\|)(.*)\|$ ]]; then
             local content="${BASH_REMATCH[2]}"
+            local visible_content="$content"
             # Section headers (lines starting with ---)
             if [[ "$content" == *"---"* ]]; then
                 content="${CLR_CYAN}${content}${CLR_RESET}"
             fi
-            # Key bindings at the bottom
-            if [[ "$content" == *"Press"* ]]; then
-                content="${CLR_GRAY}${content}${CLR_RESET}"
+            # Key bindings at the bottom - highlight keys in cyan
+            if [[ "$visible_content" == *"Press"* ]]; then
+                # Calculate visible length (without placeholders, with actual key names)
+                visible_content="${visible_content//ENTER_KEY/Enter}"
+                visible_content="${visible_content//E_KEY/e}"
+                visible_content="${visible_content//Q_KEY/q}"
+                local visible_len=${#visible_content}
+                local padding=$((inner_width - visible_len))
+                # Apply colors
+                content="${content//ENTER_KEY/${CLR_CYAN}Enter${CLR_GRAY}}"
+                content="${content//E_KEY/${CLR_CYAN}e${CLR_GRAY}}"
+                content="${content//Q_KEY/${CLR_CYAN}q${CLR_GRAY}}"
+                content="${CLR_GRAY}${content}"
+                # Add padding spaces before reset
+                printf -v content "%s%${padding}s${CLR_RESET}" "$content" ""
             fi
             echo "${CLR_GRAY}|${CLR_RESET}${content}${CLR_GRAY}|${CLR_RESET}"
         else
@@ -3791,45 +4040,79 @@ _colorize_preview() {
 }
 
 # Edit configuration menu
-# Returns: 0 to continue to installation, 1 to show preview again
+# edit_configuration presents a dynamic, section-based editor allowing the user to choose and edit configuration sections (e.g., Basic Settings, Network, IPv6, Storage, Proxmox, SSL, Tailscale, Optional, SSH) and invokes the corresponding edit action for the selected section.
+# Returns 0 to continue to installation, 1 to show the preview again.
 edit_configuration() {
-    local edit_sections=(
-        "Basic Settings|Hostname, domain, email, password, timezone"
-        "Network|Bridge mode, private subnet"
-        "IPv6|IPv6 mode and settings"
-        "Storage|ZFS RAID level"
-        "Proxmox|Version and repository"
-        "SSL|Certificate type"
-        "Tailscale|VPN configuration"
-        "Optional|Shell, packages, power profile"
-        "SSH Key|Public key for authentication"
-        "Done|Return to configuration review"
-    )
+    # Build menu dynamically based on current configuration
+    local -a edit_sections=()
+    local -a edit_actions=()
+
+    # Always available sections
+    edit_sections+=("Basic Settings|Hostname, domain, email, password, timezone")
+    edit_actions+=("_edit_basic_settings")
+
+    edit_sections+=("Network|Bridge mode, private subnet")
+    edit_actions+=("_edit_network_settings")
+
+    edit_sections+=("IPv6|IPv6 mode and settings")
+    edit_actions+=("_edit_ipv6_settings")
+
+    # Storage - show RAID options only if multiple drives
+    if [[ "${DRIVE_COUNT:-0}" -ge 2 ]]; then
+        edit_sections+=("Storage|ZFS RAID level (${DRIVE_COUNT} drives)")
+    else
+        edit_sections+=("Storage|Single drive mode")
+    fi
+    edit_actions+=("_edit_storage_settings")
+
+    edit_sections+=("Proxmox|Version and repository")
+    edit_actions+=("_edit_proxmox_settings")
+
+    # SSL - only show if Tailscale is NOT enabled
+    if [[ "$INSTALL_TAILSCALE" != "yes" ]]; then
+        edit_sections+=("SSL|Certificate type")
+        edit_actions+=("_edit_ssl_settings")
+    fi
+
+    edit_sections+=("Tailscale|VPN configuration")
+    edit_actions+=("_edit_tailscale_settings")
+
+    edit_sections+=("Optional|Shell, packages, power profile")
+    edit_actions+=("_edit_optional_settings")
+
+    edit_sections+=("SSH Key|Public key for authentication")
+    edit_actions+=("_edit_ssh_settings")
+
+    # Done option always last
+    edit_sections+=("Done|Return to configuration review")
+    edit_actions+=("return")
 
     radio_menu \
         "Edit Configuration (select section)" \
         "Select which section to edit"$'\n' \
         "${edit_sections[@]}"
 
-    case $MENU_SELECTED in
-        0) _edit_basic_settings ;;
-        1) _edit_network_settings ;;
-        2) _edit_ipv6_settings ;;
-        3) _edit_storage_settings ;;
-        4) _edit_proxmox_settings ;;
-        5) _edit_ssl_settings ;;
-        6) _edit_tailscale_settings ;;
-        7) _edit_optional_settings ;;
-        8) _edit_ssh_settings ;;
-        9) return 0 ;;  # Done - return to preview
-    esac
+    # Execute selected action
+    local action="${edit_actions[$MENU_SELECTED]}"
+    if [[ "$action" == "return" ]]; then
+        return 0
+    else
+        $action
+    fi
 
     return 0
 }
 
 # =============================================================================
 # Section edit functions
-# =============================================================================
+# _edit_basic_settings prompts the user to configure core server settings: hostname, domain suffix, email, root password, and timezone.
+# It validates inputs where applicable and updates the corresponding environment variables.
+# - Prompts for hostname and validates format (letters, numbers, hyphens, 1-63 chars); updates `PVE_HOSTNAME`.
+# - Prompts for domain suffix; updates `DOMAIN_SUFFIX`.
+# - Prompts for notification email and validates format; updates `EMAIL`.
+# - Prompts for a new root password (empty to keep current or to auto-generate); validates password strength and, on success, sets `NEW_ROOT_PASSWORD` and `PASSWORD_GENERATED="no"`.
+# - Presents a timezone selection (predefined list or Custom); validates custom input and updates `TIMEZONE`.
+# - Updates derived `FQDN` as `${PVE_HOSTNAME}.${DOMAIN_SUFFIX}` and prints success messages for each changed value.
 
 _edit_basic_settings() {
     # Hostname
@@ -3913,7 +4196,11 @@ _edit_basic_settings() {
     FQDN="${PVE_HOSTNAME}.${DOMAIN_SUFFIX}"
 }
 
+# _edit_network_settings presents an interactive menu to select the network bridge mode and, when an internal bridge is chosen, configure the private subnet and update derived private network variables.
 _edit_network_settings() {
+    # Save previous mode to detect changes
+    local prev_bridge_mode="$BRIDGE_MODE"
+
     # Bridge mode
     local bridge_options=("internal" "external" "both")
     local bridge_header="Configure network bridges for VMs"$'\n'
@@ -3932,6 +4219,13 @@ _edit_network_settings() {
 
     # Private subnet (only for internal/both)
     if [[ "$BRIDGE_MODE" == "internal" || "$BRIDGE_MODE" == "both" ]]; then
+        # Show info if switching from external mode
+        if [[ "$prev_bridge_mode" == "external" ]]; then
+            echo ""
+            print_info "Internal bridge enabled - configuring private subnet..."
+            echo ""
+        fi
+
         local subnet_options=("10.0.0.0/24" "192.168.1.0/24" "172.16.0.0/24" "custom")
 
         radio_menu \
@@ -3961,6 +4255,12 @@ _edit_network_settings() {
         PRIVATE_IP="${PRIVATE_CIDR}.1"
         SUBNET_MASK=$(echo "$PRIVATE_SUBNET" | cut -d'/' -f2)
         PRIVATE_IP_CIDR="${PRIVATE_IP}/${SUBNET_MASK}"
+    else
+        # External only - clear private network values
+        PRIVATE_SUBNET=""
+        PRIVATE_CIDR=""
+        PRIVATE_IP=""
+        PRIVATE_IP_CIDR=""
     fi
 }
 
@@ -4102,6 +4402,7 @@ _edit_ssl_settings() {
     print_success "SSL:" "$SSL_TYPE"
 }
 
+# _edit_tailscale_settings configures Tailscale VPN installation and related flags, prompts for an optional auth key to enable auto-connect and stealth mode, and if disabling a previously enabled Tailscale instance, invokes SSL configuration.
 _edit_tailscale_settings() {
     local ts_header="Tailscale provides secure remote access."
 
@@ -4132,6 +4433,9 @@ _edit_tailscale_settings() {
             print_warning "Tailscale:" "enabled (manual auth required)"
         fi
     else
+        # Check if Tailscale was previously enabled - need to configure SSL
+        local was_tailscale_enabled="$INSTALL_TAILSCALE"
+
         INSTALL_TAILSCALE="no"
         TAILSCALE_AUTH_KEY=""
         TAILSCALE_SSH="no"
@@ -4139,6 +4443,14 @@ _edit_tailscale_settings() {
         TAILSCALE_DISABLE_SSH="no"
         STEALTH_MODE="no"
         print_success "Tailscale:" "not installed"
+
+        # If Tailscale was enabled before, now need to configure SSL
+        if [[ "$was_tailscale_enabled" == "yes" ]]; then
+            echo ""
+            print_info "Tailscale disabled - configuring SSL certificate..."
+            echo ""
+            _edit_ssl_settings
+        fi
     fi
 }
 
@@ -4227,7 +4539,7 @@ _edit_ssh_settings() {
 # =============================================================================
 
 # Show configuration preview and handle edit/confirm
-# Returns: 0 to proceed with installation, 1 to exit
+# show_configuration_review displays the configuration preview and reads a single key to either proceed with installation, open the editor, or cancel the process.
 show_configuration_review() {
     while true; do
         # Clear screen for clean display
@@ -4247,7 +4559,9 @@ show_configuration_review() {
                 return 0
                 ;;
             e|E)
-                # Edit configuration
+                # Edit configuration - clear screen first
+                clear
+                show_banner --no-info
                 edit_configuration
                 ;;
             q|Q)
@@ -4261,13 +4575,15 @@ show_configuration_review() {
         esac
     done
 }
-
 # --- 11-packages.sh ---
 # shellcheck shell=bash
 # =============================================================================
 # Package preparation and ISO download
 # =============================================================================
 
+# Prepares system packages for Proxmox installation.
+# Adds Proxmox repository, downloads GPG key, installs required packages.
+# Side effects: Modifies apt sources, installs packages
 prepare_packages() {
     log "Starting package preparation"
 
@@ -4323,7 +4639,8 @@ prepare_packages() {
 # Cache for ISO list (avoid multiple HTTP requests)
 _ISO_LIST_CACHE=""
 
-# Fetch ISO list from Proxmox repository (cached)
+# Internal: fetches ISO list from Proxmox repository (cached).
+# Returns: List of ISO filenames via stdout
 _fetch_iso_list() {
     if [[ -z "$_ISO_LIST_CACHE" ]]; then
         _ISO_LIST_CACHE=$(curl -s "$PROXMOX_ISO_BASE_URL" | grep -oE 'proxmox-ve_[0-9]+\.[0-9]+-[0-9]+\.iso' | sort -uV)
@@ -4331,14 +4648,17 @@ _fetch_iso_list() {
     echo "$_ISO_LIST_CACHE"
 }
 
-# Fetch available Proxmox VE ISO versions (last N versions)
-# Returns array of ISO filenames, newest first
+# Fetches available Proxmox VE ISO versions (last N versions).
+# Parameters:
+#   $1 - Number of versions to return (default: 5)
+# Returns: ISO filenames via stdout, newest first
 get_available_proxmox_isos() {
     local count="${1:-5}"
     _fetch_iso_list | tail -n "$count" | tac
 }
 
-# Fetch latest Proxmox VE ISO URL
+# Fetches URL of latest Proxmox VE ISO.
+# Returns: Full ISO URL via stdout, or error on failure
 get_latest_proxmox_ve_iso() {
     local latest_iso
     latest_iso=$(_fetch_iso_list | tail -n1)
@@ -4351,19 +4671,29 @@ get_latest_proxmox_ve_iso() {
     fi
 }
 
-# Get ISO URL by filename
+# Constructs full ISO URL from filename.
+# Parameters:
+#   $1 - ISO filename
+# Returns: Full URL via stdout
 get_proxmox_iso_url() {
     local iso_filename="$1"
     echo "${PROXMOX_ISO_BASE_URL}${iso_filename}"
 }
 
-# Extract version from ISO filename (e.g., "8.3-1" from "proxmox-ve_8.3-1.iso")
+# Extracts version from ISO filename.
+# Parameters:
+#   $1 - ISO filename (e.g., "proxmox-ve_8.3-1.iso")
+# Returns: Version string (e.g., "8.3-1") via stdout
 get_iso_version() {
     local iso_filename="$1"
     echo "$iso_filename" | sed -E 's/proxmox-ve_([0-9]+\.[0-9]+-[0-9]+)\.iso/\1/'
 }
 
-# Download ISO using curl with retry support (most stable)
+# Internal: downloads ISO using curl with retry support.
+# Parameters:
+#   $1 - URL to download
+#   $2 - Output filename
+# Returns: Exit code from curl
 _download_iso_curl() {
     local url="$1"
     local output="$2"
@@ -4380,7 +4710,11 @@ _download_iso_curl() {
         "$url" >> "$LOG_FILE" 2>&1
 }
 
-# Download ISO using wget with retry support
+# Internal: downloads ISO using wget with retry support.
+# Parameters:
+#   $1 - URL to download
+#   $2 - Output filename
+# Returns: Exit code from wget
 _download_iso_wget() {
     local url="$1"
     local output="$2"
@@ -4396,7 +4730,12 @@ _download_iso_wget() {
         "$url" >> "$LOG_FILE" 2>&1
 }
 
-# Download ISO using aria2c with conservative settings
+# Internal: downloads ISO using aria2c with conservative settings.
+# Parameters:
+#   $1 - URL to download
+#   $2 - Output filename
+#   $3 - Optional SHA256 checksum for verification
+# Returns: Exit code from aria2c
 _download_iso_aria2c() {
     local url="$1"
     local output="$2"
@@ -4429,6 +4768,10 @@ _download_iso_aria2c() {
     aria2c "${aria2_args[@]}" "$url" >> "$LOG_FILE" 2>&1
 }
 
+# Downloads Proxmox ISO with fallback chain and checksum verification.
+# Uses selected version or fetches latest if not specified.
+# Tries: aria2c → curl → wget
+# Side effects: Creates pve.iso file, exits on failure
 download_proxmox_iso() {
     log "Starting Proxmox ISO download"
 
@@ -4467,6 +4810,7 @@ download_proxmox_iso() {
     # Download with fallback chain: aria2c (conservative) -> curl -> wget
     log "Downloading ISO: $ISO_FILENAME"
     local download_success=false
+    local download_method=""
 
     # Try aria2c first with conservative settings (2 connections instead of 8)
     local exit_code
@@ -4478,6 +4822,7 @@ download_proxmox_iso() {
         exit_code=$?
         if [[ $exit_code -eq 0 ]] && [[ -s "pve.iso" ]]; then
             download_success=true
+            download_method="aria2c"
             log "aria2c download successful"
         else
             log "aria2c failed (exit code: $exit_code), trying curl fallback"
@@ -4494,6 +4839,7 @@ download_proxmox_iso() {
         exit_code=$?
         if [[ $exit_code -eq 0 ]] && [[ -s "pve.iso" ]]; then
             download_success=true
+            download_method="curl"
             log "curl download successful"
         else
             log "curl failed (exit code: $exit_code), trying wget fallback"
@@ -4510,6 +4856,7 @@ download_proxmox_iso() {
         exit_code=$?
         if [[ $exit_code -eq 0 ]] && [[ -s "pve.iso" ]]; then
             download_success=true
+            download_method="wget"
             log "wget download successful"
         else
             rm -f pve.iso
@@ -4522,19 +4869,26 @@ download_proxmox_iso() {
         exit 1
     fi
 
-    log "ISO file size: $(stat -c%s pve.iso 2>/dev/null | awk '{printf "%.1fG", $1/1024/1024/1024}')"
+    local iso_size
+    iso_size=$(stat -c%s pve.iso 2>/dev/null) || iso_size=0
+    log "ISO file size: $(echo "$iso_size" | awk '{printf "%.1fG", $1/1024/1024/1024}')"
 
     # Verify checksum (if not already verified by aria2c)
     if [[ -n "$expected_checksum" ]]; then
-        log "Verifying ISO checksum"
-        local actual_checksum
-        actual_checksum=$(sha256sum pve.iso | awk '{print $1}')
-        if [[ "$actual_checksum" != "$expected_checksum" ]]; then
-            log "ERROR: Checksum mismatch! Expected: $expected_checksum, Got: $actual_checksum"
-            rm -f pve.iso SHA256SUMS
-            exit 1
+        # Skip manual verification if aria2c already validated
+        if [[ "$download_method" == "aria2c" ]]; then
+            log "Checksum already verified by aria2c"
+        else
+            log "Verifying ISO checksum"
+            local actual_checksum
+            actual_checksum=$(sha256sum pve.iso | awk '{print $1}')
+            if [[ "$actual_checksum" != "$expected_checksum" ]]; then
+                log "ERROR: Checksum mismatch! Expected: $expected_checksum, Got: $actual_checksum"
+                rm -f pve.iso SHA256SUMS
+                exit 1
+            fi
+            log "Checksum verification passed"
         fi
-        log "Checksum verification passed"
     else
         log "WARNING: Could not find checksum for $ISO_FILENAME"
         print_warning "Could not find checksum for $ISO_FILENAME"
@@ -4543,7 +4897,10 @@ download_proxmox_iso() {
     rm -f SHA256SUMS
 }
 
-# Validate answer.toml has required fields
+# Validates answer.toml has all required fields.
+# Parameters:
+#   $1 - Path to answer.toml file
+# Returns: 0 if valid, 1 if missing required fields
 validate_answer_toml() {
     local file="$1"
     local required_fields=("fqdn" "mailto" "timezone" "root_password")
@@ -4563,6 +4920,9 @@ validate_answer_toml() {
     return 0
 }
 
+# Creates answer.toml for Proxmox autoinstall.
+# Downloads template and applies configuration variables.
+# Side effects: Creates answer.toml file, exits on failure
 make_answer_toml() {
     log "Creating answer.toml for autoinstall"
     log "ZFS_RAID=$ZFS_RAID, DRIVE_COUNT=$DRIVE_COUNT"
@@ -4617,6 +4977,8 @@ make_answer_toml() {
     cat answer.toml >> "$LOG_FILE"
 }
 
+# Creates autoinstall ISO from Proxmox ISO and answer.toml.
+# Side effects: Creates pve-autoinstall.iso, removes pve.iso
 make_autoinstall_iso() {
     log "Creating autoinstall ISO"
     log "Input: pve.iso exists: $(test -f pve.iso && echo 'yes' || echo 'no')"
@@ -4628,6 +4990,11 @@ make_autoinstall_iso() {
     # Run ISO creation with full logging
     proxmox-auto-install-assistant prepare-iso pve.iso --fetch-from iso --answer-file answer.toml --output pve-autoinstall.iso >> "$LOG_FILE" 2>&1 &
     show_progress $! "Creating autoinstall ISO" "Autoinstall ISO created"
+    wait $!
+    local exit_code=$?
+    if [[ $exit_code -ne 0 ]]; then
+        log "WARNING: proxmox-auto-install-assistant exited with code $exit_code"
+    fi
 
     # Verify ISO was created
     if [[ ! -f "./pve-autoinstall.iso" ]]; then
@@ -4650,11 +5017,15 @@ make_autoinstall_iso() {
 # QEMU installation and boot functions
 # =============================================================================
 
+# Checks if system is booted in UEFI mode.
+# Returns: 0 if UEFI, 1 if legacy BIOS
 is_uefi_mode() {
     [[ -d /sys/firmware/efi ]]
 }
 
-# Configure QEMU settings (shared between install and boot)
+# Configures QEMU settings (shared between install and boot).
+# Detects UEFI/BIOS mode, KVM availability, CPU cores, and RAM.
+# Side effects: Sets UEFI_OPTS, KVM_OPTS, CPU_OPTS, QEMU_CORES, QEMU_RAM, DRIVE_ARGS
 setup_qemu_config() {
     log "Setting up QEMU configuration"
 
@@ -4722,8 +5093,11 @@ setup_qemu_config() {
 # Drive release helper functions
 # =============================================================================
 
-# Send signal to process if it's running
-# Usage: _signal_process PID SIGNAL LOG_MESSAGE
+# Internal: sends signal to process if running.
+# Parameters:
+#   $1 - Process ID
+#   $2 - Signal name/number
+#   $3 - Log message
 _signal_process() {
     local pid="$1"
     local signal="$2"
@@ -4735,8 +5109,9 @@ _signal_process() {
     fi
 }
 
-# Kill processes by pattern with graceful then forced termination
-# Usage: _kill_processes_by_pattern PATTERN
+# Internal: kills processes by pattern with graceful then forced termination.
+# Parameters:
+#   $1 - Process pattern to match
 _kill_processes_by_pattern() {
     local pattern="$1"
     local pids
@@ -4764,7 +5139,7 @@ _kill_processes_by_pattern() {
     pkill -9 "$pattern" 2>/dev/null || true
 }
 
-# Stop mdadm RAID arrays
+# Internal: stops mdadm RAID arrays.
 _stop_mdadm_arrays() {
     if ! command -v mdadm &>/dev/null; then
         return 0
@@ -4781,7 +5156,7 @@ _stop_mdadm_arrays() {
     done
 }
 
-# Deactivate LVM volume groups
+# Internal: deactivates LVM volume groups.
 _deactivate_lvm() {
     if ! command -v vgchange &>/dev/null; then
         return 0
@@ -4798,7 +5173,7 @@ _deactivate_lvm() {
     fi
 }
 
-# Unmount filesystems on specified drives
+# Internal: unmounts filesystems on target drives.
 _unmount_drive_filesystems() {
     [[ -z "${DRIVES[*]}" ]] && return 0
 
@@ -4824,7 +5199,7 @@ _unmount_drive_filesystems() {
     done
 }
 
-# Kill processes holding drives open
+# Internal: kills processes holding drives open.
 _kill_drive_holders() {
     [[ -z "${DRIVES[*]}" ]] && return 0
 
@@ -4849,7 +5224,8 @@ _kill_drive_holders() {
 # Main drive release function
 # =============================================================================
 
-# Release drives from any existing locks
+# Releases drives from existing locks before QEMU starts.
+# Stops RAID arrays, deactivates LVM, unmounts filesystems, kills holders.
 release_drives() {
     log "Releasing drives from locks..."
 
@@ -4874,7 +5250,9 @@ release_drives() {
     log "Drives released"
 }
 
-# Install Proxmox via QEMU
+# Installs Proxmox via QEMU with autoinstall ISO.
+# Runs QEMU in background with direct drive access.
+# Side effects: Writes to drives, exits on failure
 install_proxmox() {
     setup_qemu_config
 
@@ -4924,7 +5302,9 @@ install_proxmox() {
     fi
 }
 
-# Boot installed Proxmox with SSH port forwarding
+# Boots installed Proxmox with SSH port forwarding.
+# Exposes SSH on port 5555 for post-install configuration.
+# Side effects: Starts QEMU, sets QEMU_PID global
 boot_proxmox_with_port_forwarding() {
     setup_qemu_config
     
@@ -4963,6 +5343,9 @@ boot_proxmox_with_port_forwarding() {
 # Template preparation and download
 # =============================================================================
 
+# Downloads and prepares all template files for Proxmox configuration.
+# Selects appropriate templates based on bridge mode and repository type.
+# Side effects: Creates templates directory, downloads and modifies templates
 make_templates() {
     log "Starting template preparation"
     mkdir -p ./templates
@@ -5025,6 +5408,9 @@ make_templates() {
 # Base system configuration via SSH
 # =============================================================================
 
+# Configures base system via SSH into QEMU VM.
+# Copies templates, configures repositories, installs packages.
+# Side effects: Modifies remote system configuration
 configure_base_system() {
     # Copy template files to VM (parallel for better performance)
     remote_copy "templates/hosts" "/etc/hosts" > /dev/null 2>&1 &
@@ -5185,6 +5571,8 @@ configure_base_system() {
     show_progress $! "Configuring fastfetch" "Fastfetch configured"
 }
 
+# Configures default shell for root user.
+# Optionally installs ZSH with Oh-My-Zsh and Powerlevel10k theme.
 configure_shell() {
     # Configure default shell for root
     if [[ "$DEFAULT_SHELL" == "zsh" ]]; then
@@ -5220,6 +5608,8 @@ configure_shell() {
     fi
 }
 
+# Configures system services: NTP, unattended upgrades, conntrack, CPU governor.
+# Removes subscription notice for non-enterprise installations.
 configure_system_services() {
     # Configure NTP time synchronization with chrony
     run_remote "Installing NTP (chrony)" '
@@ -5291,6 +5681,9 @@ configure_system_services() {
 # Tailscale VPN configuration
 # =============================================================================
 
+# Configures Tailscale VPN with SSH and Web UI access.
+# Optionally authenticates with auth key and enables stealth mode.
+# Side effects: Installs and configures Tailscale on remote system
 configure_tailscale() {
     if [[ "$INSTALL_TAILSCALE" != "yes" ]]; then
         return 0
@@ -5388,6 +5781,10 @@ configure_tailscale() {
 # Protects SSH and Proxmox API from brute-force attacks
 # =============================================================================
 
+# Installs and configures Fail2Ban for brute-force protection.
+# Only installs when Tailscale is not used (Tailscale provides its own security).
+# Configures jails for SSH and Proxmox API protection.
+# Side effects: Sets FAIL2BAN_INSTALLED global, installs fail2ban package
 configure_fail2ban() {
     # Only install Fail2Ban if Tailscale is NOT installed
     # Tailscale provides its own security through authenticated mesh network
@@ -5442,6 +5839,10 @@ configure_fail2ban() {
 # Provides audit trail for security compliance and forensics
 # =============================================================================
 
+# Installs and configures auditd for system audit logging.
+# Deploys custom audit rules for Proxmox administrative actions.
+# Configures log rotation and persistence settings.
+# Side effects: Sets AUDITD_INSTALLED global, installs auditd package
 configure_auditd() {
     # Skip if auditd installation is not requested
     if [[ "$INSTALL_AUDITD" != "yes" ]]; then
@@ -5503,6 +5904,9 @@ configure_auditd() {
 # SSL certificate configuration via SSH
 # =============================================================================
 
+# Configures SSL certificates for Proxmox Web UI.
+# For Let's Encrypt, sets up first-boot certificate acquisition.
+# Side effects: Installs certbot, configures systemd service for cert renewal
 configure_ssl_certificate() {
     log "configure_ssl_certificate: SSL_TYPE=$SSL_TYPE"
 
@@ -5523,14 +5927,26 @@ configure_ssl_certificate() {
     ' "Certbot installed"
 
     # Apply template substitutions locally before copying
-    apply_template_vars "./templates/letsencrypt-firstboot.sh" \
+    if ! apply_template_vars "./templates/letsencrypt-firstboot.sh" \
         "CERT_DOMAIN=${cert_domain}" \
-        "CERT_EMAIL=${EMAIL}"
+        "CERT_EMAIL=${EMAIL}"; then
+        log "ERROR: Failed to apply template variables to letsencrypt-firstboot.sh"
+        exit 1
+    fi
 
     # Copy Let's Encrypt templates to VM
-    remote_copy "./templates/letsencrypt-deploy-hook.sh" "/tmp/letsencrypt-deploy-hook.sh"
-    remote_copy "./templates/letsencrypt-firstboot.sh" "/tmp/letsencrypt-firstboot.sh"
-    remote_copy "./templates/letsencrypt-firstboot.service" "/tmp/letsencrypt-firstboot.service"
+    if ! remote_copy "./templates/letsencrypt-deploy-hook.sh" "/tmp/letsencrypt-deploy-hook.sh"; then
+        log "ERROR: Failed to copy letsencrypt-deploy-hook.sh"
+        exit 1
+    fi
+    if ! remote_copy "./templates/letsencrypt-firstboot.sh" "/tmp/letsencrypt-firstboot.sh"; then
+        log "ERROR: Failed to copy letsencrypt-firstboot.sh"
+        exit 1
+    fi
+    if ! remote_copy "./templates/letsencrypt-firstboot.service" "/tmp/letsencrypt-firstboot.service"; then
+        log "ERROR: Failed to copy letsencrypt-firstboot.service"
+        exit 1
+    fi
 
     # Configure first-boot certificate script
     run_remote "Configuring Let's Encrypt templates" '
@@ -5561,6 +5977,9 @@ configure_ssl_certificate() {
 # SSH hardening and finalization
 # =============================================================================
 
+# Configures SSH hardening with key-based authentication only.
+# Deploys SSH public key and hardens sshd_config.
+# Side effects: Disables password authentication on remote system
 configure_ssh_hardening() {
     # Deploy SSH hardening LAST (after all other operations)
     # CRITICAL: This must succeed - if it fails, system remains with password auth enabled
@@ -5582,6 +6001,7 @@ configure_ssh_hardening() {
     fi
 }
 
+# Finalizes VM by powering it off and waiting for QEMU to exit.
 finalize_vm() {
     # Power off the VM
     remote_exec "poweroff" > /dev/null 2>&1 &
@@ -5589,12 +6009,20 @@ finalize_vm() {
 
     # Wait for QEMU to exit
     wait_with_progress "Waiting for QEMU process to exit" 120 "! kill -0 $QEMU_PID 2>/dev/null" 1 "QEMU process exited"
+    local exit_code=$?
+    if [[ $exit_code -ne 0 ]]; then
+        log "WARNING: QEMU process did not exit cleanly within 120 seconds"
+        # Force kill if still running
+        kill -9 "$QEMU_PID" 2>/dev/null || true
+    fi
 }
 
 # =============================================================================
 # Main configuration function
 # =============================================================================
 
+# Main entry point for post-install Proxmox configuration via SSH.
+# Orchestrates all configuration steps: templates, base, services, security.
 configure_proxmox_via_ssh() {
     log "Starting Proxmox configuration via SSH"
     make_templates
@@ -5624,8 +6052,11 @@ VALIDATION_WARNINGS=0
 # Store validation results for summary (global array)
 declare -a VALIDATION_RESULTS=()
 
-# Add validation result
-# Usage: _add_validation_result "status" "check_name" "details"
+# Internal: adds validation result to global arrays.
+# Parameters:
+#   $1 - Status (pass/fail/warn)
+#   $2 - Check name
+#   $3 - Details (optional)
 _add_validation_result() {
     local status="$1"
     local check_name="$2"
@@ -5647,7 +6078,7 @@ _add_validation_result() {
     esac
 }
 
-# Validate SSH configuration
+# Internal: validates SSH configuration (service, keys, auth settings).
 _validate_ssh() {
     # Check SSH service is running
     local ssh_status
@@ -5677,7 +6108,7 @@ _validate_ssh() {
     fi
 }
 
-# Validate ZFS configuration
+# Internal: validates ZFS pool health and ARC configuration.
 _validate_zfs() {
     # Check rpool health
     local pool_health
@@ -5702,7 +6133,7 @@ _validate_zfs() {
     fi
 }
 
-# Validate network configuration
+# Internal: validates network connectivity (IPv4, DNS, IPv6).
 _validate_network() {
     # Check IPv4 connectivity (ping gateway)
     local ipv4_ping
@@ -5734,7 +6165,7 @@ _validate_network() {
     fi
 }
 
-# Validate essential Proxmox services
+# Internal: validates essential Proxmox services.
 _validate_services() {
     # List of critical services to check
     local services=("pve-cluster" "pvedaemon" "pveproxy" "pvestatd")
@@ -5763,7 +6194,7 @@ _validate_services() {
     fi
 }
 
-# Validate Proxmox-specific configuration
+# Internal: validates Proxmox Web UI and API.
 _validate_proxmox() {
     # Check Proxmox web interface is responding
     local web_check
@@ -5784,7 +6215,7 @@ _validate_proxmox() {
     fi
 }
 
-# Validate SSL certificate
+# Internal: validates SSL certificate presence and validity.
 _validate_ssl() {
     # Check certificate exists and get expiry
     local cert_info
@@ -5799,8 +6230,8 @@ _validate_ssl() {
     fi
 }
 
-# Run all validation checks with spinner
-# Sets global VALIDATION_RESULTS array for use in summary
+# Runs all post-installation validation checks.
+# Side effects: Sets VALIDATION_PASSED/FAILED/WARNINGS and VALIDATION_RESULTS globals
 validate_installation() {
     log "Starting post-installation validation..."
 
@@ -5866,8 +6297,11 @@ validate_installation() {
 # Finish and reboot
 # =============================================================================
 
-# Truncate string with ellipsis in the middle
-# Usage: truncate_middle "string" max_length
+# Truncates string with ellipsis in the middle.
+# Parameters:
+#   $1 - String to truncate
+#   $2 - Maximum length (default: 25)
+# Returns: Truncated string via stdout
 truncate_middle() {
     local str="$1"
     local max_len="${2:-25}"
@@ -5885,7 +6319,8 @@ truncate_middle() {
     echo "${str:0:$keep_start}...${str: -$keep_end}"
 }
 
-# Function to reboot into the main OS
+# Displays installation summary and prompts for system reboot.
+# Shows validation results, configuration details, and access methods.
 reboot_to_main_os() {
     local inner_width=$((MENU_BOX_WIDTH - 6))
 
@@ -6039,7 +6474,11 @@ reboot_to_main_os() {
     read -r -e -p "Do you want to reboot the system? (y/n): " -i "y" REBOOT
     if [[ "$REBOOT" == "y" ]]; then
         print_info "Rebooting the system..."
-        reboot
+        if ! reboot; then
+            log "ERROR: Failed to reboot - system may require manual restart"
+            print_error "Failed to reboot the system"
+            exit 1
+        fi
     else
         print_info "Exiting..."
         exit 0
