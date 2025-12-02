@@ -624,7 +624,9 @@ show_configuration_review() {
                 return 0
                 ;;
             e|E)
-                # Edit configuration
+                # Edit configuration - clear screen first
+                clear
+                show_banner --no-info
                 edit_configuration
                 ;;
             q|Q)
