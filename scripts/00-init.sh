@@ -18,6 +18,17 @@ CLR_GRAY=$'\033[38;5;240m'
 CLR_HETZNER=$'\033[38;5;160m'
 CLR_RESET=$'\033[m'
 
+# Disable all colors (called when --no-color flag is used)
+disable_colors() {
+    CLR_RED=''
+    CLR_CYAN=''
+    CLR_YELLOW=''
+    CLR_ORANGE=''
+    CLR_GRAY=''
+    CLR_HETZNER=''
+    CLR_RESET=''
+}
+
 # Version (MAJOR only - MINOR.PATCH added by CI from git tags/commits)
 VERSION="1"
 

@@ -17,6 +17,7 @@ Complete reference for all configuration options available in the installer.
 | `--qemu-ram MB` | Set QEMU RAM in MB (default: auto 4096-8192) |
 | `--qemu-cores N` | Set QEMU CPU cores (default: auto, max 16) |
 | `--iso-version FILE` | Use specific Proxmox ISO (e.g., `proxmox-ve_8.3-1.iso`) |
+| `--no-color` | Disable colored output |
 
 ## Usage Examples
 

@@ -231,6 +231,7 @@ Post-install configuration runs via SSH into QEMU VM on port 5555:
 | `--qemu-ram MB` | Override QEMU RAM (default: auto 4096-8192) |
 | `--qemu-cores N` | Override QEMU CPU cores (default: auto, max 16) |
 | `--iso-version FILE` | Use specific Proxmox ISO (e.g., proxmox-ve_8.3-1.iso) |
+| `--no-color` | Disable colored output |
 
 ## Conventions
 
