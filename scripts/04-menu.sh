@@ -342,7 +342,7 @@ checkbox_menu() {
             elif [[ "$line" =~ ^(\|)(.*)\|$ ]]; then
                 local content="${BASH_REMATCH[2]}"
                 # Cursor indicator - orange
-                content="${content//> />${CLR_ORANGE} ${CLR_RESET}}"
+                content="${content//> /${CLR_ORANGE}› ${CLR_RESET}}"
                 # Checked checkbox - orange (matching radio menu style)
                 content="${content//\[x\]/${CLR_ORANGE}[●]${CLR_RESET}}"
                 # Unchecked checkbox - gray
