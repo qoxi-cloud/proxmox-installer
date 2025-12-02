@@ -140,13 +140,13 @@ display_config_preview() {
         printf "%-${inner_width}s\n" "Press ENTER_KEY to start installation"
         printf "%-${inner_width}s\n" "Press E_KEY to edit configuration"
         printf "%-${inner_width}s\n" "Press Q_KEY to quit"
-    } | boxes -d stone -p a1 -s $MENU_BOX_WIDTH | _colorize_preview
+    } | boxes -d stone -p a1 -s "$MENU_BOX_WIDTH" | _colorize_preview
 }
 
 # Colorize preview output
 _colorize_preview() {
     local box_width=$MENU_BOX_WIDTH
-    local inner_width=$((box_width - 2))  # Width between | borders
+    local inner_width=$((box_width - 1))  # Width between | borders (boxes adds padding)
 
     while IFS= read -r line; do
         # Top/bottom border
