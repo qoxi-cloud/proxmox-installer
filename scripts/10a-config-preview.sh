@@ -137,14 +137,17 @@ display_config_preview() {
             printf "%-${inner_width}s\n" "$line"
         done
         echo ""
-        echo "Press Enter to start installation"
-        echo "Press 'e' to edit configuration"
-        echo "Press 'q' to quit"
-    } | boxes -d stone -p a1 -s $MENU_BOX_WIDTH | _colorize_preview
+        printf "%-${inner_width}s\n" "Press ENTER_KEY to start installation"
+        printf "%-${inner_width}s\n" "Press E_KEY to edit configuration"
+        printf "%-${inner_width}s\n" "Press Q_KEY to quit"
+    } | boxes -d stone -p a1 -s "$MENU_BOX_WIDTH" | _colorize_preview
 }
 
 # Colorize preview output
 _colorize_preview() {
+    local box_width=$MENU_BOX_WIDTH
+    local inner_width=$((box_width - 1))  # Width between | borders (boxes adds padding)
+
     while IFS= read -r line; do
         # Top/bottom border
         if [[ "$line" =~ ^\+[-+]+\+$ ]]; then
@@ -152,13 +155,26 @@ _colorize_preview() {
         # Content line with | borders
         elif [[ "$line" =~ ^(\|)(.*)\|$ ]]; then
             local content="${BASH_REMATCH[2]}"
+            local visible_content="$content"
             # Section headers (lines starting with ---)
             if [[ "$content" == *"---"* ]]; then
                 content="${CLR_CYAN}${content}${CLR_RESET}"
             fi
-            # Key bindings at the bottom
-            if [[ "$content" == *"Press"* ]]; then
-                content="${CLR_GRAY}${content}${CLR_RESET}"
+            # Key bindings at the bottom - highlight keys in cyan
+            if [[ "$visible_content" == *"Press"* ]]; then
+                # Calculate visible length (without placeholders, with actual key names)
+                visible_content="${visible_content//ENTER_KEY/Enter}"
+                visible_content="${visible_content//E_KEY/e}"
+                visible_content="${visible_content//Q_KEY/q}"
+                local visible_len=${#visible_content}
+                local padding=$((inner_width - visible_len))
+                # Apply colors
+                content="${content//ENTER_KEY/${CLR_CYAN}Enter${CLR_GRAY}}"
+                content="${content//E_KEY/${CLR_CYAN}e${CLR_GRAY}}"
+                content="${content//Q_KEY/${CLR_CYAN}q${CLR_GRAY}}"
+                content="${CLR_GRAY}${content}"
+                # Add padding spaces before reset
+                printf -v content "%s%${padding}s${CLR_RESET}" "$content" ""
             fi
             echo "${CLR_GRAY}|${CLR_RESET}${content}${CLR_GRAY}|${CLR_RESET}"
         else
@@ -170,36 +186,62 @@ _colorize_preview() {
 # Edit configuration menu
 # Returns: 0 to continue to installation, 1 to show preview again
 edit_configuration() {
-    local edit_sections=(
-        "Basic Settings|Hostname, domain, email, password, timezone"
-        "Network|Bridge mode, private subnet"
-        "IPv6|IPv6 mode and settings"
-        "Storage|ZFS RAID level"
-        "Proxmox|Version and repository"
-        "SSL|Certificate type"
-        "Tailscale|VPN configuration"
-        "Optional|Shell, packages, power profile"
-        "SSH Key|Public key for authentication"
-        "Done|Return to configuration review"
-    )
+    # Build menu dynamically based on current configuration
+    local -a edit_sections=()
+    local -a edit_actions=()
+
+    # Always available sections
+    edit_sections+=("Basic Settings|Hostname, domain, email, password, timezone")
+    edit_actions+=("_edit_basic_settings")
+
+    edit_sections+=("Network|Bridge mode, private subnet")
+    edit_actions+=("_edit_network_settings")
+
+    edit_sections+=("IPv6|IPv6 mode and settings")
+    edit_actions+=("_edit_ipv6_settings")
+
+    # Storage - show RAID options only if multiple drives
+    if [[ "${DRIVE_COUNT:-0}" -ge 2 ]]; then
+        edit_sections+=("Storage|ZFS RAID level (${DRIVE_COUNT} drives)")
+    else
+        edit_sections+=("Storage|Single drive mode")
+    fi
+    edit_actions+=("_edit_storage_settings")
+
+    edit_sections+=("Proxmox|Version and repository")
+    edit_actions+=("_edit_proxmox_settings")
+
+    # SSL - only show if Tailscale is NOT enabled
+    if [[ "$INSTALL_TAILSCALE" != "yes" ]]; then
+        edit_sections+=("SSL|Certificate type")
+        edit_actions+=("_edit_ssl_settings")
+    fi
+
+    edit_sections+=("Tailscale|VPN configuration")
+    edit_actions+=("_edit_tailscale_settings")
+
+    edit_sections+=("Optional|Shell, packages, power profile")
+    edit_actions+=("_edit_optional_settings")
+
+    edit_sections+=("SSH Key|Public key for authentication")
+    edit_actions+=("_edit_ssh_settings")
+
+    # Done option always last
+    edit_sections+=("Done|Return to configuration review")
+    edit_actions+=("return")
 
     radio_menu \
         "Edit Configuration (select section)" \
         "Select which section to edit"$'\n' \
         "${edit_sections[@]}"
 
-    case $MENU_SELECTED in
-        0) _edit_basic_settings ;;
-        1) _edit_network_settings ;;
-        2) _edit_ipv6_settings ;;
-        3) _edit_storage_settings ;;
-        4) _edit_proxmox_settings ;;
-        5) _edit_ssl_settings ;;
-        6) _edit_tailscale_settings ;;
-        7) _edit_optional_settings ;;
-        8) _edit_ssh_settings ;;
-        9) return 0 ;;  # Done - return to preview
-    esac
+    # Execute selected action
+    local action="${edit_actions[$MENU_SELECTED]}"
+    if [[ "$action" == "return" ]]; then
+        return 0
+    else
+        $action
+    fi
 
     return 0
 }
@@ -291,6 +333,9 @@ _edit_basic_settings() {
 }
 
 _edit_network_settings() {
+    # Save previous mode to detect changes
+    local prev_bridge_mode="$BRIDGE_MODE"
+
     # Bridge mode
     local bridge_options=("internal" "external" "both")
     local bridge_header="Configure network bridges for VMs"$'\n'
@@ -309,6 +354,13 @@ _edit_network_settings() {
 
     # Private subnet (only for internal/both)
     if [[ "$BRIDGE_MODE" == "internal" || "$BRIDGE_MODE" == "both" ]]; then
+        # Show info if switching from external mode
+        if [[ "$prev_bridge_mode" == "external" ]]; then
+            echo ""
+            print_info "Internal bridge enabled - configuring private subnet..."
+            echo ""
+        fi
+
         local subnet_options=("10.0.0.0/24" "192.168.1.0/24" "172.16.0.0/24" "custom")
 
         radio_menu \
@@ -338,6 +390,12 @@ _edit_network_settings() {
         PRIVATE_IP="${PRIVATE_CIDR}.1"
         SUBNET_MASK=$(echo "$PRIVATE_SUBNET" | cut -d'/' -f2)
         PRIVATE_IP_CIDR="${PRIVATE_IP}/${SUBNET_MASK}"
+    else
+        # External only - clear private network values
+        PRIVATE_SUBNET=""
+        PRIVATE_CIDR=""
+        PRIVATE_IP=""
+        PRIVATE_IP_CIDR=""
     fi
 }
 
@@ -509,6 +567,9 @@ _edit_tailscale_settings() {
             print_warning "Tailscale:" "enabled (manual auth required)"
         fi
     else
+        # Check if Tailscale was previously enabled - need to configure SSL
+        local was_tailscale_enabled="$INSTALL_TAILSCALE"
+
         INSTALL_TAILSCALE="no"
         TAILSCALE_AUTH_KEY=""
         TAILSCALE_SSH="no"
@@ -516,6 +577,14 @@ _edit_tailscale_settings() {
         TAILSCALE_DISABLE_SSH="no"
         STEALTH_MODE="no"
         print_success "Tailscale:" "not installed"
+
+        # If Tailscale was enabled before, now need to configure SSL
+        if [[ "$was_tailscale_enabled" == "yes" ]]; then
+            echo ""
+            print_info "Tailscale disabled - configuring SSL certificate..."
+            echo ""
+            _edit_ssl_settings
+        fi
     fi
 }
 
@@ -624,7 +693,9 @@ show_configuration_review() {
                 return 0
                 ;;
             e|E)
-                # Edit configuration
+                # Edit configuration - clear screen first
+                clear
+                show_banner --no-info
                 edit_configuration
                 ;;
             q|Q)
