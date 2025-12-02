@@ -20,9 +20,34 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for version calculation
+
+      - name: Calculate version
+        id: version
+        run: |
+          # Get MAJOR version from source file
+          MAJOR=$(grep -oP 'VERSION="\K[0-9]+' scripts/00-init.sh)
+
+          # Count tags matching vMAJOR.* for MINOR
+          MINOR=$(git tag -l "v${MAJOR}.*" 2>/dev/null | wc -l | tr -d ' ')
+
+          # Count commits since last tag for PATCH
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [[ -n "$LATEST_TAG" ]]; then
+            PATCH=$(git rev-list "${LATEST_TAG}..HEAD" --count)
+          else
+            PATCH=$(git rev-list HEAD --count)
+          fi
+
+          VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Generated version: ${VERSION}"
 
       - name: Build script
         run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
           # Header
           cat > pve-install.sh << 'HEADER'
           #!/usr/bin/env bash
@@ -38,6 +63,9 @@ jobs:
             # Remove shebang from all files
             sed '1{/^#!/d}' "$f" >> pve-install.sh
           done
+
+          # Replace version placeholder with calculated version
+          sed -i "s/^VERSION=\"[0-9]*\"$/VERSION=\"${VERSION}\"/" pve-install.sh
 
           chmod +x pve-install.sh
 

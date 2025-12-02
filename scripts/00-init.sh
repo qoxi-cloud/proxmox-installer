@@ -18,8 +18,8 @@ CLR_GRAY=$'\033[38;5;240m'
 CLR_HETZNER=$'\033[38;5;160m'
 CLR_RESET=$'\033[m'
 
-# Version
-VERSION="1.3.0"
+# Version (MAJOR only - MINOR.PATCH added by CI from git tags/commits)
+VERSION="1"
 
 # =============================================================================
 # Configuration constants

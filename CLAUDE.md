@@ -36,6 +36,45 @@ shellcheck scripts/*.sh
 # Ignored warnings: SC1091 (sourced files), SC2034 (unused vars), SC2086 (word splitting)
 ```
 
+## Versioning
+
+The project uses **Semantic Versioning** with automatic MINOR and PATCH calculation:
+
+| Component | Source | Description |
+|-----------|--------|-------------|
+| **MAJOR** | `scripts/00-init.sh` | Stored as `VERSION="1"` (only the major number) |
+| **MINOR** | Git tags | Count of tags matching `v{MAJOR}.*` |
+| **PATCH** | Git commits | Commits since the last tag |
+
+**How it works:**
+
+1. `00-init.sh` contains only the MAJOR version: `VERSION="1"`
+2. GitHub Actions calculates the full version during build
+3. The final `pve-install.sh` contains the complete version (e.g., `VERSION="1.2.5"`)
+4. Version changes are NOT pushed back to the repository
+
+**Version examples:**
+
+| Situation | Resulting Version |
+|-----------|-------------------|
+| MAJOR=1, 0 tags, 50 commits | `1.0.50` |
+| MAJOR=1, tag `v1.0.0`, 0 commits after | `1.1.0` |
+| MAJOR=1, tag `v1.0.0`, 10 commits after | `1.1.10` |
+| MAJOR=1, tags `v1.0.0` + `v1.1.0`, 5 commits after | `1.2.5` |
+
+**Creating a release:**
+
+```bash
+git tag v1.0.0
+git push --tags
+```
+
+This increments MINOR and resets PATCH to 0 on next build.
+
+**Bumping MAJOR version:**
+
+Edit `VERSION="2"` in `scripts/00-init.sh` — MINOR/PATCH will reset based on `v2.*` tags.
+
 ## Architecture
 
 ### Script Execution Order

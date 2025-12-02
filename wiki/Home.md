@@ -14,6 +14,7 @@ This project provides an automated solution for installing Proxmox VE on Hetzner
 | [SSL Certificates](SSL-Certificates) | Let's Encrypt and self-signed certificates |
 | [Post-Installation](Post-Installation) | Packages, security hardening, optimizations |
 | [Tailscale Setup](Tailscale-Setup) | Remote access via Tailscale VPN |
+| [Development Guide](Development) | Build system, versioning, contributing |
 
 ## Quick Start
 

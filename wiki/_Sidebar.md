@@ -15,6 +15,9 @@
 - [🔧 Post-Installation](Post-Installation)
 - [🔐 Tailscale Setup](Tailscale-Setup)
 
+**Development**
+- [🛠️ Development Guide](Development)
+
 ---
 
 **Links**
