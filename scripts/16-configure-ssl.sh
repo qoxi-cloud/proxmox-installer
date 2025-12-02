@@ -3,6 +3,9 @@
 # SSL certificate configuration via SSH
 # =============================================================================
 
+# Configures SSL certificates for Proxmox Web UI.
+# For Let's Encrypt, sets up first-boot certificate acquisition.
+# Side effects: Installs certbot, configures systemd service for cert renewal
 configure_ssl_certificate() {
     log "configure_ssl_certificate: SSL_TYPE=$SSL_TYPE"
 
@@ -23,14 +26,26 @@ configure_ssl_certificate() {
     ' "Certbot installed"
 
     # Apply template substitutions locally before copying
-    apply_template_vars "./templates/letsencrypt-firstboot.sh" \
+    if ! apply_template_vars "./templates/letsencrypt-firstboot.sh" \
         "CERT_DOMAIN=${cert_domain}" \
-        "CERT_EMAIL=${EMAIL}"
+        "CERT_EMAIL=${EMAIL}"; then
+        log "ERROR: Failed to apply template variables to letsencrypt-firstboot.sh"
+        exit 1
+    fi
 
     # Copy Let's Encrypt templates to VM
-    remote_copy "./templates/letsencrypt-deploy-hook.sh" "/tmp/letsencrypt-deploy-hook.sh"
-    remote_copy "./templates/letsencrypt-firstboot.sh" "/tmp/letsencrypt-firstboot.sh"
-    remote_copy "./templates/letsencrypt-firstboot.service" "/tmp/letsencrypt-firstboot.service"
+    if ! remote_copy "./templates/letsencrypt-deploy-hook.sh" "/tmp/letsencrypt-deploy-hook.sh"; then
+        log "ERROR: Failed to copy letsencrypt-deploy-hook.sh"
+        exit 1
+    fi
+    if ! remote_copy "./templates/letsencrypt-firstboot.sh" "/tmp/letsencrypt-firstboot.sh"; then
+        log "ERROR: Failed to copy letsencrypt-firstboot.sh"
+        exit 1
+    fi
+    if ! remote_copy "./templates/letsencrypt-firstboot.service" "/tmp/letsencrypt-firstboot.service"; then
+        log "ERROR: Failed to copy letsencrypt-firstboot.service"
+        exit 1
+    fi
 
     # Configure first-boot certificate script
     run_remote "Configuring Let's Encrypt templates" '
