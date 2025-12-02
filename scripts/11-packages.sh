@@ -287,7 +287,9 @@ download_proxmox_iso() {
         exit 1
     fi
 
-    log "ISO file size: $(stat -c%s pve.iso 2>/dev/null | awk '{printf "%.1fG", $1/1024/1024/1024}')"
+    local iso_size
+    iso_size=$(stat -c%s pve.iso 2>/dev/null) || iso_size=0
+    log "ISO file size: $(echo "$iso_size" | awk '{printf "%.1fG", $1/1024/1024/1024}')"
 
     # Verify checksum (if not already verified by aria2c)
     if [[ -n "$expected_checksum" ]]; then
