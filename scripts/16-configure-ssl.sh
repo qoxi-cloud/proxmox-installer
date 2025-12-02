@@ -26,9 +26,12 @@ configure_ssl_certificate() {
     ' "Certbot installed"
 
     # Apply template substitutions locally before copying
-    apply_template_vars "./templates/letsencrypt-firstboot.sh" \
+    if ! apply_template_vars "./templates/letsencrypt-firstboot.sh" \
         "CERT_DOMAIN=${cert_domain}" \
-        "CERT_EMAIL=${EMAIL}"
+        "CERT_EMAIL=${EMAIL}"; then
+        log "ERROR: Failed to apply template variables to letsencrypt-firstboot.sh"
+        exit 1
+    fi
 
     # Copy Let's Encrypt templates to VM
     remote_copy "./templates/letsencrypt-deploy-hook.sh" "/tmp/letsencrypt-deploy-hook.sh"
