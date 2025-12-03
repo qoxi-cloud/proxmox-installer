@@ -151,8 +151,11 @@ echo -e "\n${YELLOW}=== Testing _wiz_progress_bar function ===${NC}"
 test_progress_bar_basic() {
     local bar
     bar=$(_wiz_progress_bar 1 2 10)
-    # UTF-8 block chars are 3 bytes each, so 10 chars = 30 bytes
-    [[ ${#bar} -eq 30 ]]
+    # Check character count (locale-dependent, may be 10 chars or 30 bytes)
+    # Use printf to count actual bytes for consistent cross-platform behavior
+    local byte_len
+    byte_len=$(printf '%s' "$bar" | wc -c | tr -d ' ')
+    [[ "$byte_len" -eq 30 ]]
 }
 
 assert_true "_wiz_progress_bar returns correct width" test_progress_bar_basic
@@ -186,8 +189,13 @@ test_progress_bar_various_widths() {
     bar10=$(_wiz_progress_bar 5 10 10)
     bar50=$(_wiz_progress_bar 5 10 50)
     bar100=$(_wiz_progress_bar 5 10 100)
+    # Use printf | wc -c for consistent byte counting across locales
     # UTF-8 block chars are 3 bytes each
-    [[ ${#bar10} -eq 30 ]] && [[ ${#bar50} -eq 150 ]] && [[ ${#bar100} -eq 300 ]]
+    local len10 len50 len100
+    len10=$(printf '%s' "$bar10" | wc -c | tr -d ' ')
+    len50=$(printf '%s' "$bar50" | wc -c | tr -d ' ')
+    len100=$(printf '%s' "$bar100" | wc -c | tr -d ' ')
+    [[ "$len10" -eq 30 ]] && [[ "$len50" -eq 150 ]] && [[ "$len100" -eq 300 ]]
 }
 
 assert_true "_wiz_progress_bar handles various widths" test_progress_bar_various_widths
