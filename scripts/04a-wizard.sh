@@ -23,23 +23,40 @@ WIZARD_WIDTH=60
 WIZARD_TOTAL_STEPS=6
 
 # =============================================================================
-# Color configuration for gum (hex values from our color scheme)
+# Color configuration
 # =============================================================================
-# Maps our ANSI colors to hex for gum:
-#   CLR_CYAN    (#00B1FF) -> Primary/accent color
-#   CLR_ORANGE  (#FF8700) -> Highlight/selected
-#   CLR_YELLOW  (#FFFF55) -> Warnings
-#   CLR_RED     (#FF5555) -> Errors
-#   CLR_GRAY    (#585858) -> Muted/borders
-#   CLR_HETZNER (#D70000) -> Brand color
+# Hex colors for gum commands (gum uses hex format)
+# ANSI codes for direct terminal output (instant, no subprocess)
+#
+# Color mapping from project scheme:
+#   CLR_CYAN    -> Primary (UI elements)
+#   CLR_ORANGE  -> Accent (highlights, selected items)
+#   CLR_YELLOW  -> Warnings
+#   CLR_RED     -> Errors
+#   CLR_GRAY    -> Muted text, borders
+#   CLR_HETZNER -> Hetzner brand red
 
-GUM_PRIMARY="#00B1FF"
-GUM_ACCENT="#FF8700"
-GUM_SUCCESS="#55FF55"
-GUM_WARNING="#FFFF55"
-GUM_ERROR="#FF5555"
-GUM_MUTED="#585858"
-GUM_BORDER="#444444"
+# Hex colors for gum
+# shellcheck disable=SC2034
+GUM_PRIMARY="#00B1FF"    # Cyan - primary UI color
+GUM_ACCENT="#FF8700"     # Orange - highlights/selected
+GUM_SUCCESS="#55FF55"    # Green - success messages
+GUM_WARNING="#FFFF55"    # Yellow - warnings
+GUM_ERROR="#FF5555"      # Red - errors
+GUM_MUTED="#585858"      # Gray - muted text
+GUM_BORDER="#444444"     # Dark gray - borders
+GUM_HETZNER="#D70000"    # Hetzner brand red
+
+# ANSI escape codes for direct terminal output (instant rendering)
+# shellcheck disable=SC2034
+ANSI_PRIMARY=$'\033[38;2;0;177;255m'   # #00B1FF
+ANSI_ACCENT=$'\033[38;5;208m'          # #FF8700 (256-color)
+ANSI_SUCCESS=$'\033[38;2;85;255;85m'   # #55FF55
+ANSI_WARNING=$'\033[38;2;255;255;85m'  # #FFFF55
+ANSI_ERROR=$'\033[38;2;255;85;85m'     # #FF5555
+ANSI_MUTED=$'\033[38;5;240m'           # #585858 (256-color)
+ANSI_HETZNER=$'\033[38;5;160m'         # #D70000 (256-color)
+ANSI_RESET=$'\033[0m'
 
 # =============================================================================
 # Banner display
@@ -49,22 +66,16 @@ GUM_BORDER="#444444"
 # Uses direct ANSI codes for instant display (no gum subprocess overhead).
 # Side effects: Outputs styled banner to terminal
 wiz_banner() {
-    # ANSI color codes matching our gum colors
-    local gray=$'\033[38;5;240m'
-    local orange=$'\033[38;5;208m'
-    local red=$'\033[38;5;160m'
-    local reset=$'\033[0m'
-
     printf '%s\n' \
         "" \
-        "${gray}    _____                                             ${reset}" \
-        "${gray}   |  __ \\                                            ${reset}" \
-        "${gray}   | |__) | _ __   ___  ${orange}__  __${gray}  _ __ ___    ___  ${orange}__  __${reset}" \
-        "${gray}   |  ___/ | '__| / _ \\ ${orange}\\ \\/ /${gray} | '_ \` _ \\  / _ \\ ${orange}\\ \\/ /${reset}" \
-        "${gray}   | |     | |   | (_) |${orange} >  <${gray}  | | | | | || (_) |${orange} >  <${reset}" \
-        "${gray}   |_|     |_|    \\___/ ${orange}/_/\\_\\${gray} |_| |_| |_| \\___/ ${orange}/_/\\_\\${reset}" \
+        "${ANSI_MUTED}    _____                                             ${ANSI_RESET}" \
+        "${ANSI_MUTED}   |  __ \\                                            ${ANSI_RESET}" \
+        "${ANSI_MUTED}   | |__) | _ __   ___  ${ANSI_ACCENT}__  __${ANSI_MUTED}  _ __ ___    ___  ${ANSI_ACCENT}__  __${ANSI_RESET}" \
+        "${ANSI_MUTED}   |  ___/ | '__| / _ \\ ${ANSI_ACCENT}\\ \\/ /${ANSI_MUTED} | '_ \` _ \\  / _ \\ ${ANSI_ACCENT}\\ \\/ /${ANSI_RESET}" \
+        "${ANSI_MUTED}   | |     | |   | (_) |${ANSI_ACCENT} >  <${ANSI_MUTED}  | | | | | || (_) |${ANSI_ACCENT} >  <${ANSI_RESET}" \
+        "${ANSI_MUTED}   |_|     |_|    \\___/ ${ANSI_ACCENT}/_/\\_\\${ANSI_MUTED} |_| |_| |_| \\___/ ${ANSI_ACCENT}/_/\\_\\${ANSI_RESET}" \
         "" \
-        "${red}               Hetzner ${gray}Automated Installer${reset}" \
+        "${ANSI_HETZNER}               Hetzner ${ANSI_MUTED}Automated Installer${ANSI_RESET}" \
         ""
 }
 
