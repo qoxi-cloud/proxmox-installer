@@ -73,13 +73,14 @@ assert_equals() {
 echo -e "\n${YELLOW}=== Testing field array declarations ===${NC}"
 
 test_field_arrays_exist() {
-    [[ -v WIZ_FIELD_LABELS ]] && \
-    [[ -v WIZ_FIELD_VALUES ]] && \
-    [[ -v WIZ_FIELD_TYPES ]] && \
-    [[ -v WIZ_FIELD_OPTIONS ]] && \
-    [[ -v WIZ_FIELD_DEFAULTS ]] && \
-    [[ -v WIZ_FIELD_VALIDATORS ]] && \
-    [[ -v WIZ_CURRENT_FIELD ]]
+    # Use declare -p to check if arrays exist (compatible with Bash 3.2+)
+    declare -p WIZ_FIELD_LABELS &>/dev/null && \
+    declare -p WIZ_FIELD_VALUES &>/dev/null && \
+    declare -p WIZ_FIELD_TYPES &>/dev/null && \
+    declare -p WIZ_FIELD_OPTIONS &>/dev/null && \
+    declare -p WIZ_FIELD_DEFAULTS &>/dev/null && \
+    declare -p WIZ_FIELD_VALIDATORS &>/dev/null && \
+    declare -p WIZ_CURRENT_FIELD &>/dev/null
 }
 
 assert_true "field arrays are declared" test_field_arrays_exist

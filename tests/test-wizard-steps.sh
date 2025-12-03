@@ -295,38 +295,32 @@ test_empty_timezone_in_array() {
 
 assert_true "WIZ_TIMEZONES has no empty entries" test_empty_timezone_in_array
 
-test_duplicate_bridge_modes() {
-    local -A seen
-    local has_dup=false
-    for mode in "${WIZ_BRIDGE_MODES[@]}"; do
-        [[ -n "${seen[$mode]:-}" ]] && has_dup=true && break
-        seen[$mode]=1
+# Helper function to check for duplicates in array (Bash 3.2 compatible)
+_has_duplicates() {
+    local arr=("$@")
+    local i j
+    for ((i = 0; i < ${#arr[@]}; i++)); do
+        for ((j = i + 1; j < ${#arr[@]}; j++)); do
+            [[ "${arr[i]}" == "${arr[j]}" ]] && return 0
+        done
     done
-    ! $has_dup
+    return 1
+}
+
+test_duplicate_bridge_modes() {
+    ! _has_duplicates "${WIZ_BRIDGE_MODES[@]}"
 }
 
 assert_true "WIZ_BRIDGE_MODES has no duplicates" test_duplicate_bridge_modes
 
 test_subnet_uniqueness() {
-    local -A seen
-    local has_dup=false
-    for subnet in "${WIZ_SUBNETS[@]}"; do
-        [[ -n "${seen[$subnet]:-}" ]] && has_dup=true && break
-        seen[$subnet]=1
-    done
-    ! $has_dup
+    ! _has_duplicates "${WIZ_SUBNETS[@]}"
 }
 
 assert_true "WIZ_SUBNETS has no duplicates" test_subnet_uniqueness
 
 test_governor_uniqueness() {
-    local -A seen
-    local has_dup=false
-    for gov in "${WIZ_GOVERNORS[@]}"; do
-        [[ -n "${seen[$gov]:-}" ]] && has_dup=true && break
-        seen[$gov]=1
-    done
-    ! $has_dup
+    ! _has_duplicates "${WIZ_GOVERNORS[@]}"
 }
 
 assert_true "WIZ_GOVERNORS has no duplicates" test_governor_uniqueness
