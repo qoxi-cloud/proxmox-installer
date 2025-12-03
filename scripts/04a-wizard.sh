@@ -585,7 +585,7 @@ wiz_step_interactive() {
 
         # Check for escape sequence (arrow keys send 3 chars: ESC [ A/B/C/D)
         if [[ "$key" == $'\e' ]]; then
-            read -rsn2 -t 0.1 key
+            read -rsn2 -t1 key 2>/dev/null || read -rsn2 key
             case "$key" in
                 '[A') # Up arrow
                     ((WIZ_CURRENT_FIELD > 0)) && ((WIZ_CURRENT_FIELD--))
