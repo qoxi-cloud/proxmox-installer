@@ -174,6 +174,26 @@ eval "$(sed -n '/^function_name()/,/^}/p' "$SCRIPT_DIR/scripts/module.sh")"
 - Some functions (e.g., `apply_template_vars` using `sed -i`) are not tested due to platform differences
 - Tests run in CI on Ubuntu runners
 
+**IMPORTANT: Running tests on non-Ubuntu systems (e.g., macOS):**
+
+CI runs on Ubuntu, and there are subtle differences in shell behavior between platforms (e.g., locale handling, `${#var}` for UTF-8 strings). To ensure tests pass in CI, **always run tests in Docker** when developing on macOS or other non-Ubuntu systems:
+
+```bash
+# Run all tests in Ubuntu container (matches CI environment)
+docker run --rm -v "$(pwd)":/workspace -w /workspace ubuntu:latest bash -c "
+    apt-get update && apt-get install -y bash coreutils
+    ./tests/run-all-tests.sh
+"
+
+# Run a specific test file
+docker run --rm -v "$(pwd)":/workspace -w /workspace ubuntu:latest bash -c "
+    apt-get update && apt-get install -y bash coreutils
+    ./tests/test-wizard-core.sh
+"
+```
+
+This prevents false positives where tests pass locally but fail in CI due to platform differences.
+
 ## CI/CD Workflow
 
 The project uses multiple GitHub Actions workflows:
