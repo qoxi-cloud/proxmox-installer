@@ -766,6 +766,547 @@ _wiz_edit_field_select() {
 
 
 # =============================================================================
+# Wizard Step Implementations
+# =============================================================================
+
+# Timezone options for the wizard
+WIZ_TIMEZONES=(
+    "Europe/Kyiv"
+    "Europe/London"
+    "Europe/Berlin"
+    "America/New_York"
+    "America/Los_Angeles"
+    "Asia/Tokyo"
+    "UTC"
+)
+
+# Bridge mode options
+WIZ_BRIDGE_MODES=("internal" "external" "both")
+WIZ_BRIDGE_LABELS=("Internal NAT" "External (bridged)" "Both")
+
+# Private subnet options
+WIZ_SUBNETS=("10.0.0.0/24" "192.168.1.0/24" "172.16.0.0/24")
+
+# IPv6 mode options
+WIZ_IPV6_MODES=("auto" "manual" "disabled")
+WIZ_IPV6_LABELS=("Auto-detect" "Manual" "Disabled")
+
+# ZFS RAID options
+WIZ_ZFS_MODES=("raid1" "raid0" "single")
+WIZ_ZFS_LABELS=("RAID-1 (mirror)" "RAID-0 (stripe)" "Single drive")
+
+# Repository options
+WIZ_REPO_TYPES=("no-subscription" "enterprise" "test")
+WIZ_REPO_LABELS=("No-Subscription" "Enterprise" "Test")
+
+# SSL options
+WIZ_SSL_TYPES=("self-signed" "letsencrypt")
+WIZ_SSL_LABELS=("Self-signed" "Let's Encrypt")
+
+# CPU governor options
+WIZ_GOVERNORS=("performance" "ondemand" "powersave" "schedutil" "conservative")
+
+# -----------------------------------------------------------------------------
+# Step 1: System Configuration
+# -----------------------------------------------------------------------------
+_wiz_step_system() {
+    _wiz_clear_fields
+    _wiz_add_field "Hostname" "input" "${PVE_HOSTNAME:-pve}" "validate_hostname"
+    _wiz_add_field "Domain" "input" "${DOMAIN_SUFFIX:-local}"
+    _wiz_add_field "Email" "input" "${EMAIL:-admin@example.com}" "validate_email"
+    _wiz_add_field "Password" "password" ""
+    _wiz_add_field "Timezone" "choose" "$(IFS='|'; echo "${WIZ_TIMEZONES[*]}")"
+
+    # Pre-fill values if already set
+    [[ -n "$PVE_HOSTNAME" ]] && WIZ_FIELD_VALUES[0]="$PVE_HOSTNAME"
+    [[ -n "$DOMAIN_SUFFIX" ]] && WIZ_FIELD_VALUES[1]="$DOMAIN_SUFFIX"
+    [[ -n "$EMAIL" ]] && WIZ_FIELD_VALUES[2]="$EMAIL"
+    [[ -n "$NEW_ROOT_PASSWORD" ]] && WIZ_FIELD_VALUES[3]="$NEW_ROOT_PASSWORD"
+    [[ -n "$TIMEZONE" ]] && WIZ_FIELD_VALUES[4]="$TIMEZONE"
+
+    local result
+    result=$(wiz_step_interactive 1 "System")
+
+    if [[ "$result" == "next" ]]; then
+        PVE_HOSTNAME="${WIZ_FIELD_VALUES[0]}"
+        DOMAIN_SUFFIX="${WIZ_FIELD_VALUES[1]}"
+        EMAIL="${WIZ_FIELD_VALUES[2]}"
+        NEW_ROOT_PASSWORD="${WIZ_FIELD_VALUES[3]}"
+        TIMEZONE="${WIZ_FIELD_VALUES[4]}"
+
+        # Generate password if empty
+        if [[ -z "$NEW_ROOT_PASSWORD" ]]; then
+            NEW_ROOT_PASSWORD=$(generate_password "$DEFAULT_PASSWORD_LENGTH")
+            PASSWORD_GENERATED="yes"
+        fi
+    fi
+
+    echo "$result"
+}
+
+# -----------------------------------------------------------------------------
+# Step 2: Network Configuration
+# -----------------------------------------------------------------------------
+_wiz_step_network() {
+    _wiz_clear_fields
+
+    # Build bridge mode options string
+    local bridge_opts=""
+    for i in "${!WIZ_BRIDGE_LABELS[@]}"; do
+        [[ -n "$bridge_opts" ]] && bridge_opts+="|"
+        bridge_opts+="${WIZ_BRIDGE_LABELS[$i]}"
+    done
+
+    # Build subnet options string
+    local subnet_opts=""
+    for s in "${WIZ_SUBNETS[@]}"; do
+        [[ -n "$subnet_opts" ]] && subnet_opts+="|"
+        subnet_opts+="$s"
+    done
+
+    # Build IPv6 mode options
+    local ipv6_opts=""
+    for i in "${!WIZ_IPV6_LABELS[@]}"; do
+        [[ -n "$ipv6_opts" ]] && ipv6_opts+="|"
+        ipv6_opts+="${WIZ_IPV6_LABELS[$i]}"
+    done
+
+    _wiz_add_field "Interface" "input" "${INTERFACE_NAME:-eth0}"
+    _wiz_add_field "Bridge mode" "choose" "$bridge_opts"
+    _wiz_add_field "Private subnet" "choose" "$subnet_opts"
+    _wiz_add_field "IPv6" "choose" "$ipv6_opts"
+
+    # Pre-fill values
+    [[ -n "$INTERFACE_NAME" ]] && WIZ_FIELD_VALUES[0]="$INTERFACE_NAME"
+    if [[ -n "$BRIDGE_MODE" ]]; then
+        for i in "${!WIZ_BRIDGE_MODES[@]}"; do
+            [[ "${WIZ_BRIDGE_MODES[$i]}" == "$BRIDGE_MODE" ]] && WIZ_FIELD_VALUES[1]="${WIZ_BRIDGE_LABELS[$i]}"
+        done
+    fi
+    if [[ -n "$PRIVATE_SUBNET" ]]; then
+        WIZ_FIELD_VALUES[2]="$PRIVATE_SUBNET"
+    fi
+    if [[ -n "$IPV6_MODE" ]]; then
+        for i in "${!WIZ_IPV6_MODES[@]}"; do
+            [[ "${WIZ_IPV6_MODES[$i]}" == "$IPV6_MODE" ]] && WIZ_FIELD_VALUES[3]="${WIZ_IPV6_LABELS[$i]}"
+        done
+    fi
+
+    local result
+    result=$(wiz_step_interactive 2 "Network")
+
+    if [[ "$result" == "next" ]]; then
+        INTERFACE_NAME="${WIZ_FIELD_VALUES[0]}"
+
+        # Convert bridge label back to mode
+        local bridge_label="${WIZ_FIELD_VALUES[1]}"
+        for i in "${!WIZ_BRIDGE_LABELS[@]}"; do
+            [[ "${WIZ_BRIDGE_LABELS[$i]}" == "$bridge_label" ]] && BRIDGE_MODE="${WIZ_BRIDGE_MODES[$i]}"
+        done
+
+        PRIVATE_SUBNET="${WIZ_FIELD_VALUES[2]}"
+
+        # Convert IPv6 label back to mode
+        local ipv6_label="${WIZ_FIELD_VALUES[3]}"
+        for i in "${!WIZ_IPV6_LABELS[@]}"; do
+            [[ "${WIZ_IPV6_LABELS[$i]}" == "$ipv6_label" ]] && IPV6_MODE="${WIZ_IPV6_MODES[$i]}"
+        done
+
+        # Apply IPv6 settings
+        if [[ "$IPV6_MODE" == "disabled" ]]; then
+            MAIN_IPV6=""
+            IPV6_GATEWAY=""
+            FIRST_IPV6_CIDR=""
+        else
+            IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
+        fi
+    fi
+
+    echo "$result"
+}
+
+# -----------------------------------------------------------------------------
+# Step 3: Storage Configuration
+# -----------------------------------------------------------------------------
+_wiz_step_storage() {
+    _wiz_clear_fields
+
+    # Build ZFS options based on drive count
+    local zfs_opts=""
+    if [[ "${DRIVE_COUNT:-0}" -ge 2 ]]; then
+        for i in "${!WIZ_ZFS_LABELS[@]}"; do
+            [[ -n "$zfs_opts" ]] && zfs_opts+="|"
+            zfs_opts+="${WIZ_ZFS_LABELS[$i]}"
+        done
+    else
+        zfs_opts="Single drive"
+    fi
+
+    # Build repo options
+    local repo_opts=""
+    for i in "${!WIZ_REPO_LABELS[@]}"; do
+        [[ -n "$repo_opts" ]] && repo_opts+="|"
+        repo_opts+="${WIZ_REPO_LABELS[$i]}"
+    done
+
+    _wiz_add_field "ZFS mode" "choose" "$zfs_opts"
+    _wiz_add_field "Repository" "choose" "$repo_opts"
+    _wiz_add_field "Proxmox version" "input" "${PROXMOX_ISO_VERSION:-latest}"
+
+    # Pre-fill values
+    if [[ -n "$ZFS_RAID" ]]; then
+        for i in "${!WIZ_ZFS_MODES[@]}"; do
+            [[ "${WIZ_ZFS_MODES[$i]}" == "$ZFS_RAID" ]] && WIZ_FIELD_VALUES[0]="${WIZ_ZFS_LABELS[$i]}"
+        done
+    fi
+    if [[ -n "$PVE_REPO_TYPE" ]]; then
+        for i in "${!WIZ_REPO_TYPES[@]}"; do
+            [[ "${WIZ_REPO_TYPES[$i]}" == "$PVE_REPO_TYPE" ]] && WIZ_FIELD_VALUES[1]="${WIZ_REPO_LABELS[$i]}"
+        done
+    fi
+    [[ -n "$PROXMOX_ISO_VERSION" ]] && WIZ_FIELD_VALUES[2]="$PROXMOX_ISO_VERSION"
+
+    local result
+    result=$(wiz_step_interactive 3 "Storage")
+
+    if [[ "$result" == "next" ]]; then
+        # Convert ZFS label back to mode
+        local zfs_label="${WIZ_FIELD_VALUES[0]}"
+        if [[ "${DRIVE_COUNT:-0}" -ge 2 ]]; then
+            for i in "${!WIZ_ZFS_LABELS[@]}"; do
+                [[ "${WIZ_ZFS_LABELS[$i]}" == "$zfs_label" ]] && ZFS_RAID="${WIZ_ZFS_MODES[$i]}"
+            done
+        else
+            ZFS_RAID="single"
+        fi
+
+        # Convert repo label back to type
+        local repo_label="${WIZ_FIELD_VALUES[1]}"
+        for i in "${!WIZ_REPO_LABELS[@]}"; do
+            [[ "${WIZ_REPO_LABELS[$i]}" == "$repo_label" ]] && PVE_REPO_TYPE="${WIZ_REPO_TYPES[$i]}"
+        done
+
+        local pve_version="${WIZ_FIELD_VALUES[2]}"
+        [[ "$pve_version" != "latest" ]] && PROXMOX_ISO_VERSION="$pve_version"
+    fi
+
+    echo "$result"
+}
+
+# -----------------------------------------------------------------------------
+# Step 4: Security Configuration
+# -----------------------------------------------------------------------------
+_wiz_step_security() {
+    _wiz_clear_fields
+
+    # Build SSL options
+    local ssl_opts=""
+    for i in "${!WIZ_SSL_LABELS[@]}"; do
+        [[ -n "$ssl_opts" ]] && ssl_opts+="|"
+        ssl_opts+="${WIZ_SSL_LABELS[$i]}"
+    done
+
+    # Get detected SSH key
+    local detected_key=""
+    if [[ -z "$SSH_PUBLIC_KEY" ]]; then
+        detected_key=$(get_rescue_ssh_key 2>/dev/null || true)
+    else
+        detected_key="$SSH_PUBLIC_KEY"
+    fi
+
+    _wiz_add_field "SSH key" "input" "" "validate_ssh_key"
+    _wiz_add_field "SSL certificate" "choose" "$ssl_opts"
+
+    # Pre-fill values
+    if [[ -n "$detected_key" ]]; then
+        parse_ssh_key "$detected_key"
+        WIZ_FIELD_VALUES[0]="${SSH_KEY_TYPE:-ssh-key} (${SSH_KEY_SHORT:-detected})"
+        WIZ_FIELD_DEFAULTS[0]="$detected_key"
+    fi
+    if [[ -n "$SSL_TYPE" ]]; then
+        for i in "${!WIZ_SSL_TYPES[@]}"; do
+            [[ "${WIZ_SSL_TYPES[$i]}" == "$SSL_TYPE" ]] && WIZ_FIELD_VALUES[1]="${WIZ_SSL_LABELS[$i]}"
+        done
+    fi
+
+    local result
+    result=$(wiz_step_interactive 4 "Security")
+
+    if [[ "$result" == "next" ]]; then
+        # Handle SSH key
+        local ssh_value="${WIZ_FIELD_VALUES[0]}"
+        if [[ "$ssh_value" == *"(detected)"* || "$ssh_value" == *"ssh-"* ]]; then
+            SSH_PUBLIC_KEY="${WIZ_FIELD_DEFAULTS[0]:-$detected_key}"
+        else
+            SSH_PUBLIC_KEY="$ssh_value"
+        fi
+
+        # Convert SSL label back to type
+        local ssl_label="${WIZ_FIELD_VALUES[1]}"
+        for i in "${!WIZ_SSL_LABELS[@]}"; do
+            [[ "${WIZ_SSL_LABELS[$i]}" == "$ssl_label" ]] && SSL_TYPE="${WIZ_SSL_TYPES[$i]}"
+        done
+    fi
+
+    echo "$result"
+}
+
+# -----------------------------------------------------------------------------
+# Step 5: Features Configuration
+# -----------------------------------------------------------------------------
+_wiz_step_features() {
+    _wiz_clear_fields
+
+    # Build governor options
+    local gov_opts=""
+    for g in "${WIZ_GOVERNORS[@]}"; do
+        [[ -n "$gov_opts" ]] && gov_opts+="|"
+        gov_opts+="$g"
+    done
+
+    _wiz_add_field "Default shell" "choose" "zsh|bash"
+    _wiz_add_field "CPU governor" "choose" "$gov_opts"
+    _wiz_add_field "Bandwidth monitor" "choose" "yes|no"
+    _wiz_add_field "Auto updates" "choose" "yes|no"
+    _wiz_add_field "Audit logging" "choose" "no|yes"
+
+    # Pre-fill values
+    WIZ_FIELD_VALUES[0]="${DEFAULT_SHELL:-zsh}"
+    WIZ_FIELD_VALUES[1]="${CPU_GOVERNOR:-performance}"
+    WIZ_FIELD_VALUES[2]="${INSTALL_VNSTAT:-yes}"
+    WIZ_FIELD_VALUES[3]="${INSTALL_UNATTENDED_UPGRADES:-yes}"
+    WIZ_FIELD_VALUES[4]="${INSTALL_AUDITD:-no}"
+
+    local result
+    result=$(wiz_step_interactive 5 "Features")
+
+    if [[ "$result" == "next" ]]; then
+        DEFAULT_SHELL="${WIZ_FIELD_VALUES[0]}"
+        CPU_GOVERNOR="${WIZ_FIELD_VALUES[1]}"
+        INSTALL_VNSTAT="${WIZ_FIELD_VALUES[2]}"
+        INSTALL_UNATTENDED_UPGRADES="${WIZ_FIELD_VALUES[3]}"
+        INSTALL_AUDITD="${WIZ_FIELD_VALUES[4]}"
+    fi
+
+    echo "$result"
+}
+
+# -----------------------------------------------------------------------------
+# Step 6: Tailscale Configuration
+# -----------------------------------------------------------------------------
+_wiz_step_tailscale() {
+    _wiz_clear_fields
+
+    _wiz_add_field "Install Tailscale" "choose" "yes|no"
+    _wiz_add_field "Auth key" "input" ""
+    _wiz_add_field "Tailscale SSH" "choose" "yes|no"
+    _wiz_add_field "Disable OpenSSH" "choose" "no|yes"
+
+    # Pre-fill values
+    WIZ_FIELD_VALUES[0]="${INSTALL_TAILSCALE:-no}"
+    [[ -n "$TAILSCALE_AUTH_KEY" ]] && WIZ_FIELD_VALUES[1]="$TAILSCALE_AUTH_KEY"
+    WIZ_FIELD_VALUES[2]="${TAILSCALE_SSH:-yes}"
+    WIZ_FIELD_VALUES[3]="${TAILSCALE_DISABLE_SSH:-no}"
+
+    local result
+    result=$(wiz_step_interactive 6 "Tailscale VPN")
+
+    if [[ "$result" == "next" ]]; then
+        INSTALL_TAILSCALE="${WIZ_FIELD_VALUES[0]}"
+
+        if [[ "$INSTALL_TAILSCALE" == "yes" ]]; then
+            TAILSCALE_AUTH_KEY="${WIZ_FIELD_VALUES[1]}"
+            TAILSCALE_SSH="${WIZ_FIELD_VALUES[2]}"
+            TAILSCALE_WEBUI="yes"
+            TAILSCALE_DISABLE_SSH="${WIZ_FIELD_VALUES[3]}"
+
+            # Enable stealth mode if OpenSSH disabled
+            if [[ "$TAILSCALE_DISABLE_SSH" == "yes" ]]; then
+                STEALTH_MODE="yes"
+            else
+                STEALTH_MODE="no"
+            fi
+        else
+            TAILSCALE_AUTH_KEY=""
+            TAILSCALE_SSH="no"
+            TAILSCALE_WEBUI="no"
+            TAILSCALE_DISABLE_SSH="no"
+            STEALTH_MODE="no"
+        fi
+    fi
+
+    echo "$result"
+}
+
+# =============================================================================
+# Configuration Preview
+# =============================================================================
+
+# Displays a summary of all configuration before installation.
+# Returns: "install", "back", or "quit"
+_wiz_show_preview() {
+    clear
+    wiz_banner
+
+    # Build summary content
+    local summary=""
+    summary+="${ANSI_PRIMARY}System${ANSI_RESET}"$'\n'
+    summary+="  ${ANSI_MUTED}Hostname:${ANSI_RESET} ${PVE_HOSTNAME}.${DOMAIN_SUFFIX}"$'\n'
+    summary+="  ${ANSI_MUTED}Email:${ANSI_RESET} ${EMAIL}"$'\n'
+    summary+="  ${ANSI_MUTED}Timezone:${ANSI_RESET} ${TIMEZONE}"$'\n'
+    summary+="  ${ANSI_MUTED}Password:${ANSI_RESET} "
+    if [[ "$PASSWORD_GENERATED" == "yes" ]]; then
+        summary+="(auto-generated)"
+    else
+        summary+="********"
+    fi
+    summary+=$'\n\n'
+
+    summary+="${ANSI_PRIMARY}Network${ANSI_RESET}"$'\n'
+    summary+="  ${ANSI_MUTED}Interface:${ANSI_RESET} ${INTERFACE_NAME}"$'\n'
+    summary+="  ${ANSI_MUTED}IPv4:${ANSI_RESET} ${MAIN_IPV4_CIDR:-detecting...}"$'\n'
+    summary+="  ${ANSI_MUTED}Bridge:${ANSI_RESET} ${BRIDGE_MODE}"$'\n'
+    if [[ "$BRIDGE_MODE" == "internal" || "$BRIDGE_MODE" == "both" ]]; then
+        summary+="  ${ANSI_MUTED}Private subnet:${ANSI_RESET} ${PRIVATE_SUBNET}"$'\n'
+    fi
+    if [[ "$IPV6_MODE" != "disabled" && -n "$MAIN_IPV6" ]]; then
+        summary+="  ${ANSI_MUTED}IPv6:${ANSI_RESET} ${MAIN_IPV6}"$'\n'
+    fi
+    summary+=$'\n'
+
+    summary+="${ANSI_PRIMARY}Storage${ANSI_RESET}"$'\n'
+    summary+="  ${ANSI_MUTED}Drives:${ANSI_RESET} ${DRIVE_COUNT:-1} detected"$'\n'
+    summary+="  ${ANSI_MUTED}ZFS mode:${ANSI_RESET} ${ZFS_RAID:-single}"$'\n'
+    summary+="  ${ANSI_MUTED}Repository:${ANSI_RESET} ${PVE_REPO_TYPE:-no-subscription}"$'\n'
+    summary+=$'\n'
+
+    summary+="${ANSI_PRIMARY}Security${ANSI_RESET}"$'\n'
+    if [[ -n "$SSH_PUBLIC_KEY" ]]; then
+        parse_ssh_key "$SSH_PUBLIC_KEY"
+        summary+="  ${ANSI_MUTED}SSH key:${ANSI_RESET} ${SSH_KEY_TYPE} (${SSH_KEY_SHORT})"$'\n'
+    else
+        summary+="  ${ANSI_MUTED}SSH key:${ANSI_RESET} ${ANSI_WARNING}not configured${ANSI_RESET}"$'\n'
+    fi
+    summary+="  ${ANSI_MUTED}SSL:${ANSI_RESET} ${SSL_TYPE:-self-signed}"$'\n'
+    summary+=$'\n'
+
+    summary+="${ANSI_PRIMARY}Features${ANSI_RESET}"$'\n'
+    summary+="  ${ANSI_MUTED}Shell:${ANSI_RESET} ${DEFAULT_SHELL:-zsh}"$'\n'
+    summary+="  ${ANSI_MUTED}CPU governor:${ANSI_RESET} ${CPU_GOVERNOR:-performance}"$'\n'
+    summary+="  ${ANSI_MUTED}vnstat:${ANSI_RESET} ${INSTALL_VNSTAT:-yes}"$'\n'
+    summary+="  ${ANSI_MUTED}Auto updates:${ANSI_RESET} ${INSTALL_UNATTENDED_UPGRADES:-yes}"$'\n'
+    summary+="  ${ANSI_MUTED}Audit:${ANSI_RESET} ${INSTALL_AUDITD:-no}"$'\n'
+
+    if [[ "$INSTALL_TAILSCALE" == "yes" ]]; then
+        summary+=$'\n'
+        summary+="${ANSI_PRIMARY}Tailscale${ANSI_RESET}"$'\n'
+        summary+="  ${ANSI_MUTED}Install:${ANSI_RESET} yes"$'\n'
+        if [[ -n "$TAILSCALE_AUTH_KEY" ]]; then
+            summary+="  ${ANSI_MUTED}Auth:${ANSI_RESET} auto-connect"$'\n'
+        else
+            summary+="  ${ANSI_MUTED}Auth:${ANSI_RESET} manual"$'\n'
+        fi
+        summary+="  ${ANSI_MUTED}Tailscale SSH:${ANSI_RESET} ${TAILSCALE_SSH:-yes}"$'\n'
+        if [[ "$TAILSCALE_DISABLE_SSH" == "yes" ]]; then
+            summary+="  ${ANSI_MUTED}OpenSSH:${ANSI_RESET} ${ANSI_WARNING}will be disabled${ANSI_RESET}"$'\n'
+        fi
+    fi
+
+    # Build footer
+    local footer=""
+    footer+="${ANSI_MUTED}[B] Back${ANSI_RESET}  "
+    footer+="${ANSI_ACCENT}[Enter] Install${ANSI_RESET}  "
+    footer+="${ANSI_MUTED}[${ANSI_ACCENT}Q${ANSI_MUTED}] Quit${ANSI_RESET}"
+
+    gum style \
+        --border rounded \
+        --border-foreground "$GUM_BORDER" \
+        --width "$WIZARD_WIDTH" \
+        --padding "0 1" \
+        "${ANSI_PRIMARY}Configuration Summary${ANSI_RESET}" \
+        "" \
+        "$summary" \
+        "" \
+        "$footer"
+
+    # Wait for input
+    while true; do
+        local key
+        read -rsn1 key
+        case "$key" in
+            ""|$'\n') echo "install"; return ;;
+            "b"|"B") echo "back"; return ;;
+            "q"|"Q")
+                if wiz_confirm "Are you sure you want to quit?"; then
+                    clear
+                    printf '%s\n' "${ANSI_ERROR}Installation cancelled.${ANSI_RESET}"
+                    exit 1
+                fi
+                ;;
+        esac
+    done
+}
+
+# =============================================================================
+# Main Wizard Flow
+# =============================================================================
+
+# Runs the complete wizard flow.
+# Side effects: Sets all configuration global variables
+# Returns: 0 on success (ready to install), 1 on cancel
+get_inputs_wizard() {
+    local current_step=1
+    local total_steps=6
+
+    # Update wizard total steps
+    WIZARD_TOTAL_STEPS=$((total_steps + 1))  # +1 for preview
+
+    while true; do
+        local result=""
+
+        case $current_step in
+            1) result=$(_wiz_step_system) ;;
+            2) result=$(_wiz_step_network) ;;
+            3) result=$(_wiz_step_storage) ;;
+            4) result=$(_wiz_step_security) ;;
+            5) result=$(_wiz_step_features) ;;
+            6) result=$(_wiz_step_tailscale) ;;
+            7)
+                # Preview/confirm step
+                result=$(_wiz_show_preview)
+                if [[ "$result" == "install" ]]; then
+                    # Calculate derived values
+                    FQDN="${PVE_HOSTNAME}.${DOMAIN_SUFFIX}"
+
+                    # Calculate private network values
+                    if [[ "$BRIDGE_MODE" == "internal" || "$BRIDGE_MODE" == "both" ]]; then
+                        PRIVATE_CIDR=$(echo "$PRIVATE_SUBNET" | cut -d'/' -f1 | rev | cut -d'.' -f2- | rev)
+                        PRIVATE_IP="${PRIVATE_CIDR}.1"
+                        SUBNET_MASK=$(echo "$PRIVATE_SUBNET" | cut -d'/' -f2)
+                        PRIVATE_IP_CIDR="${PRIVATE_IP}/${SUBNET_MASK}"
+                    fi
+
+                    clear
+                    return 0
+                fi
+                ;;
+        esac
+
+        case "$result" in
+            "next")
+                ((current_step++))
+                ;;
+            "back")
+                ((current_step > 1)) && ((current_step--))
+                ;;
+            "quit")
+                return 1
+                ;;
+        esac
+    done
+}
+
+# =============================================================================
 # Demo/test function
 # =============================================================================
 

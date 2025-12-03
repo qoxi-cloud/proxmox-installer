@@ -4,7 +4,7 @@
 # =============================================================================
 
 # Main entry point for input collection.
-# Detects network, collects inputs (interactive or non-interactive mode),
+# Detects network, collects inputs (wizard or non-interactive mode),
 # calculates derived values, and optionally saves configuration.
 # Side effects: Sets all configuration globals, may save config file
 get_system_inputs() {
@@ -15,10 +15,11 @@ get_system_inputs() {
         print_success "Network interface:" "${INTERFACE_NAME}"
         get_inputs_non_interactive
     else
-        get_inputs_interactive
+        # Use the gum-based wizard for interactive mode
+        get_inputs_wizard
     fi
 
-    # Calculate derived values
+    # Calculate derived values (also done in wizard, but ensure they're set)
     FQDN="${PVE_HOSTNAME}.${DOMAIN_SUFFIX}"
 
     # Calculate private network values
