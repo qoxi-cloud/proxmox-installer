@@ -463,9 +463,13 @@ _wiz_add_field() {
 # Builds content showing fields with current/cursor indicator.
 # Parameters:
 #   $1 - Current field index (for cursor), -1 for no cursor
+#   $2 - Edit mode field index, -1 for no edit mode
+#   $3 - Current edit buffer (for edit mode)
 # Returns: Formatted content via stdout
 _wiz_build_fields_content() {
     local cursor_idx="${1:--1}"
+    local edit_idx="${2:--1}"
+    local edit_buffer="${3:-}"
     local content=""
     local i
 
@@ -481,27 +485,39 @@ _wiz_build_fields_content() {
         fi
 
         # Build field line
-        if [[ $i -eq $cursor_idx ]]; then
+        if [[ $i -eq $edit_idx ]]; then
+            # Edit mode - show input field with cursor
+            content+="${ANSI_ACCENT}› ${ANSI_RESET}"
+            content+="${ANSI_PRIMARY}${label}: ${ANSI_RESET}"
+            if [[ "$type" == "password" ]]; then
+                # Show asterisks for password
+                local masked=""
+                for ((j=0; j<${#edit_buffer}; j++)); do masked+="*"; done
+                content+="${ANSI_SUCCESS}${masked}${ANSI_ACCENT}▌${ANSI_RESET}"
+            else
+                content+="${ANSI_SUCCESS}${edit_buffer}${ANSI_ACCENT}▌${ANSI_RESET}"
+            fi
+        elif [[ $i -eq $cursor_idx ]]; then
             # Current field - show cursor
             if [[ -n "$value" ]]; then
-                content+="$(gum style --foreground "$GUM_ACCENT" "›") "
-                content+="$(gum style --foreground "$GUM_MUTED" "${label}:") "
-                content+="$(gum style --foreground "$GUM_PRIMARY" "$display_value")"
+                content+="${ANSI_ACCENT}› ${ANSI_RESET}"
+                content+="${ANSI_MUTED}${label}: ${ANSI_RESET}"
+                content+="${ANSI_PRIMARY}${display_value}${ANSI_RESET}"
             else
-                content+="$(gum style --foreground "$GUM_ACCENT" "›") "
-                content+="$(gum style --foreground "$GUM_ACCENT" "${label}:") "
-                content+="$(gum style --foreground "$GUM_MUTED" "...")"
+                content+="${ANSI_ACCENT}› ${ANSI_RESET}"
+                content+="${ANSI_ACCENT}${label}: ${ANSI_RESET}"
+                content+="${ANSI_MUTED}...${ANSI_RESET}"
             fi
         else
             # Not current field
             if [[ -n "$value" ]]; then
-                content+="$(gum style --foreground "$GUM_SUCCESS" "✓") "
-                content+="$(gum style --foreground "$GUM_MUTED" "${label}:") "
-                content+="$(gum style --foreground "$GUM_PRIMARY" "$display_value")"
+                content+="${ANSI_SUCCESS}✓ ${ANSI_RESET}"
+                content+="${ANSI_MUTED}${label}: ${ANSI_RESET}"
+                content+="${ANSI_PRIMARY}${display_value}${ANSI_RESET}"
             else
-                content+="$(gum style --foreground "$GUM_MUTED" "○") "
-                content+="$(gum style --foreground "$GUM_MUTED" "${label}:") "
-                content+="$(gum style --foreground "$GUM_MUTED" "...")"
+                content+="${ANSI_MUTED}○ ${ANSI_RESET}"
+                content+="${ANSI_MUTED}${label}: ${ANSI_RESET}"
+                content+="${ANSI_MUTED}...${ANSI_RESET}"
             fi
         fi
         content+=$'\n'
@@ -509,6 +525,52 @@ _wiz_build_fields_content() {
 
     # Remove trailing newline
     printf "%s" "${content%$'\n'}"
+}
+
+# Draws the wizard box with current state.
+# Parameters:
+#   $1 - Step number
+#   $2 - Step title
+#   $3 - Content (field lines)
+#   $4 - Footer text
+#   $5 - "true" to clear screen, "false" to just move cursor home
+_wiz_draw_box() {
+    local step="$1"
+    local title="$2"
+    local content="$3"
+    local footer="$4"
+    local do_clear="$5"
+
+    # Hide cursor during redraw
+    printf '\033[?25l'
+
+    if [[ "$do_clear" == "true" ]]; then
+        clear
+    else
+        printf '\033[H'
+    fi
+    wiz_banner
+
+    local header
+    header="${ANSI_PRIMARY}Step ${step}/${WIZARD_TOTAL_STEPS}: ${title}${ANSI_RESET}"
+
+    local progress
+    progress="${ANSI_MUTED}$(_wiz_progress_bar "$step" "$WIZARD_TOTAL_STEPS" 53)${ANSI_RESET}"
+
+    gum style \
+        --border rounded \
+        --border-foreground "$GUM_BORDER" \
+        --width "$WIZARD_WIDTH" \
+        --padding "0 1" \
+        "$header" \
+        "$progress" \
+        "" \
+        "$content" \
+        "" \
+        "$footer"
+
+    # Clear to end of screen
+    printf '\033[J\033[?25h'
 }
 
 # Displays the wizard box with editable fields and handles input.
@@ -533,172 +595,165 @@ wiz_step_interactive() {
         fi
     done
 
-    # Initial draw with clear
+    # Edit mode state
+    local edit_mode=false
+    local edit_buffer=""
     local first_draw=true
 
     while true; do
-        # Build and display wizard box
-        local content
-        content=$(_wiz_build_fields_content "$WIZ_CURRENT_FIELD")
-
         # Build footer based on state
         local footer=""
-        if [[ "$show_back" == "true" ]]; then
-            footer+="${ANSI_MUTED}[B] Back  ${ANSI_RESET}"
-        fi
-        footer+="${ANSI_MUTED}[↑/↓] Navigate  ${ANSI_RESET}"
-        footer+="${ANSI_ACCENT}[Enter] Edit  ${ANSI_RESET}"
-
-        # Check if all fields are filled
         local all_filled=true
         for val in "${WIZ_FIELD_VALUES[@]}"; do
             [[ -z "$val" ]] && all_filled=false && break
         done
 
-        if [[ "$all_filled" == "true" ]]; then
-            footer+="${ANSI_ACCENT}[N] Next  ${ANSI_RESET}"
-        fi
-        footer+="${ANSI_MUTED}[Q] Quit${ANSI_RESET}"
-
-        # Draw wizard box (move cursor home instead of clear for smooth redraw)
-        # Hide cursor during redraw to prevent flicker
-        printf '\033[?25l'
-
-        if [[ "$first_draw" == "true" ]]; then
-            clear
-            first_draw=false
+        if [[ "$edit_mode" == "true" ]]; then
+            footer+="${ANSI_ACCENT}[Enter] Save  ${ANSI_RESET}"
+            footer+="${ANSI_MUTED}[Esc] Cancel${ANSI_RESET}"
         else
-            # Move cursor to home position (top-left)
-            printf '\033[H'
+            if [[ "$show_back" == "true" ]]; then
+                footer+="${ANSI_MUTED}[B] Back  ${ANSI_RESET}"
+            fi
+            footer+="${ANSI_MUTED}[↑/↓] Navigate  ${ANSI_RESET}"
+            footer+="${ANSI_ACCENT}[Enter] Edit  ${ANSI_RESET}"
+            if [[ "$all_filled" == "true" ]]; then
+                footer+="${ANSI_ACCENT}[N] Next  ${ANSI_RESET}"
+            fi
+            footer+="${ANSI_MUTED}[Q] Quit${ANSI_RESET}"
         fi
-        wiz_banner
 
-        local header
-        header="$(gum style --foreground "$GUM_PRIMARY" --bold "Step ${step}/${WIZARD_TOTAL_STEPS}: ${title}")"
+        # Build content
+        local content
+        if [[ "$edit_mode" == "true" ]]; then
+            content=$(_wiz_build_fields_content "-1" "$WIZ_CURRENT_FIELD" "$edit_buffer")
+        else
+            content=$(_wiz_build_fields_content "$WIZ_CURRENT_FIELD" "-1" "")
+        fi
 
-        local progress
-        progress="$(gum style --foreground "$GUM_MUTED" "$(_wiz_progress_bar "$step" "$WIZARD_TOTAL_STEPS" 53)")"
+        # Draw
+        _wiz_draw_box "$step" "$title" "$content" "$footer" "$first_draw"
+        first_draw=false
 
-        gum style \
-            --border rounded \
-            --border-foreground "$GUM_BORDER" \
-            --width "$WIZARD_WIDTH" \
-            --padding "0 1" \
-            "$header" \
-            "$progress" \
-            "" \
-            "$content" \
-            "" \
-            "$footer"
-
-        # Clear to end of screen (remove any leftover content) and show cursor
-        printf '\033[J\033[?25h'
-
-        # Wait for keypress (read up to 3 chars for arrow keys)
+        # Wait for keypress
         local key
         read -rsn1 key
 
-        # Check for escape sequence (arrow keys send 3 chars: ESC [ A/B/C/D)
-        if [[ "$key" == $'\e' ]]; then
-            read -rsn2 -t1 key 2>/dev/null || read -rsn2 key
+        if [[ "$edit_mode" == "true" ]]; then
+            # Edit mode key handling
             case "$key" in
-                '[A') # Up arrow
-                    ((WIZ_CURRENT_FIELD > 0)) && ((WIZ_CURRENT_FIELD--))
+                $'\e')
+                    # Escape - cancel edit
+                    edit_mode=false
+                    edit_buffer=""
                     ;;
-                '[B') # Down arrow
-                    ((WIZ_CURRENT_FIELD < num_fields - 1)) && ((WIZ_CURRENT_FIELD++))
+                ""|$'\n')
+                    # Enter - save value
+                    local validator="${WIZ_FIELD_VALIDATORS[$WIZ_CURRENT_FIELD]}"
+                    if [[ -n "$validator" && -n "$edit_buffer" ]]; then
+                        if ! "$validator" "$edit_buffer" 2>/dev/null; then
+                            # Invalid - flash and continue editing
+                            continue
+                        fi
+                    fi
+                    WIZ_FIELD_VALUES[WIZ_CURRENT_FIELD]="$edit_buffer"
+                    edit_mode=false
+                    edit_buffer=""
+                    # Move to next empty field
+                    for ((i = WIZ_CURRENT_FIELD + 1; i < num_fields; i++)); do
+                        if [[ -z "${WIZ_FIELD_VALUES[$i]}" ]]; then
+                            WIZ_CURRENT_FIELD=$i
+                            break
+                        fi
+                    done
+                    ;;
+                $'\x7f'|$'\b')
+                    # Backspace - delete last char
+                    if [[ -n "$edit_buffer" ]]; then
+                        edit_buffer="${edit_buffer%?}"
+                    fi
+                    ;;
+                *)
+                    # Regular character - append to buffer
+                    if [[ "$key" =~ ^[[:print:]]$ ]]; then
+                        edit_buffer+="$key"
+                    fi
                     ;;
             esac
-            continue
+        else
+            # Navigation mode key handling
+            case "$key" in
+                $'\e')
+                    # Escape sequence (arrows)
+                    read -rsn2 -t1 key 2>/dev/null || read -rsn2 key
+                    case "$key" in
+                        '[A') ((WIZ_CURRENT_FIELD > 0)) && ((WIZ_CURRENT_FIELD--)) ;;
+                        '[B') ((WIZ_CURRENT_FIELD < num_fields - 1)) && ((WIZ_CURRENT_FIELD++)) ;;
+                    esac
+                    ;;
+                ""|$'\n')
+                    # Enter - start editing
+                    local field_type="${WIZ_FIELD_TYPES[$WIZ_CURRENT_FIELD]}"
+                    if [[ "$field_type" == "choose" || "$field_type" == "multi" ]]; then
+                        # For choose/multi, use gum choose
+                        _wiz_edit_field_select "$WIZ_CURRENT_FIELD"
+                        first_draw=true
+                    else
+                        # For input/password, use inline edit
+                        edit_mode=true
+                        edit_buffer="${WIZ_FIELD_VALUES[$WIZ_CURRENT_FIELD]:-${WIZ_FIELD_DEFAULTS[$WIZ_CURRENT_FIELD]}}"
+                    fi
+                    ;;
+                "j") ((WIZ_CURRENT_FIELD < num_fields - 1)) && ((WIZ_CURRENT_FIELD++)) ;;
+                "k") ((WIZ_CURRENT_FIELD > 0)) && ((WIZ_CURRENT_FIELD--)) ;;
+                "n"|"N")
+                    if [[ "$all_filled" == "true" ]]; then
+                        echo "next"
+                        return
+                    fi
+                    ;;
+                "b"|"B")
+                    if [[ "$show_back" == "true" ]]; then
+                        echo "back"
+                        return
+                    fi
+                    ;;
+                "q"|"Q")
+                    if wiz_confirm "Are you sure you want to quit?"; then
+                        clear
+                        printf '%s\n' "${ANSI_ERROR}Installation cancelled.${ANSI_RESET}"
+                        exit 1
+                    fi
+                    first_draw=true
+                    ;;
+            esac
         fi
-
-        case "$key" in
-            ""|$'\n')
-                # Enter - edit current field
-                _wiz_edit_field "$WIZ_CURRENT_FIELD"
-                first_draw=true  # Force full redraw after editing
-                ;;
-            "j")
-                # j = down (vim style)
-                ((WIZ_CURRENT_FIELD < num_fields - 1)) && ((WIZ_CURRENT_FIELD++))
-                ;;
-            "k")
-                # k = up (vim style)
-                ((WIZ_CURRENT_FIELD > 0)) && ((WIZ_CURRENT_FIELD--))
-                ;;
-            "n"|"N")
-                # Next (only if all filled)
-                if [[ "$all_filled" == "true" ]]; then
-                    echo "next"
-                    return
-                fi
-                ;;
-            "b"|"B")
-                if [[ "$show_back" == "true" ]]; then
-                    echo "back"
-                    return
-                fi
-                ;;
-            "q"|"Q")
-                if wiz_confirm "Are you sure you want to quit?"; then
-                    clear
-                    gum style --foreground "$GUM_ERROR" "Installation cancelled."
-                    exit 1
-                fi
-                ;;
-        esac
     done
 }
 
-# Edits a single field with validation.
+# Handles select field editing (choose/multi) using gum.
 # Parameters:
 #   $1 - Field index
-_wiz_edit_field() {
+_wiz_edit_field_select() {
     local idx="$1"
     local label="${WIZ_FIELD_LABELS[$idx]}"
     local type="${WIZ_FIELD_TYPES[$idx]}"
-    local current_value="${WIZ_FIELD_VALUES[$idx]}"
-    local default="${WIZ_FIELD_DEFAULTS[$idx]}"
     local field_options="${WIZ_FIELD_OPTIONS[$idx]}"
-    local validator="${WIZ_FIELD_VALIDATORS[$idx]}"
-
-    local new_value=""
     local -a opts
+    local new_value=""
+
+    IFS='|' read -ra opts <<< "$field_options"
 
     echo ""
-
-    case "$type" in
-        "input")
-            new_value=$(wiz_input "$label:" "${current_value:-$default}" "$default")
-            ;;
-        "password")
-            new_value=$(wiz_input "$label:" "${current_value:-$default}" "" "true")
-            ;;
-        "choose")
-            # Convert pipe-separated options to array
-            IFS='|' read -ra opts <<< "$field_options"
-            new_value=$(wiz_choose "Select ${label}:" "${opts[@]}")
-            ;;
-        "multi")
-            IFS='|' read -ra opts <<< "$field_options"
-            new_value=$(wiz_choose_multi "Select ${label}:" "${opts[@]}")
-            ;;
-    esac
-
-    # Validate if validator is specified
-    if [[ -n "$validator" && -n "$new_value" ]]; then
-        if ! "$validator" "$new_value"; then
-            wiz_msg error "Invalid value for ${label}"
-            sleep 1
-            return
-        fi
+    if [[ "$type" == "choose" ]]; then
+        new_value=$(wiz_choose "Select ${label}:" "${opts[@]}")
+    else
+        new_value=$(wiz_choose_multi "Select ${label}:" "${opts[@]}")
     fi
 
-    # Update value
-    WIZ_FIELD_VALUES[$idx]="$new_value"
-
-    # Move to next empty field if current was empty
-    if [[ -z "$current_value" ]]; then
+    if [[ -n "$new_value" ]]; then
+        WIZ_FIELD_VALUES[idx]="$new_value"
+        # Move to next empty field
         local num_fields=${#WIZ_FIELD_LABELS[@]}
         for ((i = idx + 1; i < num_fields; i++)); do
             if [[ -z "${WIZ_FIELD_VALUES[$i]}" ]]; then
@@ -708,6 +763,7 @@ _wiz_edit_field() {
         done
     fi
 }
+
 
 # =============================================================================
 # Demo/test function
