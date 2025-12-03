@@ -62,6 +62,52 @@ Changes:
 - Updated network templates with IPv6 placeholders
 ```
 
+## Pull Request Format
+
+When creating pull requests, use the template at `.github/pull_request_template.md`. PR titles must follow the same emoji conventional format as commit messages.
+
+**PR Title Format:**
+
+```text
+<emoji> <type>: <short description>
+```
+
+**Example:**
+
+```text
+✨ feat: add IPv6 dual-stack support for network bridges
+```
+
+**PR Body Structure:**
+
+```markdown
+## Summary
+
+Brief description of what this PR does
+
+## Changes
+
+- List specific changes
+- Each change on its own line
+
+## Type of Change
+
+- [x] New feature (`feat`)
+
+## Testing
+
+- [x] Unit tests pass (`./tests/run-all-tests.sh`)
+- [x] ShellCheck passes (`shellcheck scripts/*.sh`)
+- [x] Manual testing performed
+
+## Checklist
+
+- [x] Code follows project conventions (see CLAUDE.md)
+- [x] All content is in English
+- [x] Commit messages follow emoji conventional format
+- [x] No secrets or credentials included
+```
+
 ## Project Overview
 
 Automated Proxmox VE installer for Hetzner dedicated servers without console access. The installer runs in Hetzner Rescue System and uses QEMU to install Proxmox on NVMe drives.
