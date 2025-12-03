@@ -543,7 +543,7 @@ wiz_step_interactive() {
         if [[ "$show_back" == "true" ]]; then
             footer+="${ANSI_MUTED}[B] Back  ${ANSI_RESET}"
         fi
-        footer+="${ANSI_MUTED}[↑↓] Navigate  ${ANSI_RESET}"
+        footer+="${ANSI_MUTED}[j/k] Navigate  ${ANSI_RESET}"
         footer+="${ANSI_ACCENT}[Enter] Edit  ${ANSI_RESET}"
 
         # Check if all fields are filled
@@ -580,14 +580,14 @@ wiz_step_interactive() {
             "$footer"
 
         # Wait for keypress
-        local key
+        local key escape_seq
         IFS= read -rsn1 key
 
         case "$key" in
             $'\x1b')
                 # Escape sequence (arrows)
-                read -rsn2 -t 0.1 key || true
-                case "$key" in
+                IFS= read -rsn2 -t 0.1 escape_seq || true
+                case "$escape_seq" in
                     '[A') # Up
                         ((WIZ_CURRENT_FIELD > 0)) && ((WIZ_CURRENT_FIELD--))
                         ;;
@@ -599,6 +599,14 @@ wiz_step_interactive() {
             ""|$'\n')
                 # Enter - edit current field
                 _wiz_edit_field "$WIZ_CURRENT_FIELD"
+                ;;
+            "j")
+                # j = down (vim style)
+                ((WIZ_CURRENT_FIELD < num_fields - 1)) && ((WIZ_CURRENT_FIELD++))
+                ;;
+            "k")
+                # k = up (vim style)
+                ((WIZ_CURRENT_FIELD > 0)) && ((WIZ_CURRENT_FIELD--))
                 ;;
             "n"|"N")
                 # Next (only if all filled)
