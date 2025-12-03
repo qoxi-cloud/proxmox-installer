@@ -206,20 +206,21 @@ The project uses multiple GitHub Actions workflows:
 2. Run ShellCheck linting
 3. Run unit tests (`./tests/run-all-tests.sh`)
 4. Concatenate scripts into `pve-install.sh`
-5. Calculate and inject version number
-6. Upload artifact and PR metadata
+5. Minify with `shfmt -mn` to create `pve-install.min.sh`
+6. Calculate and inject version number
+7. Upload artifacts and PR metadata
 
 **Deploy Job** - Runs only on push to main:
 
-1. Download build artifact
-2. Deploy to GitHub Pages as `pve-install.sh`
+1. Download build artifacts
+2. Deploy to GitHub Pages as `pve-install.min.sh` (minified) and `pve-install.sh` (full)
 
 ### Deploy PR Workflow (`deploy-pr.yml`)
 
 Runs after build completes for PRs (including forks):
 
 1. Download build artifact and PR metadata
-2. Deploy to GitHub Pages as `pve-install-pr.{number}.sh`
+2. Deploy to GitHub Pages as `pve-install-pr.{number}.min.sh`
 3. Post/update comment on PR with test link
 
 Uses `workflow_run` trigger for secure fork PR deployments.
@@ -235,7 +236,7 @@ Uses `workflow_run` trigger for secure fork PR deployments.
 
 Runs when PR is closed (merged or rejected):
 
-1. Remove `pve-install-pr.{number}.sh` from GitHub Pages
+1. Remove `pve-install-pr.{number}.min.sh` from GitHub Pages
 
 Uses `pull_request_target` for secure access to close events from forks.
 
@@ -262,7 +263,7 @@ The project uses **Semantic Versioning** with automatic MINOR and PATCH calculat
 
 1. `00-init.sh` contains only the MAJOR version: `VERSION="1"`
 2. GitHub Actions calculates the full version during build
-3. The final `pve-install.sh` contains the complete version (e.g., `VERSION="1.2.5"`)
+3. The final `pve-install.min.sh` contains the complete version (e.g., `VERSION="1.2.5"`)
 4. Version changes are NOT pushed back to the repository
 
 **Version examples:**
