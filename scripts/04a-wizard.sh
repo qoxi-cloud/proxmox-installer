@@ -249,8 +249,10 @@ wiz_confirm() {
 
     gum confirm \
         --prompt.foreground "$GUM_PRIMARY" \
-        --selected.foreground "$GUM_ACCENT" \
-        --unselected.foreground "$GUM_MUTED" \
+        --selected.background "$GUM_ACCENT" \
+        --selected.foreground "#000000" \
+        --unselected.background "$GUM_MUTED" \
+        --unselected.foreground "#FFFFFF" \
         "$question"
 }
 
