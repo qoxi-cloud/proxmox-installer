@@ -56,6 +56,7 @@ wiz_choose() {
   local options=("$@")
 
   local result
+  # gum reads from /dev/tty automatically, just need stdin from tty
   result=$(gum choose \
     --header "$header" \
     --cursor "› " \
@@ -63,7 +64,7 @@ wiz_choose() {
     --selected.foreground "$GUM_PRIMARY" \
     --header.foreground "$GUM_MUTED" \
     --height 10 \
-    "${options[@]}")
+    "${options[@]}" </dev/tty)
 
   # Find selected index
   WIZ_SELECTED_INDEX=0
@@ -97,7 +98,7 @@ wiz_choose_multi() {
     --selected.foreground "$GUM_SUCCESS" \
     --header.foreground "$GUM_MUTED" \
     --height 12 \
-    "${options[@]}")
+    "${options[@]}" </dev/tty)
 
   # Build array of selected indices
   WIZ_SELECTED_INDICES=()
@@ -128,7 +129,7 @@ wiz_confirm() {
     --selected.foreground "#000000" \
     --unselected.background "$GUM_MUTED" \
     --unselected.foreground "#FFFFFF" \
-    "$question"
+    "$question" </dev/tty >/dev/tty
 }
 
 # Displays spinner while running a command.

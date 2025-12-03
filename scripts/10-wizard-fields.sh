@@ -139,7 +139,7 @@ _wiz_edit_field_select() {
 
   IFS='|' read -ra opts <<<"$field_options"
 
-  echo ""
+  echo "" >/dev/tty
   if [[ $type == "choose" ]]; then
     new_value=$(wiz_choose "Select ${label}:" "${opts[@]}")
   else
@@ -226,9 +226,9 @@ wiz_step_interactive() {
     log "wiz_step_interactive: _wiz_draw_box done, waiting for key"
     first_draw=false
 
-    # Wait for keypress
+    # Wait for keypress (read from terminal directly)
     local key
-    read -rsn1 key
+    read -rsn1 key </dev/tty
 
     if [[ $edit_mode == "true" ]]; then
       # Edit mode key handling
