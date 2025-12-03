@@ -410,13 +410,287 @@ wiz_section() {
 }
 
 # =============================================================================
+# Interactive step with inline editing
+# =============================================================================
+
+# Field definition arrays for current step
+declare -a WIZ_FIELD_LABELS=()
+declare -a WIZ_FIELD_VALUES=()
+declare -a WIZ_FIELD_TYPES=()      # "input", "password", "choose", "multi"
+declare -a WIZ_FIELD_OPTIONS=()    # For choose/multi: "opt1|opt2|opt3"
+declare -a WIZ_FIELD_DEFAULTS=()
+declare -a WIZ_FIELD_VALIDATORS=() # Validator function names
+WIZ_CURRENT_FIELD=0
+
+# Clears field arrays for a new step.
+_wiz_clear_fields() {
+    WIZ_FIELD_LABELS=()
+    WIZ_FIELD_VALUES=()
+    WIZ_FIELD_TYPES=()
+    WIZ_FIELD_OPTIONS=()
+    WIZ_FIELD_DEFAULTS=()
+    WIZ_FIELD_VALIDATORS=()
+    WIZ_CURRENT_FIELD=0
+}
+
+# Adds a field definition to the current step.
+# Parameters:
+#   $1 - Label
+#   $2 - Type: "input", "password", "choose", "multi"
+#   $3 - Default value or options (for choose: "opt1|opt2|opt3")
+#   $4 - Validator function name (optional)
+_wiz_add_field() {
+    local label="$1"
+    local type="$2"
+    local default_or_options="$3"
+    local validator="${4:-}"
+
+    WIZ_FIELD_LABELS+=("$label")
+    WIZ_FIELD_VALUES+=("")
+    WIZ_FIELD_TYPES+=("$type")
+
+    if [[ "$type" == "choose" || "$type" == "multi" ]]; then
+        WIZ_FIELD_OPTIONS+=("$default_or_options")
+        WIZ_FIELD_DEFAULTS+=("")
+    else
+        WIZ_FIELD_OPTIONS+=("")
+        WIZ_FIELD_DEFAULTS+=("$default_or_options")
+    fi
+
+    WIZ_FIELD_VALIDATORS+=("$validator")
+}
+
+# Builds content showing fields with current/cursor indicator.
+# Parameters:
+#   $1 - Current field index (for cursor), -1 for no cursor
+# Returns: Formatted content via stdout
+_wiz_build_fields_content() {
+    local cursor_idx="${1:--1}"
+    local content=""
+    local i
+
+    for i in "${!WIZ_FIELD_LABELS[@]}"; do
+        local label="${WIZ_FIELD_LABELS[$i]}"
+        local value="${WIZ_FIELD_VALUES[$i]}"
+        local type="${WIZ_FIELD_TYPES[$i]}"
+
+        # Determine display value
+        local display_value="$value"
+        if [[ "$type" == "password" && -n "$value" ]]; then
+            display_value="********"
+        fi
+
+        # Build field line
+        if [[ $i -eq $cursor_idx ]]; then
+            # Current field - show cursor
+            if [[ -n "$value" ]]; then
+                content+="$(gum style --foreground "$GUM_ACCENT" "›") "
+                content+="$(gum style --foreground "$GUM_MUTED" "${label}:") "
+                content+="$(gum style --foreground "$GUM_PRIMARY" "$display_value")"
+            else
+                content+="$(gum style --foreground "$GUM_ACCENT" "›") "
+                content+="$(gum style --foreground "$GUM_ACCENT" "${label}:") "
+                content+="$(gum style --foreground "$GUM_MUTED" "...")"
+            fi
+        else
+            # Not current field
+            if [[ -n "$value" ]]; then
+                content+="$(gum style --foreground "$GUM_SUCCESS" "✓") "
+                content+="$(gum style --foreground "$GUM_MUTED" "${label}:") "
+                content+="$(gum style --foreground "$GUM_PRIMARY" "$display_value")"
+            else
+                content+="$(gum style --foreground "$GUM_MUTED" "○") "
+                content+="$(gum style --foreground "$GUM_MUTED" "${label}:") "
+                content+="$(gum style --foreground "$GUM_MUTED" "...")"
+            fi
+        fi
+        content+=$'\n'
+    done
+
+    # Remove trailing newline
+    printf "%s" "${content%$'\n'}"
+}
+
+# Displays the wizard box with editable fields and handles input.
+# Parameters:
+#   $1 - Step number
+#   $2 - Step title
+# Returns: "next", "back", or "quit"
+# Side effects: Populates WIZ_FIELD_VALUES array
+wiz_step_interactive() {
+    local step="$1"
+    local title="$2"
+    local num_fields=${#WIZ_FIELD_LABELS[@]}
+    local show_back="true"
+    [[ "$step" -eq 1 ]] && show_back="false"
+
+    # Find first empty field to start with
+    WIZ_CURRENT_FIELD=0
+    for i in "${!WIZ_FIELD_VALUES[@]}"; do
+        if [[ -z "${WIZ_FIELD_VALUES[$i]}" ]]; then
+            WIZ_CURRENT_FIELD=$i
+            break
+        fi
+    done
+
+    while true; do
+        # Build and display wizard box
+        local content
+        content=$(_wiz_build_fields_content "$WIZ_CURRENT_FIELD")
+
+        # Build footer based on state
+        local footer=""
+        if [[ "$show_back" == "true" ]]; then
+            footer+="${ANSI_MUTED}[B] Back  ${ANSI_RESET}"
+        fi
+        footer+="${ANSI_MUTED}[↑↓] Navigate  ${ANSI_RESET}"
+        footer+="${ANSI_ACCENT}[Enter] Edit  ${ANSI_RESET}"
+
+        # Check if all fields are filled
+        local all_filled=true
+        for val in "${WIZ_FIELD_VALUES[@]}"; do
+            [[ -z "$val" ]] && all_filled=false && break
+        done
+
+        if [[ "$all_filled" == "true" ]]; then
+            footer+="${ANSI_ACCENT}[N] Next  ${ANSI_RESET}"
+        fi
+        footer+="${ANSI_MUTED}[Q] Quit${ANSI_RESET}"
+
+        # Draw wizard box
+        clear
+        wiz_banner
+
+        local header
+        header="$(gum style --foreground "$GUM_PRIMARY" --bold "Step ${step}/${WIZARD_TOTAL_STEPS}: ${title}")"
+
+        local progress
+        progress="$(gum style --foreground "$GUM_MUTED" "$(_wiz_progress_bar "$step" "$WIZARD_TOTAL_STEPS" 53)")"
+
+        gum style \
+            --border rounded \
+            --border-foreground "$GUM_BORDER" \
+            --width "$WIZARD_WIDTH" \
+            --padding "0 1" \
+            "$header" \
+            "$progress" \
+            "" \
+            "$content" \
+            "" \
+            "$footer"
+
+        # Wait for keypress
+        local key
+        IFS= read -rsn1 key
+
+        case "$key" in
+            $'\x1b')
+                # Escape sequence (arrows)
+                read -rsn2 -t 0.1 key || true
+                case "$key" in
+                    '[A') # Up
+                        ((WIZ_CURRENT_FIELD > 0)) && ((WIZ_CURRENT_FIELD--))
+                        ;;
+                    '[B') # Down
+                        ((WIZ_CURRENT_FIELD < num_fields - 1)) && ((WIZ_CURRENT_FIELD++))
+                        ;;
+                esac
+                ;;
+            ""|$'\n')
+                # Enter - edit current field
+                _wiz_edit_field "$WIZ_CURRENT_FIELD"
+                ;;
+            "n"|"N")
+                # Next (only if all filled)
+                if [[ "$all_filled" == "true" ]]; then
+                    echo "next"
+                    return
+                fi
+                ;;
+            "b"|"B")
+                if [[ "$show_back" == "true" ]]; then
+                    echo "back"
+                    return
+                fi
+                ;;
+            "q"|"Q")
+                if wiz_confirm "Are you sure you want to quit?"; then
+                    clear
+                    gum style --foreground "$GUM_ERROR" "Installation cancelled."
+                    exit 1
+                fi
+                ;;
+        esac
+    done
+}
+
+# Edits a single field with validation.
+# Parameters:
+#   $1 - Field index
+_wiz_edit_field() {
+    local idx="$1"
+    local label="${WIZ_FIELD_LABELS[$idx]}"
+    local type="${WIZ_FIELD_TYPES[$idx]}"
+    local current_value="${WIZ_FIELD_VALUES[$idx]}"
+    local default="${WIZ_FIELD_DEFAULTS[$idx]}"
+    local field_options="${WIZ_FIELD_OPTIONS[$idx]}"
+    local validator="${WIZ_FIELD_VALIDATORS[$idx]}"
+
+    local new_value=""
+    local -a opts
+
+    echo ""
+
+    case "$type" in
+        "input")
+            new_value=$(wiz_input "$label:" "${current_value:-$default}" "$default")
+            ;;
+        "password")
+            new_value=$(wiz_input "$label:" "${current_value:-$default}" "" "true")
+            ;;
+        "choose")
+            # Convert pipe-separated options to array
+            IFS='|' read -ra opts <<< "$field_options"
+            new_value=$(wiz_choose "Select ${label}:" "${opts[@]}")
+            ;;
+        "multi")
+            IFS='|' read -ra opts <<< "$field_options"
+            new_value=$(wiz_choose_multi "Select ${label}:" "${opts[@]}")
+            ;;
+    esac
+
+    # Validate if validator is specified
+    if [[ -n "$validator" && -n "$new_value" ]]; then
+        if ! "$validator" "$new_value"; then
+            wiz_msg error "Invalid value for ${label}"
+            sleep 1
+            return
+        fi
+    fi
+
+    # Update value
+    WIZ_FIELD_VALUES[$idx]="$new_value"
+
+    # Move to next empty field if current was empty
+    if [[ -z "$current_value" ]]; then
+        local num_fields=${#WIZ_FIELD_LABELS[@]}
+        for ((i = idx + 1; i < num_fields; i++)); do
+            if [[ -z "${WIZ_FIELD_VALUES[$i]}" ]]; then
+                WIZ_CURRENT_FIELD=$i
+                return
+            fi
+        done
+    fi
+}
+
+# =============================================================================
 # Demo/test function
 # =============================================================================
 
 # Demonstrates wizard visuals (for testing).
 # Can be run standalone: source 04a-wizard.sh && wiz_demo
 wiz_demo() {
-    # Demo Step 2: Network
+    # Demo Step 2: Network (static display)
     local content
     content=$(wiz_build_content \
         "Interface|enp0s31f6" \
@@ -432,41 +706,25 @@ wiz_demo() {
     nav=$(wiz_wait_nav)
     echo "Navigation: $nav"
 
-    # Demo input
+    # Demo interactive step
     echo ""
-    echo "--- Demo: text input ---"
-    local hostname
-    hostname=$(wiz_input "Hostname:" "pve" "enter hostname")
-    echo "You entered: $hostname"
+    echo "--- Demo: interactive step ---"
+    _wiz_clear_fields
+    _wiz_add_field "Hostname" "input" "pve"
+    _wiz_add_field "Domain" "input" "local"
+    _wiz_add_field "Email" "input" "admin@example.com"
+    _wiz_add_field "Password" "password" ""
+    _wiz_add_field "Timezone" "choose" "Europe/Kyiv|Europe/London|America/New_York|UTC"
 
-    # Demo choose
-    echo ""
-    echo "--- Demo: single select ---"
-    local tz
-    tz=$(wiz_choose "Select timezone:" "Europe/Kyiv" "Europe/London" "America/New_York" "UTC")
-    echo "Selected: $tz (index: $WIZ_SELECTED_INDEX)"
-
-    # Demo multi-select
-    echo ""
-    echo "--- Demo: multi select ---"
-    local extras
-    extras=$(wiz_choose_multi "Select extras:" "vnstat" "auditd" "unattended-upgrades")
-    echo "Selected: $extras"
-    echo "Indices: ${WIZ_SELECTED_INDICES[*]}"
-
-    # Demo confirm
-    echo ""
-    echo "--- Demo: confirm ---"
-    if wiz_confirm "Proceed with demo?"; then
-        wiz_msg success "Confirmed!"
-    else
-        wiz_msg warning "Cancelled"
-    fi
-
-    # Demo spinner
-    echo ""
-    echo "--- Demo: spinner ---"
-    wiz_spin "Doing something..." sleep 2
+    local result
+    result=$(wiz_step_interactive 1 "System")
+    echo "Step result: $result"
+    echo "Values:"
+    for i in "${!WIZ_FIELD_LABELS[@]}"; do
+        local display="${WIZ_FIELD_VALUES[$i]}"
+        [[ "${WIZ_FIELD_TYPES[$i]}" == "password" ]] && display="********"
+        echo "  ${WIZ_FIELD_LABELS[$i]}: $display"
+    done
 
     wiz_msg success "Demo complete!"
 }
