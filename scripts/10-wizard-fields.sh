@@ -166,11 +166,13 @@ _wiz_edit_field_select() {
 # Returns: "next", "back", or "quit"
 #wiz_step_interactive runs an interactive wizard step for the given step number and title, presenting WIZ_FIELD_LABELS, handling navigation, inline editing and choose/multi prompts, applying per-field validators, populating the WIZ_FIELD_VALUES array, and emitting "next" or "back" to indicate flow.
 wiz_step_interactive() {
+  log "wiz_step_interactive: entering step=$1 title=$2"
   local step="$1"
   local title="$2"
   local num_fields=${#WIZ_FIELD_LABELS[@]}
   local show_back="true"
   [[ $step -eq 1 ]] && show_back="false"
+  log "wiz_step_interactive: num_fields=$num_fields"
 
   # Find first empty field to start with
   WIZ_CURRENT_FIELD=0
@@ -186,6 +188,7 @@ wiz_step_interactive() {
   local edit_buffer=""
   local first_draw=true
 
+  log "wiz_step_interactive: entering main loop"
   while true; do
     # Build footer based on state
     local footer=""
@@ -217,8 +220,10 @@ wiz_step_interactive() {
       content=$(_wiz_build_fields_content "$WIZ_CURRENT_FIELD" "-1" "")
     fi
 
+    log "wiz_step_interactive: calling _wiz_draw_box"
     # Draw
     _wiz_draw_box "$step" "$title" "$content" "$footer" "$first_draw"
+    log "wiz_step_interactive: _wiz_draw_box done, waiting for key"
     first_draw=false
 
     # Wait for keypress

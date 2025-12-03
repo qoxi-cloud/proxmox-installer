@@ -129,17 +129,24 @@ _wiz_show_preview() {
 # It updates WIZARD_TOTAL_STEPS, sets globals (e.g., PVE_HOSTNAME, DOMAIN_SUFFIX, PRIVATE_SUBNET) via step helpers, and computes derived values (FQDN, PRIVATE_IP, PRIVATE_IP_CIDR) when the user confirms installation.
 # Returns: 0 on success (ready to install), 1 on cancel.
 get_inputs_wizard() {
+  log "get_inputs_wizard: entering function"
   local current_step=1
   local total_steps=6
 
   # Update wizard total steps
   WIZARD_TOTAL_STEPS=$((total_steps + 1)) # +1 for preview
+  log "get_inputs_wizard: WIZARD_TOTAL_STEPS=$WIZARD_TOTAL_STEPS"
 
   while true; do
     local result=""
+    log "get_inputs_wizard: current_step=$current_step"
 
     case $current_step in
-      1) result=$(_wiz_step_system) ;;
+      1)
+        log "get_inputs_wizard: calling _wiz_step_system"
+        result=$(_wiz_step_system)
+        log "get_inputs_wizard: _wiz_step_system returned: $result"
+        ;;
       2) result=$(_wiz_step_network) ;;
       3) result=$(_wiz_step_storage) ;;
       4) result=$(_wiz_step_security) ;;

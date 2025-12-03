@@ -51,6 +51,7 @@ WIZ_GOVERNORS=("performance" "ondemand" "powersave" "schedutil" "conservative")
 # _wiz_step_system collects and persists core system settings (hostname, domain, email, root password, timezone) using an interactive wizard step.
 # If the root password is left empty it generates one and sets PASSWORD_GENERATED="yes"; the function echoes the interaction result (e.g., "next", "back").
 _wiz_step_system() {
+  log "_wiz_step_system: entering"
   _wiz_clear_fields
   _wiz_add_field "Hostname" "input" "${PVE_HOSTNAME:-pve}" "validate_hostname"
   _wiz_add_field "Domain" "input" "${DOMAIN_SUFFIX:-local}"
@@ -60,6 +61,7 @@ _wiz_step_system() {
     IFS='|'
     echo "${WIZ_TIMEZONES[*]}"
   )"
+  log "_wiz_step_system: fields added, count=${#WIZ_FIELD_LABELS[@]}"
 
   # Pre-fill values if already set
   [[ -n $PVE_HOSTNAME ]] && WIZ_FIELD_VALUES[0]="$PVE_HOSTNAME"
@@ -68,8 +70,10 @@ _wiz_step_system() {
   [[ -n $NEW_ROOT_PASSWORD ]] && WIZ_FIELD_VALUES[3]="$NEW_ROOT_PASSWORD"
   [[ -n $TIMEZONE ]] && WIZ_FIELD_VALUES[4]="$TIMEZONE"
 
+  log "_wiz_step_system: calling wiz_step_interactive"
   local result
   result=$(wiz_step_interactive 1 "System")
+  log "_wiz_step_system: wiz_step_interactive returned: $result"
 
   if [[ $result == "next" ]]; then
     PVE_HOSTNAME="${WIZ_FIELD_VALUES[0]}"
