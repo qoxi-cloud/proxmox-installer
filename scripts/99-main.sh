@@ -208,11 +208,9 @@ log "QEMU_CORES_OVERRIDE=$QEMU_CORES_OVERRIDE"
 log "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
 log "SSL_TYPE=${SSL_TYPE:-self-signed}"
 
-# Collect system info and display status
+# Collect system info
 log "Step: collect_system_info"
 collect_system_info
-log "Step: show_system_status"
-show_system_status
 log "Step: get_system_inputs"
 get_system_inputs
 
