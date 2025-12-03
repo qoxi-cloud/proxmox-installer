@@ -220,10 +220,8 @@ wiz_step_interactive() {
       content=$(_wiz_build_fields_content "$WIZ_CURRENT_FIELD" "-1" "")
     fi
 
-    log "wiz_step_interactive: calling _wiz_draw_box"
     # Draw
     _wiz_draw_box "$step" "$title" "$content" "$footer" "$first_draw"
-    log "wiz_step_interactive: _wiz_draw_box done, waiting for key"
     first_draw=false
 
     # Wait for keypress (read from terminal directly)
@@ -299,13 +297,13 @@ wiz_step_interactive() {
         "k") ((WIZ_CURRENT_FIELD > 0)) && ((WIZ_CURRENT_FIELD--)) ;;
         "n" | "N")
           if [[ $all_filled == "true" ]]; then
-            echo "next"
+            WIZ_RESULT="next"
             return
           fi
           ;;
         "b" | "B")
           if [[ $show_back == "true" ]]; then
-            echo "back"
+            WIZ_RESULT="back"
             return
           fi
           ;;

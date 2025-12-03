@@ -190,39 +190,36 @@ _wiz_draw_box() {
   local footer="$4"
   local do_clear="$5"
 
-  # All output goes directly to terminal (not captured by $())
-  {
-    # Hide cursor during redraw
-    printf '\033[?25l'
+  # Hide cursor during redraw
+  printf '\033[?25l'
 
-    if [[ $do_clear == "true" ]]; then
-      clear
-    else
-      printf '\033[H'
-    fi
-    wiz_banner
+  if [[ $do_clear == "true" ]]; then
+    clear
+  else
+    printf '\033[H'
+  fi
+  wiz_banner
 
-    local header
-    header="${ANSI_PRIMARY}Step ${step}/${WIZARD_TOTAL_STEPS}: ${title}${ANSI_RESET}"
+  local header
+  header="${ANSI_PRIMARY}Step ${step}/${WIZARD_TOTAL_STEPS}: ${title}${ANSI_RESET}"
 
-    local progress
-    progress="${ANSI_MUTED}$(_wiz_progress_bar "$step" "$WIZARD_TOTAL_STEPS" 53)${ANSI_RESET}"
+  local progress
+  progress="${ANSI_MUTED}$(_wiz_progress_bar "$step" "$WIZARD_TOTAL_STEPS" 53)${ANSI_RESET}"
 
-    gum style \
-      --border rounded \
-      --border-foreground "$GUM_BORDER" \
-      --width "$WIZARD_WIDTH" \
-      --padding "0 1" \
-      "$header" \
-      "$progress" \
-      "" \
-      "$content" \
-      "" \
-      "$footer"
+  gum style \
+    --border rounded \
+    --border-foreground "$GUM_BORDER" \
+    --width "$WIZARD_WIDTH" \
+    --padding "0 1" \
+    "$header" \
+    "$progress" \
+    "" \
+    "$content" \
+    "" \
+    "$footer"
 
-    # Clear to end of screen
-    printf '\033[J\033[?25h'
-  } >/dev/tty
+  # Clear to end of screen
+  printf '\033[J\033[?25h'
 }
 
 # =============================================================================

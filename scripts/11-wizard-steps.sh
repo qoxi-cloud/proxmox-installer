@@ -71,11 +71,10 @@ _wiz_step_system() {
   [[ -n $TIMEZONE ]] && WIZ_FIELD_VALUES[4]="$TIMEZONE"
 
   log "_wiz_step_system: calling wiz_step_interactive"
-  local result
-  result=$(wiz_step_interactive 1 "System")
-  log "_wiz_step_system: wiz_step_interactive returned: $result"
+  wiz_step_interactive 1 "System"
+  log "_wiz_step_system: wiz_step_interactive returned: $WIZ_RESULT"
 
-  if [[ $result == "next" ]]; then
+  if [[ $WIZ_RESULT == "next" ]]; then
     PVE_HOSTNAME="${WIZ_FIELD_VALUES[0]}"
     DOMAIN_SUFFIX="${WIZ_FIELD_VALUES[1]}"
     EMAIL="${WIZ_FIELD_VALUES[2]}"
@@ -88,8 +87,6 @@ _wiz_step_system() {
       PASSWORD_GENERATED="yes"
     fi
   fi
-
-  echo "$result"
 }
 
 # =============================================================================
@@ -141,10 +138,9 @@ _wiz_step_network() {
     done
   fi
 
-  local result
-  result=$(wiz_step_interactive 2 "Network")
+  wiz_step_interactive 2 "Network"
 
-  if [[ $result == "next" ]]; then
+  if [[ $WIZ_RESULT == "next" ]]; then
     INTERFACE_NAME="${WIZ_FIELD_VALUES[0]}"
 
     # Convert bridge label back to mode
@@ -170,8 +166,6 @@ _wiz_step_network() {
       IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
     fi
   fi
-
-  echo "$result"
 }
 
 # =============================================================================
@@ -223,10 +217,9 @@ _wiz_step_storage() {
   fi
   [[ -n $PROXMOX_ISO_VERSION ]] && WIZ_FIELD_VALUES[2]="$PROXMOX_ISO_VERSION"
 
-  local result
-  result=$(wiz_step_interactive 3 "Storage")
+  wiz_step_interactive 3 "Storage"
 
-  if [[ $result == "next" ]]; then
+  if [[ $WIZ_RESULT == "next" ]]; then
     # Convert ZFS label back to mode
     local zfs_label="${WIZ_FIELD_VALUES[0]}"
     if [[ ${DRIVE_COUNT:-0} -ge 2 ]]; then
@@ -246,8 +239,6 @@ _wiz_step_storage() {
     local pve_version="${WIZ_FIELD_VALUES[2]}"
     [[ $pve_version != "latest" ]] && PROXMOX_ISO_VERSION="$pve_version"
   fi
-
-  echo "$result"
 }
 
 # =============================================================================
@@ -290,10 +281,9 @@ _wiz_step_security() {
     done
   fi
 
-  local result
-  result=$(wiz_step_interactive 4 "Security")
+  wiz_step_interactive 4 "Security"
 
-  if [[ $result == "next" ]]; then
+  if [[ $WIZ_RESULT == "next" ]]; then
     # Handle SSH key
     local ssh_value="${WIZ_FIELD_VALUES[0]}"
     if [[ $ssh_value == *"(detected)"* || $ssh_value == *"ssh-"* ]]; then
@@ -308,8 +298,6 @@ _wiz_step_security() {
       [[ ${WIZ_SSL_LABELS[$i]} == "$ssl_label" ]] && SSL_TYPE="${WIZ_SSL_TYPES[$i]}"
     done
   fi
-
-  echo "$result"
 }
 
 # =============================================================================
@@ -339,18 +327,15 @@ _wiz_step_features() {
   WIZ_FIELD_VALUES[3]="${INSTALL_UNATTENDED_UPGRADES:-yes}"
   WIZ_FIELD_VALUES[4]="${INSTALL_AUDITD:-no}"
 
-  local result
-  result=$(wiz_step_interactive 5 "Features")
+  wiz_step_interactive 5 "Features"
 
-  if [[ $result == "next" ]]; then
+  if [[ $WIZ_RESULT == "next" ]]; then
     DEFAULT_SHELL="${WIZ_FIELD_VALUES[0]}"
     CPU_GOVERNOR="${WIZ_FIELD_VALUES[1]}"
     INSTALL_VNSTAT="${WIZ_FIELD_VALUES[2]}"
     INSTALL_UNATTENDED_UPGRADES="${WIZ_FIELD_VALUES[3]}"
     INSTALL_AUDITD="${WIZ_FIELD_VALUES[4]}"
   fi
-
-  echo "$result"
 }
 
 # =============================================================================
@@ -371,10 +356,9 @@ _wiz_step_tailscale() {
   WIZ_FIELD_VALUES[2]="${TAILSCALE_SSH:-yes}"
   WIZ_FIELD_VALUES[3]="${TAILSCALE_DISABLE_SSH:-no}"
 
-  local result
-  result=$(wiz_step_interactive 6 "Tailscale VPN")
+  wiz_step_interactive 6 "Tailscale VPN"
 
-  if [[ $result == "next" ]]; then
+  if [[ $WIZ_RESULT == "next" ]]; then
     INSTALL_TAILSCALE="${WIZ_FIELD_VALUES[0]}"
 
     if [[ $INSTALL_TAILSCALE == "yes" ]]; then
@@ -397,6 +381,4 @@ _wiz_step_tailscale() {
       STEALTH_MODE="no"
     fi
   fi
-
-  echo "$result"
 }

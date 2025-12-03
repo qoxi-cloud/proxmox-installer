@@ -98,14 +98,14 @@ _wiz_show_preview() {
   # Wait for input
   while true; do
     local key
-    read -rsn1 key
+    read -rsn1 key </dev/tty
     case "$key" in
       "" | $'\n')
-        echo "install"
+        WIZ_RESULT="install"
         return
         ;;
       "b" | "B")
-        echo "back"
+        WIZ_RESULT="back"
         return
         ;;
       "q" | "Q")
@@ -138,24 +138,24 @@ get_inputs_wizard() {
   log "get_inputs_wizard: WIZARD_TOTAL_STEPS=$WIZARD_TOTAL_STEPS"
 
   while true; do
-    local result=""
+    WIZ_RESULT=""
     log "get_inputs_wizard: current_step=$current_step"
 
     case $current_step in
       1)
         log "get_inputs_wizard: calling _wiz_step_system"
-        result=$(_wiz_step_system)
-        log "get_inputs_wizard: _wiz_step_system returned: $result"
+        _wiz_step_system
+        log "get_inputs_wizard: _wiz_step_system returned: $WIZ_RESULT"
         ;;
-      2) result=$(_wiz_step_network) ;;
-      3) result=$(_wiz_step_storage) ;;
-      4) result=$(_wiz_step_security) ;;
-      5) result=$(_wiz_step_features) ;;
-      6) result=$(_wiz_step_tailscale) ;;
+      2) _wiz_step_network ;;
+      3) _wiz_step_storage ;;
+      4) _wiz_step_security ;;
+      5) _wiz_step_features ;;
+      6) _wiz_step_tailscale ;;
       7)
         # Preview/confirm step
-        result=$(_wiz_show_preview)
-        if [[ $result == "install" ]]; then
+        _wiz_show_preview
+        if [[ $WIZ_RESULT == "install" ]]; then
           # Calculate derived values
           FQDN="${PVE_HOSTNAME}.${DOMAIN_SUFFIX}"
 
@@ -173,7 +173,7 @@ get_inputs_wizard() {
         ;;
     esac
 
-    case "$result" in
+    case "$WIZ_RESULT" in
       "next")
         ((current_step++))
         ;;
