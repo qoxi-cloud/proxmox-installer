@@ -25,12 +25,6 @@ show_banner() {
     if [[ -n $CONFIG_FILE ]]; then
       echo -e "${CLR_YELLOW}Config: ${CONFIG_FILE}${CLR_RESET}"
     fi
-    if [[ $NON_INTERACTIVE == true ]]; then
-      echo -e "${CLR_YELLOW}Mode: Non-interactive${CLR_RESET}"
-    fi
-    if [[ $TEST_MODE == true ]]; then
-      echo -e "${CLR_YELLOW}Mode: Test (TCG emulation, no KVM)${CLR_RESET}"
-    fi
   fi
   echo ""
 }
