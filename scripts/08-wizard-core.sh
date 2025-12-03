@@ -81,6 +81,11 @@ _wiz_progress_bar() {
     local total="$2"
     local width="${3:-50}"
 
+    # Guard against division by zero and invalid inputs
+    if [[ "$total" -le 0 || "$width" -le 0 ]]; then
+        return 0
+    fi
+
     local filled=$((width * current / total))
     local empty=$((width - filled))
 
