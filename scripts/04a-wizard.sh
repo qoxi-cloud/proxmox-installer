@@ -533,6 +533,9 @@ wiz_step_interactive() {
         fi
     done
 
+    # Initial draw with clear
+    local first_draw=true
+
     while true; do
         # Build and display wizard box
         local content
@@ -557,8 +560,17 @@ wiz_step_interactive() {
         fi
         footer+="${ANSI_MUTED}[Q] Quit${ANSI_RESET}"
 
-        # Draw wizard box
-        clear
+        # Draw wizard box (move cursor home instead of clear for smooth redraw)
+        # Hide cursor during redraw to prevent flicker
+        printf '\033[?25l'
+
+        if [[ "$first_draw" == "true" ]]; then
+            clear
+            first_draw=false
+        else
+            # Move cursor to home position (top-left)
+            printf '\033[H'
+        fi
         wiz_banner
 
         local header
@@ -578,6 +590,9 @@ wiz_step_interactive() {
             "$content" \
             "" \
             "$footer"
+
+        # Clear to end of screen (remove any leftover content) and show cursor
+        printf '\033[J\033[?25h'
 
         # Wait for keypress (read up to 3 chars for arrow keys)
         local key
@@ -601,6 +616,7 @@ wiz_step_interactive() {
             ""|$'\n')
                 # Enter - edit current field
                 _wiz_edit_field "$WIZ_CURRENT_FIELD"
+                first_draw=true  # Force full redraw after editing
                 ;;
             "j")
                 # j = down (vim style)
