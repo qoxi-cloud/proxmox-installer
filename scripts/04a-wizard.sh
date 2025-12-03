@@ -579,25 +579,25 @@ wiz_step_interactive() {
             "" \
             "$footer"
 
-        # Wait for keypress
+        # Wait for keypress (read up to 3 chars for arrow keys)
         local key
-        IFS= read -rsn1 key
+        read -rsn1 key
+
+        # Check for escape sequence (arrow keys send 3 chars: ESC [ A/B/C/D)
+        if [[ "$key" == $'\e' ]]; then
+            read -rsn2 -t 0.1 key
+            case "$key" in
+                '[A') # Up arrow
+                    ((WIZ_CURRENT_FIELD > 0)) && ((WIZ_CURRENT_FIELD--))
+                    ;;
+                '[B') # Down arrow
+                    ((WIZ_CURRENT_FIELD < num_fields - 1)) && ((WIZ_CURRENT_FIELD++))
+                    ;;
+            esac
+            continue
+        fi
 
         case "$key" in
-            $'\e')
-                # Escape sequence - read remaining characters
-                local seq1 seq2
-                IFS= read -rsn1 -t 0.01 seq1 || true
-                IFS= read -rsn1 -t 0.01 seq2 || true
-                case "${seq1}${seq2}" in
-                    '[A') # Up arrow
-                        ((WIZ_CURRENT_FIELD > 0)) && ((WIZ_CURRENT_FIELD--))
-                        ;;
-                    '[B') # Down arrow
-                        ((WIZ_CURRENT_FIELD < num_fields - 1)) && ((WIZ_CURRENT_FIELD++))
-                        ;;
-                esac
-                ;;
             ""|$'\n')
                 # Enter - edit current field
                 _wiz_edit_field "$WIZ_CURRENT_FIELD"
