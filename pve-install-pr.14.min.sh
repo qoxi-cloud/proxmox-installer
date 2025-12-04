@@ -11,7 +11,7 @@ CLR_HETZNER=$'\033[38;5;160m'
 CLR_RESET=$'\033[m'
 MENU_BOX_WIDTH=60
 SPINNER_CHARS=('○' '◔' '◑' '◕' '●' '◕' '◑' '◔')
-VERSION="1.18.23-pr.14"
+VERSION="1.18.24-pr.14"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feature/wizard}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1481,7 +1481,8 @@ local new_value
 printf '%s' "$ANSI_CURSOR_SHOW"
 clear
 wiz_banner
-local opts_newline="${field_options//|/$'\n'}"
+local opts_newline
+opts_newline=$(printf '%s' "$field_options"|tr '|' '\n')
 new_value=$(gum filter \
 --height 10 \
 --header "Select $label:" \
