@@ -11,7 +11,7 @@ CLR_HETZNER=$'\033[38;5;160m'
 CLR_RESET=$'\033[m'
 MENU_BOX_WIDTH=60
 SPINNER_CHARS=('○' '◔' '◑' '◕' '●' '◕' '◑' '◔')
-VERSION="1.18.15-pr.14"
+VERSION="1.18.17-pr.14"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feature/wizard}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -3372,46 +3372,65 @@ log "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
 log "SSL_TYPE=${SSL_TYPE:-self-signed}"
 log "Step: collect_system_info"
 collect_system_info
+wiz_cursor_hide
+_wiz_clear_fields
+_wiz_add_field "Hostname" "input" "pve"
+_wiz_add_field "Domain" "input" "local"
+_wiz_add_field "Email" "input" "admin@example.com"
+_wiz_add_field "Password" "password" ""
+_wiz_add_field "Timezone" "choose" "Europe/Kyiv|Europe/London|America/New_York|UTC"
+wiz_step_interactive 1 "System"
+wiz_cursor_show
+clear
+wiz_banner
+echo ""
+echo -e "${CLR_CYAN}Wizard exited.$CLR_RESET"
+echo ""
+exit 0
+: <<'DISABLED_INSTALLATION'
 log "Step: get_system_inputs"
 get_system_inputs
-if [[ $VALIDATE_ONLY == true ]];then
-log "Validate-only mode: showing configuration summary"
-echo ""
-echo -e "$CLR_CYAN✓ Configuration validated successfully$CLR_RESET"
-echo ""
-echo "Configuration Summary:"
-echo "  Hostname:     $HOSTNAME"
-echo "  FQDN:         $FQDN"
-echo "  Email:        $EMAIL"
-echo "  Timezone:     $TIMEZONE"
-echo "  IPv4:         $MAIN_IPV4_CIDR"
-echo "  Gateway:      $MAIN_IPV4_GW"
-echo "  Interface:    $INTERFACE_NAME"
-echo "  ZFS Mode:     $ZFS_RAID_MODE"
-echo "  Drives:       ${DRIVES[*]}"
-echo "  Bridge Mode:  $BRIDGE_MODE"
-if [[ $BRIDGE_MODE != "external" ]];then
-echo "  Private Net:  $PRIVATE_SUBNET"
+
+# If validate-only mode, show summary and exit
+if [[ $VALIDATE_ONLY == true ]]; then
+  log "Validate-only mode: showing configuration summary"
+  echo ""
+  echo -e "${CLR_CYAN}✓ Configuration validated successfully${CLR_RESET}"
+  echo ""
+  echo "Configuration Summary:"
+  echo "  Hostname:     $HOSTNAME"
+  echo "  FQDN:         $FQDN"
+  echo "  Email:        $EMAIL"
+  echo "  Timezone:     $TIMEZONE"
+  echo "  IPv4:         $MAIN_IPV4_CIDR"
+  echo "  Gateway:      $MAIN_IPV4_GW"
+  echo "  Interface:    $INTERFACE_NAME"
+  echo "  ZFS Mode:     $ZFS_RAID_MODE"
+  echo "  Drives:       ${DRIVES[*]}"
+  echo "  Bridge Mode:  $BRIDGE_MODE"
+  if [[ $BRIDGE_MODE != "external" ]]; then
+    echo "  Private Net:  $PRIVATE_SUBNET"
+  fi
+  echo "  Tailscale:    $INSTALL_TAILSCALE"
+  echo "  Auditd:       ${INSTALL_AUDITD:-no}"
+  echo "  Repository:   ${PVE_REPO_TYPE:-no-subscription}"
+  echo "  SSL:          ${SSL_TYPE:-self-signed}"
+  if [[ -n $PROXMOX_ISO_VERSION ]]; then
+    echo "  Proxmox ISO:  ${PROXMOX_ISO_VERSION}"
+  else
+    echo "  Proxmox ISO:  latest"
+  fi
+  if [[ -n $QEMU_RAM_OVERRIDE ]]; then
+    echo "  QEMU RAM:     ${QEMU_RAM_OVERRIDE}MB (override)"
+  fi
+  if [[ -n $QEMU_CORES_OVERRIDE ]]; then
+    echo "  QEMU Cores:   ${QEMU_CORES_OVERRIDE} (override)"
+  fi
+  echo ""
+  echo -e "${CLR_GRAY}Run without --validate to start installation${CLR_RESET}"
+  exit 0
 fi
-echo "  Tailscale:    $INSTALL_TAILSCALE"
-echo "  Auditd:       ${INSTALL_AUDITD:-no}"
-echo "  Repository:   ${PVE_REPO_TYPE:-no-subscription}"
-echo "  SSL:          ${SSL_TYPE:-self-signed}"
-if [[ -n $PROXMOX_ISO_VERSION ]];then
-echo "  Proxmox ISO:  $PROXMOX_ISO_VERSION"
-else
-echo "  Proxmox ISO:  latest"
-fi
-if [[ -n $QEMU_RAM_OVERRIDE ]];then
-echo "  QEMU RAM:     ${QEMU_RAM_OVERRIDE}MB (override)"
-fi
-if [[ -n $QEMU_CORES_OVERRIDE ]];then
-echo "  QEMU Cores:   $QEMU_CORES_OVERRIDE (override)"
-fi
-echo ""
-echo -e "${CLR_GRAY}Run without --validate to start installation$CLR_RESET"
-exit 0
-fi
+
 log "Step: prepare_packages"
 prepare_packages
 log "Step: download_proxmox_iso"
@@ -3422,13 +3441,22 @@ log "Step: make_autoinstall_iso"
 make_autoinstall_iso
 log "Step: install_proxmox"
 install_proxmox
+
+# Boot and configure via SSH
 log "Step: boot_proxmox_with_port_forwarding"
-boot_proxmox_with_port_forwarding||{
-log "ERROR: Failed to boot Proxmox with port forwarding"
-exit 1
+boot_proxmox_with_port_forwarding || {
+  log "ERROR: Failed to boot Proxmox with port forwarding"
+  exit 1
 }
+
+# Configure Proxmox via SSH
 log "Step: configure_proxmox_via_ssh"
 configure_proxmox_via_ssh
+
+# Mark installation as completed (disables error handler message)
 INSTALL_COMPLETED=true
+
+# Reboot to the main OS
 log "Step: reboot_to_main_os"
 reboot_to_main_os
+DISABLED_INSTALLATION
