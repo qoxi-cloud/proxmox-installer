@@ -62,27 +62,6 @@ Changes:
 - Updated network templates with IPv6 placeholders
 ```
 
-## Pre-Commit Code Review
-
-**IMPORTANT:** Before creating any commit, run CodeRabbit to review uncommitted changes and fix any issues:
-
-```bash
-coderabbit --type uncommitted --prompt-only
-```
-
-This command:
-
-- Analyzes all staged and unstaged changes
-- Outputs review feedback directly to the terminal
-- Does NOT create a PR or GitHub comment
-
-**Workflow:**
-
-1. Make your code changes
-2. Run `coderabbit --type uncommitted --prompt-only`
-3. Fix any issues identified by CodeRabbit
-4. Stage and commit your changes
-
 ## Pull Request Format
 
 When creating pull requests, use the template at `.github/pull_request_template.md`. PR titles must follow the same emoji conventional format as commit messages.
