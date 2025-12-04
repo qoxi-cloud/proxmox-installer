@@ -1145,10 +1145,14 @@ wiz_step_interactive() {
             local label="${WIZ_FIELD_LABELS[$WIZ_CURRENT_FIELD]}"
             local current_val="${WIZ_FIELD_VALUES[$WIZ_CURRENT_FIELD]}"
             local new_value
-            # Show cursor for gum filter
+            # Show cursor for gum filter and clear screen for clean display
             printf '%s' "$ANSI_CURSOR_SHOW"
-            new_value=$(echo "$field_options" | tr '|' '\n' | gum filter \
-              --height 8 \
+            clear
+            wiz_banner
+            # Convert pipe-separated options to newline-separated for gum filter
+            local opts_newline="${field_options//|/$'\n'}"
+            new_value=$(gum filter \
+              --height 10 \
               --header "Select ${label}:" \
               --header.foreground "$GUM_MUTED" \
               --indicator "› " \
@@ -1156,10 +1160,8 @@ wiz_step_interactive() {
               --match.foreground "$GUM_PRIMARY" \
               --prompt "Search: " \
               --prompt.foreground "$GUM_ACCENT" \
-              --cursor-text.foreground "$GUM_PRIMARY" \
               --placeholder "Type to filter..." \
-              --value "$current_val" \
-              2>/dev/null) || true
+              <<<"$opts_newline" 2>/dev/null) || true
             printf '%s' "$ANSI_CURSOR_HIDE"
             if [[ -n $new_value ]]; then
               WIZ_FIELD_VALUES[WIZ_CURRENT_FIELD]="$new_value"
