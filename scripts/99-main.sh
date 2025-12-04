@@ -209,6 +209,34 @@ log "SSL_TYPE=${SSL_TYPE:-self-signed}"
 # Collect system info
 log "Step: collect_system_info"
 collect_system_info
+
+# Show wizard demo (stays open until user exits)
+# Hide cursor for wizard duration
+wiz_cursor_hide
+
+# Demo Step 1: System info
+_wiz_clear_fields
+_wiz_add_field "Hostname" "input" "pve"
+_wiz_add_field "Domain" "input" "local"
+_wiz_add_field "Email" "input" "admin@example.com"
+_wiz_add_field "Password" "password" ""
+_wiz_add_field "Timezone" "choose" "Europe/Kyiv|Europe/London|America/New_York|UTC"
+
+wiz_step_interactive 1 "System"
+
+# Restore cursor and exit
+wiz_cursor_show
+clear
+wiz_banner
+echo ""
+echo -e "${CLR_CYAN}Wizard exited.${CLR_RESET}"
+echo ""
+exit 0
+
+# === TEMPORARILY DISABLED - Installation flow ===
+# The code below will be re-enabled once wizard confirmation step is implemented
+
+: <<'DISABLED_INSTALLATION'
 log "Step: get_system_inputs"
 get_system_inputs
 
@@ -280,3 +308,4 @@ INSTALL_COMPLETED=true
 # Reboot to the main OS
 log "Step: reboot_to_main_os"
 reboot_to_main_os
+DISABLED_INSTALLATION
