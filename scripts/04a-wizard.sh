@@ -795,11 +795,14 @@ wiz_step_interactive() {
           fi
           ;;
         "q" | "Q")
+          # Show confirm dialog below the box
+          echo ""
           if wiz_confirm "Are you sure you want to quit?"; then
             clear
             printf '%s\n' "${ANSI_ERROR}Installation cancelled.${ANSI_RESET}"
             exit 1
           fi
+          # Redraw will happen on next loop iteration
           ;;
       esac
     fi
