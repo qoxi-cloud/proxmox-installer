@@ -781,9 +781,9 @@ _wiz_build_fields_content() {
       local opt_idx=0
       for opt in "${opts[@]}"; do
         if [[ $opt_idx -eq $select_cursor ]]; then
-          content+="    ${ANSI_ACCENT}› ${ANSI_PRIMARY}${opt}${ANSI_RESET}"
+          content+="${ANSI_ACCENT}› ${ANSI_PRIMARY}${opt}${ANSI_RESET}"
         else
-          content+="      ${ANSI_MUTED}${opt}${ANSI_RESET}"
+          content+="  ${ANSI_MUTED}${opt}${ANSI_RESET}"
         fi
         content+=$'\n'
         ((opt_idx++))
