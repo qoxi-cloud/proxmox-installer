@@ -906,7 +906,11 @@ wiz_step_interactive() {
     done
 
     if [[ $edit_mode == "true" ]]; then
+      local current_type="${WIZ_FIELD_TYPES[$WIZ_CURRENT_FIELD]}"
       footer+="${ANSI_MUTED}[${ANSI_ACCENT}←/→${ANSI_MUTED}] Move${ANSI_RESET}  "
+      if [[ $current_type == "password" ]]; then
+        footer+="${ANSI_ACCENT}[G] Generate${ANSI_RESET}  "
+      fi
       footer+="${ANSI_ACCENT}[Enter] Save${ANSI_RESET}  "
       footer+="${ANSI_MUTED}[Esc] Cancel${ANSI_RESET}"
     else
@@ -1009,6 +1013,18 @@ wiz_step_interactive() {
           if [[ $edit_cursor -gt 0 ]]; then
             edit_buffer="${edit_buffer:0:edit_cursor-1}${edit_buffer:edit_cursor}"
             ((edit_cursor--))
+          fi
+          ;;
+        "g" | "G")
+          # Generate password (only for password fields)
+          local current_type="${WIZ_FIELD_TYPES[$WIZ_CURRENT_FIELD]}"
+          if [[ $current_type == "password" ]]; then
+            edit_buffer=$(generate_password 16)
+            edit_cursor=${#edit_buffer}
+          else
+            # Regular character for non-password fields
+            edit_buffer="${edit_buffer:0:edit_cursor}${key}${edit_buffer:edit_cursor}"
+            ((edit_cursor++))
           fi
           ;;
         *)
