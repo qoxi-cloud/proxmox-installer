@@ -557,12 +557,12 @@ _wiz_build_fields_content() {
         local before_cursor="" after_cursor=""
         for ((j = 0; j < edit_cursor; j++)); do before_cursor+="*"; done
         for ((j = edit_cursor; j < ${#edit_buffer}; j++)); do after_cursor+="*"; done
-        content+="${ANSI_SUCCESS}${before_cursor}${ANSI_ACCENT}▌${ANSI_SUCCESS}${after_cursor}${ANSI_RESET}"
+        content+="${ANSI_SUCCESS}${before_cursor}${ANSI_ACCENT}│${ANSI_SUCCESS}${after_cursor}${ANSI_RESET}"
       else
         # Show text with cursor at position
         local before_cursor="${edit_buffer:0:edit_cursor}"
         local after_cursor="${edit_buffer:edit_cursor}"
-        content+="${ANSI_SUCCESS}${before_cursor}${ANSI_ACCENT}▌${ANSI_SUCCESS}${after_cursor}${ANSI_RESET}"
+        content+="${ANSI_SUCCESS}${before_cursor}${ANSI_ACCENT}│${ANSI_SUCCESS}${after_cursor}${ANSI_RESET}"
       fi
     elif [[ $i -eq $cursor_idx ]]; then
       # Current field - show cursor
@@ -721,57 +721,53 @@ wiz_step_interactive() {
     fi
 
     # Wait for keypress
+    # Use IFS= to preserve space character (otherwise read strips it)
     local key
-    read -rsn1 key
+    IFS= read -rsn1 key
 
     if [[ $edit_mode == "true" ]]; then
       # Edit mode key handling
       case "$key" in
         $'\e')
-          # Check for escape sequence (arrows) or plain Escape
-          # Read with short timeout - if nothing follows, it's plain Escape
-          local seq=""
-          if read -rsn1 -t 0.05 seq && [[ $seq == "[" ]]; then
-            # CSI sequence - read the rest
-            local code=""
-            read -rsn1 -t 0.05 code
-            case "$code" in
-              'D') # Left arrow - move cursor left
-                ((edit_cursor > 0)) && ((edit_cursor--))
-                ;;
-              'C') # Right arrow - move cursor right
-                ((edit_cursor < ${#edit_buffer})) && ((edit_cursor++))
-                ;;
-              'H') # Home - move to start
-                edit_cursor=0
-                ;;
-              'F') # End - move to end
-                edit_cursor=${#edit_buffer}
-                ;;
-              '3') # Delete key (need to read ~)
-                read -rsn1 -t 0.05 _ # consume ~
-                if [[ $edit_cursor -lt ${#edit_buffer} ]]; then
-                  edit_buffer="${edit_buffer:0:edit_cursor}${edit_buffer:edit_cursor+1}"
-                fi
-                ;;
-              '1') # Home (alternate, need to read ~)
-                read -rsn1 -t 0.05 _
-                edit_cursor=0
-                ;;
-              '4') # End (alternate, need to read ~)
-                read -rsn1 -t 0.05 _
-                edit_cursor=${#edit_buffer}
-                ;;
-            esac
-          else
-            # Plain Escape or unknown sequence - cancel edit
-            edit_mode=false
-            edit_buffer=""
-            edit_cursor=0
-          fi
+          # Escape key pressed - check for escape sequence
+          # Arrow keys send: ESC [ A/B/C/D
+          # Read 2 more chars immediately (escape sequences arrive together)
+          local seq
+          read -rsn2 seq
+          case "$seq" in
+            '[D') # Left arrow
+              ((edit_cursor > 0)) && ((edit_cursor--))
+              ;;
+            '[C') # Right arrow
+              ((edit_cursor < ${#edit_buffer})) && ((edit_cursor++))
+              ;;
+            '[H') # Home
+              edit_cursor=0
+              ;;
+            '[F') # End
+              edit_cursor=${#edit_buffer}
+              ;;
+            '[3')
+              # Delete key - consume the trailing ~
+              read -rsn1 _
+              if [[ $edit_cursor -lt ${#edit_buffer} ]]; then
+                edit_buffer="${edit_buffer:0:edit_cursor}${edit_buffer:edit_cursor+1}"
+              fi
+              ;;
+            '[1')
+              # Home (alternate) - consume the trailing ~
+              read -rsn1 _
+              edit_cursor=0
+              ;;
+            '[4')
+              # End (alternate) - consume the trailing ~
+              read -rsn1 _
+              edit_cursor=${#edit_buffer}
+              ;;
+          esac
           ;;
-        "" | $'\n')
-          # Enter - save value
+        "")
+          # Enter - save value (read -rsn1 returns empty string for Enter)
           local validator="${WIZ_FIELD_VALIDATORS[$WIZ_CURRENT_FIELD]}"
           if [[ -n $validator && -n $edit_buffer ]]; then
             if ! "$validator" "$edit_buffer" 2>/dev/null; then
@@ -799,8 +795,8 @@ wiz_step_interactive() {
           fi
           ;;
         *)
-          # Regular character - insert at cursor position
-          if [[ $key =~ ^[[:print:]]$ ]]; then
+          # Regular character (including space) - insert at cursor position
+          if [[ $key =~ ^[[:print:]]$ || $key == " " ]]; then
             edit_buffer="${edit_buffer:0:edit_cursor}${key}${edit_buffer:edit_cursor}"
             ((edit_cursor++))
           fi
@@ -827,7 +823,7 @@ wiz_step_interactive() {
             # For input/password, use inline edit
             edit_mode=true
             edit_buffer="${WIZ_FIELD_VALUES[$WIZ_CURRENT_FIELD]:-${WIZ_FIELD_DEFAULTS[$WIZ_CURRENT_FIELD]}}"
-            edit_cursor=${#edit_buffer}  # Start with cursor at end
+            edit_cursor=${#edit_buffer} # Start with cursor at end
           fi
           ;;
         "j") ((WIZ_CURRENT_FIELD < num_fields - 1)) && ((WIZ_CURRENT_FIELD++)) ;;
@@ -880,7 +876,7 @@ _wiz_edit_field_select() {
   fi
 
   if [[ -n $new_value ]]; then
-    WIZ_FIELD_VALUES[$idx]="$new_value"
+    WIZ_FIELD_VALUES[idx]="$new_value"
     # Move to next empty field
     local num_fields=${#WIZ_FIELD_LABELS[@]}
     for ((i = idx + 1; i < num_fields; i++)); do
