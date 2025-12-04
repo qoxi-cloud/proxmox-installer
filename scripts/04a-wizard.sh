@@ -729,32 +729,46 @@ wiz_step_interactive() {
       case "$key" in
         $'\e')
           # Check for escape sequence (arrows) or plain Escape
-          read -rsn2 -t 0.1 seq || seq=""
-          case "$seq" in
-            '[D') # Left arrow - move cursor left
-              ((edit_cursor > 0)) && ((edit_cursor--))
-              ;;
-            '[C') # Right arrow - move cursor right
-              ((edit_cursor < ${#edit_buffer})) && ((edit_cursor++))
-              ;;
-            '[H' | '[1~') # Home - move to start
-              edit_cursor=0
-              ;;
-            '[F' | '[4~') # End - move to end
-              edit_cursor=${#edit_buffer}
-              ;;
-            '[3~') # Delete - delete char at cursor
-              if [[ $edit_cursor -lt ${#edit_buffer} ]]; then
-                edit_buffer="${edit_buffer:0:edit_cursor}${edit_buffer:edit_cursor+1}"
-              fi
-              ;;
-            *)
-              # Plain Escape - cancel edit
-              edit_mode=false
-              edit_buffer=""
-              edit_cursor=0
-              ;;
-          esac
+          # Read with short timeout - if nothing follows, it's plain Escape
+          local seq=""
+          if read -rsn1 -t 0.05 seq && [[ $seq == "[" ]]; then
+            # CSI sequence - read the rest
+            local code=""
+            read -rsn1 -t 0.05 code
+            case "$code" in
+              'D') # Left arrow - move cursor left
+                ((edit_cursor > 0)) && ((edit_cursor--))
+                ;;
+              'C') # Right arrow - move cursor right
+                ((edit_cursor < ${#edit_buffer})) && ((edit_cursor++))
+                ;;
+              'H') # Home - move to start
+                edit_cursor=0
+                ;;
+              'F') # End - move to end
+                edit_cursor=${#edit_buffer}
+                ;;
+              '3') # Delete key (need to read ~)
+                read -rsn1 -t 0.05 _ # consume ~
+                if [[ $edit_cursor -lt ${#edit_buffer} ]]; then
+                  edit_buffer="${edit_buffer:0:edit_cursor}${edit_buffer:edit_cursor+1}"
+                fi
+                ;;
+              '1') # Home (alternate, need to read ~)
+                read -rsn1 -t 0.05 _
+                edit_cursor=0
+                ;;
+              '4') # End (alternate, need to read ~)
+                read -rsn1 -t 0.05 _
+                edit_cursor=${#edit_buffer}
+                ;;
+            esac
+          else
+            # Plain Escape or unknown sequence - cancel edit
+            edit_mode=false
+            edit_buffer=""
+            edit_cursor=0
+          fi
           ;;
         "" | $'\n')
           # Enter - save value
