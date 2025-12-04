@@ -11,7 +11,7 @@ CLR_HETZNER=$'\033[38;5;160m'
 CLR_RESET=$'\033[m'
 MENU_BOX_WIDTH=60
 SPINNER_CHARS=('○' '◔' '◑' '◕' '●' '◕' '◑' '◔')
-VERSION="1.18.19-pr.14"
+VERSION="1.18.20-pr.14"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feature/wizard}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1196,6 +1196,8 @@ local cursor_idx="${1:--1}"
 local edit_idx="${2:--1}"
 local edit_buffer="${3:-}"
 local edit_cursor="${4:-0}"
+local select_idx="${5:--1}"
+local select_cursor="${6:-0}"
 local content=""
 local i
 for i in "${!WIZ_FIELD_LABELS[@]}";do
@@ -1206,7 +1208,25 @@ local display_value="$value"
 if [[ $type == "password" && -n $value ]];then
 display_value="********"
 fi
-if [[ $i -eq $edit_idx ]];then
+if [[ $i -eq $select_idx ]];then
+content+="$ANSI_ACCENT› $ANSI_RESET"
+content+="$ANSI_PRIMARY$label:$ANSI_RESET"
+content+=$'\n'
+local field_options="${WIZ_FIELD_OPTIONS[$i]}"
+local -a opts
+IFS='|' read -ra opts <<<"$field_options"
+local opt_idx=0
+for opt in "${opts[@]}";do
+if [[ $opt_idx -eq $select_cursor ]];then
+content+="    $ANSI_ACCENT› $ANSI_PRIMARY$opt$ANSI_RESET"
+else
+content+="      $ANSI_MUTED$opt$ANSI_RESET"
+fi
+content+=$'\n'
+((opt_idx++))
+done
+content="${content%$'\n'}"
+elif [[ $i -eq $edit_idx ]];then
 content+="$ANSI_ACCENT› $ANSI_RESET"
 content+="$ANSI_PRIMARY$label: $ANSI_RESET"
 if [[ $type == "password" ]];then
@@ -1297,13 +1317,20 @@ done
 local edit_mode=false
 local edit_buffer=""
 local edit_cursor=0
+local select_mode=false
+local select_cursor=0
+local select_opts_count=0
 while true;do
 local footer=""
 local all_filled=true
 for val in "${WIZ_FIELD_VALUES[@]}";do
 [[ -z $val ]]&&all_filled=false&&break
 done
-if [[ $edit_mode == "true" ]];then
+if [[ $select_mode == "true" ]];then
+footer+="$ANSI_MUTED[$ANSI_ACCENT↑/↓$ANSI_MUTED] Select$ANSI_RESET  "
+footer+="$ANSI_ACCENT[Enter] Confirm$ANSI_RESET  "
+footer+="$ANSI_MUTED[Esc] Cancel$ANSI_RESET"
+elif [[ $edit_mode == "true" ]];then
 local current_type="${WIZ_FIELD_TYPES[$WIZ_CURRENT_FIELD]}"
 footer+="$ANSI_MUTED[$ANSI_ACCENT←/→$ANSI_MUTED] Move$ANSI_RESET  "
 if [[ $current_type == "password" ]];then
@@ -1323,20 +1350,47 @@ fi
 footer+="$ANSI_MUTED[${ANSI_ACCENT}Q$ANSI_MUTED] Quit$ANSI_RESET"
 fi
 local content
-if [[ $edit_mode == "true" ]];then
-content=$(_wiz_build_fields_content "-1" "$WIZ_CURRENT_FIELD" "$edit_buffer" "$edit_cursor")
+if [[ $select_mode == "true" ]];then
+content=$(_wiz_build_fields_content "-1" "-1" "" "0" "$WIZ_CURRENT_FIELD" "$select_cursor")
+elif [[ $edit_mode == "true" ]];then
+content=$(_wiz_build_fields_content "-1" "$WIZ_CURRENT_FIELD" "$edit_buffer" "$edit_cursor" "-1" "0")
 else
-content=$(_wiz_build_fields_content "$WIZ_CURRENT_FIELD" "-1" "" "0")
+content=$(_wiz_build_fields_content "$WIZ_CURRENT_FIELD" "-1" "" "0" "-1" "0")
 fi
 _wiz_draw_box "$step" "$title" "$content" "$footer"
-if [[ $edit_mode == "true" ]];then
-printf '%s' "$ANSI_CURSOR_SHOW"
-else
 printf '%s' "$ANSI_CURSOR_HIDE"
-fi
 local key
 IFS= read -rsn1 key
-if [[ $edit_mode == "true" ]];then
+if [[ $select_mode == "true" ]];then
+case "$key" in
+$'\e')local seq=""
+read -rsn2 -t 0.1 seq||true
+case "$seq" in
+'[A')((select_cursor>0))&&((select_cursor--))
+;;
+'[B')((select_cursor<select_opts_count-1))&&((select_cursor++))
+;;
+'')select_mode=false
+select_cursor=0
+esac
+;;
+"")local field_options="${WIZ_FIELD_OPTIONS[$WIZ_CURRENT_FIELD]}"
+local -a opts
+IFS='|' read -ra opts <<<"$field_options"
+WIZ_FIELD_VALUES[WIZ_CURRENT_FIELD]="${opts[$select_cursor]}"
+select_mode=false
+select_cursor=0
+for ((i=WIZ_CURRENT_FIELD+1; i<num_fields; i++));do
+if [[ -z ${WIZ_FIELD_VALUES[$i]} ]];then
+WIZ_CURRENT_FIELD=$i
+break
+fi
+done
+;;
+"j")((select_cursor<select_opts_count-1))&&((select_cursor++));;
+"k")((select_cursor>0))&&((select_cursor--))
+esac
+elif [[ $edit_mode == "true" ]];then
 case "$key" in
 $'\e')local seq=""
 read -rsn2 -t 0.1 seq||true
@@ -1407,7 +1461,7 @@ fi
 esac
 else
 case "$key" in
-$'\e')read -rsn2 -t1 key 2>/dev/null||read -rsn2 key
+$'\e')read -rsn2 -t 0.1 key 2>/dev/null||true
 case "$key" in
 '[A')((WIZ_CURRENT_FIELD>0))&&((WIZ_CURRENT_FIELD--));;
 '[B')((WIZ_CURRENT_FIELD<num_fields-1))&&((WIZ_CURRENT_FIELD++))
@@ -1415,7 +1469,21 @@ esac
 ;;
 ""|$'\n')local field_type="${WIZ_FIELD_TYPES[$WIZ_CURRENT_FIELD]}"
 if [[ $field_type == "choose" || $field_type == "multi" ]];then
-_wiz_edit_field_select "$WIZ_CURRENT_FIELD"
+select_mode=true
+select_cursor=0
+local field_options="${WIZ_FIELD_OPTIONS[$WIZ_CURRENT_FIELD]}"
+local -a opts
+IFS='|' read -ra opts <<<"$field_options"
+select_opts_count=${#opts[@]}
+local current_val="${WIZ_FIELD_VALUES[$WIZ_CURRENT_FIELD]}"
+if [[ -n $current_val ]];then
+for idx in "${!opts[@]}";do
+if [[ ${opts[$idx]} == "$current_val" ]];then
+select_cursor=$idx
+break
+fi
+done
+fi
 else
 edit_mode=true
 edit_buffer="${WIZ_FIELD_VALUES[$WIZ_CURRENT_FIELD]:-${WIZ_FIELD_DEFAULTS[$WIZ_CURRENT_FIELD]}}"
@@ -1447,31 +1515,6 @@ fi
 esac
 fi
 done
-}
-_wiz_edit_field_select(){
-local idx="$1"
-local label="${WIZ_FIELD_LABELS[$idx]}"
-local type="${WIZ_FIELD_TYPES[$idx]}"
-local field_options="${WIZ_FIELD_OPTIONS[$idx]}"
-local -a opts
-local new_value=""
-IFS='|' read -ra opts <<<"$field_options"
-echo ""
-if [[ $type == "choose" ]];then
-new_value=$(wiz_choose "Select $label:" "${opts[@]}")
-else
-new_value=$(wiz_choose_multi "Select $label:" "${opts[@]}")
-fi
-if [[ -n $new_value ]];then
-WIZ_FIELD_VALUES[idx]="$new_value"
-local num_fields=${#WIZ_FIELD_LABELS[@]}
-for ((i=idx+1; i<num_fields; i++));do
-if [[ -z ${WIZ_FIELD_VALUES[$i]} ]];then
-WIZ_CURRENT_FIELD=$i
-return
-fi
-done
-fi
 }
 wiz_demo(){
 wiz_cursor_hide
