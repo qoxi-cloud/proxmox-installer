@@ -220,7 +220,7 @@ _wiz_add_field "Hostname" "input" "pve"
 _wiz_add_field "Domain" "input" "local"
 _wiz_add_field "Email" "input" "admin@example.com"
 _wiz_add_field "Password" "password" ""
-_wiz_add_field "Timezone" "choose" "Europe/Kyiv|Europe/London|America/New_York|UTC"
+_wiz_add_field "Timezone" "filter" "$(wiz_get_timezones)"
 
 wiz_step_interactive 1 "System"
 

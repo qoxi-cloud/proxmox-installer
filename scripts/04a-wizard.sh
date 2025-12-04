@@ -606,6 +606,18 @@ wiz_msg() {
 }
 
 # =============================================================================
+# Timezone utilities
+# =============================================================================
+
+# Common timezones (sorted by region, most used first)
+# Returns pipe-separated list of timezones
+wiz_get_timezones() {
+  cat <<'TIMEZONES'
+Europe/Kyiv|Europe/London|Europe/Paris|Europe/Berlin|Europe/Amsterdam|Europe/Brussels|Europe/Vienna|Europe/Warsaw|Europe/Prague|Europe/Budapest|Europe/Rome|Europe/Madrid|Europe/Lisbon|Europe/Athens|Europe/Helsinki|Europe/Stockholm|Europe/Oslo|Europe/Copenhagen|Europe/Dublin|Europe/Zurich|Europe/Moscow|Europe/Istanbul|America/New_York|America/Chicago|America/Denver|America/Los_Angeles|America/Toronto|America/Vancouver|America/Mexico_City|America/Sao_Paulo|America/Buenos_Aires|America/Lima|America/Bogota|America/Santiago|Asia/Tokyo|Asia/Shanghai|Asia/Hong_Kong|Asia/Singapore|Asia/Seoul|Asia/Taipei|Asia/Bangkok|Asia/Jakarta|Asia/Manila|Asia/Kolkata|Asia/Mumbai|Asia/Dubai|Asia/Jerusalem|Asia/Riyadh|Australia/Sydney|Australia/Melbourne|Australia/Brisbane|Australia/Perth|Pacific/Auckland|Pacific/Fiji|Pacific/Honolulu|Africa/Cairo|Africa/Johannesburg|Africa/Lagos|Africa/Nairobi|UTC
+TIMEZONES
+}
+
+# =============================================================================
 # Navigation handling
 # =============================================================================
 
@@ -1127,7 +1139,39 @@ wiz_step_interactive() {
         "" | $'\n')
           # Enter - start editing
           local field_type="${WIZ_FIELD_TYPES[$WIZ_CURRENT_FIELD]}"
-          if [[ $field_type == "choose" || $field_type == "multi" ]]; then
+          if [[ $field_type == "filter" ]]; then
+            # For filter type, use gum filter with search
+            local field_options="${WIZ_FIELD_OPTIONS[$WIZ_CURRENT_FIELD]}"
+            local label="${WIZ_FIELD_LABELS[$WIZ_CURRENT_FIELD]}"
+            local current_val="${WIZ_FIELD_VALUES[$WIZ_CURRENT_FIELD]}"
+            local new_value
+            # Show cursor for gum filter
+            printf '%s' "$ANSI_CURSOR_SHOW"
+            new_value=$(echo "$field_options" | tr '|' '\n' | gum filter \
+              --height 8 \
+              --header "Select ${label}:" \
+              --header.foreground "$GUM_MUTED" \
+              --indicator "› " \
+              --indicator.foreground "$GUM_ACCENT" \
+              --match.foreground "$GUM_PRIMARY" \
+              --prompt "Search: " \
+              --prompt.foreground "$GUM_ACCENT" \
+              --cursor-text.foreground "$GUM_PRIMARY" \
+              --placeholder "Type to filter..." \
+              --value "$current_val" \
+              2>/dev/null) || true
+            printf '%s' "$ANSI_CURSOR_HIDE"
+            if [[ -n $new_value ]]; then
+              WIZ_FIELD_VALUES[WIZ_CURRENT_FIELD]="$new_value"
+              # Move to next empty field
+              for ((i = WIZ_CURRENT_FIELD + 1; i < num_fields; i++)); do
+                if [[ -z ${WIZ_FIELD_VALUES[$i]} ]]; then
+                  WIZ_CURRENT_FIELD=$i
+                  break
+                fi
+              done
+            fi
+          elif [[ $field_type == "choose" || $field_type == "multi" ]]; then
             # For choose/multi, use inline select mode
             select_mode=true
             select_cursor=0
