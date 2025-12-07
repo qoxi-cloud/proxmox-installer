@@ -11,7 +11,7 @@ CLR_HETZNER=$'\033[38;5;160m'
 CLR_RESET=$'\033[m'
 MENU_BOX_WIDTH=60
 SPINNER_CHARS=('○' '◔' '◑' '◕' '●' '◕' '◑' '◔')
-VERSION="1.18.7-pr.16"
+VERSION="1.18.8-pr.16"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feature/animated-banner}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -286,15 +286,17 @@ printf '%s\n' \
 "$line_hetzner" \
 ""
 }
-show_banner_animated(){
-local duration="${1:-30}"
-local frame_delay="${2:-0.1}"
-local end_time=$((SECONDS+duration))
+BANNER_ANIMATION_PID=""
+show_banner_animated_start(){
+local frame_delay="${1:-0.1}"
+[[ ! -t 1 ]]&&return
+show_banner_animated_stop 2>/dev/null
 printf '%s' "$ANSI_CURSOR_HIDE"
 clear
-local direction=1
+(local direction=1
 local current_letter=0
-while [[ $SECONDS -lt $end_time ]];do
+trap 'exit 0' TERM INT
+while true;do
 _show_banner_frame "$current_letter"
 sleep "$frame_delay"
 if [[ $direction -eq 1 ]];then
@@ -310,7 +312,16 @@ current_letter=1
 direction=1
 fi
 fi
-done
+done) \
+&
+BANNER_ANIMATION_PID=$!
+}
+show_banner_animated_stop(){
+if [[ -n $BANNER_ANIMATION_PID ]];then
+kill "$BANNER_ANIMATION_PID" 2>/dev/null
+wait "$BANNER_ANIMATION_PID" 2>/dev/null
+BANNER_ANIMATION_PID=""
+fi
 clear
 show_banner
 printf '%s' "$ANSI_CURSOR_SHOW"
@@ -4062,21 +4073,9 @@ log "QEMU_CORES_OVERRIDE=$QEMU_CORES_OVERRIDE"
 log "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
 log "SSL_TYPE=${SSL_TYPE:-self-signed}"
 log "Step: collect_system_info"
-BANNER_ANIMATION_PID=""
-if [[ -t 1 ]];then
-{
-show_banner_animated 60 0.1
-}&
-BANNER_ANIMATION_PID=$!
-fi
+show_banner_animated_start 0.1
 collect_system_info
-if [[ -n $BANNER_ANIMATION_PID ]];then
-kill "$BANNER_ANIMATION_PID" 2>/dev/null||true
-wait "$BANNER_ANIMATION_PID" 2>/dev/null||true
-fi
-printf '%s' "$ANSI_CURSOR_SHOW"
-clear
-show_banner
+show_banner_animated_stop
 log "Step: show_system_status"
 show_system_status
 log "Step: get_system_inputs"
