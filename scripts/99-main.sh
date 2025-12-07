@@ -203,9 +203,20 @@ log "QEMU_CORES_OVERRIDE=$QEMU_CORES_OVERRIDE"
 log "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
 log "SSL_TYPE=${SSL_TYPE:-self-signed}"
 
-# Collect system info and display status
+# Collect system info with animated banner
 log "Step: collect_system_info"
+
+# Start animated banner in background
+show_banner_animated_start 0.1
+
+# Run system checks and prefetch Proxmox ISO info in parallel
 collect_system_info
+log "Step: prefetch_proxmox_iso_info"
+prefetch_proxmox_iso_info
+
+# Stop animation and show static banner with system info
+show_banner_animated_stop
+
 log "Step: show_system_status"
 show_system_status
 log "Step: get_system_inputs"

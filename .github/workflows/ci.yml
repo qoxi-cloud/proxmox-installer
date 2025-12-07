@@ -122,7 +122,8 @@ jobs:
           chmod +x pve-install.min.sh
 
       - name: Lint with ShellCheck
-        run: shellcheck -e SC1091,SC2034,SC2086 scripts/*.sh
+        # SC1003: single quote escape in ASCII art banner (intentional)
+        run: shellcheck -e SC1003,SC1091,SC2034,SC2086 scripts/*.sh
 
       - name: Run unit tests
         run: |

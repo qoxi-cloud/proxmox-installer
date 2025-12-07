@@ -3,32 +3,13 @@
 # System checks and hardware detection
 # =============================================================================
 
-# Collects and validates system information with progress indicator.
+# Collects and validates system information silently.
 # Checks: root access, internet connectivity, disk space, RAM, CPU, KVM.
 # Installs required packages if missing.
+# Note: Progress is shown via animated banner in 99-main.sh
 # Side effects: Sets PREFLIGHT_* global variables, may install packages
 collect_system_info() {
   local errors=0
-  local checks=7
-  local current=0
-
-  # Progress update helper (optimized: no subprocess spawning)
-  update_progress() {
-    current=$((current + 1))
-    local pct=$((current * 100 / checks))
-    local filled=$((pct / 5))
-    local empty=$((20 - filled))
-    local bar_filled="" bar_empty=""
-
-    # Build progress bar strings without spawning subprocesses
-    printf -v bar_filled '%*s' "$filled" ''
-    bar_filled="${bar_filled// /█}"
-    printf -v bar_empty '%*s' "$empty" ''
-    bar_empty="${bar_empty// /░}"
-
-    printf "\r${CLR_ORANGE}Checking system... [${CLR_ORANGE}%s${CLR_RESET}${CLR_GRAY}%s${CLR_RESET}${CLR_ORANGE}] %3d%%${CLR_RESET}" \
-      "$bar_filled" "$bar_empty" "$pct"
-  }
 
   # Install required tools and display utilities
   # boxes: table display, column: alignment, iproute2: ip command
@@ -36,8 +17,9 @@ collect_system_info() {
   # jq: JSON parsing for API responses
   # aria2c: optional multi-connection downloads (fallback: curl, wget)
   # findmnt: efficient mount point queries
-  update_progress
+  # gum: interactive prompts and spinners (from Charm repo)
   local packages_to_install=""
+  local need_charm_repo=false
   command -v boxes &>/dev/null || packages_to_install+=" boxes"
   command -v column &>/dev/null || packages_to_install+=" bsdmainutils"
   command -v ip &>/dev/null || packages_to_install+=" iproute2"
@@ -47,6 +29,17 @@ collect_system_info() {
   command -v jq &>/dev/null || packages_to_install+=" jq"
   command -v aria2c &>/dev/null || packages_to_install+=" aria2"
   command -v findmnt &>/dev/null || packages_to_install+=" util-linux"
+  command -v gum &>/dev/null || {
+    need_charm_repo=true
+    packages_to_install+=" gum"
+  }
+
+  # Add Charm repo for gum if needed (not in default Debian repos)
+  if [[ $need_charm_repo == true ]]; then
+    mkdir -p /etc/apt/keyrings
+    curl -fsSL https://repo.charm.sh/apt/gpg.key | gpg --dearmor -o /etc/apt/keyrings/charm.gpg 2>/dev/null
+    echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" >/etc/apt/sources.list.d/charm.list
+  fi
 
   if [[ -n $packages_to_install ]]; then
     apt-get update -qq >/dev/null 2>&1
@@ -55,7 +48,6 @@ collect_system_info() {
   fi
 
   # Check if running as root
-  update_progress
   if [[ $EUID -ne 0 ]]; then
     PREFLIGHT_ROOT="✗ Not root"
     PREFLIGHT_ROOT_STATUS="error"
@@ -64,10 +56,8 @@ collect_system_info() {
     PREFLIGHT_ROOT="Running as root"
     PREFLIGHT_ROOT_STATUS="ok"
   fi
-  sleep 0.1
 
   # Check internet connectivity
-  update_progress
   if ping -c 1 -W 3 "$DNS_PRIMARY" >/dev/null 2>&1; then
     PREFLIGHT_NET="Available"
     PREFLIGHT_NET_STATUS="ok"
@@ -78,7 +68,6 @@ collect_system_info() {
   fi
 
   # Check available disk space (need at least 3GB in /root for ISO)
-  update_progress
   local free_space_mb
   free_space_mb=$(df -m /root | awk 'NR==2 {print $4}')
   if [[ $free_space_mb -ge $MIN_DISK_SPACE_MB ]]; then
@@ -89,10 +78,8 @@ collect_system_info() {
     PREFLIGHT_DISK_STATUS="error"
     errors=$((errors + 1))
   fi
-  sleep 0.1
 
   # Check RAM (need at least 4GB)
-  update_progress
   local total_ram_mb
   total_ram_mb=$(free -m | awk '/^Mem:/{print $2}')
   if [[ $total_ram_mb -ge $MIN_RAM_MB ]]; then
@@ -103,10 +90,8 @@ collect_system_info() {
     PREFLIGHT_RAM_STATUS="error"
     errors=$((errors + 1))
   fi
-  sleep 0.1
 
   # Check CPU cores
-  update_progress
   local cpu_cores
   cpu_cores=$(nproc)
   if [[ $cpu_cores -ge 2 ]]; then
@@ -116,10 +101,8 @@ collect_system_info() {
     PREFLIGHT_CPU="${cpu_cores} core(s)"
     PREFLIGHT_CPU_STATUS="warn"
   fi
-  sleep 0.1
 
   # Check if KVM is available (try to load module if not present)
-  update_progress
   if [[ ! -e /dev/kvm ]]; then
     # Try to load KVM module (needed in rescue mode)
     modprobe kvm 2>/dev/null || true
@@ -143,10 +126,6 @@ collect_system_info() {
     PREFLIGHT_KVM_STATUS="error"
     errors=$((errors + 1))
   fi
-  sleep 0.1
-
-  # Clear progress line
-  printf "\r\033[K"
 
   PREFLIGHT_ERRORS=$errors
 }
