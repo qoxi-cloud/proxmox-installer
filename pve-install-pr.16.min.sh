@@ -11,7 +11,7 @@ CLR_HETZNER=$'\033[38;5;160m'
 CLR_RESET=$'\033[m'
 MENU_BOX_WIDTH=60
 SPINNER_CHARS=('○' '◔' '◑' '◕' '●' '◕' '◑' '◔')
-VERSION="1.18.5-pr.16"
+VERSION="1.18.7-pr.16"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feature/animated-banner}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -4063,13 +4063,17 @@ log "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
 log "SSL_TYPE=${SSL_TYPE:-self-signed}"
 log "Step: collect_system_info"
 BANNER_ANIMATION_PID=""
+if [[ -t 1 ]];then
 {
 show_banner_animated 60 0.1
 }&
 BANNER_ANIMATION_PID=$!
+fi
 collect_system_info
+if [[ -n $BANNER_ANIMATION_PID ]];then
 kill "$BANNER_ANIMATION_PID" 2>/dev/null||true
 wait "$BANNER_ANIMATION_PID" 2>/dev/null||true
+fi
 printf '%s' "$ANSI_CURSOR_SHOW"
 clear
 show_banner
