@@ -107,53 +107,77 @@ _show_banner_frame() {
     ""
 }
 
-# Runs animated banner for specified duration.
-# Animation: Letters P→r→o→x→m→o→x highlight sequentially, then reverse.
+# =============================================================================
+# Background animation control
+# =============================================================================
+
+# PID of background animation process
+BANNER_ANIMATION_PID=""
+
+# Starts animated banner in background.
+# The animation runs until stopped with show_banner_animated_stop().
 # Parameters:
-#   $1 - Duration in seconds (default: 30)
-#   $2 - Frame delay in seconds (default: 0.1)
-# Side effects: Clears screen, shows animation, restores screen
-show_banner_animated() {
-  local duration="${1:-30}"
-  local frame_delay="${2:-0.1}"
+#   $1 - Frame delay in seconds (default: 0.1)
+# Side effects: Sets BANNER_ANIMATION_PID, clears screen, starts background animation
+show_banner_animated_start() {
+  local frame_delay="${1:-0.1}"
 
-  # Calculate total frames and timing
-  local end_time=$((SECONDS + duration))
+  # Skip animation in non-interactive environments
+  [[ ! -t 1 ]] && return
 
-  # Hide cursor during animation
+  # Kill any existing animation
+  show_banner_animated_stop 2>/dev/null
+
+  # Hide cursor
   printf '%s' "$ANSI_CURSOR_HIDE"
 
   # Clear screen once
   clear
 
-  # Animation loop
-  local direction=1 # 1 = forward, -1 = backward
-  local current_letter=0
+  # Start animation in background subshell
+  (
+    local direction=1
+    local current_letter=0
 
-  while [[ $SECONDS -lt $end_time ]]; do
-    # Draw current frame
-    _show_banner_frame "$current_letter"
+    # Trap to ensure clean exit
+    trap 'exit 0' TERM INT
 
-    # Wait for frame_delay seconds
-    sleep "$frame_delay"
+    while true; do
+      _show_banner_frame "$current_letter"
+      sleep "$frame_delay"
 
-    # Move to next letter
-    if [[ $direction -eq 1 ]]; then
-      ((current_letter++))
-      if [[ $current_letter -ge $BANNER_LETTER_COUNT ]]; then
-        current_letter=$((BANNER_LETTER_COUNT - 2))
-        direction=-1
+      # Move to next letter
+      if [[ $direction -eq 1 ]]; then
+        ((current_letter++))
+        if [[ $current_letter -ge $BANNER_LETTER_COUNT ]]; then
+          current_letter=$((BANNER_LETTER_COUNT - 2))
+          direction=-1
+        fi
+      else
+        ((current_letter--))
+        if [[ $current_letter -lt 0 ]]; then
+          current_letter=1
+          direction=1
+        fi
       fi
-    else
-      ((current_letter--))
-      if [[ $current_letter -lt 0 ]]; then
-        current_letter=1
-        direction=1
-      fi
-    fi
-  done
+    done
+  ) &
 
-  # Show static banner at the end
+  BANNER_ANIMATION_PID=$!
+}
+
+# Stops background animated banner.
+# Shows static banner after stopping animation.
+# Side effects: Kills background process, clears BANNER_ANIMATION_PID, shows static banner
+show_banner_animated_stop() {
+  if [[ -n $BANNER_ANIMATION_PID ]]; then
+    # Kill the background process
+    kill "$BANNER_ANIMATION_PID" 2>/dev/null
+    wait "$BANNER_ANIMATION_PID" 2>/dev/null
+    BANNER_ANIMATION_PID=""
+  fi
+
+  # Clear screen and show static banner
   clear
   show_banner
 

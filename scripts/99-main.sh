@@ -206,26 +206,14 @@ log "SSL_TYPE=${SSL_TYPE:-self-signed}"
 # Collect system info with animated banner
 log "Step: collect_system_info"
 
-# Start animated banner in background (only in interactive TTY)
-BANNER_ANIMATION_PID=""
-if [[ -t 1 ]]; then
-  {
-    show_banner_animated 60 0.1
-  } &
-  BANNER_ANIMATION_PID=$!
-fi
+# Start animated banner in background
+show_banner_animated_start 0.1
 
 # Run system checks silently
 collect_system_info
 
 # Stop animation and show static banner with system info
-if [[ -n $BANNER_ANIMATION_PID ]]; then
-  kill "$BANNER_ANIMATION_PID" 2>/dev/null || true
-  wait "$BANNER_ANIMATION_PID" 2>/dev/null || true
-fi
-printf '%s' "$ANSI_CURSOR_SHOW"
-clear
-show_banner
+show_banner_animated_stop
 
 log "Step: show_system_status"
 show_system_status
