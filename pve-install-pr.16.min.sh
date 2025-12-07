@@ -11,7 +11,7 @@ CLR_HETZNER=$'\033[38;5;160m'
 CLR_RESET=$'\033[m'
 MENU_BOX_WIDTH=60
 SPINNER_CHARS=('○' '◔' '◑' '◕' '●' '◕' '◑' '◔')
-VERSION="1.18.8-pr.16"
+VERSION="1.18.9-pr.16"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feature/animated-banner}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -2830,11 +2830,16 @@ fi
 log "Required packages installed successfully"
 }
 _ISO_LIST_CACHE=""
+_CHECKSUM_CACHE=""
 _fetch_iso_list(){
 if [[ -z $_ISO_LIST_CACHE ]];then
 _ISO_LIST_CACHE=$(curl -s "$PROXMOX_ISO_BASE_URL"|grep -oE 'proxmox-ve_[0-9]+\.[0-9]+-[0-9]+\.iso'|sort -uV)
 fi
 echo "$_ISO_LIST_CACHE"
+}
+prefetch_proxmox_iso_info(){
+_ISO_LIST_CACHE=$(curl -s "$PROXMOX_ISO_BASE_URL" 2>/dev/null|grep -oE 'proxmox-ve_[0-9]+\.[0-9]+-[0-9]+\.iso'|sort -uV)||true
+_CHECKSUM_CACHE=$(curl -s "$PROXMOX_CHECKSUM_URL" 2>/dev/null)||true
 }
 get_available_proxmox_isos(){
 local count="${1:-5}"
@@ -2931,13 +2936,18 @@ exit 1
 fi
 log "Found ISO URL: $PROXMOX_ISO_URL"
 ISO_FILENAME=$(basename "$PROXMOX_ISO_URL")
+local expected_checksum=""
+if [[ -n $_CHECKSUM_CACHE ]];then
+log "Using cached checksum data"
+expected_checksum=$(echo "$_CHECKSUM_CACHE"|grep "$ISO_FILENAME"|awk '{print $1}')
+else
 log "Downloading checksum file"
 curl -sS -o SHA256SUMS "$PROXMOX_CHECKSUM_URL" >>"$LOG_FILE" 2>&1||true
-local expected_checksum=""
 if [[ -f "SHA256SUMS" ]];then
 expected_checksum=$(grep "$ISO_FILENAME" SHA256SUMS|awk '{print $1}')
-log "Expected checksum: $expected_checksum"
 fi
+fi
+log "Expected checksum: $expected_checksum"
 log "Downloading ISO: $ISO_FILENAME"
 local download_success=false
 local download_method=""
@@ -4075,6 +4085,8 @@ log "SSL_TYPE=${SSL_TYPE:-self-signed}"
 log "Step: collect_system_info"
 show_banner_animated_start 0.1
 collect_system_info
+log "Step: prefetch_proxmox_iso_info"
+prefetch_proxmox_iso_info
 show_banner_animated_stop
 log "Step: show_system_status"
 show_system_status
