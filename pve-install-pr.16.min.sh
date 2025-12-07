@@ -11,7 +11,7 @@ CLR_HETZNER=$'\033[38;5;160m'
 CLR_RESET=$'\033[m'
 MENU_BOX_WIDTH=60
 SPINNER_CHARS=('○' '◔' '◑' '◕' '●' '◕' '◑' '◔')
-VERSION="1.18.9-pr.16"
+VERSION="1.18.10-pr.16"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feature/animated-banner}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -215,15 +215,17 @@ BANNER_LETTER_COUNT=7
 ANSI_CURSOR_HIDE=$'\033[?25l'
 ANSI_CURSOR_SHOW=$'\033[?25h'
 show_banner(){
-echo -e "$CLR_GRAY    _____                                              $CLR_RESET"
-echo -e "$CLR_GRAY   |  __ \\                                             $CLR_RESET"
-echo -e "$CLR_GRAY   | |__) | _ __   ___  ${CLR_ORANGE}__  __$CLR_GRAY  _ __ ___    ___  ${CLR_ORANGE}__  __$CLR_RESET"
-echo -e "$CLR_GRAY   |  ___/ | '__| / _ \\ $CLR_ORANGE\\ \\/ /$CLR_GRAY | '_ \` _ \\  / _ \\ $CLR_ORANGE\\ \\/ /$CLR_RESET"
-echo -e "$CLR_GRAY   | |     | |   | (_) |$CLR_ORANGE >  <$CLR_GRAY  | | | | | || (_) |$CLR_ORANGE >  <$CLR_RESET"
-echo -e "$CLR_GRAY   |_|     |_|    \\___/ $CLR_ORANGE/_/\\_\\$CLR_GRAY |_| |_| |_| \\___/ $CLR_ORANGE/_/\\_\\$CLR_RESET"
-echo -e ""
-echo -e "$CLR_HETZNER               Hetzner ${CLR_GRAY}Automated Installer$CLR_RESET"
-echo ""
+printf '%s\n' \
+"" \
+"$CLR_GRAY    _____                                             $CLR_RESET" \
+"$CLR_GRAY   |  __ \\                                            $CLR_RESET" \
+"$CLR_GRAY   | |__) | _ __   ___  ${CLR_ORANGE}__  __$CLR_GRAY  _ __ ___    ___  ${CLR_ORANGE}__  __$CLR_RESET" \
+"$CLR_GRAY   |  ___/ | '__| / _ \\ $CLR_ORANGE\\ \\/ /$CLR_GRAY | '_ \` _ \\  / _ \\ $CLR_ORANGE\\ \\/ /$CLR_RESET" \
+"$CLR_GRAY   | |     | |   | (_) |$CLR_ORANGE >  <$CLR_GRAY  | | | | | || (_) |$CLR_ORANGE >  <$CLR_RESET" \
+"$CLR_GRAY   |_|     |_|    \\___/ $CLR_ORANGE/_/\\_\\$CLR_GRAY |_| |_| |_| \\___/ $CLR_ORANGE/_/\\_\\$CLR_RESET" \
+"" \
+"$CLR_HETZNER               Hetzner ${CLR_GRAY}Automated Installer$CLR_RESET" \
+""
 }
 _show_banner_frame(){
 local h="${1:--1}"
