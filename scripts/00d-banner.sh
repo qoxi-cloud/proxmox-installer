@@ -14,15 +14,17 @@ ANSI_CURSOR_SHOW=$'\033[?25h'
 # Display main ASCII banner
 # Usage: show_banner
 show_banner() {
-  echo -e "${CLR_GRAY}    _____                                              ${CLR_RESET}"
-  echo -e "${CLR_GRAY}   |  __ \\                                             ${CLR_RESET}"
-  echo -e "${CLR_GRAY}   | |__) | _ __   ___  ${CLR_ORANGE}__  __${CLR_GRAY}  _ __ ___    ___  ${CLR_ORANGE}__  __${CLR_RESET}"
-  echo -e "${CLR_GRAY}   |  ___/ | '__| / _ \\ ${CLR_ORANGE}\\ \\/ /${CLR_GRAY} | '_ \` _ \\  / _ \\ ${CLR_ORANGE}\\ \\/ /${CLR_RESET}"
-  echo -e "${CLR_GRAY}   | |     | |   | (_) |${CLR_ORANGE} >  <${CLR_GRAY}  | | | | | || (_) |${CLR_ORANGE} >  <${CLR_RESET}"
-  echo -e "${CLR_GRAY}   |_|     |_|    \\___/ ${CLR_ORANGE}/_/\\_\\${CLR_GRAY} |_| |_| |_| \\___/ ${CLR_ORANGE}/_/\\_\\${CLR_RESET}"
-  echo -e ""
-  echo -e "${CLR_HETZNER}               Hetzner ${CLR_GRAY}Automated Installer${CLR_RESET}"
-  echo ""
+  printf '%s\n' \
+    "" \
+    "${CLR_GRAY}    _____                                             ${CLR_RESET}" \
+    "${CLR_GRAY}   |  __ \\                                            ${CLR_RESET}" \
+    "${CLR_GRAY}   | |__) | _ __   ___  ${CLR_ORANGE}__  __${CLR_GRAY}  _ __ ___    ___  ${CLR_ORANGE}__  __${CLR_RESET}" \
+    "${CLR_GRAY}   |  ___/ | '__| / _ \\ ${CLR_ORANGE}\\ \\/ /${CLR_GRAY} | '_ \` _ \\  / _ \\ ${CLR_ORANGE}\\ \\/ /${CLR_RESET}" \
+    "${CLR_GRAY}   | |     | |   | (_) |${CLR_ORANGE} >  <${CLR_GRAY}  | | | | | || (_) |${CLR_ORANGE} >  <${CLR_RESET}" \
+    "${CLR_GRAY}   |_|     |_|    \\___/ ${CLR_ORANGE}/_/\\_\\${CLR_GRAY} |_| |_| |_| \\___/ ${CLR_ORANGE}/_/\\_\\${CLR_RESET}" \
+    "" \
+    "${CLR_HETZNER}               Hetzner ${CLR_GRAY}Automated Installer${CLR_RESET}" \
+    ""
 }
 
 # Displays animated banner with highlighted letter.
