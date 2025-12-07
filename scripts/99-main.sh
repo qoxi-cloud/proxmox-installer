@@ -219,7 +219,7 @@ fi
 collect_system_info
 
 # Stop animation and show static banner with system info
-if [[ -n "$BANNER_ANIMATION_PID" ]]; then
+if [[ -n $BANNER_ANIMATION_PID ]]; then
   kill "$BANNER_ANIMATION_PID" 2>/dev/null || true
   wait "$BANNER_ANIMATION_PID" 2>/dev/null || true
 fi
