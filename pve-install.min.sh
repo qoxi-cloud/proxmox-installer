@@ -11,7 +11,7 @@ CLR_HETZNER=$'\033[38;5;160m'
 CLR_RESET=$'\033[m'
 MENU_BOX_WIDTH=60
 SPINNER_CHARS=('○' '◔' '◑' '◕' '●' '◕' '◑' '◔')
-VERSION="1.18.2"
+VERSION="1.18.3"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -211,19 +211,123 @@ local exit_code=$?
 log_debug "Exit code: $exit_code"
 return $exit_code
 }
+BANNER_LETTER_COUNT=7
+ANSI_CURSOR_HIDE=$'\033[?25l'
+ANSI_CURSOR_SHOW=$'\033[?25h'
 show_banner(){
-echo -e "$CLR_GRAY    _____                                              $CLR_RESET"
-echo -e "$CLR_GRAY   |  __ \\                                             $CLR_RESET"
-echo -e "$CLR_GRAY   | |__) | _ __   ___  ${CLR_ORANGE}__  __$CLR_GRAY  _ __ ___    ___  ${CLR_ORANGE}__  __$CLR_RESET"
-echo -e "$CLR_GRAY   |  ___/ | '__| / _ \\ $CLR_ORANGE\\ \\/ /$CLR_GRAY | '_ \` _ \\  / _ \\ $CLR_ORANGE\\ \\/ /$CLR_RESET"
-echo -e "$CLR_GRAY   | |     | |   | (_) |$CLR_ORANGE >  <$CLR_GRAY  | | | | | || (_) |$CLR_ORANGE >  <$CLR_RESET"
-echo -e "$CLR_GRAY   |_|     |_|    \\___/ $CLR_ORANGE/_/\\_\\$CLR_GRAY |_| |_| |_| \\___/ $CLR_ORANGE/_/\\_\\$CLR_RESET"
-echo -e ""
-echo -e "$CLR_HETZNER               Hetzner ${CLR_GRAY}Automated Installer$CLR_RESET"
-echo ""
+printf '%s\n' \
+"" \
+"$CLR_GRAY    _____                                             $CLR_RESET" \
+"$CLR_GRAY   |  __ \\                                            $CLR_RESET" \
+"$CLR_GRAY   | |__) | _ __   ___  ${CLR_ORANGE}__  __$CLR_GRAY  _ __ ___    ___  ${CLR_ORANGE}__  __$CLR_RESET" \
+"$CLR_GRAY   |  ___/ | '__| / _ \\ $CLR_ORANGE\\ \\/ /$CLR_GRAY | '_ \` _ \\  / _ \\ $CLR_ORANGE\\ \\/ /$CLR_RESET" \
+"$CLR_GRAY   | |     | |   | (_) |$CLR_ORANGE >  <$CLR_GRAY  | | | | | || (_) |$CLR_ORANGE >  <$CLR_RESET" \
+"$CLR_GRAY   |_|     |_|    \\___/ $CLR_ORANGE/_/\\_\\$CLR_GRAY |_| |_| |_| \\___/ $CLR_ORANGE/_/\\_\\$CLR_RESET" \
+"" \
+"$CLR_HETZNER               Hetzner ${CLR_GRAY}Automated Installer$CLR_RESET" \
+""
 }
+_show_banner_frame(){
+local h="${1:--1}"
+local M="$CLR_GRAY"
+local A="$CLR_ORANGE"
+local R="$CLR_RESET"
+local line1="$M    "
+[[ $h -eq 0 ]]&&line1+="${A}_____$M"||line1+="_____"
+line1+="                                             $R"
+local line2="$M   "
+[[ $h -eq 0 ]]&&line2+="$A|  __ \\$M"||line2+='|  __ \'
+line2+="                                            $R"
+local line3="$M   "
+[[ $h -eq 0 ]]&&line3+="$A| |__) |$M"||line3+="| |__) |"
+[[ $h -eq 1 ]]&&line3+=" ${A}_ __$M"||line3+=" _ __"
+[[ $h -eq 2 ]]&&line3+="   ${A}___$M"||line3+="   ___"
+[[ $h -eq 3 ]]&&line3+="  ${A}__  __$M"||line3+="  __  __"
+[[ $h -eq 4 ]]&&line3+="  ${A}_ __ ___$M"||line3+="  _ __ ___"
+[[ $h -eq 5 ]]&&line3+="    ${A}___$M"||line3+="    ___"
+[[ $h -eq 6 ]]&&line3+="  ${A}__  __$M"||line3+="  __  __"
+line3+="$R"
+local line4="$M   "
+[[ $h -eq 0 ]]&&line4+="$A|  ___/ $M"||line4+="|  ___/ "
+[[ $h -eq 1 ]]&&line4+="$A| '__|$M"||line4+="| '__|"
+[[ $h -eq 2 ]]&&line4+=" $A/ _ \\$M"||line4+=' / _ \'
+[[ $h -eq 3 ]]&&line4+=" $A\\ \\/ /$M"||line4+=' \ \/ /'
+[[ $h -eq 4 ]]&&line4+=" $A| '_ \` _ \\$M"||line4+=" | '_ \` _ \\"
+[[ $h -eq 5 ]]&&line4+="  $A/ _ \\$M"||line4+='  / _ \'
+[[ $h -eq 6 ]]&&line4+=" $A\\ \\/ /$M"||line4+=' \ \/ /'
+line4+="$R"
+local line5="$M   "
+[[ $h -eq 0 ]]&&line5+="$A| |     $M"||line5+="| |     "
+[[ $h -eq 1 ]]&&line5+="$A| |$M"||line5+="| |"
+[[ $h -eq 2 ]]&&line5+="   $A| (_) |$M"||line5+="   | (_) |"
+[[ $h -eq 3 ]]&&line5+="$A >  <$M"||line5+=" >  <"
+[[ $h -eq 4 ]]&&line5+="  $A| | | | | |$M"||line5+="  | | | | | |"
+[[ $h -eq 5 ]]&&line5+="$A| (_) |$M"||line5+="| (_) |"
+[[ $h -eq 6 ]]&&line5+="$A >  <$M"||line5+=" >  <"
+line5+="$R"
+local line6="$M   "
+[[ $h -eq 0 ]]&&line6+="$A|_|     $M"||line6+="|_|     "
+[[ $h -eq 1 ]]&&line6+="$A|_|$M"||line6+="|_|"
+[[ $h -eq 2 ]]&&line6+="    $A\\___/$M"||line6+='    \___/'
+[[ $h -eq 3 ]]&&line6+=" $A/_/\\_\\$M"||line6+=' /_/\_\'
+[[ $h -eq 4 ]]&&line6+=" $A|_| |_| |_|$M"||line6+=" |_| |_| |_|"
+[[ $h -eq 5 ]]&&line6+=" $A\\___/$M"||line6+=' \___/'
+[[ $h -eq 6 ]]&&line6+=" $A/_/\\_\\$M"||line6+=' /_/\_\'
+line6+="$R"
+local line_hetzner="$CLR_HETZNER               Hetzner ${M}Automated Installer$R"
+printf '\033[H'
+printf '%s\n' \
+"" \
+"$line1" \
+"$line2" \
+"$line3" \
+"$line4" \
+"$line5" \
+"$line6" \
+"" \
+"$line_hetzner" \
+""
+}
+BANNER_ANIMATION_PID=""
+show_banner_animated_start(){
+local frame_delay="${1:-0.1}"
+[[ ! -t 1 ]]&&return
+show_banner_animated_stop 2>/dev/null
+printf '%s' "$ANSI_CURSOR_HIDE"
+clear
+(local direction=1
+local current_letter=0
+trap 'exit 0' TERM INT
+while true;do
+_show_banner_frame "$current_letter"
+sleep "$frame_delay"
+if [[ $direction -eq 1 ]];then
+((current_letter++))
+if [[ $current_letter -ge $BANNER_LETTER_COUNT ]];then
+current_letter=$((BANNER_LETTER_COUNT-2))
+direction=-1
+fi
+else
+((current_letter--))
+if [[ $current_letter -lt 0 ]];then
+current_letter=1
+direction=1
+fi
+fi
+done) \
+&
+BANNER_ANIMATION_PID=$!
+}
+show_banner_animated_stop(){
+if [[ -n $BANNER_ANIMATION_PID ]];then
+kill "$BANNER_ANIMATION_PID" 2>/dev/null
+wait "$BANNER_ANIMATION_PID" 2>/dev/null
+BANNER_ANIMATION_PID=""
+fi
 clear
 show_banner
+printf '%s' "$ANSI_CURSOR_SHOW"
+}
 display_box(){
 local title="$1"
 local content="$2"
@@ -1221,23 +1325,8 @@ printf -v "$var_name" '%s' "$password"
 }
 collect_system_info(){
 local errors=0
-local checks=7
-local current=0
-update_progress(){
-current=$((current+1))
-local pct=$((current*100/checks))
-local filled=$((pct/5))
-local empty=$((20-filled))
-local bar_filled="" bar_empty=""
-printf -v bar_filled '%*s' "$filled" ''
-bar_filled="${bar_filled// /█}"
-printf -v bar_empty '%*s' "$empty" ''
-bar_empty="${bar_empty// /░}"
-printf "\r${CLR_ORANGE}Checking system... [$CLR_ORANGE%s$CLR_RESET$CLR_GRAY%s$CLR_RESET$CLR_ORANGE] %3d%%$CLR_RESET" \
-"$bar_filled" "$bar_empty" "$pct"
-}
-update_progress
 local packages_to_install=""
+local need_charm_repo=false
 command -v boxes &>/dev/null||packages_to_install+=" boxes"
 command -v column &>/dev/null||packages_to_install+=" bsdmainutils"
 command -v ip &>/dev/null||packages_to_install+=" iproute2"
@@ -1247,11 +1336,19 @@ command -v curl &>/dev/null||packages_to_install+=" curl"
 command -v jq &>/dev/null||packages_to_install+=" jq"
 command -v aria2c &>/dev/null||packages_to_install+=" aria2"
 command -v findmnt &>/dev/null||packages_to_install+=" util-linux"
+command -v gum &>/dev/null||{
+need_charm_repo=true
+packages_to_install+=" gum"
+}
+if [[ $need_charm_repo == true ]];then
+mkdir -p /etc/apt/keyrings
+curl -fsSL https://repo.charm.sh/apt/gpg.key|gpg --dearmor -o /etc/apt/keyrings/charm.gpg 2>/dev/null
+echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" >/etc/apt/sources.list.d/charm.list
+fi
 if [[ -n $packages_to_install ]];then
 apt-get update -qq >/dev/null 2>&1
 apt-get install -qq -y $packages_to_install >/dev/null 2>&1
 fi
-update_progress
 if [[ $EUID -ne 0 ]];then
 PREFLIGHT_ROOT="✗ Not root"
 PREFLIGHT_ROOT_STATUS="error"
@@ -1260,8 +1357,6 @@ else
 PREFLIGHT_ROOT="Running as root"
 PREFLIGHT_ROOT_STATUS="ok"
 fi
-sleep 0.1
-update_progress
 if ping -c 1 -W 3 "$DNS_PRIMARY" >/dev/null 2>&1;then
 PREFLIGHT_NET="Available"
 PREFLIGHT_NET_STATUS="ok"
@@ -1270,7 +1365,6 @@ PREFLIGHT_NET="No connection"
 PREFLIGHT_NET_STATUS="error"
 errors=$((errors+1))
 fi
-update_progress
 local free_space_mb
 free_space_mb=$(df -m /root|awk 'NR==2 {print $4}')
 if [[ $free_space_mb -ge $MIN_DISK_SPACE_MB ]];then
@@ -1281,8 +1375,6 @@ PREFLIGHT_DISK="$free_space_mb MB (need ${MIN_DISK_SPACE_MB}MB+)"
 PREFLIGHT_DISK_STATUS="error"
 errors=$((errors+1))
 fi
-sleep 0.1
-update_progress
 local total_ram_mb
 total_ram_mb=$(free -m|awk '/^Mem:/{print $2}')
 if [[ $total_ram_mb -ge $MIN_RAM_MB ]];then
@@ -1293,8 +1385,6 @@ PREFLIGHT_RAM="$total_ram_mb MB (need ${MIN_RAM_MB}MB+)"
 PREFLIGHT_RAM_STATUS="error"
 errors=$((errors+1))
 fi
-sleep 0.1
-update_progress
 local cpu_cores
 cpu_cores=$(nproc)
 if [[ $cpu_cores -ge 2 ]];then
@@ -1304,8 +1394,6 @@ else
 PREFLIGHT_CPU="$cpu_cores core(s)"
 PREFLIGHT_CPU_STATUS="warn"
 fi
-sleep 0.1
-update_progress
 if [[ ! -e /dev/kvm ]];then
 modprobe kvm 2>/dev/null||true
 if grep -q "Intel" /proc/cpuinfo 2>/dev/null;then
@@ -1325,8 +1413,6 @@ PREFLIGHT_KVM="Not available"
 PREFLIGHT_KVM_STATUS="error"
 errors=$((errors+1))
 fi
-sleep 0.1
-printf "\r\033[K"
 PREFLIGHT_ERRORS=$errors
 }
 detect_drives(){
@@ -2756,11 +2842,16 @@ fi
 log "Required packages installed successfully"
 }
 _ISO_LIST_CACHE=""
+_CHECKSUM_CACHE=""
 _fetch_iso_list(){
 if [[ -z $_ISO_LIST_CACHE ]];then
 _ISO_LIST_CACHE=$(curl -s "$PROXMOX_ISO_BASE_URL"|grep -oE 'proxmox-ve_[0-9]+\.[0-9]+-[0-9]+\.iso'|sort -uV)
 fi
 echo "$_ISO_LIST_CACHE"
+}
+prefetch_proxmox_iso_info(){
+_ISO_LIST_CACHE=$(curl -s "$PROXMOX_ISO_BASE_URL" 2>/dev/null|grep -oE 'proxmox-ve_[0-9]+\.[0-9]+-[0-9]+\.iso'|sort -uV)||true
+_CHECKSUM_CACHE=$(curl -s "$PROXMOX_CHECKSUM_URL" 2>/dev/null)||true
 }
 get_available_proxmox_isos(){
 local count="${1:-5}"
@@ -2857,13 +2948,18 @@ exit 1
 fi
 log "Found ISO URL: $PROXMOX_ISO_URL"
 ISO_FILENAME=$(basename "$PROXMOX_ISO_URL")
+local expected_checksum=""
+if [[ -n $_CHECKSUM_CACHE ]];then
+log "Using cached checksum data"
+expected_checksum=$(echo "$_CHECKSUM_CACHE"|grep "$ISO_FILENAME"|awk '{print $1}')
+else
 log "Downloading checksum file"
 curl -sS -o SHA256SUMS "$PROXMOX_CHECKSUM_URL" >>"$LOG_FILE" 2>&1||true
-local expected_checksum=""
 if [[ -f "SHA256SUMS" ]];then
 expected_checksum=$(grep "$ISO_FILENAME" SHA256SUMS|awk '{print $1}')
-log "Expected checksum: $expected_checksum"
 fi
+fi
+log "Expected checksum: $expected_checksum"
 log "Downloading ISO: $ISO_FILENAME"
 local download_success=false
 local download_method=""
@@ -3999,7 +4095,11 @@ log "QEMU_CORES_OVERRIDE=$QEMU_CORES_OVERRIDE"
 log "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
 log "SSL_TYPE=${SSL_TYPE:-self-signed}"
 log "Step: collect_system_info"
+show_banner_animated_start 0.1
 collect_system_info
+log "Step: prefetch_proxmox_iso_info"
+prefetch_proxmox_iso_info
+show_banner_animated_stop
 log "Step: show_system_status"
 show_system_status
 log "Step: get_system_inputs"

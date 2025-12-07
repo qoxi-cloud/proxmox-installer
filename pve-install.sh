@@ -33,7 +33,7 @@ MENU_BOX_WIDTH=60
 SPINNER_CHARS=('○' '◔' '◑' '◕' '●' '◕' '◑' '◔')
 
 # Version (MAJOR only - MINOR.PATCH added by CI from git tags/commits)
-VERSION="1.18.2"
+VERSION="1.18.3"
 
 # =============================================================================
 # Configuration constants
@@ -379,25 +379,192 @@ run_logged() {
 # Note: cursor cleanup is handled by cleanup_and_error_handler in 00-init.sh
 # =============================================================================
 
+# Banner letter count for animation (P=0, r=1, o=2, x=3, m=4, o=5, x=6)
+BANNER_LETTER_COUNT=7
+
+# ANSI escape codes for banner animation
+ANSI_CURSOR_HIDE=$'\033[?25l'
+ANSI_CURSOR_SHOW=$'\033[?25h'
+
 # Display main ASCII banner
 # Usage: show_banner
 show_banner() {
-  echo -e "${CLR_GRAY}    _____                                              ${CLR_RESET}"
-  echo -e "${CLR_GRAY}   |  __ \\                                             ${CLR_RESET}"
-  echo -e "${CLR_GRAY}   | |__) | _ __   ___  ${CLR_ORANGE}__  __${CLR_GRAY}  _ __ ___    ___  ${CLR_ORANGE}__  __${CLR_RESET}"
-  echo -e "${CLR_GRAY}   |  ___/ | '__| / _ \\ ${CLR_ORANGE}\\ \\/ /${CLR_GRAY} | '_ \` _ \\  / _ \\ ${CLR_ORANGE}\\ \\/ /${CLR_RESET}"
-  echo -e "${CLR_GRAY}   | |     | |   | (_) |${CLR_ORANGE} >  <${CLR_GRAY}  | | | | | || (_) |${CLR_ORANGE} >  <${CLR_RESET}"
-  echo -e "${CLR_GRAY}   |_|     |_|    \\___/ ${CLR_ORANGE}/_/\\_\\${CLR_GRAY} |_| |_| |_| \\___/ ${CLR_ORANGE}/_/\\_\\${CLR_RESET}"
-  echo -e ""
-  echo -e "${CLR_HETZNER}               Hetzner ${CLR_GRAY}Automated Installer${CLR_RESET}"
-  echo ""
+  printf '%s\n' \
+    "" \
+    "${CLR_GRAY}    _____                                             ${CLR_RESET}" \
+    "${CLR_GRAY}   |  __ \\                                            ${CLR_RESET}" \
+    "${CLR_GRAY}   | |__) | _ __   ___  ${CLR_ORANGE}__  __${CLR_GRAY}  _ __ ___    ___  ${CLR_ORANGE}__  __${CLR_RESET}" \
+    "${CLR_GRAY}   |  ___/ | '__| / _ \\ ${CLR_ORANGE}\\ \\/ /${CLR_GRAY} | '_ \` _ \\  / _ \\ ${CLR_ORANGE}\\ \\/ /${CLR_RESET}" \
+    "${CLR_GRAY}   | |     | |   | (_) |${CLR_ORANGE} >  <${CLR_GRAY}  | | | | | || (_) |${CLR_ORANGE} >  <${CLR_RESET}" \
+    "${CLR_GRAY}   |_|     |_|    \\___/ ${CLR_ORANGE}/_/\\_\\${CLR_GRAY} |_| |_| |_| \\___/ ${CLR_ORANGE}/_/\\_\\${CLR_RESET}" \
+    "" \
+    "${CLR_HETZNER}               Hetzner ${CLR_GRAY}Automated Installer${CLR_RESET}" \
+    ""
+}
+
+# Displays animated banner with highlighted letter.
+# Parameters:
+#   $1 - Letter index to highlight (0-6 for P,r,o,x,m,o,x), -1 for none
+# Side effects: Outputs styled banner with one letter highlighted
+_show_banner_frame() {
+  local h="${1:--1}"
+  local M="${CLR_GRAY}"
+  local A="${CLR_ORANGE}"
+  local R="${CLR_RESET}"
+
+  # Line 1: _____ is top of P
+  local line1="${M}    "
+  [[ $h -eq 0 ]] && line1+="${A}_____${M}" || line1+="_____"
+  line1+="                                             ${R}"
+
+  # Line 2: |  __ \
+  local line2="${M}   "
+  [[ $h -eq 0 ]] && line2+="${A}|  __ \\${M}" || line2+='|  __ \'
+  line2+="                                            ${R}"
+
+  # Line 3: | |__) | _ __   ___  __  __  _ __ ___    ___  __  __
+  local line3="${M}   "
+  [[ $h -eq 0 ]] && line3+="${A}| |__) |${M}" || line3+="| |__) |"
+  [[ $h -eq 1 ]] && line3+=" ${A}_ __${M}" || line3+=" _ __"
+  [[ $h -eq 2 ]] && line3+="   ${A}___${M}" || line3+="   ___"
+  [[ $h -eq 3 ]] && line3+="  ${A}__  __${M}" || line3+="  __  __"
+  [[ $h -eq 4 ]] && line3+="  ${A}_ __ ___${M}" || line3+="  _ __ ___"
+  [[ $h -eq 5 ]] && line3+="    ${A}___${M}" || line3+="    ___"
+  [[ $h -eq 6 ]] && line3+="  ${A}__  __${M}" || line3+="  __  __"
+  line3+="${R}"
+
+  # Line 4: |  ___/ | '__| / _ \ \ \/ / | '_ ` _ \  / _ \ \ \/ /
+  local line4="${M}   "
+  [[ $h -eq 0 ]] && line4+="${A}|  ___/ ${M}" || line4+="|  ___/ "
+  [[ $h -eq 1 ]] && line4+="${A}| '__|${M}" || line4+="| '__|"
+  [[ $h -eq 2 ]] && line4+=" ${A}/ _ \\${M}" || line4+=' / _ \'
+  [[ $h -eq 3 ]] && line4+=" ${A}\\ \\/ /${M}" || line4+=' \ \/ /'
+  [[ $h -eq 4 ]] && line4+=" ${A}| '_ \` _ \\${M}" || line4+=" | '_ \` _ \\"
+  [[ $h -eq 5 ]] && line4+="  ${A}/ _ \\${M}" || line4+='  / _ \'
+  [[ $h -eq 6 ]] && line4+=" ${A}\\ \\/ /${M}" || line4+=' \ \/ /'
+  line4+="${R}"
+
+  # Line 5: | |     | |   | (_) | >  <  | | | | | || (_) | >  <
+  local line5="${M}   "
+  [[ $h -eq 0 ]] && line5+="${A}| |     ${M}" || line5+="| |     "
+  [[ $h -eq 1 ]] && line5+="${A}| |${M}" || line5+="| |"
+  [[ $h -eq 2 ]] && line5+="   ${A}| (_) |${M}" || line5+="   | (_) |"
+  [[ $h -eq 3 ]] && line5+="${A} >  <${M}" || line5+=" >  <"
+  [[ $h -eq 4 ]] && line5+="  ${A}| | | | | |${M}" || line5+="  | | | | | |"
+  [[ $h -eq 5 ]] && line5+="${A}| (_) |${M}" || line5+="| (_) |"
+  [[ $h -eq 6 ]] && line5+="${A} >  <${M}" || line5+=" >  <"
+  line5+="${R}"
+
+  # Line 6: |_|     |_|    \___/ /_/\_\ |_| |_| |_| \___/ /_/\_\
+  local line6="${M}   "
+  [[ $h -eq 0 ]] && line6+="${A}|_|     ${M}" || line6+="|_|     "
+  [[ $h -eq 1 ]] && line6+="${A}|_|${M}" || line6+="|_|"
+  [[ $h -eq 2 ]] && line6+="    ${A}\\___/${M}" || line6+='    \___/'
+  [[ $h -eq 3 ]] && line6+=" ${A}/_/\\_\\${M}" || line6+=' /_/\_\'
+  [[ $h -eq 4 ]] && line6+=" ${A}|_| |_| |_|${M}" || line6+=" |_| |_| |_|"
+  [[ $h -eq 5 ]] && line6+=" ${A}\\___/${M}" || line6+=' \___/'
+  [[ $h -eq 6 ]] && line6+=" ${A}/_/\\_\\${M}" || line6+=' /_/\_\'
+  line6+="${R}"
+
+  # Hetzner line
+  local line_hetzner="${CLR_HETZNER}               Hetzner ${M}Automated Installer${R}"
+
+  # Output all lines
+  printf '\033[H' # Move cursor home
+  printf '%s\n' \
+    "" \
+    "$line1" \
+    "$line2" \
+    "$line3" \
+    "$line4" \
+    "$line5" \
+    "$line6" \
+    "" \
+    "$line_hetzner" \
+    ""
 }
 
 # =============================================================================
-# Show banner on startup
+# Background animation control
 # =============================================================================
-clear
-show_banner
+
+# PID of background animation process
+BANNER_ANIMATION_PID=""
+
+# Starts animated banner in background.
+# The animation runs until stopped with show_banner_animated_stop().
+# Parameters:
+#   $1 - Frame delay in seconds (default: 0.1)
+# Side effects: Sets BANNER_ANIMATION_PID, clears screen, starts background animation
+show_banner_animated_start() {
+  local frame_delay="${1:-0.1}"
+
+  # Skip animation in non-interactive environments
+  [[ ! -t 1 ]] && return
+
+  # Kill any existing animation
+  show_banner_animated_stop 2>/dev/null
+
+  # Hide cursor
+  printf '%s' "$ANSI_CURSOR_HIDE"
+
+  # Clear screen once
+  clear
+
+  # Start animation in background subshell
+  (
+    local direction=1
+    local current_letter=0
+
+    # Trap to ensure clean exit
+    trap 'exit 0' TERM INT
+
+    while true; do
+      _show_banner_frame "$current_letter"
+      sleep "$frame_delay"
+
+      # Move to next letter
+      if [[ $direction -eq 1 ]]; then
+        ((current_letter++))
+        if [[ $current_letter -ge $BANNER_LETTER_COUNT ]]; then
+          current_letter=$((BANNER_LETTER_COUNT - 2))
+          direction=-1
+        fi
+      else
+        ((current_letter--))
+        if [[ $current_letter -lt 0 ]]; then
+          current_letter=1
+          direction=1
+        fi
+      fi
+    done
+  ) &
+
+  BANNER_ANIMATION_PID=$!
+}
+
+# Stops background animated banner.
+# Shows static banner after stopping animation.
+# Side effects: Kills background process, clears BANNER_ANIMATION_PID, shows static banner
+show_banner_animated_stop() {
+  if [[ -n $BANNER_ANIMATION_PID ]]; then
+    # Kill the background process
+    kill "$BANNER_ANIMATION_PID" 2>/dev/null
+    wait "$BANNER_ANIMATION_PID" 2>/dev/null
+    BANNER_ANIMATION_PID=""
+  fi
+
+  # Clear screen and show static banner
+  clear
+  show_banner
+
+  # Restore cursor
+  printf '%s' "$ANSI_CURSOR_SHOW"
+}
+
+# =============================================================================
+# Note: Banner display is handled by 99-main.sh with animated intro
+# =============================================================================
 
 # --- 01-display.sh ---
 # shellcheck shell=bash
@@ -2066,32 +2233,13 @@ prompt_password() {
 # System checks and hardware detection
 # =============================================================================
 
-# Collects and validates system information with progress indicator.
+# Collects and validates system information silently.
 # Checks: root access, internet connectivity, disk space, RAM, CPU, KVM.
 # Installs required packages if missing.
+# Note: Progress is shown via animated banner in 99-main.sh
 # Side effects: Sets PREFLIGHT_* global variables, may install packages
 collect_system_info() {
   local errors=0
-  local checks=7
-  local current=0
-
-  # Progress update helper (optimized: no subprocess spawning)
-  update_progress() {
-    current=$((current + 1))
-    local pct=$((current * 100 / checks))
-    local filled=$((pct / 5))
-    local empty=$((20 - filled))
-    local bar_filled="" bar_empty=""
-
-    # Build progress bar strings without spawning subprocesses
-    printf -v bar_filled '%*s' "$filled" ''
-    bar_filled="${bar_filled// /█}"
-    printf -v bar_empty '%*s' "$empty" ''
-    bar_empty="${bar_empty// /░}"
-
-    printf "\r${CLR_ORANGE}Checking system... [${CLR_ORANGE}%s${CLR_RESET}${CLR_GRAY}%s${CLR_RESET}${CLR_ORANGE}] %3d%%${CLR_RESET}" \
-      "$bar_filled" "$bar_empty" "$pct"
-  }
 
   # Install required tools and display utilities
   # boxes: table display, column: alignment, iproute2: ip command
@@ -2099,8 +2247,9 @@ collect_system_info() {
   # jq: JSON parsing for API responses
   # aria2c: optional multi-connection downloads (fallback: curl, wget)
   # findmnt: efficient mount point queries
-  update_progress
+  # gum: interactive prompts and spinners (from Charm repo)
   local packages_to_install=""
+  local need_charm_repo=false
   command -v boxes &>/dev/null || packages_to_install+=" boxes"
   command -v column &>/dev/null || packages_to_install+=" bsdmainutils"
   command -v ip &>/dev/null || packages_to_install+=" iproute2"
@@ -2110,6 +2259,17 @@ collect_system_info() {
   command -v jq &>/dev/null || packages_to_install+=" jq"
   command -v aria2c &>/dev/null || packages_to_install+=" aria2"
   command -v findmnt &>/dev/null || packages_to_install+=" util-linux"
+  command -v gum &>/dev/null || {
+    need_charm_repo=true
+    packages_to_install+=" gum"
+  }
+
+  # Add Charm repo for gum if needed (not in default Debian repos)
+  if [[ $need_charm_repo == true ]]; then
+    mkdir -p /etc/apt/keyrings
+    curl -fsSL https://repo.charm.sh/apt/gpg.key | gpg --dearmor -o /etc/apt/keyrings/charm.gpg 2>/dev/null
+    echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" >/etc/apt/sources.list.d/charm.list
+  fi
 
   if [[ -n $packages_to_install ]]; then
     apt-get update -qq >/dev/null 2>&1
@@ -2118,7 +2278,6 @@ collect_system_info() {
   fi
 
   # Check if running as root
-  update_progress
   if [[ $EUID -ne 0 ]]; then
     PREFLIGHT_ROOT="✗ Not root"
     PREFLIGHT_ROOT_STATUS="error"
@@ -2127,10 +2286,8 @@ collect_system_info() {
     PREFLIGHT_ROOT="Running as root"
     PREFLIGHT_ROOT_STATUS="ok"
   fi
-  sleep 0.1
 
   # Check internet connectivity
-  update_progress
   if ping -c 1 -W 3 "$DNS_PRIMARY" >/dev/null 2>&1; then
     PREFLIGHT_NET="Available"
     PREFLIGHT_NET_STATUS="ok"
@@ -2141,7 +2298,6 @@ collect_system_info() {
   fi
 
   # Check available disk space (need at least 3GB in /root for ISO)
-  update_progress
   local free_space_mb
   free_space_mb=$(df -m /root | awk 'NR==2 {print $4}')
   if [[ $free_space_mb -ge $MIN_DISK_SPACE_MB ]]; then
@@ -2152,10 +2308,8 @@ collect_system_info() {
     PREFLIGHT_DISK_STATUS="error"
     errors=$((errors + 1))
   fi
-  sleep 0.1
 
   # Check RAM (need at least 4GB)
-  update_progress
   local total_ram_mb
   total_ram_mb=$(free -m | awk '/^Mem:/{print $2}')
   if [[ $total_ram_mb -ge $MIN_RAM_MB ]]; then
@@ -2166,10 +2320,8 @@ collect_system_info() {
     PREFLIGHT_RAM_STATUS="error"
     errors=$((errors + 1))
   fi
-  sleep 0.1
 
   # Check CPU cores
-  update_progress
   local cpu_cores
   cpu_cores=$(nproc)
   if [[ $cpu_cores -ge 2 ]]; then
@@ -2179,10 +2331,8 @@ collect_system_info() {
     PREFLIGHT_CPU="${cpu_cores} core(s)"
     PREFLIGHT_CPU_STATUS="warn"
   fi
-  sleep 0.1
 
   # Check if KVM is available (try to load module if not present)
-  update_progress
   if [[ ! -e /dev/kvm ]]; then
     # Try to load KVM module (needed in rescue mode)
     modprobe kvm 2>/dev/null || true
@@ -2206,10 +2356,6 @@ collect_system_info() {
     PREFLIGHT_KVM_STATUS="error"
     errors=$((errors + 1))
   fi
-  sleep 0.1
-
-  # Clear progress line
-  printf "\r\033[K"
 
   PREFLIGHT_ERRORS=$errors
 }
@@ -4130,6 +4276,9 @@ prepare_packages() {
 # Cache for ISO list (avoid multiple HTTP requests)
 _ISO_LIST_CACHE=""
 
+# Cache for SHA256SUMS content
+_CHECKSUM_CACHE=""
+
 # Internal: fetches ISO list from Proxmox repository (cached).
 # Returns: List of ISO filenames via stdout
 _fetch_iso_list() {
@@ -4137,6 +4286,17 @@ _fetch_iso_list() {
     _ISO_LIST_CACHE=$(curl -s "$PROXMOX_ISO_BASE_URL" | grep -oE 'proxmox-ve_[0-9]+\.[0-9]+-[0-9]+\.iso' | sort -uV)
   fi
   echo "$_ISO_LIST_CACHE"
+}
+
+# Prefetches ISO list and checksums in background.
+# Call this early to cache data for later use.
+# Side effects: Populates _ISO_LIST_CACHE and _CHECKSUM_CACHE
+prefetch_proxmox_iso_info() {
+  # Fetch ISO list
+  _ISO_LIST_CACHE=$(curl -s "$PROXMOX_ISO_BASE_URL" 2>/dev/null | grep -oE 'proxmox-ve_[0-9]+\.[0-9]+-[0-9]+\.iso' | sort -uV) || true
+
+  # Fetch checksums
+  _CHECKSUM_CACHE=$(curl -s "$PROXMOX_CHECKSUM_URL" 2>/dev/null) || true
 }
 
 # Fetches available Proxmox VE ISO versions (last N versions).
@@ -4289,14 +4449,19 @@ download_proxmox_iso() {
 
   ISO_FILENAME=$(basename "$PROXMOX_ISO_URL")
 
-  # Download checksum first
-  log "Downloading checksum file"
-  curl -sS -o SHA256SUMS "$PROXMOX_CHECKSUM_URL" >>"$LOG_FILE" 2>&1 || true
+  # Get checksum from cache or download
   local expected_checksum=""
-  if [[ -f "SHA256SUMS" ]]; then
-    expected_checksum=$(grep "$ISO_FILENAME" SHA256SUMS | awk '{print $1}')
-    log "Expected checksum: $expected_checksum"
+  if [[ -n $_CHECKSUM_CACHE ]]; then
+    log "Using cached checksum data"
+    expected_checksum=$(echo "$_CHECKSUM_CACHE" | grep "$ISO_FILENAME" | awk '{print $1}')
+  else
+    log "Downloading checksum file"
+    curl -sS -o SHA256SUMS "$PROXMOX_CHECKSUM_URL" >>"$LOG_FILE" 2>&1 || true
+    if [[ -f "SHA256SUMS" ]]; then
+      expected_checksum=$(grep "$ISO_FILENAME" SHA256SUMS | awk '{print $1}')
+    fi
   fi
+  log "Expected checksum: $expected_checksum"
 
   # Download with fallback chain: aria2c (conservative) -> curl -> wget
   log "Downloading ISO: $ISO_FILENAME"
@@ -5981,9 +6146,20 @@ log "QEMU_CORES_OVERRIDE=$QEMU_CORES_OVERRIDE"
 log "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
 log "SSL_TYPE=${SSL_TYPE:-self-signed}"
 
-# Collect system info and display status
+# Collect system info with animated banner
 log "Step: collect_system_info"
+
+# Start animated banner in background
+show_banner_animated_start 0.1
+
+# Run system checks and prefetch Proxmox ISO info in parallel
 collect_system_info
+log "Step: prefetch_proxmox_iso_info"
+prefetch_proxmox_iso_info
+
+# Stop animation and show static banner with system info
+show_banner_animated_stop
+
 log "Step: show_system_status"
 show_system_status
 log "Step: get_system_inputs"
