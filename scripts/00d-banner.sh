@@ -161,14 +161,6 @@ show_banner_animated() {
   printf '%s' "$ANSI_CURSOR_SHOW"
 }
 
-# Quick animated intro banner (~0.7 second = 7 letters × 0.1 sec).
-# Convenience wrapper for one full cycle animation.
-show_banner_intro() {
-  show_banner_animated 1 0.1
-}
-
 # =============================================================================
-# Show banner on startup
+# Note: Banner display is handled by 99-main.sh with animated intro
 # =============================================================================
-clear
-show_banner

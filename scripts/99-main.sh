@@ -203,9 +203,26 @@ log "QEMU_CORES_OVERRIDE=$QEMU_CORES_OVERRIDE"
 log "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
 log "SSL_TYPE=${SSL_TYPE:-self-signed}"
 
-# Collect system info and display status
+# Collect system info with animated banner
 log "Step: collect_system_info"
+
+# Start animated banner in background
+BANNER_ANIMATION_PID=""
+{
+  show_banner_animated 60 0.1
+} &
+BANNER_ANIMATION_PID=$!
+
+# Run system checks silently
 collect_system_info
+
+# Stop animation and show static banner with system info
+kill "$BANNER_ANIMATION_PID" 2>/dev/null || true
+wait "$BANNER_ANIMATION_PID" 2>/dev/null || true
+printf '%s' "$ANSI_CURSOR_SHOW"
+clear
+show_banner
+
 log "Step: show_system_status"
 show_system_status
 log "Step: get_system_inputs"
