@@ -18,7 +18,7 @@ HEX_HETZNER="#d70000"
 HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 MENU_BOX_WIDTH=60
-VERSION="1.18.17-pr.21"
+VERSION="1.18.18-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1742,7 +1742,6 @@ back_btn="← Back"
 else
 back_btn="$CLR_GRAY← Back$CLR_RESET"
 fi
-_wiz_footer_main
 local selected
 selected=$(gum choose \
 "$hostname_line" \
@@ -1754,6 +1753,7 @@ selected=$(gum choose \
 --cursor "› " \
 --cursor.foreground "$HEX_ORANGE" \
 --selected.foreground "$HEX_ORANGE")
+_wiz_footer_main
 if [[ -z $selected ]];then
 if gum confirm "Quit installation?" --default=false \
 --prompt.foreground "$HEX_ORANGE" \
