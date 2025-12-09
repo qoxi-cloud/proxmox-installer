@@ -24,12 +24,22 @@ CLR_GRAY=$'\033[38;5;240m'
 CLR_HETZNER=$'\033[38;5;160m'
 CLR_RESET=$'\033[m'
 
+# Hex colors for gum (terminal UI toolkit)
+HEX_RED="#ff0000"
+HEX_CYAN="#00b1ff"
+HEX_YELLOW="#ffff00"
+HEX_ORANGE="#ff8700"
+HEX_GRAY="#585858"
+HEX_HETZNER="#d70000"
+HEX_GREEN="#00ff00"
+HEX_WHITE="#ffffff"
+
 # Menu box width for consistent UI rendering across all scripts
 # shellcheck disable=SC2034
 MENU_BOX_WIDTH=60
 
 # Version (MAJOR only - MINOR.PATCH added by CI from git tags/commits)
-VERSION="1.18.6"
+VERSION="1.18.7"
 
 # =============================================================================
 # Configuration constants
@@ -394,8 +404,7 @@ show_banner() {
     "${CLR_GRAY}   | |     | |   | (_) |${CLR_ORANGE} >  <${CLR_GRAY}  | | | | | || (_) |${CLR_ORANGE} >  <${CLR_RESET}" \
     "${CLR_GRAY}   |_|     |_|    \\___/ ${CLR_ORANGE}/_/\\_\\${CLR_GRAY} |_| |_| |_| \\___/ ${CLR_ORANGE}/_/\\_\\${CLR_RESET}" \
     "" \
-    "${CLR_HETZNER}               Hetzner ${CLR_GRAY}Automated Installer${CLR_RESET}" \
-    ""
+    "${CLR_HETZNER}               Hetzner ${CLR_GRAY}Automated Installer${CLR_RESET}"
 }
 
 # Displays animated banner with highlighted letter.
@@ -2424,19 +2433,32 @@ show_system_status() {
     no_drives=1
   fi
 
-  # Build system info rows
-  local sys_rows=""
+  # Build table data with colored status markers
+  # Format: ,,\n then Header,Header,Header\n then data rows
+  local table_data
+  table_data=",,
+Status,Item,Value
+"
+
+  # Helper to format status with color using gum style
+  format_status() {
+    local status="$1"
+    case "$status" in
+      ok) gum style --foreground "$HEX_CYAN" "[OK]" ;;
+      warn) gum style --foreground "$HEX_YELLOW" "[WARN]" ;;
+      error) gum style --foreground "$HEX_RED" "[ERROR]" ;;
+    esac
+  }
 
   # Helper to add row
   add_row() {
     local status="$1"
     local label="$2"
     local value="$3"
-    case "$status" in
-      ok) sys_rows+="[OK]|${label}|${value}"$'\n' ;;
-      warn) sys_rows+="[WARN]|${label}|${value}"$'\n' ;;
-      error) sys_rows+="[ERROR]|${label}|${value}"$'\n' ;;
-    esac
+    local status_text
+    status_text=$(format_status "$status")
+    table_data+="${status_text},${label},${value}
+"
   }
 
   add_row "ok" "Installer" "v${VERSION}"
@@ -2447,35 +2469,31 @@ show_system_status() {
   add_row "$PREFLIGHT_CPU_STATUS" "CPU" "$PREFLIGHT_CPU"
   add_row "$PREFLIGHT_KVM_STATUS" "KVM" "$PREFLIGHT_KVM"
 
-  # Remove trailing newline
-  sys_rows="${sys_rows%$'\n'}"
-
-  # Build storage rows
-  local storage_rows=""
+  # Add storage rows
   if [[ $no_drives -eq 1 ]]; then
-    storage_rows="[ERROR]|No drives detected!|"
+    local error_status
+    error_status=$(format_status "error")
+    table_data+="${error_status},No drives detected!,
+"
   else
     for i in "${!DRIVE_NAMES[@]}"; do
-      storage_rows+="[OK]|${DRIVE_NAMES[$i]}|${DRIVE_SIZES[$i]}  ${DRIVE_MODELS[$i]:0:25}"
-      if [[ $i -lt $((${#DRIVE_NAMES[@]} - 1)) ]]; then
-        storage_rows+=$'\n'
-      fi
+      local ok_status
+      ok_status=$(format_status "ok")
+      table_data+="${ok_status},${DRIVE_NAMES[$i]},${DRIVE_SIZES[$i]}  ${DRIVE_MODELS[$i]:0:25}
+"
     done
   fi
 
-  # Display with boxes and colorize
-  # Inner width = MENU_BOX_WIDTH - 4 (borders) - 2 (padding) = 54
-  local inner_width=$((MENU_BOX_WIDTH - 6))
-  {
-    echo "SYSTEM INFORMATION"
-    {
-      echo "$sys_rows"
-      echo "|--- Storage ---|"
-      echo "$storage_rows"
-    } | column -t -s '|' | while IFS= read -r line; do
-      printf "%-${inner_width}s\n" "$line"
-    done
-  } | boxes -d stone -p a1 -s $MENU_BOX_WIDTH | colorize_status
+  # Remove trailing newline
+  table_data="${table_data%$'\n'}"
+
+  # Display table using gum table
+  echo "$table_data" | gum table \
+    --print \
+    --border "none" \
+    --cell.foreground "$HEX_GRAY" \
+    --header.foreground "$HEX_ORANGE"
+
   echo ""
 
   # Determine if there are critical errors
@@ -2500,8 +2518,8 @@ show_system_status() {
     exit 1
   else
     # Allow user to continue or cancel
-    if ! gum confirm "Continue with installation?" \
-      --affirmative "Continue" \
+    if ! gum confirm "Start configuration?" \
+      --affirmative "Start" \
       --negative "Cancel" \
       --default=true \
       --prompt.foreground "#ff8700" \

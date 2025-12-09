@@ -9,8 +9,16 @@ CLR_ORANGE=$'\033[38;5;208m'
 CLR_GRAY=$'\033[38;5;240m'
 CLR_HETZNER=$'\033[38;5;160m'
 CLR_RESET=$'\033[m'
+HEX_RED="#ff0000"
+HEX_CYAN="#00b1ff"
+HEX_YELLOW="#ffff00"
+HEX_ORANGE="#ff8700"
+HEX_GRAY="#585858"
+HEX_HETZNER="#d70000"
+HEX_GREEN="#00ff00"
+HEX_WHITE="#ffffff"
 MENU_BOX_WIDTH=60
-VERSION="1.18.6"
+VERSION="1.18.7"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -223,8 +231,7 @@ printf '%s\n' \
 "$CLR_GRAY   | |     | |   | (_) |$CLR_ORANGE >  <$CLR_GRAY  | | | | | || (_) |$CLR_ORANGE >  <$CLR_RESET" \
 "$CLR_GRAY   |_|     |_|    \\___/ $CLR_ORANGE/_/\\_\\$CLR_GRAY |_| |_| |_| \\___/ $CLR_ORANGE/_/\\_\\$CLR_RESET" \
 "" \
-"$CLR_HETZNER               Hetzner ${CLR_GRAY}Automated Installer$CLR_RESET" \
-""
+"$CLR_HETZNER               Hetzner ${CLR_GRAY}Automated Installer$CLR_RESET"
 }
 _show_banner_frame(){
 local h="${1:--1}"
@@ -1457,16 +1464,26 @@ local no_drives=0
 if [[ $DRIVE_COUNT -eq 0 ]];then
 no_drives=1
 fi
-local sys_rows=""
+local table_data
+table_data=",,
+Status,Item,Value
+"
+format_status(){
+local status="$1"
+case "$status" in
+ok)gum style --foreground "$HEX_CYAN" "[OK]";;
+warn)gum style --foreground "$HEX_YELLOW" "[WARN]";;
+error)gum style --foreground "$HEX_RED" "[ERROR]"
+esac
+}
 add_row(){
 local status="$1"
 local label="$2"
 local value="$3"
-case "$status" in
-ok)sys_rows+="[OK]|$label|$value"$'\n';;
-warn)sys_rows+="[WARN]|$label|$value"$'\n';;
-error)sys_rows+="[ERROR]|$label|$value"$'\n'
-esac
+local status_text
+status_text=$(format_status "$status")
+table_data+="$status_text,$label,$value
+"
 }
 add_row "ok" "Installer" "v$VERSION"
 add_row "$PREFLIGHT_ROOT_STATUS" "Root Access" "$PREFLIGHT_ROOT"
@@ -1475,29 +1492,25 @@ add_row "$PREFLIGHT_DISK_STATUS" "Temp Space" "$PREFLIGHT_DISK"
 add_row "$PREFLIGHT_RAM_STATUS" "RAM" "$PREFLIGHT_RAM"
 add_row "$PREFLIGHT_CPU_STATUS" "CPU" "$PREFLIGHT_CPU"
 add_row "$PREFLIGHT_KVM_STATUS" "KVM" "$PREFLIGHT_KVM"
-sys_rows="${sys_rows%$'\n'}"
-local storage_rows=""
 if [[ $no_drives -eq 1 ]];then
-storage_rows="[ERROR]|No drives detected!|"
+local error_status
+error_status=$(format_status "error")
+table_data+="$error_status,No drives detected!,
+"
 else
 for i in "${!DRIVE_NAMES[@]}";do
-storage_rows+="[OK]|${DRIVE_NAMES[$i]}|${DRIVE_SIZES[$i]}  ${DRIVE_MODELS[$i]:0:25}"
-if [[ $i -lt $((${#DRIVE_NAMES[@]}-1)) ]];then
-storage_rows+=$'\n'
-fi
+local ok_status
+ok_status=$(format_status "ok")
+table_data+="$ok_status,${DRIVE_NAMES[$i]},${DRIVE_SIZES[$i]}  ${DRIVE_MODELS[$i]:0:25}
+"
 done
 fi
-local inner_width=$((MENU_BOX_WIDTH-6))
-{
-echo "SYSTEM INFORMATION"
-{
-echo "$sys_rows"
-echo "|--- Storage ---|"
-echo "$storage_rows"
-}|column -t -s '|'|while IFS= read -r line;do
-printf "%-${inner_width}s\n" "$line"
-done
-}|boxes -d stone -p a1 -s $MENU_BOX_WIDTH|colorize_status
+table_data="${table_data%$'\n'}"
+echo "$table_data"|gum table \
+--print \
+--border "none" \
+--cell.foreground "$HEX_GRAY" \
+--header.foreground "$HEX_ORANGE"
 echo ""
 local has_errors=false
 if [[ $PREFLIGHT_ERRORS -gt 0 || $no_drives -eq 1 ]];then
@@ -1516,8 +1529,8 @@ gum confirm "Exit installer?" \
 log "ERROR: Pre-flight checks failed"
 exit 1
 else
-if ! gum confirm "Continue with installation?" \
---affirmative "Continue" \
+if ! gum confirm "Start configuration?" \
+--affirmative "Start" \
 --negative "Cancel" \
 --default=true \
 --prompt.foreground "#ff8700" \
