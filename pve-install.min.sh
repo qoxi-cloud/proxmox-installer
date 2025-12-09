@@ -10,8 +10,7 @@ CLR_GRAY=$'\033[38;5;240m'
 CLR_HETZNER=$'\033[38;5;160m'
 CLR_RESET=$'\033[m'
 MENU_BOX_WIDTH=60
-SPINNER_CHARS=('○' '◔' '◑' '◕' '●' '◕' '◑' '◔')
-VERSION="1.18.4"
+VERSION="1.18.5"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -577,21 +576,19 @@ local done_message="${3:-$message}"
 local silent=false
 [[ ${3:-} == "--silent" || ${4:-} == "--silent" ]]&&silent=true
 [[ ${3:-} == "--silent" ]]&&done_message="$message"
-local i=0
-while kill -0 "$pid" 2>/dev/null;do
-printf "\r\e[K$CLR_CYAN%s %s$CLR_RESET" "${SPINNER_CHARS[i++%${#SPINNER_CHARS[@]}]}" "$message"
-sleep 0.2
-done
+gum spin --spinner meter --spinner.foreground "#ff8700" --title "$message" -- bash -c "
+    while kill -0 $pid 2>/dev/null; do
+      sleep 0.2
+    done
+  "
 wait "$pid" 2>/dev/null
 local exit_code=$?
 if [[ $exit_code -eq 0 ]];then
-if [[ $silent == true ]];then
-printf "\r\e[K"
-else
-printf "\r\e[K$CLR_CYAN✓$CLR_RESET %s\n" "$done_message"
+if [[ $silent != true ]];then
+printf "$CLR_CYAN✓$CLR_RESET %s\n" "$done_message"
 fi
 else
-printf "\r\e[K$CLR_RED✗$CLR_RESET %s\n" "$message"
+printf "$CLR_RED✗$CLR_RESET %s\n" "$message"
 fi
 return $exit_code
 }
@@ -601,22 +598,41 @@ local timeout="$2"
 local check_cmd="$3"
 local interval="${4:-5}"
 local done_message="${5:-$message}"
-local start_time
+local result_file
+result_file=$(mktemp)
+echo "running" >"$result_file"
+(local start_time
 start_time=$(date +%s)
-local i=0
 while true;do
 local elapsed=$(($(date +%s)-start_time))
 if eval "$check_cmd" 2>/dev/null;then
-printf "\r\e[K$CLR_CYAN✓$CLR_RESET %s\n" "$done_message"
-return 0
+echo "success" >"$result_file"
+exit 0
 fi
 if [ $elapsed -ge $timeout ];then
-printf "\r\e[K$CLR_RED✗$CLR_RESET %s timed out\n" "$message"
+echo "timeout" >"$result_file"
+exit 1
+fi
+sleep "$interval"
+done) \
+&
+local wait_pid=$!
+gum spin --spinner meter --spinner.foreground "#ff8700" --title "$message" -- bash -c "
+    while kill -0 $wait_pid 2>/dev/null; do
+      sleep 0.2
+    done
+  "
+wait "$wait_pid" 2>/dev/null
+local result
+result=$(cat "$result_file")
+rm -f "$result_file"
+if [[ $result == "success" ]];then
+printf "$CLR_CYAN✓$CLR_RESET %s\n" "$done_message"
+return 0
+else
+printf "$CLR_RED✗$CLR_RESET %s timed out\n" "$message"
 return 1
 fi
-printf "\r\e[K$CLR_CYAN%s %s$CLR_RESET" "${SPINNER_CHARS[i++%${#SPINNER_CHARS[@]}]}" "$message"
-sleep "$interval"
-done
 }
 show_timed_progress(){
 local message="$1"
