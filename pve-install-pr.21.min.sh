@@ -18,7 +18,7 @@ HEX_HETZNER="#d70000"
 HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 MENU_BOX_WIDTH=60
-VERSION="1.18.19-pr.21"
+VERSION="1.18.20-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1714,13 +1714,9 @@ _calculate_ipv6_prefix
 }
 WIZARD_CURRENT_STEP=1
 WIZARD_TOTAL_STEPS=1
-_wiz_footer_main(){
-echo ""
-echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] select  [${CLR_ORANGE}Q$CLR_GRAY] quit$CLR_RESET"
-}
 _wiz_footer_edit(){
-echo ""
 echo -e "$CLR_GRAY[${CLR_ORANGE}Enter$CLR_GRAY] confirm  [${CLR_ORANGE}Esc$CLR_GRAY] cancel$CLR_RESET"
+echo ""
 }
 _wizard_step_basic(){
 while true;do
@@ -1742,6 +1738,7 @@ back_btn="← Back"
 else
 back_btn="$CLR_GRAY← Back$CLR_RESET"
 fi
+local header_hint="[↑↓] navigate  [Enter] select  [Esc] quit"
 local selected
 selected=$(gum choose \
 "$hostname_line" \
@@ -1750,12 +1747,12 @@ selected=$(gum choose \
 "$timezone_line" \
 "" \
 "$back_btn           $next_btn" \
---header="" \
+--header="$header_hint" \
+--header.foreground "$HEX_GRAY" \
 --cursor "› " \
 --cursor.foreground "$HEX_ORANGE" \
 --selected.foreground "$HEX_WHITE" \
 --item.foreground "$HEX_WHITE")
-_wiz_footer_main
 if [[ -z $selected ]];then
 if gum confirm "Quit installation?" --default=false \
 --prompt.foreground "$HEX_ORANGE" \
@@ -1895,8 +1892,6 @@ _edit_timezone(){
 clear
 show_banner
 echo ""
-echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] select$CLR_RESET"
-echo ""
 local tz_options="Europe/Kyiv
 Europe/London
 Europe/Berlin
@@ -1907,7 +1902,8 @@ UTC
 Custom..."
 local selected
 selected=$(echo "$tz_options"|gum choose \
---header="" \
+--header="[↑↓] navigate  [Enter] select" \
+--header.foreground "$HEX_GRAY" \
 --cursor "› " \
 --cursor.foreground "$HEX_ORANGE" \
 --selected.foreground "$HEX_WHITE" \
