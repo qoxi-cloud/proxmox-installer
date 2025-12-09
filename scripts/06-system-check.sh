@@ -180,6 +180,7 @@ show_system_status() {
   # Format: ,,\n then Header,Header,Header\n then data rows
   local table_data
   table_data=",,
+Status,Item,Value
 "
 
   # Helper to format status with color using gum style
@@ -211,10 +212,6 @@ show_system_status() {
   add_row "$PREFLIGHT_CPU_STATUS" "CPU" "$PREFLIGHT_CPU"
   add_row "$PREFLIGHT_KVM_STATUS" "KVM" "$PREFLIGHT_KVM"
 
-  # Add storage section header
-  table_data+="--- Storage ---,,
-"
-
   # Add storage rows
   if [[ $no_drives -eq 1 ]]; then
     local error_status
@@ -232,12 +229,6 @@ show_system_status() {
 
   # Remove trailing newline
   table_data="${table_data%$'\n'}"
-
-  # Display title
-  gum style \
-    --foreground "$HEX_ORANGE" \
-    --bold \
-    "SYSTEM INFORMATION"
 
   # Display table using gum table
   echo "$table_data" | gum table \
