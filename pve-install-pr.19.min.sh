@@ -1457,18 +1457,18 @@ local no_drives=0
 if [[ $DRIVE_COUNT -eq 0 ]];then
 no_drives=1
 fi
-local table_data="${CLR_ORANGE}Check$CLR_RESET,${CLR_ORANGE}Item$CLR_RESET,${CLR_ORANGE}Status$CLR_RESET"
+local table_data="Check,Item,Status"
 add_row(){
 local status="$1"
 local label="$2"
 local value="$3"
 local status_text
 case "$status" in
-ok)status_text="$CLR_CYAN[OK]$CLR_RESET";;
-warn)status_text="$CLR_YELLOW[WARN]$CLR_RESET";;
-error)status_text="$CLR_RED[ERROR]$CLR_RESET"
+ok)status_text="[OK]";;
+warn)status_text="[WARN]";;
+error)status_text="[ERROR]"
 esac
-table_data+=$'\n'"$status_text,$CLR_GRAY$label$CLR_RESET,$CLR_GRAY$value$CLR_RESET"
+table_data+=$'\n'"$status_text,$label,$value"
 }
 add_row "ok" "Installer" "v$VERSION"
 add_row "$PREFLIGHT_ROOT_STATUS" "Root Access" "$PREFLIGHT_ROOT"
@@ -1478,15 +1478,16 @@ add_row "$PREFLIGHT_RAM_STATUS" "RAM" "$PREFLIGHT_RAM"
 add_row "$PREFLIGHT_CPU_STATUS" "CPU" "$PREFLIGHT_CPU"
 add_row "$PREFLIGHT_KVM_STATUS" "KVM" "$PREFLIGHT_KVM"
 if [[ $no_drives -eq 1 ]];then
-table_data+=$'\n'"$CLR_RED[ERROR]$CLR_RESET,${CLR_GRAY}Storage$CLR_RESET,${CLR_GRAY}No drives detected!$CLR_RESET"
+table_data+=$'\n'"[ERROR],Storage,No drives detected!"
 else
 for i in "${!DRIVE_NAMES[@]}";do
-table_data+=$'\n'"$CLR_CYAN[OK]$CLR_RESET,$CLR_GRAY${DRIVE_NAMES[$i]}$CLR_RESET,$CLR_GRAY${DRIVE_SIZES[$i]} ${DRIVE_MODELS[$i]:0:25}$CLR_RESET"
+table_data+=$'\n'"[OK],${DRIVE_NAMES[$i]},${DRIVE_SIZES[$i]} ${DRIVE_MODELS[$i]:0:25}"
 done
 fi
-gum style --foreground "#ff8700" --bold "SYSTEM INFORMATION"
-echo ""
-echo "$table_data"|gum table --print --border "none"
+echo "$table_data"|gum table --print \
+--border.foreground "#585858" \
+--cell.foreground "#888888" \
+--header.foreground "#ff8700"
 echo ""
 local has_errors=false
 if [[ $PREFLIGHT_ERRORS -gt 0 || $no_drives -eq 1 ]];then
