@@ -261,8 +261,8 @@ Status,Item,Value
     exit 1
   else
     # Allow user to continue or cancel
-    if ! gum confirm "Continue with installation?" \
-      --affirmative "Continue" \
+    if ! gum confirm "Start configuration?" \
+      --affirmative "Start" \
       --negative "Cancel" \
       --default=true \
       --prompt.foreground "#ff8700" \
