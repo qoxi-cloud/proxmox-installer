@@ -18,7 +18,7 @@ HEX_HETZNER="#d70000"
 HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 MENU_BOX_WIDTH=60
-VERSION="1.18.36-pr.21"
+VERSION="1.18.37-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1766,7 +1766,7 @@ fi
 _WIZ_FIELD_MAP=()
 local field_idx=0
 _add_section(){
-output+="\n$CLR_CYAN--- $1 ---$CLR_RESET\n"
+output+="$CLR_CYAN--- $1 ---$CLR_RESET\n"
 }
 _add_field(){
 local label="$1"
