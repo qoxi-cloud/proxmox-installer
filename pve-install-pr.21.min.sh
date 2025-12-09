@@ -18,7 +18,7 @@ HEX_HETZNER="#d70000"
 HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 MENU_BOX_WIDTH=60
-VERSION="1.18.23-pr.21"
+VERSION="1.18.24-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1781,7 +1781,11 @@ continue_style="$CLR_ORANGE"
 fi
 echo -e "  $back_style← Back$CLR_RESET           ${continue_style}Continue →$CLR_RESET"
 echo ""
-echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [$CLR_ORANGE←→$CLR_GRAY] back/continue  [${CLR_ORANGE}Enter$CLR_GRAY] select  [${CLR_ORANGE}Q$CLR_GRAY] quit$CLR_RESET"
+if [[ $nav_focus == "fields" ]];then
+echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] edit  [${CLR_ORANGE}Q$CLR_GRAY] quit$CLR_RESET"
+else
+echo -e "$CLR_GRAY[$CLR_ORANGE←→$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] select  [${CLR_ORANGE}Q$CLR_GRAY] quit$CLR_RESET"
+fi
 }
 _wizard_step_basic(){
 local selection=0
