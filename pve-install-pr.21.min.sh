@@ -18,7 +18,7 @@ HEX_HETZNER="#d70000"
 HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 MENU_BOX_WIDTH=60
-VERSION="1.18.13-pr.21"
+VERSION="1.18.14-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1858,7 +1858,6 @@ CONFIG_ITEMS+=("SSH|SSH Key|$ssh_display|_gum_edit_ssh")
 _build_interactive_menu(){
 _build_config_items
 local prev_section=""
-local section_first=true
 for item in "${CONFIG_ITEMS[@]}";do
 local section="${item%%|*}"
 local rest="${item#*|}"
@@ -1867,23 +1866,19 @@ rest="${rest#*|}"
 local value="${rest%%|*}"
 local edit_fn="${rest#*|}"
 if [[ $section != "$prev_section" ]];then
-section_first=true
+printf "$CLR_CYAN    --- %s ---$CLR_RESET\n" "$section"
 prev_section="$section"
 fi
-local display_line=""
-if [[ $section_first == true ]];then
-display_line=$(printf "$CLR_CYAN%-12s$CLR_RESET %-15s %s" "[$section]" "$label:" "$value")
-section_first=false
-else
-display_line=$(printf "%-12s %-15s %s" "" "$label:" "$value")
-fi
+local display_line
 if [[ -z $edit_fn ]];then
-display_line="$CLR_GRAY$display_line$CLR_RESET"
+display_line=$(printf "$CLR_GRAY    %-20s %s$CLR_RESET" "$label" "$value")
+else
+display_line=$(printf "    %-20s %s" "$label" "$value")
 fi
 echo "$display_line"
 done
 echo ""
-echo "$CLR_GREEN>>> Start Installation <<<$CLR_RESET"
+echo "$CLR_GREEN    >>> Start Installation <<<$CLR_RESET"
 }
 _strip_ansi(){
 echo "$1"|sed 's/\x1b\[[0-9;]*m//g'
@@ -1891,8 +1886,11 @@ echo "$1"|sed 's/\x1b\[[0-9;]*m//g'
 _get_edit_function_from_line(){
 local selected_line="$1"
 selected_line=$(_strip_ansi "$selected_line")
+if [[ $selected_line == *"---"* ]];then
+return
+fi
 local selected_label
-selected_label=$(echo "$selected_line"|sed 's/^\[[^]]*\]//'|sed 's/^[[:space:]]*//'|cut -d':' -f1)
+selected_label=$(echo "$selected_line"|sed 's/^[[:space:]]*//'|awk '{print $1}')
 for item in "${CONFIG_ITEMS[@]}";do
 local rest="${item#*|}"
 local label="${rest%%|*}"
@@ -2405,7 +2403,7 @@ selected=$(echo "$menu_content"|gum choose \
 --height 35)
 local selected_clean
 selected_clean=$(_strip_ansi "$selected")
-if [[ -z $selected_clean || $selected_clean =~ ^[[:space:]]*$ ]];then
+if [[ -z $selected_clean || $selected_clean =~ ^[[:space:]]*$ || $selected_clean == *"---"* ]];then
 continue
 fi
 if [[ $selected_clean == *"Start Installation"* ]];then
