@@ -18,7 +18,7 @@ HEX_HETZNER="#d70000"
 HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 MENU_BOX_WIDTH=60
-VERSION="1.18.22-pr.21"
+VERSION="1.18.23-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1734,12 +1734,21 @@ else
 WIZ_KEY="$key"
 fi
 }
+_WIZ_INITIAL_RENDER_DONE=""
+_WIZ_MENU_LINES=0
 _wiz_render_menu(){
 local selection="$1"
 local nav_focus="$2"
+if [[ -z $_WIZ_INITIAL_RENDER_DONE ]];then
 clear
 show_banner
 echo ""
+_WIZ_INITIAL_RENDER_DONE=1
+printf '\033[s'
+else
+printf '\033[u'
+printf '\033[J'
+fi
 gum style --foreground "$HEX_CYAN" --bold "Basic Settings"
 echo ""
 local pass_display
@@ -1846,6 +1855,7 @@ case $selection in
 2)_edit_password;;
 3)_edit_timezone
 esac
+_WIZ_INITIAL_RENDER_DONE=""
 fi
 ;;
 quit|esc)if
@@ -1855,6 +1865,7 @@ gum confirm "Quit installation?" --default=false \
 then
 exit 0
 fi
+_WIZ_INITIAL_RENDER_DONE=""
 esac
 done
 }
