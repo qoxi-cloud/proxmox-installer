@@ -42,7 +42,11 @@ _wiz_read_key() {
 # UI rendering helpers
 # =============================================================================
 
-# Render the main menu with current selection highlighted
+# Track if initial render has been done
+_WIZ_INITIAL_RENDER_DONE=""
+_WIZ_MENU_LINES=0
+
+# Render the main menu with current selection highlighted (flicker-free)
 # Parameters:
 #   $1 - Current selection index (0-based)
 #   $2 - Nav button focus: "fields" or "back" or "continue"
@@ -50,9 +54,20 @@ _wiz_render_menu() {
   local selection="$1"
   local nav_focus="$2"
 
-  clear
-  show_banner
-  echo ""
+  # First render: clear screen and show banner
+  if [[ -z $_WIZ_INITIAL_RENDER_DONE ]]; then
+    clear
+    show_banner
+    echo ""
+    _WIZ_INITIAL_RENDER_DONE=1
+    # Save cursor position after banner
+    printf '\033[s'
+  else
+    # Subsequent renders: restore cursor position and clear menu area
+    printf '\033[u'
+    # Clear from cursor to end of screen
+    printf '\033[J'
+  fi
 
   # Step title
   gum style --foreground "$HEX_CYAN" --bold "Basic Settings"
@@ -182,6 +197,8 @@ _wizard_step_basic() {
             2) _edit_password ;;
             3) _edit_timezone ;;
           esac
+          # Reset render state to redraw banner after edit
+          _WIZ_INITIAL_RENDER_DONE=""
         fi
         ;;
       quit | esc)
@@ -190,6 +207,8 @@ _wizard_step_basic() {
           --selected.background "$HEX_ORANGE"; then
           exit 0
         fi
+        # Reset render state to redraw after dialog
+        _WIZ_INITIAL_RENDER_DONE=""
         ;;
     esac
   done
