@@ -18,7 +18,7 @@ HEX_HETZNER="#d70000"
 HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 MENU_BOX_WIDTH=60
-VERSION="1.18.11-pr.21"
+VERSION="1.18.13-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1855,30 +1855,10 @@ ssh_display="Not configured"
 fi
 CONFIG_ITEMS+=("SSH|SSH Key|$ssh_display|_gum_edit_ssh")
 }
-_display_config_table(){
+_build_interactive_menu(){
 _build_config_items
 local prev_section=""
-for item in "${CONFIG_ITEMS[@]}";do
-local section="${item%%|*}"
-local rest="${item#*|}"
-local label="${rest%%|*}"
-rest="${rest#*|}"
-local value="${rest%%|*}"
-if [[ $section != "$prev_section" ]];then
-if [[ -n $prev_section ]];then
-echo ""
-fi
-gum style --foreground "$HEX_CYAN" --bold -- "--- $section ---"
-prev_section="$section"
-fi
-printf "  %s  %s\n" \
-"$(gum style --foreground "$HEX_GRAY" -- "$label:")" \
-"$(gum style --foreground "$HEX_WHITE" -- "$value")"
-done
-}
-_build_menu_options(){
-_build_config_items
-local prev_section=""
+local section_first=true
 for item in "${CONFIG_ITEMS[@]}";do
 local section="${item%%|*}"
 local rest="${item#*|}"
@@ -1886,17 +1866,33 @@ local label="${rest%%|*}"
 rest="${rest#*|}"
 local value="${rest%%|*}"
 local edit_fn="${rest#*|}"
-if [[ -n $edit_fn ]];then
 if [[ $section != "$prev_section" ]];then
+section_first=true
 prev_section="$section"
 fi
-echo "$label|$value"
+local display_line=""
+if [[ $section_first == true ]];then
+display_line=$(printf "$CLR_CYAN%-12s$CLR_RESET %-15s %s" "[$section]" "$label:" "$value")
+section_first=false
+else
+display_line=$(printf "%-12s %-15s %s" "" "$label:" "$value")
 fi
+if [[ -z $edit_fn ]];then
+display_line="$CLR_GRAY$display_line$CLR_RESET"
+fi
+echo "$display_line"
 done
-echo "Done|Start installation"
+echo ""
+echo "$CLR_GREEN>>> Start Installation <<<$CLR_RESET"
 }
-_get_edit_function(){
-local selected_label="$1"
+_strip_ansi(){
+echo "$1"|sed 's/\x1b\[[0-9;]*m//g'
+}
+_get_edit_function_from_line(){
+local selected_line="$1"
+selected_line=$(_strip_ansi "$selected_line")
+local selected_label
+selected_label=$(echo "$selected_line"|sed 's/^\[[^]]*\]//'|sed 's/^[[:space:]]*//'|cut -d':' -f1)
 for item in "${CONFIG_ITEMS[@]}";do
 local rest="${item#*|}"
 local label="${rest%%|*}"
@@ -2396,31 +2392,32 @@ while true;do
 clear
 show_banner
 echo ""
-gum style --foreground "$HEX_ORANGE" --bold "Configuration"
+gum style --foreground "$HEX_ORANGE" --bold -- "Configuration"
 echo ""
-_display_config_table
-echo ""
-echo ""
-local menu_options
-menu_options=$(_build_menu_options)
+local menu_content
+menu_content=$(_build_interactive_menu)
 local selected
-selected=$(echo "$menu_options"|gum choose \
+selected=$(echo "$menu_content"|gum choose \
+--cursor "› " \
 --cursor.foreground "$HEX_ORANGE" \
---selected.foreground "$HEX_ORANGE" \
---header "Select setting to edit (use arrows, Enter to select):" \
+--selected.foreground "$HEX_WHITE" \
 --header.foreground "$HEX_GRAY" \
---height 20)
-local selected_label="${selected%%|*}"
-if [[ $selected_label == "Done" ]];then
+--height 35)
+local selected_clean
+selected_clean=$(_strip_ansi "$selected")
+if [[ -z $selected_clean || $selected_clean =~ ^[[:space:]]*$ ]];then
+continue
+fi
+if [[ $selected_clean == *"Start Installation"* ]];then
 if [[ -z $SSH_PUBLIC_KEY ]];then
-gum style --foreground "$HEX_RED" "SSH key is required for secure access!"
+gum style --foreground "$HEX_RED" -- "SSH key is required for secure access!"
 sleep 2
 continue
 fi
 return 0
 fi
 local edit_fn
-edit_fn=$(_get_edit_function "$selected_label")
+edit_fn=$(_get_edit_function_from_line "$selected")
 if [[ -n $edit_fn ]];then
 clear
 show_banner
