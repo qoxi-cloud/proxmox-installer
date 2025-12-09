@@ -18,7 +18,7 @@ HEX_HETZNER="#d70000"
 HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 MENU_BOX_WIDTH=60
-VERSION="1.18.15-pr.21"
+VERSION="1.18.16-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1712,45 +1712,58 @@ _get_mac_and_ipv6
 _validate_network_config "$max_attempts"
 _calculate_ipv6_prefix
 }
-WIZARD_STEP=1
+WIZARD_CURRENT_STEP=1
 WIZARD_TOTAL_STEPS=1
+_wiz_footer_main(){
+echo ""
+echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] select  [${CLR_ORANGE}Q$CLR_GRAY] quit$CLR_RESET"
+}
+_wiz_footer_edit(){
+echo ""
+echo -e "$CLR_GRAY[${CLR_ORANGE}Enter$CLR_GRAY] confirm  [${CLR_ORANGE}Esc$CLR_GRAY] cancel$CLR_RESET"
+}
 _wizard_step_basic(){
-local step_valid=false
-while [[ $step_valid == false ]];do
+while true;do
 clear
 show_banner
 echo ""
 gum style --foreground "$HEX_CYAN" --bold "Basic Settings"
 echo ""
 local pass_display
-pass_display=$([[ $PASSWORD_GENERATED == "yes" ]]&&echo "auto-generated"||echo "********")
-echo "  Hostname:    $PVE_HOSTNAME.$DOMAIN_SUFFIX"
-echo "  Email:       $EMAIL"
-echo "  Password:    $pass_display"
-echo "  Timezone:    $TIMEZONE"
-echo ""
-local action
-action=$(gum choose \
-"Edit Hostname" \
-"Edit Email" \
-"Edit Password" \
-"Edit Timezone" \
-"Continue →" \
+pass_display=$([[ $PASSWORD_GENERATED == "yes" ]]&&echo "(auto-generated)"||echo "********")
+local hostname_line="Hostname         $PVE_HOSTNAME.$DOMAIN_SUFFIX"
+local email_line="Email            $EMAIL"
+local password_line="Password         $pass_display"
+local timezone_line="Timezone         $TIMEZONE"
+local back_btn
+local next_btn="Continue →"
+if [[ $WIZARD_CURRENT_STEP -gt 1 ]];then
+back_btn="← Back"
+else
+back_btn="$CLR_GRAY← Back$CLR_RESET"
+fi
+_wiz_footer_main
+local selected
+selected=$(gum choose \
+"$hostname_line" \
+"$email_line" \
+"$password_line" \
+"$timezone_line" \
+"" \
+"$back_btn           $next_btn" \
 --cursor "› " \
 --cursor.foreground "$HEX_ORANGE" \
 --selected.foreground "$HEX_ORANGE")
-case "$action" in
-"Edit Hostname")_wizard_edit_hostname
-;;
-"Edit Email")_wizard_edit_email
-;;
-"Edit Password")_wizard_edit_password
-;;
-"Edit Timezone")_wizard_edit_timezone
-;;
-"Continue →")if
-[[ -z $PVE_HOSTNAME ]]
-then
+if [[ -z $selected ]];then
+if gum confirm "Quit installation?" --default=false \
+--prompt.foreground "$HEX_ORANGE" \
+--selected.background "$HEX_ORANGE";then
+exit 0
+fi
+continue
+fi
+if [[ $selected == *"Continue →"* ]];then
+if [[ -z $PVE_HOSTNAME ]];then
 gum style --foreground "$HEX_RED" "Hostname is required!"
 sleep 1
 continue
@@ -1760,35 +1773,58 @@ gum style --foreground "$HEX_RED" "Valid email is required!"
 sleep 1
 continue
 fi
-step_valid=true
+break
+fi
+if [[ $selected == *"← Back"* && $WIZARD_CURRENT_STEP -gt 1 ]];then
+return 1
+fi
+if [[ -z $selected || $selected =~ ^[[:space:]]*$ ]];then
+continue
+fi
+case "$selected" in
+"$hostname_line")_edit_hostname
+;;
+"$email_line")_edit_email
+;;
+"$password_line")_edit_password
+;;
+"$timezone_line")_edit_timezone
 esac
 done
 }
-_wizard_edit_hostname(){
+_edit_hostname(){
+clear
+show_banner
 echo ""
+_wiz_footer_edit
 local new_hostname
 new_hostname=$(gum input \
---placeholder "Enter hostname (e.g., pve, proxmox)" \
+--placeholder "e.g., pve, proxmox, node1" \
 --value "$PVE_HOSTNAME" \
 --prompt "Hostname: " \
---prompt.foreground "$HEX_ORANGE" \
+--prompt.foreground "$HEX_CYAN" \
 --cursor.foreground "$HEX_ORANGE" \
 --width 40)
 if [[ -n $new_hostname ]];then
 if validate_hostname "$new_hostname";then
 PVE_HOSTNAME="$new_hostname"
 else
+echo ""
 gum style --foreground "$HEX_RED" "Invalid hostname format"
 sleep 1
 return
 fi
 fi
+clear
+show_banner
+echo ""
+_wiz_footer_edit
 local new_domain
 new_domain=$(gum input \
---placeholder "Enter domain (e.g., local, example.com)" \
+--placeholder "e.g., local, example.com" \
 --value "$DOMAIN_SUFFIX" \
 --prompt "Domain: " \
---prompt.foreground "$HEX_ORANGE" \
+--prompt.foreground "$HEX_CYAN" \
 --cursor.foreground "$HEX_ORANGE" \
 --width 40)
 if [[ -n $new_domain ]];then
@@ -1796,44 +1832,55 @@ DOMAIN_SUFFIX="$new_domain"
 fi
 FQDN="$PVE_HOSTNAME.$DOMAIN_SUFFIX"
 }
-_wizard_edit_email(){
+_edit_email(){
+clear
+show_banner
 echo ""
+_wiz_footer_edit
 local new_email
 new_email=$(gum input \
---placeholder "Enter email address" \
+--placeholder "admin@example.com" \
 --value "$EMAIL" \
 --prompt "Email: " \
---prompt.foreground "$HEX_ORANGE" \
+--prompt.foreground "$HEX_CYAN" \
 --cursor.foreground "$HEX_ORANGE" \
 --width 50)
 if [[ -n $new_email ]];then
 if validate_email "$new_email";then
 EMAIL="$new_email"
 else
+echo ""
 gum style --foreground "$HEX_RED" "Invalid email format"
 sleep 1
 fi
 fi
 }
-_wizard_edit_password(){
+_edit_password(){
+clear
+show_banner
 echo ""
+gum style --foreground "$HEX_GRAY" "Leave empty to auto-generate a secure password"
+echo ""
+_wiz_footer_edit
 local new_password
 new_password=$(gum input \
 --password \
---placeholder "Enter password (empty to auto-generate)" \
+--placeholder "Enter password or leave empty" \
 --prompt "Password: " \
---prompt.foreground "$HEX_ORANGE" \
+--prompt.foreground "$HEX_CYAN" \
 --cursor.foreground "$HEX_ORANGE" \
 --width 40)
 if [[ -z $new_password ]];then
 NEW_ROOT_PASSWORD=$(generate_password "$DEFAULT_PASSWORD_LENGTH")
 PASSWORD_GENERATED="yes"
-gum style --foreground "$HEX_GREEN" "Password auto-generated"
+echo ""
+gum style --foreground "$HEX_GREEN" "✓ Password auto-generated"
 sleep 1
 else
 local password_error
 password_error=$(get_password_error "$new_password")
 if [[ -n $password_error ]];then
+echo ""
 gum style --foreground "$HEX_RED" "$password_error"
 sleep 2
 else
@@ -1842,7 +1889,11 @@ PASSWORD_GENERATED="no"
 fi
 fi
 }
-_wizard_edit_timezone(){
+_edit_timezone(){
+clear
+show_banner
+echo ""
+echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] select$CLR_RESET"
 echo ""
 local tz_options="Europe/Kyiv
 Europe/London
@@ -1856,21 +1907,25 @@ local selected
 selected=$(echo "$tz_options"|gum choose \
 --cursor "› " \
 --cursor.foreground "$HEX_ORANGE" \
---selected.foreground "$HEX_ORANGE" \
---header "Select timezone:")
+--selected.foreground "$HEX_ORANGE")
 if [[ $selected == "Custom..." ]];then
+clear
+show_banner
+echo ""
+_wiz_footer_edit
 local custom_tz
 custom_tz=$(gum input \
---placeholder "Enter timezone (e.g., Europe/Paris)" \
+--placeholder "e.g., Europe/Paris, Asia/Singapore" \
 --value "$TIMEZONE" \
 --prompt "Timezone: " \
---prompt.foreground "$HEX_ORANGE" \
+--prompt.foreground "$HEX_CYAN" \
 --cursor.foreground "$HEX_ORANGE" \
 --width 40)
 if [[ -n $custom_tz ]];then
 if validate_timezone "$custom_tz";then
 TIMEZONE="$custom_tz"
 else
+echo ""
 gum style --foreground "$HEX_RED" "Invalid timezone"
 sleep 1
 fi
