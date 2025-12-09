@@ -220,14 +220,16 @@ _display_config_table() {
       if [[ -n $prev_section ]]; then
         echo "" # Empty line between sections
       fi
-      gum style --foreground "$HEX_CYAN" --bold "--- ${section} ---"
+      # Use -- to separate flags from text (--- looks like a flag)
+      gum style --foreground "$HEX_CYAN" --bold -- "--- ${section} ---"
       prev_section="$section"
     fi
 
     # Print setting row with gray label and white value
+    # Use -- to ensure values starting with - are not interpreted as flags
     printf "  %s  %s\n" \
-      "$(gum style --foreground "$HEX_GRAY" "${label}:")" \
-      "$(gum style --foreground "$HEX_WHITE" "$value")"
+      "$(gum style --foreground "$HEX_GRAY" -- "${label}:")" \
+      "$(gum style --foreground "$HEX_WHITE" -- "$value")"
   done
 }
 
