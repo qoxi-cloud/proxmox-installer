@@ -1457,7 +1457,7 @@ local no_drives=0
 if [[ $DRIVE_COUNT -eq 0 ]];then
 no_drives=1
 fi
-local rows=""
+local rows="Status,Component,Info\n"
 add_row(){
 local status="$1"
 local label="$2"
@@ -1484,7 +1484,7 @@ for i in "${!DRIVE_NAMES[@]}";do
 rows+="[OK],${DRIVE_NAMES[$i]},${DRIVE_SIZES[$i]} ${DRIVE_MODELS[$i]:0:25}"$'\n'
 done
 fi
-printf "Status,Component,Info\n%s" "$rows"|gum table --print \
+printf ",,\n%s" "$rows"|gum table --print \
 --border "none" \
 --cell.foreground "#888888" \
 --header.foreground "#ff8700"
