@@ -93,7 +93,7 @@ _wiz_render_menu() {
 
   # Helper to add section header
   _add_section() {
-    output+="\n${CLR_CYAN}--- $1 ---${CLR_RESET}\n"
+    output+="${CLR_CYAN}--- $1 ---${CLR_RESET}\n"
   }
 
   # Helper to add field
