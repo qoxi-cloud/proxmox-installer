@@ -18,7 +18,7 @@ HEX_HETZNER="#d70000"
 HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 MENU_BOX_WIDTH=60
-VERSION="1.18.30-pr.21"
+VERSION="1.18.31-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1735,6 +1735,7 @@ fi
 _wiz_hide_cursor(){ printf '\033[?25l';}
 _wiz_show_cursor(){ printf '\033[?25h';}
 _WIZ_INITIAL_RENDER_DONE=""
+_WIZ_MENU_START_ROW=0
 _WIZ_FIELD_COUNT=0
 _WIZ_FIELD_MAP=()
 _wiz_render_menu(){
@@ -1745,9 +1746,9 @@ clear
 show_banner
 echo ""
 _WIZ_INITIAL_RENDER_DONE=1
-printf '\033[s'
+_WIZ_MENU_START_ROW=$(($(show_banner 2>/dev/null|wc -l)+2))
 else
-printf '\033[u\033[J'
+printf '\033[%d;1H\033[J' "$_WIZ_MENU_START_ROW"
 fi
 local pass_display
 pass_display=$([[ $PASSWORD_GENERATED == "yes" ]]&&echo "(auto-generated)"||echo "********")
