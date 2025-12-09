@@ -18,7 +18,7 @@ HEX_HETZNER="#d70000"
 HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 MENU_BOX_WIDTH=60
-VERSION="1.18.18-pr.21"
+VERSION="1.18.19-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1751,6 +1751,7 @@ selected=$(gum choose \
 "$timezone_line" \
 "" \
 "$nav_line" \
+--no-show-help \
 --cursor "› " \
 --cursor.foreground "$HEX_ORANGE" \
 --selected.foreground "$HEX_WHITE" \
@@ -1908,6 +1909,7 @@ UTC
 Custom..."
 local selected
 selected=$(echo "$tz_options"|gum choose \
+--no-show-help \
 --cursor "› " \
 --cursor.foreground "$HEX_ORANGE" \
 --selected.foreground "$HEX_WHITE" \
