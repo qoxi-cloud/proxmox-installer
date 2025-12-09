@@ -1461,15 +1461,16 @@ local clr_green=$'\033[32m'
 local clr_yellow=$'\033[33m'
 local clr_red=$'\033[31m'
 local clr_reset=$'\033[0m'
-local table_data="Status,Item,Value"
+local table_data=""
 add_row(){
 local status="$1"
 local label="$2"
 local value="$3"
+[[ -n $table_data ]]&&table_data+=$'\n'
 case "$status" in
-ok)table_data+=$'\n'"$clr_green[OK]$clr_reset,$label,$value";;
-warn)table_data+=$'\n'"$clr_yellow[WARN]$clr_reset,$label,$value";;
-error)table_data+=$'\n'"$clr_red[ERROR]$clr_reset,$label,$value"
+ok)table_data+="$clr_green[OK]$clr_reset,$label,$value";;
+warn)table_data+="$clr_yellow[WARN]$clr_reset,$label,$value";;
+error)table_data+="$clr_red[ERROR]$clr_reset,$label,$value"
 esac
 }
 add_row "ok" "Installer" "v$VERSION"
@@ -1489,9 +1490,8 @@ fi
 gum style --foreground "#ff8700" --bold "SYSTEM INFORMATION"
 echo ""
 echo "$table_data"|gum table --print \
---border.foreground "#585858" \
---cell.foreground "#ffffff" \
---header.foreground "#ff8700"
+--border "none" \
+--cell.foreground "#ffffff"
 echo ""
 local has_errors=false
 if [[ $PREFLIGHT_ERRORS -gt 0 || $no_drives -eq 1 ]];then
