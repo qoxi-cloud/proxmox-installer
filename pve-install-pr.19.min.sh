@@ -1484,7 +1484,7 @@ done
 fi
 gum style --foreground "#ff8700" --bold "SYSTEM INFORMATION"
 echo ""
-echo "$table_data"|gum table \
+echo "$table_data"|gum table --print \
 --border.foreground "#585858" \
 --cell.foreground "#ffffff" \
 --header.foreground "#ff8700"
