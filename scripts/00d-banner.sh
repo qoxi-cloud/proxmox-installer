@@ -23,8 +23,7 @@ show_banner() {
     "${CLR_GRAY}   | |     | |   | (_) |${CLR_ORANGE} >  <${CLR_GRAY}  | | | | | || (_) |${CLR_ORANGE} >  <${CLR_RESET}" \
     "${CLR_GRAY}   |_|     |_|    \\___/ ${CLR_ORANGE}/_/\\_\\${CLR_GRAY} |_| |_| |_| \\___/ ${CLR_ORANGE}/_/\\_\\${CLR_RESET}" \
     "" \
-    "${CLR_HETZNER}               Hetzner ${CLR_GRAY}Automated Installer${CLR_RESET}" \
-    ""
+    "${CLR_HETZNER}               Hetzner ${CLR_GRAY}Automated Installer${CLR_RESET}"
 }
 
 # Displays animated banner with highlighted letter.
