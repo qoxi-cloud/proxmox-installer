@@ -10,7 +10,7 @@ CLR_GRAY=$'\033[38;5;240m'
 CLR_HETZNER=$'\033[38;5;160m'
 CLR_RESET=$'\033[m'
 MENU_BOX_WIDTH=60
-VERSION="1.18.6-pr.17"
+VERSION="1.18.5-pr.17"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/gum-integration}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1499,34 +1499,13 @@ printf "%-${inner_width}s\n" "$line"
 done
 }|boxes -d stone -p a1 -s $MENU_BOX_WIDTH|colorize_status
 echo ""
-local has_errors=false
-if [[ $PREFLIGHT_ERRORS -gt 0 || $no_drives -eq 1 ]];then
-has_errors=true
-fi
-if [[ $has_errors == true ]];then
-print_error "System requirements not met. Please fix the issues above."
-echo ""
-gum confirm "Exit installer?" \
---affirmative "Exit" \
---negative "" \
---default=true \
---prompt.foreground "#ff8700" \
---selected.background "#ff8700" \
---unselected.foreground "#585858"||true
-log "ERROR: Pre-flight checks failed"
+if [[ $PREFLIGHT_ERRORS -gt 0 ]];then
+log "ERROR: Pre-flight checks failed with $PREFLIGHT_ERRORS error(s)"
 exit 1
-else
-if ! gum confirm "Continue with installation?" \
---affirmative "Continue" \
---negative "Cancel" \
---default=true \
---prompt.foreground "#ff8700" \
---selected.background "#ff8700" \
---unselected.foreground "#585858";then
-log "INFO: User cancelled installation"
-print_info "Installation cancelled by user"
-exit 0
 fi
+if [[ $no_drives -eq 1 ]];then
+log "ERROR: No drives detected"
+exit 1
 fi
 }
 detect_network_interface(){
