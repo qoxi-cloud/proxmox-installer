@@ -18,7 +18,7 @@ HEX_HETZNER="#d70000"
 HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 MENU_BOX_WIDTH=60
-VERSION="1.18.26-pr.21"
+VERSION="1.18.27-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1732,6 +1732,8 @@ else
 WIZ_KEY="$key"
 fi
 }
+_wiz_hide_cursor(){ printf '\033[?25l';}
+_wiz_show_cursor(){ printf '\033[?25h';}
 _WIZ_INITIAL_RENDER_DONE=""
 _wiz_render_menu(){
 local selection="$1"
@@ -1784,21 +1786,23 @@ then
 ((selection++))
 fi
 ;;
-enter)case $selection in
+enter)_wiz_show_cursor
+case $selection in
 0)_edit_hostname;;
 1)_edit_email;;
 2)_edit_password;;
 3)_edit_timezone
 esac
+_wiz_hide_cursor
 _WIZ_INITIAL_RENDER_DONE=""
 ;;
-quit|esc)if
-gum confirm "Quit installation?" --default=false \
+quit|esc)_wiz_show_cursor
+if gum confirm "Quit installation?" --default=false \
 --prompt.foreground "$HEX_ORANGE" \
---selected.background "$HEX_ORANGE"
-then
+--selected.background "$HEX_ORANGE";then
 exit 0
 fi
+_wiz_hide_cursor
 _WIZ_INITIAL_RENDER_DONE=""
 esac
 done
@@ -1995,6 +1999,8 @@ show_gum_config_editor(){
 detect_network_interface >/dev/null 2>&1
 collect_network_info >/dev/null 2>&1
 _init_default_config
+_wiz_hide_cursor
+trap '_wiz_show_cursor' EXIT
 _wizard_main
 }
 prepare_packages(){
