@@ -18,7 +18,7 @@ HEX_HETZNER="#d70000"
 HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 MENU_BOX_WIDTH=60
-VERSION="1.18.9-pr.21"
+VERSION="1.18.10-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1712,1155 +1712,54 @@ _get_mac_and_ipv6
 _validate_network_config "$max_attempts"
 _calculate_ipv6_prefix
 }
-get_inputs_interactive(){
-print_warning "Use the predictable name (enp*, eno*) for bare metal, not eth0"
-local iface_prompt="Interface name (options: $AVAILABLE_ALTNAMES): "
-read -r -e -p "$iface_prompt" -i "$INTERFACE_NAME" INTERFACE_NAME
-printf "\033[4A\033[J"
-print_success "Interface:" "$INTERFACE_NAME"
-if [[ -n $PVE_HOSTNAME ]];then
-print_success "Hostname:" "$PVE_HOSTNAME (from env)"
-else
-prompt_with_validation \
-"Enter your hostname (e.g., pve, proxmox): " \
-"pve" \
-"validate_hostname" \
-"Invalid hostname. Use only letters, numbers, and hyphens (1-63 chars)." \
-"PVE_HOSTNAME" \
-"Hostname: "
-fi
-if [[ -n $DOMAIN_SUFFIX ]];then
-print_success "Domain:" "$DOMAIN_SUFFIX (from env)"
-else
-local domain_prompt="Enter domain suffix: "
-read -r -e -p "$domain_prompt" -i "local" DOMAIN_SUFFIX
-printf "\033[A\033[2K"
-print_success "Domain:" "$DOMAIN_SUFFIX"
-fi
-if [[ -n $EMAIL ]];then
-print_success "Email:" "$EMAIL (from env)"
-else
-prompt_with_validation \
-"Enter your email address: " \
-"admin@qoxi.cloud" \
-"validate_email" \
-"Invalid email address format." \
-"EMAIL" \
-"Email: "
-fi
-if [[ -n $NEW_ROOT_PASSWORD ]];then
-if ! validate_password_with_error "$NEW_ROOT_PASSWORD";then
-exit 1
-fi
-print_success "Password:" "******** (from env)"
-else
-echo -n "Enter root password (or press Enter to auto-generate): "
-local input_password
-local password_error
-input_password=$(read_password "")
-printf "\033[A\033[A\r\033[K"
-if [[ -z $input_password ]];then
+declare -a CONFIG_ITEMS=()
+_init_default_config(){
+[[ -z $PVE_HOSTNAME ]]&&PVE_HOSTNAME="$DEFAULT_HOSTNAME"
+[[ -z $DOMAIN_SUFFIX ]]&&DOMAIN_SUFFIX="$DEFAULT_DOMAIN"
+[[ -z $EMAIL ]]&&EMAIL="$DEFAULT_EMAIL"
+[[ -z $TIMEZONE ]]&&TIMEZONE="$DEFAULT_TIMEZONE"
+if [[ -z $NEW_ROOT_PASSWORD ]];then
 NEW_ROOT_PASSWORD=$(generate_password "$DEFAULT_PASSWORD_LENGTH")
 PASSWORD_GENERATED="yes"
-print_success "Password:" "auto-generated (will be shown at the end)"
-else
-password_error=$(get_password_error "$input_password")
-while [[ -n $password_error ]];do
-print_error "$password_error"
-input_password=$(read_password "Enter root password: ")
-password_error=$(get_password_error "$input_password")
-done
-NEW_ROOT_PASSWORD="$input_password"
-printf "\033[A\r\033[K"
-print_success "Password:" "********"
 fi
-fi
-if [[ -n $PROXMOX_ISO_VERSION ]];then
-print_success "Proxmox ISO:" "$PROXMOX_ISO_VERSION (from env/cli)"
-else
-local iso_list
-get_available_proxmox_isos 5 >/tmp/iso_list.tmp&
-show_progress $! "Fetching available Proxmox versions" --silent
-iso_list=$(cat /tmp/iso_list.tmp 2>/dev/null)
-rm -f /tmp/iso_list.tmp
-if [[ -z $iso_list ]];then
-print_warning "Could not fetch ISO list, will use latest"
-PROXMOX_ISO_VERSION=""
-else
-local -a iso_array
-local -a iso_menu_items
-local first=true
-while IFS= read -r iso;do
-iso_array+=("$iso")
-local version
-version=$(get_iso_version "$iso")
-if [[ $first == true ]];then
-iso_menu_items+=("Proxmox VE $version|Latest version (recommended)")
-first=false
-else
-iso_menu_items+=("Proxmox VE $version|")
-fi
-done <<<"$iso_list"
-radio_menu \
-"Proxmox VE Version (↑/↓ select, Enter confirm)" \
-"Select which Proxmox VE version to install"$'\n' \
-"${iso_menu_items[@]}"
-PROXMOX_ISO_VERSION="${iso_array[$MENU_SELECTED]}"
-local selected_version
-selected_version=$(get_iso_version "$PROXMOX_ISO_VERSION")
-if [[ $MENU_SELECTED -eq 0 ]];then
-print_success "Proxmox VE:" "$selected_version (latest)"
-else
-print_success "Proxmox VE:" "$selected_version"
-fi
-fi
-fi
-if [[ -n $TIMEZONE ]];then
-print_success "Timezone:" "$TIMEZONE (from env)"
-else
-local tz_options=("Europe/Kyiv" "Europe/London" "Europe/Berlin" "America/New_York" "America/Los_Angeles" "Asia/Tokyo" "UTC" "custom")
-radio_menu \
-"Timezone (↑/↓ select, Enter confirm)" \
-"Select your server timezone"$'\n' \
-"Europe/Kyiv|Ukraine" \
-"Europe/London|United Kingdom (GMT/BST)" \
-"Europe/Berlin|Germany, Central Europe (CET/CEST)" \
-"America/New_York|US Eastern Time (EST/EDT)" \
-"America/Los_Angeles|US Pacific Time (PST/PDT)" \
-"Asia/Tokyo|Japan Standard Time (JST)" \
-"UTC|Coordinated Universal Time" \
-"Custom|Enter timezone manually"
-if [[ $MENU_SELECTED -eq 7 ]];then
-prompt_with_validation \
-"Enter your timezone: " \
-"Europe/Kyiv" \
-"validate_timezone" \
-"Invalid timezone. Use format like: Europe/London, America/New_York" \
-"TIMEZONE" \
-"Timezone: "
-else
-TIMEZONE="${tz_options[$MENU_SELECTED]}"
-print_success "Timezone:" "$TIMEZONE"
-fi
-fi
-if [[ -n $BRIDGE_MODE ]];then
-print_success "Bridge mode:" "$BRIDGE_MODE (from env)"
-else
-local bridge_options=("internal" "external" "both")
-local bridge_header="Configure network bridges for VMs and containers"$'\n'
-bridge_header+="vmbr0 = external (bridged to physical NIC)"$'\n'
-bridge_header+="vmbr1 = internal (NAT with private subnet)"$'\n'
-radio_menu \
-"Network Bridge Mode (↑/↓ select, Enter confirm)" \
-"$bridge_header" \
-"Internal only (NAT)|VMs use private IPs with NAT" \
-"External only (Bridged)|VMs get IPs from router/DHCP" \
-"Both bridges|Internal NAT + External bridged"
-BRIDGE_MODE="${bridge_options[$MENU_SELECTED]}"
-case "$BRIDGE_MODE" in
-internal)print_success "Bridge mode:" "Internal NAT only (vmbr0)";;
-external)print_success "Bridge mode:" "External bridged only (vmbr0)";;
-both)print_success "Bridge mode:" "Both (vmbr0=external, vmbr1=internal)"
-esac
-fi
+[[ -z $BRIDGE_MODE ]]&&BRIDGE_MODE="$DEFAULT_BRIDGE_MODE"
+[[ -z $PRIVATE_SUBNET ]]&&PRIVATE_SUBNET="$DEFAULT_SUBNET"
+[[ -z $IPV6_MODE ]]&&IPV6_MODE="$DEFAULT_IPV6_MODE"
+[[ -z $IPV6_GATEWAY ]]&&IPV6_GATEWAY="$DEFAULT_IPV6_GATEWAY"
 if [[ $BRIDGE_MODE == "internal" || $BRIDGE_MODE == "both" ]];then
-if [[ -n $PRIVATE_SUBNET ]];then
-print_success "Private subnet:" "$PRIVATE_SUBNET (from env)"
-else
-local subnet_options=("10.0.0.0/24" "192.168.1.0/24" "172.16.0.0/24" "custom")
-radio_menu \
-"Private Subnet (↑/↓ select, Enter confirm)" \
-"Internal network for VMs and containers"$'\n' \
-"10.0.0.0/24|Class A private (recommended)" \
-"192.168.1.0/24|Class C private (common home network)" \
-"172.16.0.0/24|Class B private" \
-"Custom|Enter subnet manually"
-if [[ $MENU_SELECTED -eq 3 ]];then
-prompt_with_validation \
-"Enter your private subnet: " \
-"10.0.0.0/24" \
-"validate_subnet" \
-"Invalid subnet. Use CIDR format like: 10.0.0.0/24" \
-"PRIVATE_SUBNET" \
-"Private subnet: "
-else
-PRIVATE_SUBNET="${subnet_options[$MENU_SELECTED]}"
-print_success "Private subnet:" "$PRIVATE_SUBNET"
+PRIVATE_CIDR=$(echo "$PRIVATE_SUBNET"|cut -d'/' -f1|rev|cut -d'.' -f2-|rev)
+PRIVATE_IP="$PRIVATE_CIDR.1"
+SUBNET_MASK=$(echo "$PRIVATE_SUBNET"|cut -d'/' -f2)
+PRIVATE_IP_CIDR="$PRIVATE_IP/$SUBNET_MASK"
 fi
-fi
-fi
-if [[ -n $IPV6_MODE ]];then
-if [[ $IPV6_MODE == "disabled" ]];then
-MAIN_IPV6=""
-IPV6_GATEWAY=""
-FIRST_IPV6_CIDR=""
-print_success "IPv6:" "disabled (from env)"
-elif [[ $IPV6_MODE == "manual" ]];then
-IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
-if [[ -n $IPV6_ADDRESS ]];then
-MAIN_IPV6="${IPV6_ADDRESS%/*}"
-fi
-print_success "IPv6:" "${MAIN_IPV6:-auto} (gateway: $IPV6_GATEWAY, from env)"
-else
-IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
-if [[ -n $MAIN_IPV6 ]];then
-print_success "IPv6:" "$MAIN_IPV6 (gateway: $IPV6_GATEWAY, from env)"
-else
-print_warning "IPv6: not detected"
-fi
-fi
-else
-local ipv6_options=("auto" "manual" "disabled")
-local ipv6_header="Configure IPv6 networking for dual-stack support."$'\n'
-if [[ -n $MAIN_IPV6 ]];then
-ipv6_header+="Detected: $MAIN_IPV6"$'\n'
-else
-ipv6_header+="No IPv6 address detected on interface."$'\n'
-fi
-radio_menu \
-"IPv6 Configuration (↑/↓ select, Enter confirm)" \
-"$ipv6_header" \
-"Auto|Use detected IPv6 address (recommended)" \
-"Manual|Enter IPv6 address and gateway manually" \
-"Disabled|IPv4-only configuration"
-IPV6_MODE="${ipv6_options[$MENU_SELECTED]}"
-if [[ $IPV6_MODE == "disabled" ]];then
-MAIN_IPV6=""
-IPV6_GATEWAY=""
-FIRST_IPV6_CIDR=""
-print_success "IPv6:" "disabled"
-elif [[ $IPV6_MODE == "manual" ]];then
-local ipv6_content="Enter your IPv6 address in CIDR notation."$'\n'
-ipv6_content+="Example: 2001:db8::1/64"
-input_box "IPv6 Address" "$ipv6_content" "IPv6 Address: " "${MAIN_IPV6:+$MAIN_IPV6/64}"
-while [[ -n $INPUT_VALUE ]]&&! validate_ipv6_cidr "$INPUT_VALUE";do
-print_error "Invalid IPv6 CIDR notation. Use format like: 2001:db8::1/64"
-input_box "IPv6 Address" "$ipv6_content" "IPv6 Address: " "$INPUT_VALUE"
-done
-if [[ -n $INPUT_VALUE ]];then
-IPV6_ADDRESS="$INPUT_VALUE"
-MAIN_IPV6="${INPUT_VALUE%/*}"
-fi
-local gw_content="Enter your IPv6 gateway address."$'\n'
-gw_content+="Default for Hetzner: fe80::1 (link-local)"
-input_box "IPv6 Gateway" "$gw_content" "Gateway: " "${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
-while [[ -n $INPUT_VALUE ]]&&! validate_ipv6_gateway "$INPUT_VALUE";do
-print_error "Invalid IPv6 gateway address."
-input_box "IPv6 Gateway" "$gw_content" "Gateway: " "$INPUT_VALUE"
-done
-IPV6_GATEWAY="${INPUT_VALUE:-$DEFAULT_IPV6_GATEWAY}"
-print_success "IPv6:" "${MAIN_IPV6:-none} (gateway: $IPV6_GATEWAY)"
-else
-IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
-if [[ -n $MAIN_IPV6 ]];then
-print_success "IPv6:" "$MAIN_IPV6 (gateway: $IPV6_GATEWAY)"
-else
-print_warning "IPv6: not detected (will be IPv4-only)"
-fi
-fi
-fi
+if [[ -z $ZFS_RAID ]];then
 if [[ ${DRIVE_COUNT:-0} -ge 2 ]];then
-if [[ -n $ZFS_RAID ]];then
-print_success "ZFS mode:" "$ZFS_RAID (from env)"
-else
-local zfs_options=("raid1" "raid0" "single")
-local zfs_labels=("RAID-1 (mirror) - Recommended" "RAID-0 (stripe) - No redundancy" "Single drive - No redundancy")
-radio_menu \
-"ZFS Storage Mode (↑/↓ select, Enter confirm)" \
-"Select ZFS pool configuration for your drives"$'\n' \
-"${zfs_labels[0]}|Survives 1 disk failure" \
-"${zfs_labels[1]}|2x space & speed, no redundancy" \
-"${zfs_labels[2]}|Uses first drive only"
-ZFS_RAID="${zfs_options[$MENU_SELECTED]}"
-print_success "ZFS mode:" "${zfs_labels[$MENU_SELECTED]}"
-fi
-else
-if [[ -n $ZFS_RAID ]];then
-print_success "ZFS mode:" "$ZFS_RAID (from env)"
+ZFS_RAID="raid1"
 else
 ZFS_RAID="single"
-print_success "ZFS mode:" "single (1 drive detected)"
 fi
 fi
-if [[ -n $PVE_REPO_TYPE ]];then
-print_success "Repository:" "$PVE_REPO_TYPE (from env)"
-if [[ $PVE_REPO_TYPE == "enterprise" && -n $PVE_SUBSCRIPTION_KEY ]];then
-print_success "Subscription key:" "configured"
-fi
-else
-local repo_options=("no-subscription" "enterprise" "test")
-radio_menu \
-"Proxmox Repository (↑/↓ select, Enter confirm)" \
-"Select which repository to use for updates"$'\n' \
-"No-Subscription|Free community repository (default)" \
-"Enterprise|Stable, requires subscription key" \
-"Test|Latest packages, may be unstable"
-PVE_REPO_TYPE="${repo_options[$MENU_SELECTED]}"
-if [[ $PVE_REPO_TYPE == "enterprise" ]];then
-local key_content="Enterprise repository requires a subscription key."$'\n'
-key_content+="Get your key from:"$'\n'
-key_content+="https://www.proxmox.com/proxmox-ve/pricing"$'\n'
-key_content+=$'\n'
-key_content+="Format: pve1c-XXXXXXXXXX or pve2c-XXXXXXXXXX"
-input_box "Proxmox Subscription Key" "$key_content" "Key: " ""
-PVE_SUBSCRIPTION_KEY="$INPUT_VALUE"
-if [[ -n $PVE_SUBSCRIPTION_KEY ]];then
-print_success "Repository:" "enterprise (key configured)"
-else
-print_warning "Repository:" "enterprise (no key - will show warning in UI)"
-fi
-else
-PVE_SUBSCRIPTION_KEY=""
-print_success "Repository:" "$PVE_REPO_TYPE"
-fi
-fi
-local all_features_from_env=true
-[[ -z $DEFAULT_SHELL ]]&&all_features_from_env=false
-[[ -z $INSTALL_VNSTAT ]]&&all_features_from_env=false
-[[ -z $INSTALL_AUDITD ]]&&all_features_from_env=false
-[[ -z $INSTALL_UNATTENDED_UPGRADES ]]&&all_features_from_env=false
-if [[ $all_features_from_env == true ]];then
-print_success "Default shell:" "$DEFAULT_SHELL (from env)"
-if [[ $INSTALL_VNSTAT == "yes" ]];then
-print_success "Bandwidth monitoring:" "enabled (from env)"
-else
-print_success "Bandwidth monitoring:" "disabled (from env)"
-fi
-if [[ $INSTALL_UNATTENDED_UPGRADES == "yes" ]];then
-print_success "Auto security updates:" "enabled (from env)"
-else
-print_success "Auto security updates:" "disabled (from env)"
-fi
-if [[ $INSTALL_AUDITD == "yes" ]];then
-print_success "Audit logging:" "enabled (from env)"
-else
-print_success "Audit logging:" "disabled (from env)"
-fi
-else
-local features_header="Select optional features to install."$'\n'
-features_header+="Use ↑/↓ to navigate, Space to toggle, Enter to confirm."$'\n'
-local zsh_default=1
-local vnstat_default=1
-local unattended_default=1
-local auditd_default=0
-[[ $DEFAULT_SHELL == "bash" ]]&&zsh_default=0
-[[ $INSTALL_VNSTAT == "no" ]]&&vnstat_default=0
-[[ $INSTALL_UNATTENDED_UPGRADES == "no" ]]&&unattended_default=0
-[[ $INSTALL_AUDITD == "yes" ]]&&auditd_default=1
-checkbox_menu \
-"Optional Features (↑/↓ navigate, Space toggle, Enter confirm)" \
-"$features_header" \
-"ZSH shell|Modern shell with autosuggestions and syntax highlighting|$zsh_default" \
-"vnstat|Bandwidth monitoring for tracking Hetzner transfer usage|$vnstat_default" \
-"Unattended upgrades|Automatic security updates|$unattended_default" \
-"auditd|Audit logging for administrative action tracking|$auditd_default"
-if [[ ${CHECKBOX_RESULTS[0]} == "1" ]];then
-DEFAULT_SHELL="zsh"
-print_success "Default shell:" "zsh"
-else
-DEFAULT_SHELL="bash"
-print_success "Default shell:" "bash"
-fi
-if [[ ${CHECKBOX_RESULTS[1]} == "1" ]];then
-INSTALL_VNSTAT="yes"
-print_success "Bandwidth monitoring:" "enabled (vnstat)"
-else
-INSTALL_VNSTAT="no"
-print_success "Bandwidth monitoring:" "disabled"
-fi
-if [[ ${CHECKBOX_RESULTS[2]} == "1" ]];then
-INSTALL_UNATTENDED_UPGRADES="yes"
-print_success "Auto security updates:" "enabled"
-else
-INSTALL_UNATTENDED_UPGRADES="no"
-print_success "Auto security updates:" "disabled"
-fi
-if [[ ${CHECKBOX_RESULTS[3]} == "1" ]];then
-INSTALL_AUDITD="yes"
-print_success "Audit logging:" "enabled (auditd)"
-else
-INSTALL_AUDITD="no"
-print_success "Audit logging:" "disabled"
-fi
-fi
-if [[ -n $CPU_GOVERNOR ]];then
-print_success "Power profile:" "$CPU_GOVERNOR (from env)"
-else
-local governor_options=("performance" "ondemand" "powersave" "schedutil" "conservative")
-local governor_header="Select CPU frequency scaling governor (power profile)."$'\n'
-governor_header+="Affects power consumption, heat, and performance."$'\n'
-radio_menu \
-"Power Profile (↑/↓ select, Enter confirm)" \
-"$governor_header" \
-"Performance|Max speed, highest power (recommended)" \
-"On-demand|Scales frequency based on load" \
-"Powersave|Min speed, lowest power consumption" \
-"Schedutil|Kernel scheduler-driven scaling" \
-"Conservative|Gradual frequency scaling"
-CPU_GOVERNOR="${governor_options[$MENU_SELECTED]}"
-print_success "Power profile:" "$CPU_GOVERNOR"
-fi
-if [[ -n $SSH_PUBLIC_KEY ]];then
-parse_ssh_key "$SSH_PUBLIC_KEY"
-print_success "SSH key:" "$SSH_KEY_TYPE (from env)"
-else
-local DETECTED_SSH_KEY
-DETECTED_SSH_KEY=$(get_rescue_ssh_key)
-if [[ -n $DETECTED_SSH_KEY ]];then
-parse_ssh_key "$DETECTED_SSH_KEY"
-local ssh_header="! Password authentication will be DISABLED"$'\n'
-ssh_header+=$'\n'
-ssh_header+="  Detected key from Rescue System:"$'\n'
-ssh_header+="  Type:    $SSH_KEY_TYPE"$'\n'
-ssh_header+="  Key:     $SSH_KEY_SHORT"
-if [[ -n $SSH_KEY_COMMENT ]];then
-ssh_header+=$'\n'"  Comment: $SSH_KEY_COMMENT"
-fi
-ssh_header+=$'\n'
-radio_menu \
-"SSH Public Key (↑/↓ select, Enter confirm)" \
-"$ssh_header" \
-"Use detected key|Already configured in Hetzner" \
-"Enter different key|Paste your own SSH public key"
-if [[ $MENU_SELECTED -eq 0 ]];then
-SSH_PUBLIC_KEY="$DETECTED_SSH_KEY"
-print_success "SSH key:" "configured ($SSH_KEY_TYPE)"
-else
-SSH_PUBLIC_KEY=""
-fi
-fi
+[[ -z $PVE_REPO_TYPE ]]&&PVE_REPO_TYPE="$DEFAULT_REPO_TYPE"
+[[ -z $SSL_TYPE ]]&&SSL_TYPE="$DEFAULT_SSL_TYPE"
+[[ -z $INSTALL_TAILSCALE ]]&&INSTALL_TAILSCALE="no"
+[[ -z $DEFAULT_SHELL ]]&&DEFAULT_SHELL="zsh"
+[[ -z $CPU_GOVERNOR ]]&&CPU_GOVERNOR="$DEFAULT_CPU_GOVERNOR"
+[[ -z $INSTALL_VNSTAT ]]&&INSTALL_VNSTAT="yes"
+[[ -z $INSTALL_UNATTENDED_UPGRADES ]]&&INSTALL_UNATTENDED_UPGRADES="yes"
+[[ -z $INSTALL_AUDITD ]]&&INSTALL_AUDITD="no"
 if [[ -z $SSH_PUBLIC_KEY ]];then
-local ssh_content="! Password authentication will be DISABLED"$'\n'
-if [[ -z $DETECTED_SSH_KEY ]];then
-ssh_content+=$'\n'"No SSH key detected in Rescue System."
+SSH_PUBLIC_KEY=$(get_rescue_ssh_key 2>/dev/null||true)
 fi
-ssh_content+=$'\n'$'\n'"Paste your SSH public key below:"$'\n'
-ssh_content+="(Usually from ~/.ssh/id_ed25519.pub or ~/.ssh/id_rsa.pub)"
-input_box "SSH Public Key Configuration" "$ssh_content" "SSH Public Key: " ""
-while [[ -z $INPUT_VALUE ]]||! validate_ssh_key "$INPUT_VALUE";do
-if [[ -z $INPUT_VALUE ]];then
-print_error "SSH public key is required for secure access!"
-else
-print_warning "SSH key format may be invalid. Continue anyway? (y/n): "
-read -rsn1 confirm
-echo ""
-if [[ $confirm =~ ^[Yy]$ ]];then
-break
-fi
-fi
-input_box "SSH Public Key Configuration" "$ssh_content" "SSH Public Key: " ""
-done
-SSH_PUBLIC_KEY="$INPUT_VALUE"
-parse_ssh_key "$SSH_PUBLIC_KEY"
-print_success "SSH key:" "configured ($SSH_KEY_TYPE)"
-fi
-fi
-if [[ -n $INSTALL_TAILSCALE ]];then
-if [[ $INSTALL_TAILSCALE == "yes" ]];then
-TAILSCALE_SSH="${TAILSCALE_SSH:-yes}"
-TAILSCALE_WEBUI="${TAILSCALE_WEBUI:-yes}"
-if [[ -n $TAILSCALE_AUTH_KEY ]];then
-print_success "Tailscale:" "yes (auto-connect, from env)"
-else
-print_success "Tailscale:" "yes (manual auth, from env)"
-fi
-else
-TAILSCALE_AUTH_KEY=""
-TAILSCALE_SSH="no"
-TAILSCALE_WEBUI="no"
-print_success "Tailscale:" "skipped (from env)"
-fi
-else
-local ts_header="Tailscale provides secure remote access to your server."$'\n'
-ts_header+="Auth key: https://login.tailscale.com/admin/settings/keys"$'\n'
-radio_menu \
-"Tailscale VPN - Optional (↑/↓ select, Enter confirm)" \
-"$ts_header" \
-"Install Tailscale|Recommended for secure remote access" \
-"Skip installation|Install Tailscale later if needed"
-if [[ $MENU_SELECTED -eq 0 ]];then
-INSTALL_TAILSCALE="yes"
-TAILSCALE_SSH="yes"
-TAILSCALE_WEBUI="yes"
-TAILSCALE_DISABLE_SSH="no"
-if [[ -z $TAILSCALE_AUTH_KEY ]];then
-local auth_content="Auth key enables automatic configuration."$'\n'
-auth_content+="Leave empty for manual auth after reboot."$'\n'
-auth_content+=$'\n'
-auth_content+="For unattended setup, use a reusable auth key"$'\n'
-auth_content+="with tags and expiry for better security."
-input_box "Tailscale Auth Key (optional)" "$auth_content" "Auth Key: " ""
-TAILSCALE_AUTH_KEY="$INPUT_VALUE"
-fi
-if [[ -n $TAILSCALE_AUTH_KEY ]];then
-TAILSCALE_DISABLE_SSH="yes"
-STEALTH_MODE="yes"
-print_success "Tailscale:" "will be installed (auto-connect)"
-print_success "OpenSSH:" "will be disabled on first boot"
-print_success "Stealth firewall:" "enabled (server hidden from internet)"
-else
-print_warning "Tailscale:" "enabled (no key - manual auth required)"
-STEALTH_MODE="no"
-fi
-else
-INSTALL_TAILSCALE="no"
-TAILSCALE_AUTH_KEY=""
-TAILSCALE_SSH="no"
-TAILSCALE_WEBUI="no"
-TAILSCALE_DISABLE_SSH="no"
-STEALTH_MODE="no"
-print_success "Tailscale:" "installation skipped"
-fi
-fi
-if [[ $INSTALL_TAILSCALE != "yes" ]];then
-if [[ -n $SSL_TYPE ]];then
-print_success "SSL certificate:" "$SSL_TYPE (from env)"
-else
-local ssl_options=("self-signed" "letsencrypt")
-local le_fqdn="${FQDN:-$PVE_HOSTNAME.$DOMAIN_SUFFIX}"
-local ssl_header="Configure SSL certificate for Proxmox Web UI."$'\n'
-ssl_header+=$'\n'
-ssl_header+="! For Let's Encrypt, before continuing ensure:"$'\n'
-ssl_header+="  - Domain $le_fqdn is registered"$'\n'
-ssl_header+="  - DNS A record points to ${MAIN_IPV4_CIDR%/*}"$'\n'
-ssl_header+="  - Port 80 is accessible from the internet"
-radio_menu \
-"SSL Certificate (↑/↓ select, Enter confirm)" \
-"$ssl_header" \
-"Self-signed|Default Proxmox certificate (recommended)" \
-"Let's Encrypt|Requires domain pointing to this server"
-SSL_TYPE="${ssl_options[$MENU_SELECTED]}"
-if [[ $SSL_TYPE == "letsencrypt" ]];then
-local le_fqdn="${FQDN:-$PVE_HOSTNAME.$DOMAIN_SUFFIX}"
-local expected_ip="${MAIN_IPV4_CIDR%/*}"
-local max_attempts=3
-local attempt=1
-local dns_result=1
-local dns_tmp="/tmp/dns_check_$$"
-while [[ $attempt -le $max_attempts ]];do
-(resolved_ip=$(dig +short A "$le_fqdn" @1.1.1.1 2>/dev/null|grep -E '^[0-9]+\.'|head -1)
-if [[ -z $resolved_ip ]];then
-resolved_ip=$(dig +short A "$le_fqdn" @8.8.8.8 2>/dev/null|grep -E '^[0-9]+\.'|head -1)
-fi
-if [[ -z $resolved_ip ]];then
-echo "1:" >"$dns_tmp"
-elif [[ $resolved_ip == "$expected_ip" ]];then
-echo "0:$resolved_ip" >"$dns_tmp"
-else
-echo "2:$resolved_ip" >"$dns_tmp"
-fi) \
-&
-local check_pid=$!
-show_progress $check_pid "Checking DNS: $le_fqdn → $expected_ip (attempt $attempt/$max_attempts)" --silent
-if [[ -f $dns_tmp ]];then
-dns_result=$(cut -d: -f1 <"$dns_tmp")
-DNS_RESOLVED_IP=$(cut -d: -f2 <"$dns_tmp")
-rm -f "$dns_tmp"
-else
-dns_result=1
-fi
-if [[ $dns_result -eq 0 ]];then
-print_success "SSL:" "Let's Encrypt (DNS verified: $le_fqdn → $expected_ip)"
-break
-fi
-if [[ $dns_result -eq 1 ]];then
-print_error "DNS check failed: $le_fqdn does not resolve"
-else
-print_error "DNS mismatch: $le_fqdn → $DNS_RESOLVED_IP (expected: $expected_ip)"
-fi
-if [[ $attempt -lt $max_attempts ]];then
-print_info "Retrying in $DNS_RETRY_DELAY seconds... (Press Ctrl+C to cancel)"
-sleep "$DNS_RETRY_DELAY"
-fi
-((attempt++))
-done
-rm -f "$dns_tmp" 2>/dev/null
-if [[ $dns_result -ne 0 ]];then
-echo ""
-print_error "DNS validation failed after $max_attempts attempts"
-echo ""
-print_info "To fix this:"
-print_info "  1. Go to your DNS provider"
-print_info "  2. Create/update A record: $le_fqdn → $expected_ip"
-print_info "  3. Wait for DNS propagation (usually 1-5 minutes)"
-print_info "  4. Run this installer again"
-echo ""
-exit 1
-fi
-else
-print_success "SSL:" "Self-signed certificate"
-fi
-fi
-else
-SSL_TYPE="self-signed"
-fi
-}
-get_system_inputs(){
-detect_network_interface
-collect_network_info
-get_inputs_interactive
-FQDN="$PVE_HOSTNAME.$DOMAIN_SUFFIX"
-if [[ $BRIDGE_MODE == "internal" || $BRIDGE_MODE == "both" ]];then
-PRIVATE_CIDR=$(echo "$PRIVATE_SUBNET"|cut -d'/' -f1|rev|cut -d'.' -f2-|rev)
-PRIVATE_IP="$PRIVATE_CIDR.1"
-SUBNET_MASK=$(echo "$PRIVATE_SUBNET"|cut -d'/' -f2)
-PRIVATE_IP_CIDR="$PRIVATE_IP/$SUBNET_MASK"
-fi
-}
-display_config_preview(){
-local inner_width=$((MENU_BOX_WIDTH-6))
-local content=""
-content+="|--- Basic Settings ---|"$'\n'
-content+="|Hostname|$PVE_HOSTNAME.$DOMAIN_SUFFIX"$'\n'
-content+="|Email|$EMAIL"$'\n'
-content+="|Password|$([ "$PASSWORD_GENERATED" == "yes" ]&&echo "auto-generated"||echo "********")"$'\n'
-content+="|Timezone|$TIMEZONE"$'\n'
-content+="|--- Network ---"$'\n'
-content+="|Interface|$INTERFACE_NAME"$'\n'
-content+="|IPv4|$MAIN_IPV4_CIDR"$'\n'
-content+="|Gateway|$MAIN_IPV4_GW"$'\n'
-case "$BRIDGE_MODE" in
-internal)content+="|Bridge|Internal NAT (vmbr0)";;
-external)content+="|Bridge|External bridged (vmbr0)";;
-both)content+="|Bridge|Both (vmbr0=ext, vmbr1=int)"
-esac
-content+=$'\n'
-if [[ $BRIDGE_MODE == "internal" || $BRIDGE_MODE == "both" ]];then
-content+="|Private subnet|$PRIVATE_SUBNET"$'\n'
-fi
-content+="|--- IPv6 ---"$'\n'
-case "$IPV6_MODE" in
-disabled)content+="|IPv6|Disabled"$'\n'
-;;
-manual)content+="|IPv6|${MAIN_IPV6:-not set}"$'\n'
-content+="|IPv6 Gateway|$IPV6_GATEWAY"$'\n'
-;;
-auto|*)if
-[[ -n $MAIN_IPV6 ]]
-then
-content+="|IPv6|$MAIN_IPV6 (auto)"$'\n'
-content+="|IPv6 Gateway|${IPV6_GATEWAY:-fe80::1}"$'\n'
-else
-content+="|IPv6|Not detected"$'\n'
-fi
-esac
-content+="|--- Storage ---"$'\n'
-local zfs_desc
-case "$ZFS_RAID" in
-raid1)zfs_desc="RAID-1 (mirror)";;
-raid0)zfs_desc="RAID-0 (stripe)";;
-single)zfs_desc="Single drive";;
-*)zfs_desc="$ZFS_RAID"
-esac
-content+="|ZFS Mode|$zfs_desc"$'\n'
-content+="|Drives|${DRIVES[*]}"$'\n'
-content+="|--- Proxmox ---"$'\n'
-if [[ -n $PROXMOX_ISO_VERSION ]];then
-local pve_version
-pve_version=$(get_iso_version "$PROXMOX_ISO_VERSION" 2>/dev/null||echo "$PROXMOX_ISO_VERSION")
-content+="|Version|$pve_version"$'\n'
-else
-content+="|Version|Latest"$'\n'
-fi
-content+="|Repository|${PVE_REPO_TYPE:-no-subscription}"$'\n'
-content+="|--- SSL ---"$'\n'
-if [[ $INSTALL_TAILSCALE == "yes" ]];then
-content+="|SSL|Self-signed (Tailscale HTTPS)"$'\n'
-else
-content+="|SSL|${SSL_TYPE:-self-signed}"$'\n'
-fi
-content+="|--- VPN ---"$'\n'
-if [[ $INSTALL_TAILSCALE == "yes" ]];then
-if [[ -n $TAILSCALE_AUTH_KEY ]];then
-content+="|Tailscale|Enabled (auto-connect)"$'\n'
-else
-content+="|Tailscale|Enabled (manual auth)"$'\n'
-fi
-if [[ $STEALTH_MODE == "yes" ]];then
-content+="|Stealth mode|Enabled"$'\n'
-fi
-if [[ $TAILSCALE_DISABLE_SSH == "yes" ]];then
-content+="|OpenSSH|Will be disabled"$'\n'
-fi
-else
-content+="|Tailscale|Not installed"$'\n'
-fi
-content+="|--- Optional ---"$'\n'
-content+="|Shell|${DEFAULT_SHELL:-bash}"$'\n'
-content+="|Power profile|${CPU_GOVERNOR:-performance}"$'\n'
-local features=""
-[[ $INSTALL_VNSTAT == "yes" ]]&&features+="vnstat, "
-[[ $INSTALL_UNATTENDED_UPGRADES == "yes" ]]&&features+="auto-updates, "
-[[ $INSTALL_AUDITD == "yes" ]]&&features+="auditd, "
-if [[ -n $features ]];then
-content+="|Features|${features%, }"$'\n'
-else
-content+="|Features|None"$'\n'
-fi
-content+="|--- SSH ---"$'\n'
-if [[ -n $SSH_PUBLIC_KEY ]];then
-parse_ssh_key "$SSH_PUBLIC_KEY"
-content+="|SSH Key|$SSH_KEY_TYPE"
-if [[ -n $SSH_KEY_COMMENT ]];then
-content+=" ($SSH_KEY_COMMENT)"
-fi
-content+=$'\n'
-else
-content+="|SSH Key|Not configured"$'\n'
-fi
-content="${content%$'\n'}"
-{
-echo "Configuration Review"
-echo "$content"|column -t -s '|'|while IFS= read -r line;do
-printf "%-${inner_width}s\n" "$line"
-done
-echo ""
-printf "%-${inner_width}s\n" "Press ENTER_KEY to start installation"
-printf "%-${inner_width}s\n" "Press E_KEY to edit configuration"
-printf "%-${inner_width}s\n" "Press Q_KEY to quit"
-}|boxes -d stone -p a1 -s "$MENU_BOX_WIDTH"|_colorize_preview
-}
-_colorize_preview(){
-local box_width=$MENU_BOX_WIDTH
-local inner_width=$((box_width-1))
-while IFS= read -r line;do
-if [[ $line =~ ^\+[-+]+\+$ ]];then
-echo "$CLR_GRAY$line$CLR_RESET"
-elif [[ $line =~ ^(\|)(.*)\|$ ]];then
-local content="${BASH_REMATCH[2]}"
-local visible_content="$content"
-if [[ $content == *"---"* ]];then
-content="$CLR_CYAN$content$CLR_RESET"
-fi
-if [[ $visible_content == *"Press"* ]];then
-visible_content="${visible_content//ENTER_KEY/Enter}"
-visible_content="${visible_content//E_KEY/e}"
-visible_content="${visible_content//Q_KEY/q}"
-local visible_len=${#visible_content}
-local padding=$((inner_width-visible_len))
-content="${content//ENTER_KEY/${CLR_CYAN}Enter$CLR_GRAY}"
-content="${content//E_KEY/${CLR_CYAN}e$CLR_GRAY}"
-content="${content//Q_KEY/${CLR_CYAN}q$CLR_GRAY}"
-content="$CLR_GRAY$content"
-printf -v content "%s%${padding}s$CLR_RESET" "$content" ""
-fi
-echo "$CLR_GRAY|$CLR_RESET$content$CLR_GRAY|$CLR_RESET"
-else
-echo "$line"
-fi
-done
-}
-edit_configuration(){
-local -a edit_sections=()
-local -a edit_actions=()
-edit_sections+=("Basic Settings|Hostname, domain, email, password, timezone")
-edit_actions+=("_edit_basic_settings")
-edit_sections+=("Network|Bridge mode, private subnet")
-edit_actions+=("_edit_network_settings")
-edit_sections+=("IPv6|IPv6 mode and settings")
-edit_actions+=("_edit_ipv6_settings")
-if [[ ${DRIVE_COUNT:-0} -ge 2 ]];then
-edit_sections+=("Storage|ZFS RAID level ($DRIVE_COUNT drives)")
-else
-edit_sections+=("Storage|Single drive mode")
-fi
-edit_actions+=("_edit_storage_settings")
-edit_sections+=("Proxmox|Version and repository")
-edit_actions+=("_edit_proxmox_settings")
-if [[ $INSTALL_TAILSCALE != "yes" ]];then
-edit_sections+=("SSL|Certificate type")
-edit_actions+=("_edit_ssl_settings")
-fi
-edit_sections+=("Tailscale|VPN configuration")
-edit_actions+=("_edit_tailscale_settings")
-edit_sections+=("Optional|Shell, packages, power profile")
-edit_actions+=("_edit_optional_settings")
-edit_sections+=("SSH Key|Public key for authentication")
-edit_actions+=("_edit_ssh_settings")
-edit_sections+=("Done|Return to configuration review")
-edit_actions+=("return")
-radio_menu \
-"Edit Configuration (select section)" \
-"Select which section to edit"$'\n' \
-"${edit_sections[@]}"
-local action="${edit_actions[$MENU_SELECTED]}"
-if [[ $action == "return" ]];then
-return 0
-else
-$action
-fi
-return 0
-}
-_edit_basic_settings(){
-local hostname_content="Enter the short hostname for your server."$'\n'
-hostname_content+="Example: pve, proxmox, server01"
-input_box "Hostname" "$hostname_content" "Hostname: " "$PVE_HOSTNAME"
-while [[ -n $INPUT_VALUE ]]&&! validate_hostname "$INPUT_VALUE";do
-print_error "Invalid hostname. Use only letters, numbers, and hyphens (1-63 chars)."
-input_box "Hostname" "$hostname_content" "Hostname: " "$INPUT_VALUE"
-done
-[[ -n $INPUT_VALUE ]]&&PVE_HOSTNAME="$INPUT_VALUE"
-print_success "Hostname:" "$PVE_HOSTNAME"
-local domain_content="Enter the domain suffix for your server."$'\n'
-domain_content+="Example: local, example.com"
-input_box "Domain" "$domain_content" "Domain: " "$DOMAIN_SUFFIX"
-[[ -n $INPUT_VALUE ]]&&DOMAIN_SUFFIX="$INPUT_VALUE"
-print_success "Domain:" "$DOMAIN_SUFFIX"
-local email_content="Enter your email address for notifications."
-input_box "Email" "$email_content" "Email: " "$EMAIL"
-while [[ -n $INPUT_VALUE ]]&&! validate_email "$INPUT_VALUE";do
-print_error "Invalid email address format."
-input_box "Email" "$email_content" "Email: " "$INPUT_VALUE"
-done
-[[ -n $INPUT_VALUE ]]&&EMAIL="$INPUT_VALUE"
-print_success "Email:" "$EMAIL"
-local password_content="Enter new root password or leave empty to keep current."$'\n'
-password_content+="Leave empty to auto-generate a new password."
-input_box "Password" "$password_content" "Password: " ""
-if [[ -n $INPUT_VALUE ]];then
-local password_error
-password_error=$(get_password_error "$INPUT_VALUE")
-while [[ -n $password_error ]];do
-print_error "$password_error"
-input_box "Password" "$password_content" "Password: " ""
-[[ -z $INPUT_VALUE ]]&&break
-password_error=$(get_password_error "$INPUT_VALUE")
-done
-if [[ -n $INPUT_VALUE ]];then
-NEW_ROOT_PASSWORD="$INPUT_VALUE"
-PASSWORD_GENERATED="no"
-print_success "Password:" "********"
-fi
-fi
-local tz_options=("Europe/Kyiv" "Europe/London" "Europe/Berlin" "America/New_York" "America/Los_Angeles" "Asia/Tokyo" "UTC" "custom")
-radio_menu \
-"Timezone (select or choose Custom)" \
-"Select your server timezone"$'\n' \
-"Europe/Kyiv|Ukraine" \
-"Europe/London|United Kingdom" \
-"Europe/Berlin|Germany" \
-"America/New_York|US Eastern" \
-"America/Los_Angeles|US Pacific" \
-"Asia/Tokyo|Japan" \
-"UTC|Coordinated Universal Time" \
-"Custom|Enter timezone manually"
-if [[ $MENU_SELECTED -eq 7 ]];then
-local tz_content="Enter your timezone in Region/City format."$'\n'
-tz_content+="Example: Europe/London, America/New_York"
-input_box "Timezone" "$tz_content" "Timezone: " "$TIMEZONE"
-while [[ -n $INPUT_VALUE ]]&&! validate_timezone "$INPUT_VALUE";do
-print_error "Invalid timezone format."
-input_box "Timezone" "$tz_content" "Timezone: " "$INPUT_VALUE"
-done
-[[ -n $INPUT_VALUE ]]&&TIMEZONE="$INPUT_VALUE"
-else
-TIMEZONE="${tz_options[$MENU_SELECTED]}"
-fi
-print_success "Timezone:" "$TIMEZONE"
 FQDN="$PVE_HOSTNAME.$DOMAIN_SUFFIX"
 }
-_edit_network_settings(){
-local prev_bridge_mode="$BRIDGE_MODE"
-local bridge_options=("internal" "external" "both")
-local bridge_header="Configure network bridges for VMs"$'\n'
-bridge_header+="vmbr0 = external (bridged to NIC)"$'\n'
-bridge_header+="vmbr1 = internal (NAT)"
-radio_menu \
-"Network Bridge Mode" \
-"$bridge_header" \
-"Internal only (NAT)|VMs use private IPs" \
-"External only (Bridged)|VMs get IPs from router" \
-"Both bridges|Internal + External"
-BRIDGE_MODE="${bridge_options[$MENU_SELECTED]}"
-print_success "Bridge mode:" "$BRIDGE_MODE"
-if [[ $BRIDGE_MODE == "internal" || $BRIDGE_MODE == "both" ]];then
-if [[ $prev_bridge_mode == "external" ]];then
-echo ""
-print_info "Internal bridge enabled - configuring private subnet..."
-echo ""
-fi
-local subnet_options=("10.0.0.0/24" "192.168.1.0/24" "172.16.0.0/24" "custom")
-radio_menu \
-"Private Subnet" \
-"Select private subnet for internal bridge"$'\n' \
-"10.0.0.0/24|Class A private (recommended)" \
-"192.168.1.0/24|Class C private" \
-"172.16.0.0/24|Class B private" \
-"Custom|Enter subnet manually"
-if [[ $MENU_SELECTED -eq 3 ]];then
-local subnet_content="Enter private subnet in CIDR notation."$'\n'
-subnet_content+="Example: 10.0.0.0/24, 192.168.100.0/24"
-input_box "Private Subnet" "$subnet_content" "Subnet: " "$PRIVATE_SUBNET"
-while [[ -n $INPUT_VALUE ]]&&! validate_subnet "$INPUT_VALUE";do
-print_error "Invalid subnet format."
-input_box "Private Subnet" "$subnet_content" "Subnet: " "$INPUT_VALUE"
-done
-[[ -n $INPUT_VALUE ]]&&PRIVATE_SUBNET="$INPUT_VALUE"
-else
-PRIVATE_SUBNET="${subnet_options[$MENU_SELECTED]}"
-fi
-print_success "Private subnet:" "$PRIVATE_SUBNET"
-PRIVATE_CIDR=$(echo "$PRIVATE_SUBNET"|cut -d'/' -f1|rev|cut -d'.' -f2-|rev)
-PRIVATE_IP="$PRIVATE_CIDR.1"
-SUBNET_MASK=$(echo "$PRIVATE_SUBNET"|cut -d'/' -f2)
-PRIVATE_IP_CIDR="$PRIVATE_IP/$SUBNET_MASK"
-else
-PRIVATE_SUBNET=""
-PRIVATE_CIDR=""
-PRIVATE_IP=""
-PRIVATE_IP_CIDR=""
-fi
-}
-_edit_ipv6_settings(){
-local ipv6_options=("auto" "manual" "disabled")
-local ipv6_header="Configure IPv6 networking."$'\n'
-if [[ -n $MAIN_IPV6 ]];then
-ipv6_header+="Current: $MAIN_IPV6"
-else
-ipv6_header+="No IPv6 detected on interface."
-fi
-radio_menu \
-"IPv6 Configuration" \
-"$ipv6_header" \
-"Auto|Use detected IPv6" \
-"Manual|Enter IPv6 manually" \
-"Disabled|IPv4-only"
-IPV6_MODE="${ipv6_options[$MENU_SELECTED]}"
-if [[ $IPV6_MODE == "disabled" ]];then
-MAIN_IPV6=""
-IPV6_GATEWAY=""
-FIRST_IPV6_CIDR=""
-print_success "IPv6:" "disabled"
-elif [[ $IPV6_MODE == "manual" ]];then
-local ipv6_content="Enter IPv6 address in CIDR notation."$'\n'
-ipv6_content+="Example: 2001:db8::1/64"
-input_box "IPv6 Address" "$ipv6_content" "IPv6: " "${MAIN_IPV6:+$MAIN_IPV6/64}"
-while [[ -n $INPUT_VALUE ]]&&! validate_ipv6_cidr "$INPUT_VALUE";do
-print_error "Invalid IPv6 CIDR notation."
-input_box "IPv6 Address" "$ipv6_content" "IPv6: " "$INPUT_VALUE"
-done
-if [[ -n $INPUT_VALUE ]];then
-IPV6_ADDRESS="$INPUT_VALUE"
-MAIN_IPV6="${INPUT_VALUE%/*}"
-fi
-local gw_content="Enter IPv6 gateway address."$'\n'
-gw_content+="Default for Hetzner: fe80::1"
-input_box "IPv6 Gateway" "$gw_content" "Gateway: " "${IPV6_GATEWAY:-fe80::1}"
-while [[ -n $INPUT_VALUE ]]&&! validate_ipv6_gateway "$INPUT_VALUE";do
-print_error "Invalid IPv6 gateway."
-input_box "IPv6 Gateway" "$gw_content" "Gateway: " "$INPUT_VALUE"
-done
-IPV6_GATEWAY="${INPUT_VALUE:-fe80::1}"
-print_success "IPv6:" "$MAIN_IPV6 (gateway: $IPV6_GATEWAY)"
-else
-IPV6_GATEWAY="${IPV6_GATEWAY:-fe80::1}"
-if [[ -n $MAIN_IPV6 ]];then
-print_success "IPv6:" "$MAIN_IPV6 (auto)"
-else
-print_warning "IPv6:" "not detected"
-fi
-fi
-}
-_edit_storage_settings(){
-if [[ ${DRIVE_COUNT:-0} -lt 2 ]];then
-print_warning "Only one drive detected - RAID options not available"
-ZFS_RAID="single"
-return
-fi
-local zfs_options=("raid1" "raid0" "single")
-radio_menu \
-"ZFS Storage Mode" \
-"Select ZFS pool configuration"$'\n' \
-"RAID-1 (mirror)|Survives 1 disk failure" \
-"RAID-0 (stripe)|2x space, no redundancy" \
-"Single drive|Uses first drive only"
-ZFS_RAID="${zfs_options[$MENU_SELECTED]}"
-print_success "ZFS mode:" "$ZFS_RAID"
-}
-_edit_proxmox_settings(){
-local repo_options=("no-subscription" "enterprise" "test")
-radio_menu \
-"Proxmox Repository" \
-"Select repository for updates"$'\n' \
-"No-Subscription|Free community repository" \
-"Enterprise|Stable, requires subscription" \
-"Test|Latest, may be unstable"
-PVE_REPO_TYPE="${repo_options[$MENU_SELECTED]}"
-if [[ $PVE_REPO_TYPE == "enterprise" ]];then
-local key_content="Enter Proxmox subscription key."$'\n'
-key_content+="Format: pve1c-XXXXXXXXXX"
-input_box "Subscription Key" "$key_content" "Key: " "$PVE_SUBSCRIPTION_KEY"
-PVE_SUBSCRIPTION_KEY="$INPUT_VALUE"
-else
-PVE_SUBSCRIPTION_KEY=""
-fi
-print_success "Repository:" "$PVE_REPO_TYPE"
-}
-_edit_ssl_settings(){
-if [[ $INSTALL_TAILSCALE == "yes" ]];then
-print_info "SSL is managed by Tailscale when VPN is enabled"
-SSL_TYPE="self-signed"
-return
-fi
-local ssl_options=("self-signed" "letsencrypt")
-radio_menu \
-"SSL Certificate" \
-"Select SSL certificate type"$'\n' \
-"Self-signed|Default Proxmox certificate" \
-"Let's Encrypt|Requires domain pointing to server"
-SSL_TYPE="${ssl_options[$MENU_SELECTED]}"
-if [[ $SSL_TYPE == "letsencrypt" ]];then
-local le_fqdn="${FQDN:-$PVE_HOSTNAME.$DOMAIN_SUFFIX}"
-local expected_ip="${MAIN_IPV4_CIDR%/*}"
-print_info "Verifying DNS: $le_fqdn -> $expected_ip"
-local resolved_ip
-resolved_ip=$(dig +short A "$le_fqdn" @1.1.1.1 2>/dev/null|grep -E '^[0-9]+\.'|head -1)
-if [[ $resolved_ip == "$expected_ip" ]];then
-print_success "SSL:" "Let's Encrypt (DNS verified)"
-else
-print_error "DNS mismatch: $le_fqdn -> ${resolved_ip:-not found} (expected: $expected_ip)"
-print_warning "Let's Encrypt may fail. Falling back to self-signed."
-SSL_TYPE="self-signed"
-fi
-fi
-print_success "SSL:" "$SSL_TYPE"
-}
-_edit_tailscale_settings(){
-local ts_header="Tailscale provides secure remote access."
-radio_menu \
-"Tailscale VPN" \
-"$ts_header" \
-"Install Tailscale|Recommended for secure access" \
-"Skip|Do not install Tailscale"
-if [[ $MENU_SELECTED -eq 0 ]];then
-INSTALL_TAILSCALE="yes"
-TAILSCALE_SSH="yes"
-TAILSCALE_WEBUI="yes"
-local auth_content="Auth key enables automatic setup."$'\n'
-auth_content+="Leave empty for manual auth after reboot."
-input_box "Tailscale Auth Key (optional)" "$auth_content" "Auth Key: " "$TAILSCALE_AUTH_KEY"
-TAILSCALE_AUTH_KEY="$INPUT_VALUE"
-if [[ -n $TAILSCALE_AUTH_KEY ]];then
-TAILSCALE_DISABLE_SSH="yes"
-STEALTH_MODE="yes"
-print_success "Tailscale:" "enabled (auto-connect)"
-print_success "Stealth mode:" "enabled"
-else
-TAILSCALE_DISABLE_SSH="no"
-STEALTH_MODE="no"
-print_warning "Tailscale:" "enabled (manual auth required)"
-fi
-else
-local was_tailscale_enabled="$INSTALL_TAILSCALE"
-INSTALL_TAILSCALE="no"
-TAILSCALE_AUTH_KEY=""
-TAILSCALE_SSH="no"
-TAILSCALE_WEBUI="no"
-TAILSCALE_DISABLE_SSH="no"
-STEALTH_MODE="no"
-print_success "Tailscale:" "not installed"
-if [[ $was_tailscale_enabled == "yes" ]];then
-echo ""
-print_info "Tailscale disabled - configuring SSL certificate..."
-echo ""
-_edit_ssl_settings
-fi
-fi
-}
-_edit_optional_settings(){
-radio_menu \
-"Default Shell" \
-"Select default shell for root user"$'\n' \
-"ZSH|Modern shell with plugins" \
-"Bash|Standard shell"
-DEFAULT_SHELL=$([ $MENU_SELECTED -eq 0 ]&&echo "zsh"||echo "bash")
-print_success "Shell:" "$DEFAULT_SHELL"
-local governor_options=("performance" "ondemand" "powersave" "schedutil" "conservative")
-radio_menu \
-"Power Profile" \
-"Select CPU frequency scaling"$'\n' \
-"Performance|Max speed" \
-"On-demand|Scale based on load" \
-"Powersave|Min speed" \
-"Schedutil|Kernel scheduler-driven" \
-"Conservative|Gradual scaling"
-CPU_GOVERNOR="${governor_options[$MENU_SELECTED]}"
-print_success "Power profile:" "$CPU_GOVERNOR"
-local vnstat_default
-local unattended_default
-local auditd_default
-vnstat_default=$([[ $INSTALL_VNSTAT == "yes" ]]&&echo "1"||echo "0")
-unattended_default=$([[ $INSTALL_UNATTENDED_UPGRADES == "yes" ]]&&echo "1"||echo "0")
-auditd_default=$([[ $INSTALL_AUDITD == "yes" ]]&&echo "1"||echo "0")
-checkbox_menu \
-"Optional Packages" \
-"Select additional packages to install"$'\n' \
-"vnstat|Bandwidth monitoring|$vnstat_default" \
-"Unattended upgrades|Automatic security updates|$unattended_default" \
-"auditd|Audit logging|$auditd_default"
-INSTALL_VNSTAT=$([[ ${CHECKBOX_RESULTS[0]} == "1" ]]&&echo "yes"||echo "no")
-INSTALL_UNATTENDED_UPGRADES=$([[ ${CHECKBOX_RESULTS[1]} == "1" ]]&&echo "yes"||echo "no")
-INSTALL_AUDITD=$([[ ${CHECKBOX_RESULTS[2]} == "1" ]]&&echo "yes"||echo "no")
-print_success "vnstat:" "$INSTALL_VNSTAT"
-print_success "Auto-updates:" "$INSTALL_UNATTENDED_UPGRADES"
-print_success "auditd:" "$INSTALL_AUDITD"
-}
-_edit_ssh_settings(){
-local ssh_content="Enter your SSH public key."$'\n'
-ssh_content+="Usually from ~/.ssh/id_ed25519.pub or ~/.ssh/id_rsa.pub"
-local current_key=""
-if [[ -n $SSH_PUBLIC_KEY ]];then
-current_key="$SSH_PUBLIC_KEY"
-fi
-input_box "SSH Public Key" "$ssh_content" "SSH Key: " "$current_key"
-if [[ -n $INPUT_VALUE ]];then
-if validate_ssh_key "$INPUT_VALUE";then
-SSH_PUBLIC_KEY="$INPUT_VALUE"
-parse_ssh_key "$SSH_PUBLIC_KEY"
-print_success "SSH key:" "$SSH_KEY_TYPE"
-else
-print_warning "SSH key format may be invalid"
-echo -n "Use anyway? (y/n): "
-read -rsn1 confirm
-echo ""
-if [[ $confirm =~ ^[Yy]$ ]];then
-SSH_PUBLIC_KEY="$INPUT_VALUE"
-parse_ssh_key "$SSH_PUBLIC_KEY"
-print_success "SSH key:" "$SSH_KEY_TYPE"
-fi
-fi
-fi
-}
-show_configuration_review(){
-while true;do
-clear
-show_banner --no-info
-display_config_preview
-local action
-IFS= read -rsn1 action
-case "$action" in
-""|" ")return 0
-;;
-e|E)clear
-show_banner --no-info
-edit_configuration
-;;
-q|Q)print_info "Installation cancelled by user"
-exit 0
-;;
-*)
-esac
-done
-}
-declare -a CONFIG_ITEMS=()
 _build_config_items(){
 CONFIG_ITEMS=()
-CONFIG_ITEMS+=("Basic|Hostname|$PVE_HOSTNAME.$DOMAIN_SUFFIX|_gum_edit_hostname")
-CONFIG_ITEMS+=("Basic|Email|$EMAIL|_gum_edit_email")
+CONFIG_ITEMS+=("Basic Settings|Hostname|$PVE_HOSTNAME.$DOMAIN_SUFFIX|_gum_edit_hostname")
+CONFIG_ITEMS+=("Basic Settings|Email|$EMAIL|_gum_edit_email")
 local pass_display
 pass_display=$([ "$PASSWORD_GENERATED" == "yes" ]&&echo "auto-generated"||echo "********")
-CONFIG_ITEMS+=("Basic|Password|$pass_display|_gum_edit_password")
-CONFIG_ITEMS+=("Basic|Timezone|$TIMEZONE|_gum_edit_timezone")
+CONFIG_ITEMS+=("Basic Settings|Password|$pass_display|_gum_edit_password")
+CONFIG_ITEMS+=("Basic Settings|Timezone|$TIMEZONE|_gum_edit_timezone")
 CONFIG_ITEMS+=("Network|Interface|$INTERFACE_NAME|_gum_edit_interface")
 CONFIG_ITEMS+=("Network|IPv4|$MAIN_IPV4_CIDR|")
 CONFIG_ITEMS+=("Network|Gateway|$MAIN_IPV4_GW|")
@@ -2958,8 +1857,6 @@ CONFIG_ITEMS+=("SSH|SSH Key|$ssh_display|_gum_edit_ssh")
 }
 _display_config_table(){
 _build_config_items
-local table_data="Section,Setting,Value
-"
 local prev_section=""
 for item in "${CONFIG_ITEMS[@]}";do
 local section="${item%%|*}"
@@ -2969,43 +1866,37 @@ rest="${rest#*|}"
 local value="${rest%%|*}"
 if [[ $section != "$prev_section" ]];then
 if [[ -n $prev_section ]];then
-table_data+="---,---,---
-"
+echo ""
 fi
-table_data+="$section,$label,$value
-"
+gum style --foreground "$HEX_CYAN" --bold "--- $section ---"
 prev_section="$section"
-else
-table_data+=",$label,$value
-"
 fi
+printf "  %s  %s\n" \
+"$(gum style --foreground "$HEX_GRAY" "$label:")" \
+"$(gum style --foreground "$HEX_WHITE" "$value")"
 done
-table_data="${table_data%$'\n'}"
-echo "$table_data"|gum table \
---print \
---border "none" \
---cell.foreground "$HEX_GRAY" \
---header.foreground "$HEX_ORANGE"
 }
 _build_menu_options(){
 _build_config_items
-local -a options=()
+local prev_section=""
 for item in "${CONFIG_ITEMS[@]}";do
+local section="${item%%|*}"
 local rest="${item#*|}"
 local label="${rest%%|*}"
 rest="${rest#*|}"
 local value="${rest%%|*}"
 local edit_fn="${rest#*|}"
 if [[ -n $edit_fn ]];then
-options+=("$label - $value")
+if [[ $section != "$prev_section" ]];then
+prev_section="$section"
+fi
+echo "$label|$value"
 fi
 done
-options+=("Done - Start installation")
-printf '%s\n' "${options[@]}"
+echo "Done|Start installation"
 }
 _get_edit_function(){
-local selected="$1"
-local selected_label="${selected%% - *}"
+local selected_label="$1"
 for item in "${CONFIG_ITEMS[@]}";do
 local rest="${item#*|}"
 local label="${rest%%|*}"
@@ -3284,8 +2175,48 @@ case "$selected" in
 esac
 }
 _gum_edit_pve_version(){
-gum style --foreground "$HEX_GRAY" "Proxmox version is set during initial configuration"
+if [[ -z $PROXMOX_ISO_LIST ]];then
+local iso_list
+get_available_proxmox_isos 5 >/tmp/iso_list.tmp&
+gum spin --spinner dot --title "Fetching available Proxmox versions..." -- wait $!
+iso_list=$(cat /tmp/iso_list.tmp 2>/dev/null)
+rm -f /tmp/iso_list.tmp
+PROXMOX_ISO_LIST="$iso_list"
+fi
+if [[ -z $PROXMOX_ISO_LIST ]];then
+gum style --foreground "$HEX_YELLOW" "Could not fetch ISO list"
 sleep 1
+return
+fi
+local options=""
+local first=true
+while IFS= read -r iso;do
+local version
+version=$(get_iso_version "$iso")
+if [[ $first == true ]];then
+options+="$version (Latest)\n"
+first=false
+else
+options+="$version\n"
+fi
+done <<<"$PROXMOX_ISO_LIST"
+local selected
+selected=$(echo -e "$options"|gum choose \
+--cursor.foreground "$HEX_ORANGE" \
+--selected.foreground "$HEX_ORANGE" \
+--header "Select Proxmox version:" \
+--header.foreground "$HEX_GRAY")
+if [[ -n $selected ]];then
+local selected_version="${selected%% *}"
+while IFS= read -r iso;do
+local version
+version=$(get_iso_version "$iso")
+if [[ $version == "$selected_version" ]];then
+PROXMOX_ISO_VERSION="$iso"
+break
+fi
+done <<<"$PROXMOX_ISO_LIST"
+fi
 }
 _gum_edit_repo(){
 local repo_options="no-subscription
@@ -3458,6 +2389,9 @@ fi
 fi
 }
 show_gum_config_editor(){
+detect_network_interface
+collect_network_info
+_init_default_config
 while true;do
 clear
 show_banner
@@ -3466,18 +2400,27 @@ gum style --foreground "$HEX_ORANGE" --bold "Configuration"
 echo ""
 _display_config_table
 echo ""
+echo ""
+local menu_options
+menu_options=$(_build_menu_options)
 local selected
-selected=$(_build_menu_options|gum choose \
+selected=$(echo "$menu_options"|gum choose \
 --cursor.foreground "$HEX_ORANGE" \
 --selected.foreground "$HEX_ORANGE" \
---header "Select setting to edit (Enter to select):" \
+--header "Select setting to edit (use arrows, Enter to select):" \
 --header.foreground "$HEX_GRAY" \
 --height 20)
-if [[ $selected == "Done - Start installation" ]];then
+local selected_label="${selected%%|*}"
+if [[ $selected_label == "Done" ]];then
+if [[ -z $SSH_PUBLIC_KEY ]];then
+gum style --foreground "$HEX_RED" "SSH key is required for secure access!"
+sleep 2
+continue
+fi
 return 0
 fi
 local edit_fn
-edit_fn=$(_get_edit_function "$selected")
+edit_fn=$(_get_edit_function "$selected_label")
 if [[ -n $edit_fn ]];then
 clear
 show_banner
@@ -4789,8 +3732,6 @@ prefetch_proxmox_iso_info
 show_banner_animated_stop
 log "Step: show_system_status"
 show_system_status
-log "Step: get_system_inputs"
-get_system_inputs
 log "Step: show_gum_config_editor"
 show_gum_config_editor
 echo ""
