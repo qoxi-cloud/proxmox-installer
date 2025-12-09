@@ -115,8 +115,12 @@ _wiz_render_menu() {
   echo -e "  ${back_style}← Back${CLR_RESET}           ${continue_style}Continue →${CLR_RESET}"
 
   echo ""
-  # Footer
-  echo -e "${CLR_GRAY}[${CLR_ORANGE}↑↓${CLR_GRAY}] navigate  [${CLR_ORANGE}←→${CLR_GRAY}] back/continue  [${CLR_ORANGE}Enter${CLR_GRAY}] select  [${CLR_ORANGE}Q${CLR_GRAY}] quit${CLR_RESET}"
+  # Footer - show ↑↓ for fields, ←→ for nav buttons
+  if [[ $nav_focus == "fields" ]]; then
+    echo -e "${CLR_GRAY}[${CLR_ORANGE}↑↓${CLR_GRAY}] navigate  [${CLR_ORANGE}Enter${CLR_GRAY}] edit  [${CLR_ORANGE}Q${CLR_GRAY}] quit${CLR_RESET}"
+  else
+    echo -e "${CLR_GRAY}[${CLR_ORANGE}←→${CLR_GRAY}] navigate  [${CLR_ORANGE}Enter${CLR_GRAY}] select  [${CLR_ORANGE}Q${CLR_GRAY}] quit${CLR_RESET}"
+  fi
 }
 
 # =============================================================================
