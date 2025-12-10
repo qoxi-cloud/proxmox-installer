@@ -371,26 +371,3 @@ validate_dns_resolution() {
     return 2 # Wrong IP
   fi
 }
-
-# Prompts for password with validation and masked display.
-# Parameters:
-#   $1 - Prompt text
-#   $2 - Variable name to store result
-# Side effects: Sets variable named by $2
-prompt_password() {
-  local prompt="$1"
-  local var_name="$2"
-  local password
-  local error
-
-  password=$(read_password "$prompt")
-  error=$(get_password_error "$password")
-  while [[ -n $error ]]; do
-    print_error "$error"
-    password=$(read_password "$prompt")
-    error=$(get_password_error "$password")
-  done
-  printf "\033[A\r%s✓%s %s********\033[K\n" "${CLR_CYAN}" "${CLR_RESET}" "$prompt"
-  # Use printf -v for safe variable assignment (avoids eval)
-  printf -v "$var_name" '%s' "$password"
-}

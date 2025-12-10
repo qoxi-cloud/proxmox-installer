@@ -102,7 +102,7 @@ DEFAULT_EMAIL="admin@example.com"
 
 # All standard Debian/Linux timezones (used in interactive menu)
 # shellcheck disable=SC2034
-TIMEZONES="Africa/Abidjan
+readonly TIMEZONES="Africa/Abidjan
 Africa/Accra
 Africa/Addis_Ababa
 Africa/Algiers
@@ -532,6 +532,56 @@ DEFAULT_SSL_TYPE="self-signed"
 # CPU governor / power profile
 # Options: performance, ondemand, powersave, schedutil, conservative
 DEFAULT_CPU_GOVERNOR="performance"
+
+# =============================================================================
+# Menu option lists (used in interactive wizard)
+# =============================================================================
+
+# Proxmox repository types
+# shellcheck disable=SC2034
+readonly REPO_TYPES="no-subscription
+enterprise
+test"
+
+# Network bridge modes
+# shellcheck disable=SC2034
+readonly BRIDGE_MODES="external
+internal
+both"
+
+# IPv6 configuration modes
+# shellcheck disable=SC2034
+readonly IPV6_MODES="auto
+manual
+disabled"
+
+# ZFS RAID levels (base options, raid5/raid10 added dynamically based on drive count)
+# shellcheck disable=SC2034
+readonly ZFS_MODES="single
+raid1"
+
+# SSL certificate types
+# shellcheck disable=SC2034
+readonly SSL_TYPES="self-signed
+letsencrypt"
+
+# Shell options
+# shellcheck disable=SC2034
+readonly SHELL_OPTIONS="zsh
+bash"
+
+# CPU governor / power profile options
+# shellcheck disable=SC2034
+readonly CPU_GOVERNORS="performance
+ondemand
+powersave
+schedutil
+conservative"
+
+# Optional features (format: "id|description")
+# shellcheck disable=SC2034
+readonly OPTIONAL_FEATURES="vnstat (network stats)
+auditd (audit logging)"
 
 # IPv6 configuration defaults
 # IPV6_MODE: auto (detect from interface), manual (user-specified), disabled

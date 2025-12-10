@@ -411,15 +411,11 @@ _edit_repository() {
   show_banner
   echo ""
 
-  local options="no-subscription
-enterprise
-test"
-
   # 1 header + 3 items for gum choose
   _show_input_footer "filter" 4
 
   local selected
-  selected=$(echo "$options" | gum choose \
+  selected=$(echo "$REPO_TYPES" | gum choose \
     --header="Repository:" \
     --header.foreground "$HEX_CYAN" \
     --cursor "› " \
@@ -446,15 +442,11 @@ _edit_bridge_mode() {
   show_banner
   echo ""
 
-  local options="external
-internal
-both"
-
   # 1 header + 3 items for gum choose
   _show_input_footer "filter" 4
 
   local selected
-  selected=$(echo "$options" | gum choose \
+  selected=$(echo "$BRIDGE_MODES" | gum choose \
     --header="Bridge mode:" \
     --header.foreground "$HEX_CYAN" \
     --cursor "› " \
@@ -499,15 +491,11 @@ _edit_ipv6() {
   show_banner
   echo ""
 
-  local options="auto
-manual
-disabled"
-
   # 1 header + 3 items for gum choose
   _show_input_footer "filter" 4
 
   local selected
-  selected=$(echo "$options" | gum choose \
+  selected=$(echo "$IPV6_MODES" | gum choose \
     --header="IPv6:" \
     --header.foreground "$HEX_CYAN" \
     --cursor "› " \
@@ -524,10 +512,8 @@ _edit_zfs_mode() {
   show_banner
   echo ""
 
-  local options="single
-raid1"
-
-  # Add more options if multiple drives detected
+  # Start with base ZFS modes, add more based on drive count
+  local options="$ZFS_MODES"
   if [[ ${DRIVE_COUNT:-0} -ge 3 ]]; then
     options+="\nraid5"
   fi
@@ -559,14 +545,11 @@ _edit_tailscale() {
   show_banner
   echo ""
 
-  local options="Disabled
-Enabled"
-
   # 1 header + 2 items for gum choose
   _show_input_footer "filter" 3
 
   local selected
-  selected=$(echo "$options" | gum choose \
+  selected=$(echo -e "Disabled\nEnabled" | gum choose \
     --header="Tailscale:" \
     --header.foreground "$HEX_CYAN" \
     --cursor "› " \
@@ -586,14 +569,11 @@ _edit_ssl() {
   show_banner
   echo ""
 
-  local options="self-signed
-letsencrypt"
-
   # 1 header + 2 items for gum choose
   _show_input_footer "filter" 3
 
   local selected
-  selected=$(echo "$options" | gum choose \
+  selected=$(echo "$SSL_TYPES" | gum choose \
     --header="SSL Certificate:" \
     --header.foreground "$HEX_CYAN" \
     --cursor "› " \
@@ -610,14 +590,11 @@ _edit_shell() {
   show_banner
   echo ""
 
-  local options="zsh
-bash"
-
   # 1 header + 2 items for gum choose
   _show_input_footer "filter" 3
 
   local selected
-  selected=$(echo "$options" | gum choose \
+  selected=$(echo "$SHELL_OPTIONS" | gum choose \
     --header="Shell:" \
     --header.foreground "$HEX_CYAN" \
     --cursor "› " \
@@ -634,17 +611,11 @@ _edit_power_profile() {
   show_banner
   echo ""
 
-  local options="performance
-ondemand
-powersave
-schedutil
-conservative"
-
   # 1 header + 5 items for gum choose
   _show_input_footer "filter" 6
 
   local selected
-  selected=$(echo "$options" | gum choose \
+  selected=$(echo "$CPU_GOVERNORS" | gum choose \
     --header="Power profile:" \
     --header.foreground "$HEX_CYAN" \
     --cursor "› " \
@@ -666,7 +637,7 @@ _edit_features() {
 
   # Use gum choose with --no-limit for multi-select
   local selected
-  selected=$(echo -e "vnstat (network stats)\nauditd (audit logging)" | gum choose \
+  selected=$(echo "$OPTIONAL_FEATURES" | gum choose \
     --no-limit \
     --header="Features:" \
     --header.foreground "$HEX_CYAN" \
