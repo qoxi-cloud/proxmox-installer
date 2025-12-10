@@ -244,7 +244,7 @@ _edit_hostname() {
   echo ""
   # Print footer first, then move cursor up for input field
   _show_input_footer
-  printf '\033[2A'  # Move cursor up 2 lines (above footer)
+  printf '\033[2A' # Move cursor up 2 lines (above footer)
 
   local new_hostname
   new_hostname=$(gum input \
