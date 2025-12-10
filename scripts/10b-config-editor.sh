@@ -231,11 +231,12 @@ _wizard_main() {
 # Display footer with key hints below current cursor position
 # Prints footer on next line, then moves cursor back up for input field
 _show_input_footer() {
-  # Print empty line for input field, then footer
+  # Print empty line for input field, blank line, then footer
+  echo ""
   echo ""
   echo -e "${CLR_GRAY}[${CLR_ORANGE}Enter${CLR_GRAY}] confirm  [${CLR_ORANGE}Esc${CLR_GRAY}] cancel${CLR_RESET}"
-  # Move cursor up 2 lines (back to where input should be)
-  tput cuu 2
+  # Move cursor up 3 lines (back to where input should be)
+  tput cuu 3
 }
 
 # =============================================================================
