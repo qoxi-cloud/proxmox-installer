@@ -44,7 +44,6 @@ Changes:
 | ⚡️ | `perf` | Performance improvements |
 | 🩹 | `fix` | Simple non-critical fixes |
 | 🚑️ | `hotfix` | Critical hotfixes |
-| ✅ | `test` | Adding or updating tests |
 | 🏗️ | `build` | Build system changes |
 | 👷 | `ci` | CI/CD changes |
 
@@ -96,7 +95,6 @@ Brief description of what this PR does
 
 ## Testing
 
-- [x] Unit tests pass (`./tests/run-all-tests.sh`)
 - [x] ShellCheck passes (`shellcheck scripts/*.sh`)
 - [x] Manual testing performed
 
@@ -140,69 +138,6 @@ shfmt -i 2 -ci -s -w scripts/*.sh
 # -w: write in-place
 ```
 
-**Run unit tests:**
-
-```bash
-./tests/run-all-tests.sh
-```
-
-## Unit Tests
-
-The project includes comprehensive unit tests in the `tests/` directory:
-
-| Test File | Module | Tests | Description |
-|-----------|--------|-------|-------------|
-| `test-validation.sh` | 05-validation.sh | 103 | Hostname, FQDN, email, password, subnet, IPv6 validation |
-| `test-ssh.sh` | 03-ssh.sh | 16 | SSH key validation and parsing |
-| `test-main.sh` | 99-main.sh | 8 | String truncation utilities |
-| `test-utils.sh` | 02-utils.sh | 7 | Duration formatting |
-| `run-all-tests.sh` | - | - | Test runner aggregating all tests |
-
-**Test structure:**
-
-Each test file uses a simple assertion framework:
-
-```bash
-assert_true "description" command args...   # Expects command to succeed
-assert_false "description" command args...  # Expects command to fail
-assert_equals "description" "expected" "actual"
-assert_not_empty "description" "$value"
-```
-
-**Function extraction pattern:**
-
-Tests extract individual functions using `sed` to avoid loading entire scripts with dependencies:
-
-```bash
-eval "$(sed -n '/^function_name()/,/^}/p' "$SCRIPT_DIR/scripts/module.sh")"
-```
-
-**Cross-platform notes:**
-
-- Tests are designed to work on both macOS and Linux
-- Some functions (e.g., `apply_template_vars` using `sed -i`) are not tested due to platform differences
-- Tests run in CI on Ubuntu runners
-
-**IMPORTANT: Running tests on non-Ubuntu systems (e.g., macOS):**
-
-CI runs on Ubuntu, and there are subtle differences in shell behavior between platforms (e.g., locale handling, `${#var}` for UTF-8 strings). To ensure tests pass in CI, **always run tests in Docker** when developing on macOS or other non-Ubuntu systems:
-
-```bash
-# Run all tests in Ubuntu container (matches CI environment)
-docker run --rm -v "$(pwd)":/workspace -w /workspace ubuntu:latest bash -c "
-    apt-get update && apt-get install -y bash coreutils
-    ./tests/run-all-tests.sh
-"
-
-# Run a specific test file
-docker run --rm -v "$(pwd)":/workspace -w /workspace ubuntu:latest bash -c "
-    apt-get update && apt-get install -y bash coreutils
-    ./tests/test-validation.sh
-"
-```
-
-This prevents false positives where tests pass locally but fail in CI due to platform differences.
-
 ## CI/CD Workflow
 
 The project uses multiple GitHub Actions workflows:
@@ -216,9 +151,8 @@ The project uses multiple GitHub Actions workflows:
 3. Check formatting with `shfmt -i 2 -ci -s -d`
 4. Minify with `shfmt -mn` to create `pve-install.min.sh`
 5. Run ShellCheck linting
-6. Run unit tests (`./tests/run-all-tests.sh`)
-7. Calculate and inject version number
-8. Upload artifacts and PR metadata
+6. Calculate and inject version number
+7. Upload artifacts and PR metadata
 
 **Deploy Job** - Runs only on push to main:
 
@@ -381,9 +315,6 @@ Centralized constants in `00-init.sh` (can be overridden via environment variabl
 | DNS servers (IPv6) | `DNS6_PRIMARY`, `DNS6_SECONDARY`, `DNS6_TERTIARY`, `DNS6_QUATERNARY` |
 | Resource limits | `MIN_DISK_SPACE_MB`, `MIN_RAM_MB`, `MIN_CPU_CORES` |
 | QEMU defaults | `DEFAULT_QEMU_RAM`, `MIN_QEMU_RAM`, `MAX_QEMU_CORES`, `QEMU_MIN_RAM_RESERVE` |
-| Default values | `DEFAULT_HOSTNAME`, `DEFAULT_TIMEZONE`, `DEFAULT_SUBNET`, `DEFAULT_BRIDGE_MTU`, etc. |
-| CPU governor | `DEFAULT_CPU_GOVERNOR` (performance, ondemand, powersave, schedutil, conservative) |
-| IPv6 defaults | `DEFAULT_IPV6_MODE`, `DEFAULT_IPV6_GATEWAY`, `DEFAULT_IPV6_VM_PREFIX` |
 | Packages | `SYSTEM_UTILITIES`, `OPTIONAL_PACKAGES` |
 | Timeouts | `DNS_LOOKUP_TIMEOUT`, `SSH_CONNECT_TIMEOUT`, `SSH_READY_TIMEOUT`, `QEMU_BOOT_TIMEOUT` |
 | Retry settings | `DNS_RETRY_DELAY`, `DOWNLOAD_RETRY_COUNT`, `DOWNLOAD_RETRY_DELAY` |
