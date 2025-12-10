@@ -18,7 +18,7 @@ HEX_HETZNER="#d70000"
 HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 MENU_BOX_WIDTH=60
-VERSION="1.18.38-pr.21"
+VERSION="1.18.40-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1868,6 +1868,7 @@ clear
 show_banner
 echo ""
 _show_input_footer
+printf '\033[2A'
 local new_hostname
 new_hostname=$(gum input \
 --placeholder "e.g., pve, proxmox, node1" \
@@ -1882,6 +1883,7 @@ if validate_hostname "$new_hostname";then
 PVE_HOSTNAME="$new_hostname"
 else
 echo ""
+echo ""
 gum style --foreground "$HEX_RED" "Invalid hostname format"
 sleep 1
 return
@@ -1891,6 +1893,7 @@ clear
 show_banner
 echo ""
 _show_input_footer
+printf '\033[2A'
 local new_domain
 new_domain=$(gum input \
 --placeholder "e.g., local, example.com" \
