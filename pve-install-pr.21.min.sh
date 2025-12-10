@@ -18,7 +18,7 @@ HEX_HETZNER="#d70000"
 HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 MENU_BOX_WIDTH=60
-VERSION="1.18.46-pr.21"
+VERSION="1.18.47-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1920,8 +1920,7 @@ _edit_email(){
 clear
 show_banner
 echo ""
-echo -e "$CLR_GRAY[${CLR_ORANGE}Enter$CLR_GRAY] confirm  [${CLR_ORANGE}Esc$CLR_GRAY] cancel$CLR_RESET"
-echo ""
+_show_input_footer
 local new_email
 new_email=$(gum input \
 --placeholder "admin@example.com" \
@@ -1929,11 +1928,13 @@ new_email=$(gum input \
 --prompt "Email: " \
 --prompt.foreground "$HEX_CYAN" \
 --cursor.foreground "$HEX_ORANGE" \
---width 50)
+--width 50 \
+--no-show-help)
 if [[ -n $new_email ]];then
 if validate_email "$new_email";then
 EMAIL="$new_email"
 else
+echo ""
 echo ""
 gum style --foreground "$HEX_RED" "Invalid email format"
 sleep 1
@@ -1946,8 +1947,7 @@ show_banner
 echo ""
 gum style --foreground "$HEX_GRAY" "Leave empty to auto-generate a secure password"
 echo ""
-echo -e "$CLR_GRAY[${CLR_ORANGE}Enter$CLR_GRAY] confirm  [${CLR_ORANGE}Esc$CLR_GRAY] cancel$CLR_RESET"
-echo ""
+_show_input_footer
 local new_password
 new_password=$(gum input \
 --password \
@@ -1955,17 +1955,20 @@ new_password=$(gum input \
 --prompt "Password: " \
 --prompt.foreground "$HEX_CYAN" \
 --cursor.foreground "$HEX_ORANGE" \
---width 40)
+--width 40 \
+--no-show-help)
 if [[ -z $new_password ]];then
 NEW_ROOT_PASSWORD=$(generate_password "$DEFAULT_PASSWORD_LENGTH")
 PASSWORD_GENERATED="yes"
 echo ""
-gum style --foreground "$HEX_GREEN" "✓ Password auto-generated"
+echo ""
+gum style --foreground "$HEX_GREEN" "Password auto-generated"
 sleep 1
 else
 local password_error
 password_error=$(get_password_error "$new_password")
 if [[ -n $password_error ]];then
+echo ""
 echo ""
 gum style --foreground "$HEX_RED" "$password_error"
 sleep 2
@@ -2418,18 +2421,18 @@ _edit_repository(){
 clear
 show_banner
 echo ""
-echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] select$CLR_RESET"
-echo ""
 local options="no-subscription
 enterprise
 test"
+_show_input_footer "filter" 3
 local selected
 selected=$(echo "$options"|gum choose \
 --header="" \
 --cursor "› " \
 --cursor.foreground "$HEX_ORANGE" \
 --selected.foreground "$HEX_WHITE" \
---item.foreground "$HEX_WHITE")
+--item.foreground "$HEX_WHITE" \
+--no-show-help)
 [[ -n $selected ]]&&PVE_REPO_TYPE="$selected"
 }
 _edit_interface(){
@@ -2444,26 +2447,25 @@ _edit_bridge_mode(){
 clear
 show_banner
 echo ""
-echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] select$CLR_RESET"
-echo ""
 local options="external
 internal
 both"
+_show_input_footer "filter" 3
 local selected
 selected=$(echo "$options"|gum choose \
 --header="" \
 --cursor "› " \
 --cursor.foreground "$HEX_ORANGE" \
 --selected.foreground "$HEX_WHITE" \
---item.foreground "$HEX_WHITE")
+--item.foreground "$HEX_WHITE" \
+--no-show-help)
 [[ -n $selected ]]&&BRIDGE_MODE="$selected"
 }
 _edit_private_subnet(){
 clear
 show_banner
 echo ""
-echo -e "$CLR_GRAY[${CLR_ORANGE}Enter$CLR_GRAY] confirm  [${CLR_ORANGE}Esc$CLR_GRAY] cancel$CLR_RESET"
-echo ""
+_show_input_footer
 local new_subnet
 new_subnet=$(gum input \
 --placeholder "e.g., 10.10.10.0/24" \
@@ -2471,11 +2473,13 @@ new_subnet=$(gum input \
 --prompt "Private subnet: " \
 --prompt.foreground "$HEX_CYAN" \
 --cursor.foreground "$HEX_ORANGE" \
---width 40)
+--width 40 \
+--no-show-help)
 if [[ -n $new_subnet ]];then
 if validate_subnet "$new_subnet";then
 PRIVATE_SUBNET="$new_subnet"
 else
+echo ""
 echo ""
 gum style --foreground "$HEX_RED" "Invalid subnet format"
 sleep 1
@@ -2486,25 +2490,23 @@ _edit_ipv6(){
 clear
 show_banner
 echo ""
-echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] select$CLR_RESET"
-echo ""
 local options="auto
 manual
 disabled"
+_show_input_footer "filter" 3
 local selected
 selected=$(echo "$options"|gum choose \
 --header="" \
 --cursor "› " \
 --cursor.foreground "$HEX_ORANGE" \
 --selected.foreground "$HEX_WHITE" \
---item.foreground "$HEX_WHITE")
+--item.foreground "$HEX_WHITE" \
+--no-show-help)
 [[ -n $selected ]]&&IPV6_MODE="$selected"
 }
 _edit_zfs_mode(){
 clear
 show_banner
-echo ""
-echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] select$CLR_RESET"
 echo ""
 local options="single
 raid1"
@@ -2514,30 +2516,35 @@ fi
 if [[ ${DRIVE_COUNT:-0} -ge 4 ]];then
 options+="\nraid10"
 fi
+local item_count=2
+[[ ${DRIVE_COUNT:-0} -ge 3 ]]&&item_count=3
+[[ ${DRIVE_COUNT:-0} -ge 4 ]]&&item_count=4
+_show_input_footer "filter" "$item_count"
 local selected
 selected=$(echo -e "$options"|gum choose \
 --header="" \
 --cursor "› " \
 --cursor.foreground "$HEX_ORANGE" \
 --selected.foreground "$HEX_WHITE" \
---item.foreground "$HEX_WHITE")
+--item.foreground "$HEX_WHITE" \
+--no-show-help)
 [[ -n $selected ]]&&ZFS_RAID="$selected"
 }
 _edit_tailscale(){
 clear
 show_banner
 echo ""
-echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] select$CLR_RESET"
-echo ""
 local options="Disabled
 Enabled"
+_show_input_footer "filter" 2
 local selected
 selected=$(echo "$options"|gum choose \
 --header="" \
 --cursor "› " \
 --cursor.foreground "$HEX_ORANGE" \
 --selected.foreground "$HEX_WHITE" \
---item.foreground "$HEX_WHITE")
+--item.foreground "$HEX_WHITE" \
+--no-show-help)
 case "$selected" in
 Enabled)INSTALL_TAILSCALE="yes";;
 Disabled)INSTALL_TAILSCALE="no"
@@ -2547,65 +2554,64 @@ _edit_ssl(){
 clear
 show_banner
 echo ""
-echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] select$CLR_RESET"
-echo ""
 local options="self-signed
 letsencrypt"
+_show_input_footer "filter" 2
 local selected
 selected=$(echo "$options"|gum choose \
 --header="" \
 --cursor "› " \
 --cursor.foreground "$HEX_ORANGE" \
 --selected.foreground "$HEX_WHITE" \
---item.foreground "$HEX_WHITE")
+--item.foreground "$HEX_WHITE" \
+--no-show-help)
 [[ -n $selected ]]&&SSL_TYPE="$selected"
 }
 _edit_shell(){
 clear
 show_banner
 echo ""
-echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] select$CLR_RESET"
-echo ""
 local options="zsh
 bash"
+_show_input_footer "filter" 2
 local selected
 selected=$(echo "$options"|gum choose \
 --header="" \
 --cursor "› " \
 --cursor.foreground "$HEX_ORANGE" \
 --selected.foreground "$HEX_WHITE" \
---item.foreground "$HEX_WHITE")
+--item.foreground "$HEX_WHITE" \
+--no-show-help)
 [[ -n $selected ]]&&DEFAULT_SHELL="$selected"
 }
 _edit_power_profile(){
 clear
 show_banner
 echo ""
-echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] select$CLR_RESET"
-echo ""
 local options="performance
 ondemand
 powersave
 schedutil
 conservative"
+_show_input_footer "filter" 5
 local selected
 selected=$(echo "$options"|gum choose \
 --header="" \
 --cursor "› " \
 --cursor.foreground "$HEX_ORANGE" \
 --selected.foreground "$HEX_WHITE" \
---item.foreground "$HEX_WHITE")
+--item.foreground "$HEX_WHITE" \
+--no-show-help)
 [[ -n $selected ]]&&CPU_GOVERNOR="$selected"
 }
 _edit_features(){
 clear
 show_banner
 echo ""
-echo -e "$CLR_GRAY[${CLR_ORANGE}Space$CLR_GRAY] toggle  [${CLR_ORANGE}Enter$CLR_GRAY] confirm$CLR_RESET"
 echo ""
-local options=""
-[[ $INSTALL_VNSTAT == "yes" ]]&&options+="vnstat (network stats)\n"||options+="vnstat (network stats)\n"
-[[ $INSTALL_AUDITD == "yes" ]]&&options+="auditd (audit logging)\n"||options+="auditd (audit logging)\n"
+echo ""
+echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Space$CLR_GRAY] toggle  [${CLR_ORANGE}Enter$CLR_GRAY] confirm$CLR_RESET"
+tput cuu 3
 local selected
 selected=$(echo -e "vnstat (network stats)\nauditd (audit logging)"|gum choose \
 --no-limit \
@@ -2613,7 +2619,8 @@ selected=$(echo -e "vnstat (network stats)\nauditd (audit logging)"|gum choose \
 --cursor "› " \
 --cursor.foreground "$HEX_ORANGE" \
 --selected.foreground "$HEX_WHITE" \
---item.foreground "$HEX_WHITE")
+--item.foreground "$HEX_WHITE" \
+--no-show-help)
 INSTALL_VNSTAT="no"
 INSTALL_AUDITD="no"
 if echo "$selected"|grep -q "vnstat";then
@@ -2627,10 +2634,9 @@ _edit_ssh_key(){
 clear
 show_banner
 echo ""
-echo -e "${CLR_GRAY}Paste your SSH public key (ssh-rsa, ssh-ed25519, etc.)$CLR_RESET"
+gum style --foreground "$HEX_GRAY" "Paste your SSH public key (ssh-rsa, ssh-ed25519, etc.)"
 echo ""
-echo -e "$CLR_GRAY[${CLR_ORANGE}Enter$CLR_GRAY] confirm  [${CLR_ORANGE}Esc$CLR_GRAY] cancel$CLR_RESET"
-echo ""
+_show_input_footer
 local new_key
 new_key=$(gum input \
 --placeholder "ssh-ed25519 AAAA... user@host" \
@@ -2638,11 +2644,13 @@ new_key=$(gum input \
 --prompt "SSH Key: " \
 --prompt.foreground "$HEX_CYAN" \
 --cursor.foreground "$HEX_ORANGE" \
---width 60)
+--width 60 \
+--no-show-help)
 if [[ -n $new_key ]];then
 if validate_ssh_public_key "$new_key";then
 SSH_PUBLIC_KEY="$new_key"
 else
+echo ""
 echo ""
 gum style --foreground "$HEX_RED" "Invalid SSH key format"
 sleep 1
