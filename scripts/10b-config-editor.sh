@@ -444,6 +444,7 @@ _edit_repository() {
     --header="Repository:" \
     --header.foreground "$HEX_CYAN" \
     --cursor "${CLR_ORANGE}›${CLR_RESET} " \
+    --cursor.foreground "$HEX_NONE" \
     --selected.foreground "$HEX_WHITE" \
     --no-show-help)
 
@@ -473,6 +474,7 @@ _edit_bridge_mode() {
     --header="Bridge mode:" \
     --header.foreground "$HEX_CYAN" \
     --cursor "${CLR_ORANGE}›${CLR_RESET} " \
+    --cursor.foreground "$HEX_NONE" \
     --selected.foreground "$HEX_WHITE" \
     --no-show-help)
 
@@ -520,6 +522,7 @@ _edit_ipv6() {
     --header="IPv6:" \
     --header.foreground "$HEX_CYAN" \
     --cursor "${CLR_ORANGE}›${CLR_RESET} " \
+    --cursor.foreground "$HEX_NONE" \
     --selected.foreground "$HEX_WHITE" \
     --no-show-help)
 
@@ -551,6 +554,7 @@ _edit_zfs_mode() {
     --header="ZFS mode:" \
     --header.foreground "$HEX_CYAN" \
     --cursor "${CLR_ORANGE}›${CLR_RESET} " \
+    --cursor.foreground "$HEX_NONE" \
     --selected.foreground "$HEX_WHITE" \
     --no-show-help)
 
@@ -570,6 +574,7 @@ _edit_tailscale() {
     --header="Tailscale:" \
     --header.foreground "$HEX_CYAN" \
     --cursor "${CLR_ORANGE}›${CLR_RESET} " \
+    --cursor.foreground "$HEX_NONE" \
     --selected.foreground "$HEX_WHITE" \
     --no-show-help)
 
@@ -592,6 +597,7 @@ _edit_ssl() {
     --header="SSL Certificate:" \
     --header.foreground "$HEX_CYAN" \
     --cursor "${CLR_ORANGE}›${CLR_RESET} " \
+    --cursor.foreground "$HEX_NONE" \
     --selected.foreground "$HEX_WHITE" \
     --no-show-help)
 
@@ -611,6 +617,7 @@ _edit_shell() {
     --header="Shell:" \
     --header.foreground "$HEX_CYAN" \
     --cursor "${CLR_ORANGE}›${CLR_RESET} " \
+    --cursor.foreground "$HEX_NONE" \
     --selected.foreground "$HEX_WHITE" \
     --no-show-help)
 
@@ -630,6 +637,7 @@ _edit_power_profile() {
     --header="Power profile:" \
     --header.foreground "$HEX_CYAN" \
     --cursor "${CLR_ORANGE}›${CLR_RESET} " \
+    --cursor.foreground "$HEX_NONE" \
     --selected.foreground "$HEX_WHITE" \
     --no-show-help)
 
@@ -651,6 +659,7 @@ _edit_features() {
     --header="Features:" \
     --header.foreground "$HEX_CYAN" \
     --cursor "${CLR_ORANGE}›${CLR_RESET} " \
+    --cursor.foreground "$HEX_NONE" \
     --selected.foreground "$HEX_WHITE" \
     --no-show-help)
 

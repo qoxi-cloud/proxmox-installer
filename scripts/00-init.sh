@@ -28,6 +28,7 @@ HEX_GRAY="#585858"
 HEX_HETZNER="#d70000"
 HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
+HEX_NONE="7"
 
 # Menu box width for consistent UI rendering across all scripts
 # shellcheck disable=SC2034
