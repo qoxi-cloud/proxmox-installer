@@ -837,12 +837,13 @@ _edit_repository() {
 enterprise
 test"
 
-  # 3 items for gum choose
-  _show_input_footer "filter" 3
+  # 1 header + 3 items for gum choose
+  _show_input_footer "filter" 4
 
   local selected
   selected=$(echo "$options" | gum choose \
-    --header="" \
+    --header="Repository:" \
+    --header.foreground "$HEX_CYAN" \
     --cursor "› " \
     --cursor.foreground "$HEX_ORANGE" \
     --selected.foreground "$HEX_WHITE" \
@@ -871,12 +872,13 @@ _edit_bridge_mode() {
 internal
 both"
 
-  # 3 items for gum choose
-  _show_input_footer "filter" 3
+  # 1 header + 3 items for gum choose
+  _show_input_footer "filter" 4
 
   local selected
   selected=$(echo "$options" | gum choose \
-    --header="" \
+    --header="Bridge mode:" \
+    --header.foreground "$HEX_CYAN" \
     --cursor "› " \
     --cursor.foreground "$HEX_ORANGE" \
     --selected.foreground "$HEX_WHITE" \
@@ -923,12 +925,13 @@ _edit_ipv6() {
 manual
 disabled"
 
-  # 3 items for gum choose
-  _show_input_footer "filter" 3
+  # 1 header + 3 items for gum choose
+  _show_input_footer "filter" 4
 
   local selected
   selected=$(echo "$options" | gum choose \
-    --header="" \
+    --header="IPv6:" \
+    --header.foreground "$HEX_CYAN" \
     --cursor "› " \
     --cursor.foreground "$HEX_ORANGE" \
     --selected.foreground "$HEX_WHITE" \
@@ -954,15 +957,16 @@ raid1"
     options+="\nraid10"
   fi
 
-  # Count options (2-4 items depending on drives)
-  local item_count=2
-  [[ ${DRIVE_COUNT:-0} -ge 3 ]] && item_count=3
-  [[ ${DRIVE_COUNT:-0} -ge 4 ]] && item_count=4
+  # Count options (2-4 items depending on drives) + 1 header
+  local item_count=3
+  [[ ${DRIVE_COUNT:-0} -ge 3 ]] && item_count=4
+  [[ ${DRIVE_COUNT:-0} -ge 4 ]] && item_count=5
   _show_input_footer "filter" "$item_count"
 
   local selected
   selected=$(echo -e "$options" | gum choose \
-    --header="" \
+    --header="ZFS mode:" \
+    --header.foreground "$HEX_CYAN" \
     --cursor "› " \
     --cursor.foreground "$HEX_ORANGE" \
     --selected.foreground "$HEX_WHITE" \
@@ -980,12 +984,13 @@ _edit_tailscale() {
   local options="Disabled
 Enabled"
 
-  # 2 items for gum choose
-  _show_input_footer "filter" 2
+  # 1 header + 2 items for gum choose
+  _show_input_footer "filter" 3
 
   local selected
   selected=$(echo "$options" | gum choose \
-    --header="" \
+    --header="Tailscale:" \
+    --header.foreground "$HEX_CYAN" \
     --cursor "› " \
     --cursor.foreground "$HEX_ORANGE" \
     --selected.foreground "$HEX_WHITE" \
@@ -1006,12 +1011,13 @@ _edit_ssl() {
   local options="self-signed
 letsencrypt"
 
-  # 2 items for gum choose
-  _show_input_footer "filter" 2
+  # 1 header + 2 items for gum choose
+  _show_input_footer "filter" 3
 
   local selected
   selected=$(echo "$options" | gum choose \
-    --header="" \
+    --header="SSL Certificate:" \
+    --header.foreground "$HEX_CYAN" \
     --cursor "› " \
     --cursor.foreground "$HEX_ORANGE" \
     --selected.foreground "$HEX_WHITE" \
@@ -1029,12 +1035,13 @@ _edit_shell() {
   local options="zsh
 bash"
 
-  # 2 items for gum choose
-  _show_input_footer "filter" 2
+  # 1 header + 2 items for gum choose
+  _show_input_footer "filter" 3
 
   local selected
   selected=$(echo "$options" | gum choose \
-    --header="" \
+    --header="Shell:" \
+    --header.foreground "$HEX_CYAN" \
     --cursor "› " \
     --cursor.foreground "$HEX_ORANGE" \
     --selected.foreground "$HEX_WHITE" \
@@ -1055,12 +1062,13 @@ powersave
 schedutil
 conservative"
 
-  # 5 items for gum choose
-  _show_input_footer "filter" 5
+  # 1 header + 5 items for gum choose
+  _show_input_footer "filter" 6
 
   local selected
   selected=$(echo "$options" | gum choose \
-    --header="" \
+    --header="Power profile:" \
+    --header.foreground "$HEX_CYAN" \
     --cursor "› " \
     --cursor.foreground "$HEX_ORANGE" \
     --selected.foreground "$HEX_WHITE" \
@@ -1075,14 +1083,15 @@ _edit_features() {
   show_banner
   echo ""
 
-  # 2 items for multi-select checkbox
-  _show_input_footer "checkbox" 2
+  # 1 header + 2 items for multi-select checkbox
+  _show_input_footer "checkbox" 3
 
   # Use gum choose with --no-limit for multi-select
   local selected
   selected=$(echo -e "vnstat (network stats)\nauditd (audit logging)" | gum choose \
     --no-limit \
-    --header="" \
+    --header="Features:" \
+    --header.foreground "$HEX_CYAN" \
     --cursor "› " \
     --cursor.foreground "$HEX_ORANGE" \
     --selected.foreground "$HEX_WHITE" \
