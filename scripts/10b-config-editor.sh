@@ -49,7 +49,7 @@ _wiz_show_cursor() { printf '\033[?25h'; }
 _wiz_fmt() {
   local value="$1"
   local placeholder="${2:-→ set value}"
-  if [[ -n "$value" ]]; then
+  if [[ -n $value ]]; then
     echo "$value"
   else
     echo "${CLR_GRAY}${placeholder}${CLR_RESET}"
@@ -75,12 +75,12 @@ _wiz_render_menu() {
 
   # Build display values
   local pass_display=""
-  if [[ -n "$NEW_ROOT_PASSWORD" ]]; then
+  if [[ -n $NEW_ROOT_PASSWORD ]]; then
     pass_display=$([[ $PASSWORD_GENERATED == "yes" ]] && echo "(auto-generated)" || echo "********")
   fi
 
   local ipv6_display=""
-  if [[ -n "$IPV6_MODE" ]]; then
+  if [[ -n $IPV6_MODE ]]; then
     case "$IPV6_MODE" in
       auto) ipv6_display="Auto" ;;
       manual) ipv6_display="Manual" ;;
@@ -90,12 +90,12 @@ _wiz_render_menu() {
   fi
 
   local tailscale_display=""
-  if [[ -n "$INSTALL_TAILSCALE" ]]; then
+  if [[ -n $INSTALL_TAILSCALE ]]; then
     tailscale_display=$([[ $INSTALL_TAILSCALE == "yes" ]] && echo "Enabled" || echo "Disabled")
   fi
 
   local features_display=""
-  if [[ -n "$INSTALL_VNSTAT" || -n "$INSTALL_AUDITD" ]]; then
+  if [[ -n $INSTALL_VNSTAT || -n $INSTALL_AUDITD ]]; then
     [[ $INSTALL_VNSTAT == "yes" ]] && features_display+="vnstat"
     [[ $INSTALL_AUDITD == "yes" ]] && features_display+="${features_display:+, }auditd"
     [[ -z $features_display ]] && features_display="none"
@@ -108,7 +108,7 @@ _wiz_render_menu() {
   fi
 
   local hostname_display=""
-  if [[ -n "$PVE_HOSTNAME" && -n "$DOMAIN_SUFFIX" ]]; then
+  if [[ -n $PVE_HOSTNAME && -n $DOMAIN_SUFFIX ]]; then
     hostname_display="${PVE_HOSTNAME}.${DOMAIN_SUFFIX}"
   fi
 

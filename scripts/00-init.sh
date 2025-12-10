@@ -94,7 +94,6 @@ DNS_LOOKUP_TIMEOUT=5
 # Retry delays (seconds)
 DNS_RETRY_DELAY=10
 
-
 # All standard Debian/Linux timezones (used in interactive wizard)
 # shellcheck disable=SC2034
 readonly WIZ_TIMEZONES="Africa/Abidjan
