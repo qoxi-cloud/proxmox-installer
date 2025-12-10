@@ -231,22 +231,27 @@ _wizard_main() {
 # Display footer with key hints below current cursor position
 # Parameters:
 #   $1 - type: "input" (default) or "filter"
-#   $2 - lines to move up (default: 3)
+#   $2 - lines for component (default: 1 for input, used for filter height)
 _show_input_footer() {
   local type="${1:-input}"
-  local lines_up="${2:-3}"
+  local component_lines="${2:-1}"
 
-  # Print empty lines for component, blank line, then footer
-  echo ""
-  echo ""
+  # Print empty lines for component space
+  local i
+  for ((i = 0; i < component_lines; i++)); do
+    echo ""
+  done
 
+  # Blank line + footer
+  echo ""
   if [[ $type == "filter" ]]; then
     echo -e "${CLR_GRAY}[${CLR_ORANGE}↑↓${CLR_GRAY}] navigate  [${CLR_ORANGE}Enter${CLR_GRAY}] select  [${CLR_ORANGE}Esc${CLR_GRAY}] cancel${CLR_RESET}"
   else
     echo -e "${CLR_GRAY}[${CLR_ORANGE}Enter${CLR_GRAY}] confirm  [${CLR_ORANGE}Esc${CLR_GRAY}] cancel${CLR_RESET}"
   fi
 
-  tput cuu "$lines_up"
+  # Move cursor back up: component_lines + 1 blank + 1 footer
+  tput cuu $((component_lines + 2))
 }
 
 # =============================================================================
@@ -798,8 +803,8 @@ Pacific/Wake
 Pacific/Wallis
 UTC"
 
-  # Footer for filter (5 visible lines + 1 input + 1 blank + 1 footer = move up 8)
-  _show_input_footer "filter" 8
+  # Footer for filter: height=5 items + 1 input line = 6 lines for component
+  _show_input_footer "filter" 6
 
   local selected
   selected=$(echo "$tz_list" | gum filter \
