@@ -18,7 +18,7 @@ HEX_HETZNER="#d70000"
 HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 MENU_BOX_WIDTH=60
-VERSION="1.18.52-pr.21"
+VERSION="1.18.53-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -53,7 +53,7 @@ DEFAULT_HOSTNAME="pve"
 DEFAULT_DOMAIN="local"
 DEFAULT_TIMEZONE="Europe/Kyiv"
 DEFAULT_EMAIL="admin@example.com"
-readonly TIMEZONES="Africa/Abidjan
+readonly WIZ_TIMEZONES="Africa/Abidjan
 Africa/Accra
 Africa/Addis_Ababa
 Africa/Algiers
@@ -480,27 +480,27 @@ DEFAULT_SHELL=""
 DEFAULT_REPO_TYPE="no-subscription"
 DEFAULT_SSL_TYPE="self-signed"
 DEFAULT_CPU_GOVERNOR="performance"
-readonly REPO_TYPES="no-subscription
+readonly WIZ_REPO_TYPES="no-subscription
 enterprise
 test"
-readonly BRIDGE_MODES="external
+readonly WIZ_BRIDGE_MODES="external
 internal
 both"
-readonly IPV6_MODES="auto
+readonly WIZ_IPV6_MODES="auto
 manual
 disabled"
-readonly ZFS_MODES="single
+readonly WIZ_ZFS_MODES="single
 raid1"
-readonly SSL_TYPES="self-signed
+readonly WIZ_SSL_TYPES="self-signed
 letsencrypt"
-readonly SHELL_OPTIONS="zsh
+readonly WIZ_SHELL_OPTIONS="zsh
 bash"
-readonly CPU_GOVERNORS="performance
+readonly WIZ_CPU_GOVERNORS="performance
 ondemand
 powersave
 schedutil
 conservative"
-readonly OPTIONAL_FEATURES="vnstat (network stats)
+readonly WIZ_OPTIONAL_FEATURES="vnstat (network stats)
 auditd (audit logging)"
 DEFAULT_IPV6_MODE="auto"
 DEFAULT_IPV6_GATEWAY="fe80::1"
@@ -2375,7 +2375,7 @@ show_banner
 echo ""
 _show_input_footer "filter" 6
 local selected
-selected=$(echo "$TIMEZONES"|gum filter \
+selected=$(echo "$WIZ_TIMEZONES"|gum filter \
 --placeholder "Type to search..." \
 --indicator "›" \
 --height 5 \
@@ -2394,7 +2394,7 @@ show_banner
 echo ""
 _show_input_footer "filter" 4
 local selected
-selected=$(echo "$REPO_TYPES"|gum choose \
+selected=$(echo "$WIZ_REPO_TYPES"|gum choose \
 --header="Repository:" \
 --header.foreground "$HEX_CYAN" \
 --cursor "› " \
@@ -2418,7 +2418,7 @@ show_banner
 echo ""
 _show_input_footer "filter" 4
 local selected
-selected=$(echo "$BRIDGE_MODES"|gum choose \
+selected=$(echo "$WIZ_BRIDGE_MODES"|gum choose \
 --header="Bridge mode:" \
 --header.foreground "$HEX_CYAN" \
 --cursor "› " \
@@ -2459,7 +2459,7 @@ show_banner
 echo ""
 _show_input_footer "filter" 4
 local selected
-selected=$(echo "$IPV6_MODES"|gum choose \
+selected=$(echo "$WIZ_IPV6_MODES"|gum choose \
 --header="IPv6:" \
 --header.foreground "$HEX_CYAN" \
 --cursor "› " \
@@ -2473,7 +2473,7 @@ _edit_zfs_mode(){
 clear
 show_banner
 echo ""
-local options="$ZFS_MODES"
+local options="$WIZ_ZFS_MODES"
 if [[ ${DRIVE_COUNT:-0} -ge 3 ]];then
 options+="\nraid5"
 fi
@@ -2520,7 +2520,7 @@ show_banner
 echo ""
 _show_input_footer "filter" 3
 local selected
-selected=$(echo "$SSL_TYPES"|gum choose \
+selected=$(echo "$WIZ_SSL_TYPES"|gum choose \
 --header="SSL Certificate:" \
 --header.foreground "$HEX_CYAN" \
 --cursor "› " \
@@ -2536,7 +2536,7 @@ show_banner
 echo ""
 _show_input_footer "filter" 3
 local selected
-selected=$(echo "$SHELL_OPTIONS"|gum choose \
+selected=$(echo "$WIZ_SHELL_OPTIONS"|gum choose \
 --header="Shell:" \
 --header.foreground "$HEX_CYAN" \
 --cursor "› " \
@@ -2552,7 +2552,7 @@ show_banner
 echo ""
 _show_input_footer "filter" 6
 local selected
-selected=$(echo "$CPU_GOVERNORS"|gum choose \
+selected=$(echo "$WIZ_CPU_GOVERNORS"|gum choose \
 --header="Power profile:" \
 --header.foreground "$HEX_CYAN" \
 --cursor "› " \
@@ -2568,7 +2568,7 @@ show_banner
 echo ""
 _show_input_footer "checkbox" 3
 local selected
-selected=$(echo "$OPTIONAL_FEATURES"|gum choose \
+selected=$(echo "$WIZ_OPTIONAL_FEATURES"|gum choose \
 --no-limit \
 --header="Features:" \
 --header.foreground "$HEX_CYAN" \
