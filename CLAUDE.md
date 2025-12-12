@@ -138,6 +138,22 @@ shfmt -i 2 -ci -s -w scripts/*.sh
 # -w: write in-place
 ```
 
+**Search tools (development):**
+
+Use modern alternatives for faster searching during development:
+
+```bash
+# Use rg (ripgrep) instead of grep
+rg "pattern" scripts/          # Search in scripts directory
+rg -t sh "function"            # Search only shell files
+rg -l "TODO"                   # List files with matches
+
+# Use fd instead of find
+fd ".sh$" scripts/             # Find shell files
+fd -e sh                       # Find by extension
+fd -t f "config"               # Find files matching pattern
+```
+
 ## CI/CD Workflow
 
 The project uses multiple GitHub Actions workflows:
