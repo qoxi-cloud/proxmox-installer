@@ -58,6 +58,7 @@ jobs:
       pull-requests: write
       actions: read
       repository-projects: read
+      deployments: write
 
     steps:
       - name: Download PR metadata
@@ -96,6 +97,31 @@ jobs:
           else
             echo "is_fork=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Create deployment
+        id: deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ steps.pr.outputs.number }};
+            const prBranch = '${{ steps.pr.outputs.branch }}';
+            const version = '${{ steps.pr.outputs.version }}';
+            const repoOwner = context.repo.owner;
+            const repoName = context.repo.repo;
+
+            // Create deployment
+            const { data: deployment } = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: prBranch,
+              environment: `pr-${prNumber}`,
+              description: `Deploy PR #${prNumber} (${version})`,
+              auto_merge: false,
+              required_contexts: []
+            });
+
+            core.setOutput('deployment_id', deployment.id);
+            return deployment.id;
 
       - name: Checkout gh-pages
         uses: actions/checkout@v4
@@ -190,4 +216,30 @@ jobs:
               repo: context.repo.repo,
               issue_number: prNumber,
               body: body
+            });
+
+      - name: Update deployment status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deploymentId = ${{ steps.deployment.outputs.deployment_id }};
+            const prNumber = ${{ steps.pr.outputs.number }};
+            const filename = '${{ steps.pr.outputs.filename }}';
+            const repoOwner = context.repo.owner;
+            const repoName = context.repo.repo;
+            const scriptUrl = `https://${repoOwner}.github.io/${repoName}/${filename}`;
+
+            const state = '${{ job.status }}' === 'success' ? 'success' : 'failure';
+
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: deploymentId,
+              state: state,
+              environment_url: scriptUrl,
+              description: state === 'success'
+                ? `Deployed to pr-${prNumber}`
+                : 'Deployment failed',
+              auto_inactive: false
             });
