@@ -91,7 +91,11 @@ _wiz_render_menu() {
 
   local tailscale_display=""
   if [[ -n $INSTALL_TAILSCALE ]]; then
-    tailscale_display=$([[ $INSTALL_TAILSCALE == "yes" ]] && echo "Enabled" || echo "Disabled")
+    if [[ $INSTALL_TAILSCALE == "yes" ]]; then
+      tailscale_display="Enabled + Stealth"
+    else
+      tailscale_display="Disabled"
+    fi
   fi
 
   local features_display=""
@@ -485,7 +489,34 @@ _edit_repository() {
     --selected.foreground "$HEX_WHITE" \
     --no-show-help)
 
-  [[ -n $selected ]] && PVE_REPO_TYPE="$selected"
+  if [[ -n $selected ]]; then
+    PVE_REPO_TYPE="$selected"
+
+    # If enterprise selected, optionally ask for subscription key
+    if [[ $selected == "enterprise" ]]; then
+      clear
+      show_banner
+      echo ""
+      gum style --foreground "$HEX_GRAY" "Enter Proxmox subscription key (optional)"
+      echo ""
+      _show_input_footer
+
+      local sub_key
+      sub_key=$(gum input \
+        --placeholder "pve2c-..." \
+        --value "$PVE_SUBSCRIPTION_KEY" \
+        --prompt "Subscription Key: " \
+        --prompt.foreground "$HEX_CYAN" \
+        --cursor.foreground "$HEX_ORANGE" \
+        --width 60 \
+        --no-show-help)
+
+      PVE_SUBSCRIPTION_KEY="$sub_key"
+    else
+      # Clear subscription key if not enterprise
+      PVE_SUBSCRIPTION_KEY=""
+    fi
+  fi
 }
 
 _edit_interface() {
@@ -616,8 +647,50 @@ _edit_tailscale() {
     --no-show-help)
 
   case "$selected" in
-    Enabled) INSTALL_TAILSCALE="yes" ;;
-    Disabled) INSTALL_TAILSCALE="no" ;;
+    Enabled)
+      # Request auth key (required for Tailscale)
+      clear
+      show_banner
+      echo ""
+      gum style --foreground "$HEX_GRAY" "Enter Tailscale authentication key"
+      echo ""
+      _show_input_footer
+
+      local auth_key
+      auth_key=$(gum input \
+        --placeholder "tskey-auth-..." \
+        --prompt "Auth Key: " \
+        --prompt.foreground "$HEX_CYAN" \
+        --cursor.foreground "$HEX_ORANGE" \
+        --width 60 \
+        --no-show-help)
+
+      # If auth key provided, enable Tailscale with stealth mode
+      if [[ -n $auth_key ]]; then
+        INSTALL_TAILSCALE="yes"
+        TAILSCALE_AUTH_KEY="$auth_key"
+        TAILSCALE_SSH="yes"
+        TAILSCALE_WEBUI="yes"
+        TAILSCALE_DISABLE_SSH="yes"
+        STEALTH_MODE="yes"
+      else
+        # Auth key required - disable Tailscale if not provided
+        INSTALL_TAILSCALE="no"
+        TAILSCALE_AUTH_KEY=""
+        TAILSCALE_SSH=""
+        TAILSCALE_WEBUI=""
+        TAILSCALE_DISABLE_SSH=""
+        STEALTH_MODE=""
+      fi
+      ;;
+    Disabled)
+      INSTALL_TAILSCALE="no"
+      TAILSCALE_AUTH_KEY=""
+      TAILSCALE_SSH=""
+      TAILSCALE_WEBUI=""
+      TAILSCALE_DISABLE_SSH=""
+      STEALTH_MODE=""
+      ;;
   esac
 }
 
