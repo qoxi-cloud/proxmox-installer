@@ -925,7 +925,7 @@ _validate_config() {
     gum style --foreground "$HEX_YELLOW" "Please configure the following required fields:"
     echo ""
     for field in "${missing_fields[@]}"; do
-      echo "  ${CLR_ORANGE}•${CLR_RESET} $field"
+      echo "  ${CLR_CYAN}•${CLR_RESET} $field"
     done
     echo ""
     gum confirm "Return to configuration?" --default=true \
