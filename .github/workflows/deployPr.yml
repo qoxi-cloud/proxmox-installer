@@ -15,10 +15,15 @@ on:
 jobs:
   prepareAndWait:
     runs-on: ubuntu-latest
+    # Only run for manual dispatch or successful buildPr.yml workflow runs with PRs
+    # Note: If CI workflow name or buildPr.yml filename changes, update the conditions below
     if: >
       github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.pull_requests[0] != null)
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.pull_requests[0] != null &&
+       github.event.workflow_run.name == 'CI' &&
+       endsWith(github.event.workflow_run.path, 'buildPr.yml'))
     permissions:
       checks: read
       pull-requests: read
