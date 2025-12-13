@@ -19,7 +19,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: waitForCi
-    if: always() && (needs.waitForCi.result == 'success' || needs.waitForCi.result == 'skipped')
+    if: needs.waitForCi.result == 'success'
 
     permissions:
       contents: write

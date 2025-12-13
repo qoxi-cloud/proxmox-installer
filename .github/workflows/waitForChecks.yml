@@ -68,6 +68,8 @@ jobs:
                 ref: pr.head.sha
               });
 
+              // Filter for expected CI checks. If workflow names change, update these filters
+              // and the error message below (line 115) to match new check names.
               return checks.check_runs.filter(check =>
                 check.name.startsWith('CI') ||
                 check.name.includes('shellcheck') ||
