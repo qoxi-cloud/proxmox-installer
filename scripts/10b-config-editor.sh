@@ -29,6 +29,8 @@ _wiz_read_key() {
     WIZ_KEY="enter"
   elif [[ $key == "q" || $key == "Q" ]]; then
     WIZ_KEY="quit"
+  elif [[ $key == "s" || $key == "S" ]]; then
+    WIZ_KEY="start"
   else
     WIZ_KEY="$key"
   fi
@@ -196,7 +198,7 @@ _wiz_render_menu() {
   output+="\n"
 
   # Footer
-  output+="${CLR_GRAY}[${CLR_ORANGE}↑↓${CLR_GRAY}] navigate  [${CLR_ORANGE}Enter${CLR_GRAY}] edit  [${CLR_ORANGE}Q${CLR_GRAY}] quit${CLR_RESET}"
+  output+="${CLR_GRAY}[${CLR_ORANGE}↑↓${CLR_GRAY}] navigate  [${CLR_ORANGE}Enter${CLR_GRAY}] edit  [${CLR_ORANGE}S${CLR_GRAY}] start  [${CLR_ORANGE}Q${CLR_GRAY}] quit${CLR_RESET}"
 
   # Output everything at once
   echo -e "$output"
@@ -250,6 +252,10 @@ _wizard_main() {
         esac
         # Hide cursor again
         _wiz_hide_cursor
+        ;;
+      start)
+        # Exit wizard loop to proceed with validation and installation
+        return 0
         ;;
       quit | esc)
         _wiz_show_cursor
@@ -838,18 +844,76 @@ _edit_ssh_key() {
 }
 
 # =============================================================================
+# Configuration validation
+# =============================================================================
+
+# Validates that all required configuration variables are set
+# Returns: 0 if valid, 1 if missing required fields
+_validate_config() {
+  local missing_fields=()
+  local missing_count=0
+
+  # Required fields
+  [[ -z $PVE_HOSTNAME ]] && missing_fields+=("Hostname") && ((missing_count++))
+  [[ -z $DOMAIN_SUFFIX ]] && missing_fields+=("Domain") && ((missing_count++))
+  [[ -z $EMAIL ]] && missing_fields+=("Email") && ((missing_count++))
+  [[ -z $NEW_ROOT_PASSWORD ]] && missing_fields+=("Password") && ((missing_count++))
+  [[ -z $TIMEZONE ]] && missing_fields+=("Timezone") && ((missing_count++))
+  [[ -z $PROXMOX_ISO_VERSION ]] && missing_fields+=("Proxmox Version") && ((missing_count++))
+  [[ -z $PVE_REPO_TYPE ]] && missing_fields+=("Repository") && ((missing_count++))
+  [[ -z $BRIDGE_MODE ]] && missing_fields+=("Bridge mode") && ((missing_count++))
+  [[ -z $PRIVATE_SUBNET ]] && missing_fields+=("Private subnet") && ((missing_count++))
+  [[ -z $IPV6_MODE ]] && missing_fields+=("IPv6") && ((missing_count++))
+  [[ -z $ZFS_RAID ]] && missing_fields+=("ZFS mode") && ((missing_count++))
+  [[ -z $SHELL_TYPE ]] && missing_fields+=("Shell") && ((missing_count++))
+  [[ -z $CPU_GOVERNOR ]] && missing_fields+=("Power profile") && ((missing_count++))
+  [[ -z $SSH_PUBLIC_KEY ]] && missing_fields+=("SSH Key") && ((missing_count++))
+
+  # SSL is required only if Tailscale is disabled
+  if [[ $INSTALL_TAILSCALE != "yes" ]]; then
+    [[ -z $SSL_TYPE ]] && missing_fields+=("SSL Certificate") && ((missing_count++))
+  fi
+
+  # Show error if missing fields
+  if [[ $missing_count -gt 0 ]]; then
+    _wiz_show_cursor
+    clear
+    show_banner
+    echo ""
+    gum style --foreground "$HEX_RED" --bold "Configuration incomplete!"
+    echo ""
+    gum style --foreground "$HEX_YELLOW" "Please configure the following required fields:"
+    echo ""
+    for field in "${missing_fields[@]}"; do
+      echo "  ${CLR_ORANGE}•${CLR_RESET} $field"
+    done
+    echo ""
+    gum confirm "Return to configuration?" --default=true \
+      --prompt.foreground "$HEX_ORANGE" \
+      --selected.background "$HEX_ORANGE" || exit 1
+    _wiz_hide_cursor
+    return 1
+  fi
+
+  return 0
+}
+
+# =============================================================================
 # Main wizard entry point
 # =============================================================================
 
 show_gum_config_editor() {
-  # Initialize network detection silently (output suppressed)
-  detect_network_interface >/dev/null 2>&1
-  collect_network_info >/dev/null 2>&1
-
   # Hide cursor during wizard, restore on exit
   _wiz_hide_cursor
   trap '_wiz_show_cursor' EXIT
 
-  # Run wizard
-  _wizard_main
+  # Run wizard loop until configuration is complete
+  while true; do
+    _wizard_main
+
+    # Validate configuration before proceeding
+    if _validate_config; then
+      break
+    fi
+  done
 }
