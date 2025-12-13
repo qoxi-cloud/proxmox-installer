@@ -7,9 +7,19 @@ on:
       - completed
 
 jobs:
+  waitForCi:
+    if: github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+    uses: ./.github/workflows/waitForChecks.yml
+    with:
+      check_type: main
+      commit_sha: ${{ github.event.workflow_run.head_sha }}
+      max_attempts: 30
+      delay_ms: 10000
+
   deploy:
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+    needs: waitForCi
+    if: needs.waitForCi.result == 'success'
 
     permissions:
       contents: write
