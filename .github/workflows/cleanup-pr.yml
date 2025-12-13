@@ -1,4 +1,4 @@
-name: Cleanup PR
+name: cleanup-pr
 
 on:
   pull_request_target:

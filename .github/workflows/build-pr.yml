@@ -1,4 +1,4 @@
-name: CI
+name: build-pr
 
 on:
   pull_request:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  buildPr:
+  build-pr:
     runs-on: ubuntu-latest
 
     permissions:
