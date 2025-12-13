@@ -420,13 +420,12 @@ _edit_password() {
         clear
         show_banner
         echo ""
-        gum style --foreground "$HEX_GREEN" "Password generated successfully!"
+        gum style --foreground "$HEX_YELLOW" "Please save this password - it will be required for login"
         echo ""
         gum style --foreground "$HEX_GRAY" "Generated password: ${CLR_ORANGE}${NEW_ROOT_PASSWORD}${CLR_RESET}"
         echo ""
-        gum style --foreground "$HEX_YELLOW" "Please save this password - it will be required for login"
-        echo ""
-        read -n 1 -s -r -p "Press any key to continue..."
+        echo -e "${CLR_GRAY}Press any key to continue...${CLR_RESET}"
+        read -n 1 -s -r
         break
         ;;
       "Manual entry")
