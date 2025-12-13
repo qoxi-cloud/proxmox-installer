@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_pr:
+  buildPr:
     runs-on: ubuntu-latest
 
     permissions:

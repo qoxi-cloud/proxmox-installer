@@ -7,7 +7,7 @@ on:
     types: [opened, synchronize, reopened, edited]
 
 jobs:
-  commit_lint:
+  commitLint:
     runs-on: ubuntu-latest
 
     steps:
