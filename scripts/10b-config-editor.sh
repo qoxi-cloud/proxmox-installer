@@ -629,27 +629,64 @@ _edit_private_subnet() {
   clear
   show_banner
   echo ""
-  _show_input_footer
 
-  local new_subnet
-  new_subnet=$(gum input \
-    --placeholder "e.g., 10.10.10.0/24" \
-    --value "$PRIVATE_SUBNET" \
-    --prompt "Private subnet: " \
-    --prompt.foreground "$HEX_CYAN" \
-    --cursor.foreground "$HEX_ORANGE" \
-    --width 40 \
+  # 1 header + 4 items for gum choose
+  _show_input_footer "filter" 5
+
+  local selected
+  selected=$(echo "$WIZ_PRIVATE_SUBNETS" | gum choose \
+    --header="Private subnet:" \
+    --header.foreground "$HEX_CYAN" \
+    --cursor "${CLR_ORANGE}›${CLR_RESET} " \
+    --cursor.foreground "$HEX_NONE" \
+    --selected.foreground "$HEX_WHITE" \
     --no-show-help)
 
-  if [[ -n $new_subnet ]]; then
-    if validate_subnet "$new_subnet"; then
-      PRIVATE_SUBNET="$new_subnet"
-    else
+  # If user cancelled (Esc) or no selection
+  if [[ -z $selected ]]; then
+    return
+  fi
+
+  # Handle custom subnet input
+  if [[ $selected == "custom" ]]; then
+    while true; do
+      clear
+      show_banner
       echo ""
+      gum style --foreground "$HEX_GRAY" "Enter private subnet in CIDR notation"
+      gum style --foreground "$HEX_GRAY" "Example: 10.0.0.0/24"
       echo ""
-      gum style --foreground "$HEX_RED" "Invalid subnet format"
-      sleep 1
-    fi
+      _show_input_footer
+
+      local new_subnet
+      new_subnet=$(gum input \
+        --placeholder "e.g., 10.10.10.0/24" \
+        --value "$PRIVATE_SUBNET" \
+        --prompt "Private subnet: " \
+        --prompt.foreground "$HEX_CYAN" \
+        --cursor.foreground "$HEX_ORANGE" \
+        --width 40 \
+        --no-show-help)
+
+      # If empty or cancelled, return to menu
+      if [[ -z $new_subnet ]]; then
+        return
+      fi
+
+      # Validate subnet
+      if validate_subnet "$new_subnet"; then
+        PRIVATE_SUBNET="$new_subnet"
+        break
+      else
+        echo ""
+        echo ""
+        gum style --foreground "$HEX_RED" "Invalid subnet format. Use CIDR notation like: 10.0.0.0/24"
+        sleep 2
+      fi
+    done
+  else
+    # Use selected preset
+    PRIVATE_SUBNET="$selected"
   fi
 }
 

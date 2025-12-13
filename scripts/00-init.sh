@@ -540,6 +540,13 @@ readonly WIZ_IPV6_MODES="auto
 manual
 disabled"
 
+# Private subnet presets
+# shellcheck disable=SC2034
+readonly WIZ_PRIVATE_SUBNETS="10.0.0.0/24
+192.168.1.0/24
+172.16.0.0/24
+custom"
+
 # ZFS RAID levels (base options, raid5/raid10 added dynamically based on drive count)
 # shellcheck disable=SC2034
 readonly WIZ_ZFS_MODES="single
