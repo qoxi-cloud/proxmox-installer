@@ -1,12 +1,8 @@
-name: CI / Deploy PR
-
-# This workflow runs in the context of the base repository,
-# allowing it to deploy PR builds from forks securely.
-# It triggers after the build workflow completes.
+name: CD
 
 on:
   workflow_run:
-    workflows: ["CI / Build"]
+    workflows: ["CI"]
     types:
       - completed
   workflow_dispatch:
@@ -17,7 +13,7 @@ on:
         type: string
 
 jobs:
-  run:
+  deployPr:
     runs-on: ubuntu-latest
     # Run on workflow_run from PR (push events to PR branches), or on manual dispatch
     if: >
@@ -29,6 +25,7 @@ jobs:
       contents: write
       pull-requests: write
       actions: read
+      repository-projects: read
 
     steps:
       - name: Set run ID
