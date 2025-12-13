@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.99-pr.21"
+VERSION="2.0.100-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -3559,6 +3559,10 @@ remote_exec "chmod +x /etc/profile.d/fastfetch.sh"
 remote_exec "grep -q 'profile.d/fastfetch.sh' /etc/bash.bashrc || echo '[ -f /etc/profile.d/fastfetch.sh ] && . /etc/profile.d/fastfetch.sh' >> /etc/bash.bashrc") > \
 /dev/null 2>&1&
 show_progress $! "Configuring fastfetch" "Fastfetch configured"
+(remote_exec "mkdir -p /root/.config/bat"
+remote_copy "templates/bat-config" "/root/.config/bat/config") > \
+/dev/null 2>&1&
+show_progress $! "Configuring bat" "Bat configured"
 }
 configure_shell(){
 if [[ $SHELL_TYPE == "zsh" ]];then
