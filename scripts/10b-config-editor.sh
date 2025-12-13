@@ -111,10 +111,12 @@ _wiz_render_menu() {
   fi
 
   local features_display="none"
-  if [[ -n $INSTALL_VNSTAT || -n $INSTALL_AUDITD ]]; then
+  if [[ -n $INSTALL_VNSTAT || -n $INSTALL_AUDITD || -n $INSTALL_YAZI || -n $INSTALL_NVIM ]]; then
     features_display=""
     [[ $INSTALL_VNSTAT == "yes" ]] && features_display+="vnstat"
     [[ $INSTALL_AUDITD == "yes" ]] && features_display+="${features_display:+, }auditd"
+    [[ $INSTALL_YAZI == "yes" ]] && features_display+="${features_display:+, }yazi"
+    [[ $INSTALL_NVIM == "yes" ]] && features_display+="${features_display:+, }nvim"
     [[ -z $features_display ]] && features_display="none"
   fi
 
@@ -971,13 +973,15 @@ _edit_features() {
   show_banner
   echo ""
 
-  # 1 header + 2 items for multi-select checkbox
-  _show_input_footer "checkbox" 3
+  # 1 header + 4 items for multi-select checkbox
+  _show_input_footer "checkbox" 5
 
   # Build pre-selected items based on current configuration
   local preselected=()
   [[ $INSTALL_VNSTAT == "yes" ]] && preselected+=("vnstat")
   [[ $INSTALL_AUDITD == "yes" ]] && preselected+=("auditd")
+  [[ $INSTALL_YAZI == "yes" ]] && preselected+=("yazi")
+  [[ $INSTALL_NVIM == "yes" ]] && preselected+=("nvim")
 
   # Use gum choose with --no-limit for multi-select
   local selected
@@ -1004,11 +1008,19 @@ _edit_features() {
   # Parse selection
   INSTALL_VNSTAT="no"
   INSTALL_AUDITD="no"
+  INSTALL_YAZI="no"
+  INSTALL_NVIM="no"
   if echo "$selected" | grep -q "vnstat"; then
     INSTALL_VNSTAT="yes"
   fi
   if echo "$selected" | grep -q "auditd"; then
     INSTALL_AUDITD="yes"
+  fi
+  if echo "$selected" | grep -q "yazi"; then
+    INSTALL_YAZI="yes"
+  fi
+  if echo "$selected" | grep -q "nvim"; then
+    INSTALL_NVIM="yes"
   fi
 }
 

@@ -573,7 +573,9 @@ conservative"
 # Optional features
 # shellcheck disable=SC2034
 readonly WIZ_OPTIONAL_FEATURES="vnstat (network stats)
-auditd (audit logging)"
+auditd (audit logging)
+yazi (file manager)
+nvim (text editor)"
 
 # System utilities to install on Proxmox
 SYSTEM_UTILITIES="btop iotop ncdu tmux pigz smartmontools jq bat fastfetch"
@@ -687,6 +689,20 @@ INSTALL_VNSTAT=""
 # vnstat installation flag (set by configure_vnstat)
 # shellcheck disable=SC2034
 VNSTAT_INSTALLED=""
+
+# Yazi file manager installation setting (yes/no, default: no)
+INSTALL_YAZI=""
+
+# Yazi installation flag (set by configure_yazi)
+# shellcheck disable=SC2034
+YAZI_INSTALLED=""
+
+# Neovim installation setting (yes/no, default: no)
+INSTALL_NVIM=""
+
+# Neovim installation flag (set by configure_nvim)
+# shellcheck disable=SC2034
+NVIM_INSTALLED=""
 
 # Unattended upgrades setting (yes/no, default: yes)
 INSTALL_UNATTENDED_UPGRADES=""
