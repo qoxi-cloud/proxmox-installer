@@ -989,8 +989,8 @@ _edit_features() {
     --cursor.foreground "$HEX_NONE"
     --cursor-prefix ""
     --selected.foreground "$HEX_WHITE"
-    --selected-prefix "${CLR_CYAN}✓${CLR_RESET} "
-    --unselected-prefix "  "
+    --selected-prefix "${CLR_CYAN}✓${CLR_RESET}   "
+    --unselected-prefix "    "
     --no-show-help
   )
 
