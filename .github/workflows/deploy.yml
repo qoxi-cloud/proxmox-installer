@@ -51,6 +51,14 @@ jobs:
               console.log(`Attempt ${attempt}/${maxAttempts}:`);
 
               if (!buildCheck) {
+                // Fail fast on first attempt if build check not found
+                // This prevents timeout when workflow name changes
+                if (attempt === 1) {
+                  throw new Error(
+                    'Build check not found for main branch. This likely means the build workflow name changed. ' +
+                    'Update the check name in deploy.yml waitForCi step.'
+                  );
+                }
                 console.log('Build check not found yet, waiting...');
                 if (attempt < maxAttempts) {
                   console.log(`Waiting ${delayMs/1000}s before next check...`);
