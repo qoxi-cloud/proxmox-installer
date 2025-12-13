@@ -1,5 +1,7 @@
 name: CI / Format Check
 
+# Runs on every commit to PRs (pull_request trigger covers this)
+# Direct pushes to main are not checked as all changes must go through PRs
 on:
   pull_request:
     branches:
