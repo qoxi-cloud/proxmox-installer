@@ -171,9 +171,11 @@ _wiz_render_menu() {
   _add_section "VPN"
   _add_field "Tailscale        " "$(_wiz_fmt "$tailscale_display")" "tailscale"
 
-  # --- SSL ---
-  _add_section "SSL"
-  _add_field "Certificate      " "$(_wiz_fmt "$SSL_TYPE")" "ssl"
+  # --- SSL --- (hidden when Tailscale enabled - uses Tailscale certs)
+  if [[ $INSTALL_TAILSCALE != "yes" ]]; then
+    _add_section "SSL"
+    _add_field "Certificate      " "$(_wiz_fmt "$SSL_TYPE")" "ssl"
+  fi
 
   # --- Optional ---
   _add_section "Optional"
@@ -673,6 +675,7 @@ _edit_tailscale() {
         TAILSCALE_WEBUI="yes"
         TAILSCALE_DISABLE_SSH="yes"
         STEALTH_MODE="yes"
+        SSL_TYPE="self-signed"  # Tailscale uses its own certs
       else
         # Auth key required - disable Tailscale if not provided
         INSTALL_TAILSCALE="no"
@@ -681,6 +684,7 @@ _edit_tailscale() {
         TAILSCALE_WEBUI=""
         TAILSCALE_DISABLE_SSH=""
         STEALTH_MODE=""
+        SSL_TYPE=""  # Let user choose
       fi
       ;;
     Disabled)
@@ -690,6 +694,7 @@ _edit_tailscale() {
       TAILSCALE_WEBUI=""
       TAILSCALE_DISABLE_SSH=""
       STEALTH_MODE=""
+      SSL_TYPE=""  # Let user choose
       ;;
   esac
 }
