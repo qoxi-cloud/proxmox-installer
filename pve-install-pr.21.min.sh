@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.77-pr.21"
+VERSION="2.0.82-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -479,6 +479,10 @@ both"
 readonly WIZ_IPV6_MODES="auto
 manual
 disabled"
+readonly WIZ_PRIVATE_SUBNETS="10.0.0.0/24
+192.168.1.0/24
+172.16.0.0/24
+custom"
 readonly WIZ_ZFS_MODES="single
 raid1"
 readonly WIZ_SSL_TYPES="self-signed
@@ -1658,24 +1662,6 @@ return 0
 fi
 return 1
 }
-prompt_with_validation(){
-local prompt="$1"
-local default="$2"
-local validator="$3"
-local error_msg="$4"
-local var_name="$5"
-local confirm_label="${6:-$prompt}"
-local result
-while true;do
-read -r -e -p "$prompt" -i "$default" result
-if $validator "$result";then
-printf "\033[A\r%s✓%s %s%s%s%s\033[K\n" "$CLR_CYAN" "$CLR_RESET" "$confirm_label" "$CLR_CYAN" "$result" "$CLR_RESET"
-printf -v "$var_name" '%s' "$result"
-return 0
-fi
-print_error "$error_msg"
-done
-}
 validate_dns_resolution(){
 local fqdn="$1"
 local expected_ip="$2"
@@ -2090,8 +2076,16 @@ fi
 local ipv6_display=""
 if [[ -n $IPV6_MODE ]];then
 case "$IPV6_MODE" in
-auto)ipv6_display="Auto";;
-manual)ipv6_display="Manual";;
+auto)ipv6_display="Auto"
+if [[ -n $MAIN_IPV6 ]];then
+ipv6_display+=" ($MAIN_IPV6)"
+fi
+;;
+manual)ipv6_display="Manual"
+if [[ -n $MAIN_IPV6 ]];then
+ipv6_display+=" ($MAIN_IPV6, gw: $IPV6_GATEWAY)"
+fi
+;;
 disabled)ipv6_display="Disabled";;
 *)ipv6_display="$IPV6_MODE"
 esac
@@ -2217,6 +2211,7 @@ _wiz_hide_cursor
 start)return 0
 ;;
 quit|esc)_wiz_show_cursor
+echo ""
 if gum confirm "Quit installation?" --default=false \
 --prompt.foreground "$HEX_ORANGE" \
 --selected.background "$HEX_ORANGE";then
@@ -2487,6 +2482,26 @@ _edit_private_subnet(){
 clear
 show_banner
 echo ""
+_show_input_footer "filter" 5
+local selected
+selected=$(echo "$WIZ_PRIVATE_SUBNETS"|gum choose \
+--header="Private subnet:" \
+--header.foreground "$HEX_CYAN" \
+--cursor "$CLR_ORANGE›$CLR_RESET " \
+--cursor.foreground "$HEX_NONE" \
+--selected.foreground "$HEX_WHITE" \
+--no-show-help)
+if [[ -z $selected ]];then
+return
+fi
+if [[ $selected == "custom" ]];then
+while true;do
+clear
+show_banner
+echo ""
+gum style --foreground "$HEX_GRAY" "Enter private subnet in CIDR notation"
+gum style --foreground "$HEX_GRAY" "Example: 10.0.0.0/24"
+echo ""
 _show_input_footer
 local new_subnet
 new_subnet=$(gum input \
@@ -2497,15 +2512,21 @@ new_subnet=$(gum input \
 --cursor.foreground "$HEX_ORANGE" \
 --width 40 \
 --no-show-help)
-if [[ -n $new_subnet ]];then
+if [[ -z $new_subnet ]];then
+return
+fi
 if validate_subnet "$new_subnet";then
 PRIVATE_SUBNET="$new_subnet"
+break
 else
 echo ""
 echo ""
-gum style --foreground "$HEX_RED" "Invalid subnet format"
-sleep 1
+gum style --foreground "$HEX_RED" "Invalid subnet format. Use CIDR notation like: 10.0.0.0/24"
+sleep 2
 fi
+done
+else
+PRIVATE_SUBNET="$selected"
 fi
 }
 _edit_ipv6(){
@@ -2521,7 +2542,82 @@ selected=$(echo "$WIZ_IPV6_MODES"|gum choose \
 --cursor.foreground "$HEX_NONE" \
 --selected.foreground "$HEX_WHITE" \
 --no-show-help)
-[[ -n $selected ]]&&IPV6_MODE="$selected"
+if [[ -z $selected ]];then
+return
+fi
+IPV6_MODE="$selected"
+if [[ $IPV6_MODE == "manual" ]];then
+while true;do
+clear
+show_banner
+echo ""
+gum style --foreground "$HEX_GRAY" "Enter IPv6 address in CIDR notation"
+gum style --foreground "$HEX_GRAY" "Example: 2001:db8::1/64"
+echo ""
+_show_input_footer
+local ipv6_addr
+ipv6_addr=$(gum input \
+--placeholder "2001:db8::1/64" \
+--prompt "IPv6 Address: " \
+--prompt.foreground "$HEX_CYAN" \
+--cursor.foreground "$HEX_ORANGE" \
+--width 50 \
+--value "${IPV6_ADDRESS:-${MAIN_IPV6:+$MAIN_IPV6/64}}" \
+--no-show-help)
+if [[ -z $ipv6_addr ]];then
+IPV6_MODE=""
+return
+fi
+if validate_ipv6_cidr "$ipv6_addr";then
+IPV6_ADDRESS="$ipv6_addr"
+MAIN_IPV6="${ipv6_addr%/*}"
+break
+else
+echo ""
+echo ""
+gum style --foreground "$HEX_RED" "Invalid IPv6 CIDR notation. Use format like: 2001:db8::1/64"
+sleep 2
+fi
+done
+while true;do
+clear
+show_banner
+echo ""
+gum style --foreground "$HEX_GRAY" "Enter IPv6 gateway address"
+gum style --foreground "$HEX_GRAY" "Default for Hetzner: fe80::1 (link-local)"
+echo ""
+_show_input_footer
+local ipv6_gw
+ipv6_gw=$(gum input \
+--placeholder "fe80::1" \
+--prompt "Gateway: " \
+--prompt.foreground "$HEX_CYAN" \
+--cursor.foreground "$HEX_ORANGE" \
+--width 50 \
+--value "${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}" \
+--no-show-help)
+if [[ -z $ipv6_gw ]];then
+IPV6_GATEWAY="$DEFAULT_IPV6_GATEWAY"
+break
+fi
+if validate_ipv6_gateway "$ipv6_gw";then
+IPV6_GATEWAY="$ipv6_gw"
+break
+else
+echo ""
+echo ""
+gum style --foreground "$HEX_RED" "Invalid IPv6 gateway address"
+sleep 2
+fi
+done
+elif [[ $IPV6_MODE == "disabled" ]];then
+MAIN_IPV6=""
+IPV6_GATEWAY=""
+FIRST_IPV6_CIDR=""
+IPV6_ADDRESS=""
+elif [[ $IPV6_MODE == "auto" ]];then
+IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
+fi
 }
 _edit_zfs_mode(){
 clear
