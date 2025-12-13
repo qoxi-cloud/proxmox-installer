@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.75-pr.21"
+VERSION="2.0.76-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -2672,6 +2672,39 @@ INSTALL_AUDITD="yes"
 fi
 }
 _edit_ssh_key(){
+while true;do
+clear
+show_banner
+echo ""
+local detected_key
+detected_key=$(get_rescue_ssh_key)
+if [[ -n $detected_key ]];then
+parse_ssh_key "$detected_key"
+gum style --foreground "$HEX_YELLOW" "Detected SSH key from Rescue System:"
+echo ""
+echo -e "${CLR_GRAY}Type:$CLR_RESET    $SSH_KEY_TYPE"
+echo -e "${CLR_GRAY}Key:$CLR_RESET     $SSH_KEY_SHORT"
+[[ -n $SSH_KEY_COMMENT ]]&&echo -e "${CLR_GRAY}Comment:$CLR_RESET $SSH_KEY_COMMENT"
+echo ""
+_show_input_footer "filter" 3
+local choice
+choice=$(echo -e "Use detected key\nEnter different key"|gum choose \
+--header="SSH Key:" \
+--header.foreground "$HEX_CYAN" \
+--cursor "$CLR_ORANGE›$CLR_RESET " \
+--cursor.foreground "$HEX_NONE" \
+--selected.foreground "$HEX_WHITE" \
+--no-show-help)
+if [[ -z $choice ]];then
+return
+fi
+case "$choice" in
+"Use detected key")SSH_PUBLIC_KEY="$detected_key"
+break
+;;
+"Enter different key")
+esac
+fi
 clear
 show_banner
 echo ""
@@ -2687,16 +2720,26 @@ new_key=$(gum input \
 --cursor.foreground "$HEX_ORANGE" \
 --width 60 \
 --no-show-help)
-if [[ -n $new_key ]];then
+if [[ -z $new_key ]];then
+if [[ -n $detected_key ]];then
+continue
+else
+return
+fi
+fi
 if validate_ssh_public_key "$new_key";then
 SSH_PUBLIC_KEY="$new_key"
+break
 else
 echo ""
 echo ""
 gum style --foreground "$HEX_RED" "Invalid SSH key format"
 sleep 1
+if [[ -n $detected_key ]];then
+continue
 fi
 fi
+done
 }
 _validate_config(){
 local missing_fields=()
