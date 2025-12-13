@@ -7,9 +7,83 @@ on:
       - completed
 
 jobs:
-  deploy:
+  # Wait for all CI workflows to complete
+  waitForCi:
     runs-on: ubuntu-latest
     if: github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+    outputs:
+      run_id: ${{ steps.run.outputs.id }}
+      commit_sha: ${{ steps.commit.outputs.sha }}
+    steps:
+      - name: Set run ID
+        id: run
+        run: |
+          echo "id=${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
+
+      - name: Get commit SHA
+        id: commit
+        run: |
+          echo "sha=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+
+      - name: Wait for all CI checks
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commitSha = '${{ steps.commit.outputs.sha }}';
+            const maxAttempts = 60; // 10 minutes max
+            const delayMs = 10000; // 10 seconds between checks
+
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+              const { data: checks } = await github.rest.checks.listForRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: commitSha
+              });
+
+              const ciChecks = checks.check_runs.filter(check =>
+                check.name.startsWith('CI') ||
+                check.name.includes('shellcheck') ||
+                check.name.includes('format') ||
+                check.name.includes('commit')
+              );
+
+              const allCompleted = ciChecks.every(check =>
+                check.status === 'completed'
+              );
+
+              const allSuccess = ciChecks.every(check =>
+                check.conclusion === 'success' || check.conclusion === 'skipped'
+              );
+
+              console.log(`Attempt ${attempt}/${maxAttempts}:`);
+              console.log(`Total CI checks: ${ciChecks.length}`);
+              console.log(`Completed: ${ciChecks.filter(c => c.status === 'completed').length}`);
+              console.log(`Successful: ${ciChecks.filter(c => c.conclusion === 'success').length}`);
+
+              if (allCompleted) {
+                if (allSuccess) {
+                  console.log('All CI checks passed!');
+                  return;
+                } else {
+                  const failed = ciChecks.filter(c =>
+                    c.conclusion !== 'success' && c.conclusion !== 'skipped'
+                  );
+                  throw new Error(`CI checks failed: ${failed.map(c => c.name).join(', ')}`);
+                }
+              }
+
+              if (attempt < maxAttempts) {
+                console.log(`Waiting ${delayMs/1000}s before next check...`);
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+              }
+            }
+
+            throw new Error('Timeout waiting for CI checks to complete');
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: waitForCi
+    if: success()
 
     permissions:
       contents: write
@@ -20,7 +94,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: pve-install
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: ${{ needs.waitForCi.outputs.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Calculate version for badge
