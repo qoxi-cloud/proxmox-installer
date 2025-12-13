@@ -933,7 +933,7 @@ _edit_ssh_key() {
     fi
 
     # Validate the entered key
-    if validate_ssh_public_key "$new_key"; then
+    if validate_ssh_key "$new_key"; then
       SSH_PUBLIC_KEY="$new_key"
       break
     else
