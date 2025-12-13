@@ -1,15 +1,15 @@
-name: CD
+name: deploy
 
 on:
   workflow_run:
-    workflows: ["CI"]
+    workflows: ["build"]
     types:
       - completed
 
 jobs:
-  waitForCi:
+  wait-for-ci:
     if: github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
-    uses: ./.github/workflows/waitForChecks.yml
+    uses: ./.github/workflows/wait-for-checks.yml
     permissions:
       checks: read
       pull-requests: read
@@ -22,8 +22,8 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    needs: waitForCi
-    if: needs.waitForCi.result == 'success'
+    needs: wait-for-ci
+    if: needs.wait-for-ci.result == 'success'
 
     permissions:
       contents: write

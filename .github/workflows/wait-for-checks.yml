@@ -1,4 +1,4 @@
-name: Wait for CI Checks
+name: wait-for-checks
 
 on:
   workflow_call:
@@ -28,10 +28,10 @@ on:
     outputs:
       checks_passed:
         description: 'Whether all checks passed'
-        value: ${{ jobs.waitForChecks.outputs.checks_passed }}
+        value: ${{ jobs.wait-for-checks.outputs.checks_passed }}
 
 jobs:
-  waitForChecks:
+  wait-for-checks:
     runs-on: ubuntu-latest
     permissions:
       checks: read
@@ -71,10 +71,10 @@ jobs:
               // Filter for expected CI checks. If workflow names change, update these filters
               // and the error message below (line 115) to match new check names.
               return checks.check_runs.filter(check =>
-                check.name.startsWith('CI') ||
-                check.name.includes('shellcheck') ||
-                check.name.includes('format') ||
-                check.name.includes('commit')
+                check.name === 'build-pr' ||
+                check.name === 'shellcheck' ||
+                check.name === 'format' ||
+                check.name === 'commit-lint'
               );
             }
 

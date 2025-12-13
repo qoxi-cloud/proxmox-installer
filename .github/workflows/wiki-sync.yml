@@ -1,4 +1,4 @@
-name: Wiki Sync
+name: wiki-sync
 
 on:
   push:
