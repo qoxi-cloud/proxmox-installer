@@ -693,7 +693,7 @@ _edit_tailscale() {
         TAILSCALE_WEBUI="yes"
         TAILSCALE_DISABLE_SSH="yes"
         STEALTH_MODE="yes"
-        SSL_TYPE="self-signed"  # Tailscale uses its own certs
+        SSL_TYPE="self-signed" # Tailscale uses its own certs
       else
         # Auth key required - disable Tailscale if not provided
         INSTALL_TAILSCALE="no"
@@ -702,7 +702,7 @@ _edit_tailscale() {
         TAILSCALE_WEBUI=""
         TAILSCALE_DISABLE_SSH=""
         STEALTH_MODE=""
-        SSL_TYPE=""  # Let user choose
+        SSL_TYPE="" # Let user choose
       fi
       ;;
     Disabled)
@@ -712,7 +712,7 @@ _edit_tailscale() {
       TAILSCALE_WEBUI=""
       TAILSCALE_DISABLE_SSH=""
       STEALTH_MODE=""
-      SSL_TYPE=""  # Let user choose
+      SSL_TYPE="" # Let user choose
       ;;
   esac
 }
