@@ -105,8 +105,8 @@ jobs:
               if (checks.length === 0) {
                 if (attempt === 1) {
                   const errorMsg = checkType === 'pr'
-                    ? 'No CI checks found for this PR. This likely means workflow/job names changed. Update check name filters in wait-for-checks.yml'
-                    : 'Build check not found for main branch. This likely means the build workflow name changed. Update check name in wait-for-checks.yml';
+                    ? 'No CI checks found for this PR. This likely means workflow/job names changed. Update check name filters in waitForChecks.yml'
+                    : 'Build check not found for main branch. This likely means the build workflow name changed. Update check name in waitForChecks.yml';
                   throw new Error(errorMsg);
                 }
                 console.log('No checks found yet, waiting...');

@@ -41,7 +41,7 @@ jobs:
   waitForCi:
     needs: prepareAndWait
     if: needs.prepareAndWait.outputs.pr_number != ''
-    uses: ./.github/workflows/wait-for-checks.yml
+    uses: ./.github/workflows/waitForChecks.yml
     with:
       check_type: pr
       pr_number: ${{ needs.prepareAndWait.outputs.pr_number }}
