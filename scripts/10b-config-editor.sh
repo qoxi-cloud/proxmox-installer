@@ -974,16 +974,31 @@ _edit_features() {
   # 1 header + 2 items for multi-select checkbox
   _show_input_footer "checkbox" 3
 
+  # Build pre-selected items based on current configuration
+  local preselected=()
+  [[ $INSTALL_VNSTAT == "yes" ]] && preselected+=("vnstat")
+  [[ $INSTALL_AUDITD == "yes" ]] && preselected+=("auditd")
+
   # Use gum choose with --no-limit for multi-select
   local selected
-  selected=$(echo "$WIZ_OPTIONAL_FEATURES" | gum choose \
-    --no-limit \
-    --header="Features:" \
-    --header.foreground "$HEX_CYAN" \
-    --cursor "${CLR_ORANGE}›${CLR_RESET} " \
-    --cursor.foreground "$HEX_NONE" \
-    --selected.foreground "$HEX_WHITE" \
-    --no-show-help)
+  local gum_args=(
+    --no-limit
+    --header="Features:"
+    --header.foreground "$HEX_CYAN"
+    --cursor "${CLR_ORANGE}›${CLR_RESET} "
+    --cursor.foreground "$HEX_NONE"
+    --selected.foreground "$HEX_WHITE"
+    --selected-prefix "${CLR_CYAN}✓${CLR_RESET} "
+    --unselected-prefix "  "
+    --no-show-help
+  )
+
+  # Add preselected items if any
+  for item in "${preselected[@]}"; do
+    gum_args+=(--selected "$item")
+  done
+
+  selected=$(echo "$WIZ_OPTIONAL_FEATURES" | gum choose "${gum_args[@]}")
 
   # Parse selection
   INSTALL_VNSTAT="no"
