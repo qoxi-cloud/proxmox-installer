@@ -11,7 +11,6 @@ on:
 
 jobs:
   format-check:
-    name: CI / Format Check
     runs-on: ubuntu-latest
 
     steps:

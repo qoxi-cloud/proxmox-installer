@@ -13,7 +13,6 @@ permissions:
 
 jobs:
   sync-wiki:
-    name: CI / Wiki Sync
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

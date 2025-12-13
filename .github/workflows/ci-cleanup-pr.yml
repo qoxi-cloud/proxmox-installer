@@ -8,7 +8,6 @@ on:
 
 jobs:
   cleanup:
-    name: CI / Cleanup PR
     runs-on: ubuntu-latest
 
     permissions:

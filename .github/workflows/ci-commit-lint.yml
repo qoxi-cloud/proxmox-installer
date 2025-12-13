@@ -8,7 +8,6 @@ on:
 
 jobs:
   commit-lint:
-    name: CI / Commit Lint
     runs-on: ubuntu-latest
 
     steps:

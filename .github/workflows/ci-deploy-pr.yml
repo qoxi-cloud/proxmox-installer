@@ -18,7 +18,6 @@ on:
 
 jobs:
   deploy-pr:
-    name: CI / Deploy PR
     runs-on: ubuntu-latest
     # Run on workflow_run from PR (push events to PR branches), or on manual dispatch
     if: >
