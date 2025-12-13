@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.74-pr.21"
+VERSION="2.0.75-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -2728,7 +2728,7 @@ echo ""
 gum style --foreground "$HEX_YELLOW" "Please configure the following required fields:"
 echo ""
 for field in "${missing_fields[@]}";do
-echo "  $CLR_ORANGE•$CLR_RESET $field"
+echo "  $CLR_CYAN•$CLR_RESET $field"
 done
 echo ""
 gum confirm "Return to configuration?" --default=true \
