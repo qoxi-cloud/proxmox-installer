@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.66-pr.21"
+VERSION="2.0.67-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -547,6 +547,12 @@ AUDITD_INSTALLED=""
 INSTALL_VNSTAT=""
 VNSTAT_INSTALLED=""
 INSTALL_UNATTENDED_UPGRADES=""
+INSTALL_TAILSCALE=""
+TAILSCALE_AUTH_KEY=""
+TAILSCALE_SSH=""
+TAILSCALE_WEBUI=""
+TAILSCALE_DISABLE_SSH=""
+STEALTH_MODE=""
 show_help(){
 cat <<EOF
 Proxmox VE Automated Installer for Hetzner v$VERSION
@@ -2144,7 +2150,11 @@ esac
 fi
 local tailscale_display=""
 if [[ -n $INSTALL_TAILSCALE ]];then
-tailscale_display=$([[ $INSTALL_TAILSCALE == "yes" ]]&&echo "Enabled"||echo "Disabled")
+if [[ $INSTALL_TAILSCALE == "yes" ]];then
+tailscale_display="Enabled + Stealth"
+else
+tailscale_display="Disabled"
+fi
 fi
 local features_display=""
 if [[ -n $INSTALL_VNSTAT || -n $INSTALL_AUDITD ]];then
@@ -2437,7 +2447,29 @@ selected=$(echo "$WIZ_REPO_TYPES"|gum choose \
 --cursor.foreground "$HEX_NONE" \
 --selected.foreground "$HEX_WHITE" \
 --no-show-help)
-[[ -n $selected ]]&&PVE_REPO_TYPE="$selected"
+if [[ -n $selected ]];then
+PVE_REPO_TYPE="$selected"
+if [[ $selected == "enterprise" ]];then
+clear
+show_banner
+echo ""
+gum style --foreground "$HEX_GRAY" "Enter Proxmox subscription key (optional)"
+echo ""
+_show_input_footer
+local sub_key
+sub_key=$(gum input \
+--placeholder "pve2c-..." \
+--value "$PVE_SUBSCRIPTION_KEY" \
+--prompt "Subscription Key: " \
+--prompt.foreground "$HEX_CYAN" \
+--cursor.foreground "$HEX_ORANGE" \
+--width 60 \
+--no-show-help)
+PVE_SUBSCRIPTION_KEY="$sub_key"
+else
+PVE_SUBSCRIPTION_KEY=""
+fi
+fi
 }
 _edit_interface(){
 clear
@@ -2541,8 +2573,42 @@ selected=$(echo -e "Disabled\nEnabled"|gum choose \
 --selected.foreground "$HEX_WHITE" \
 --no-show-help)
 case "$selected" in
-Enabled)INSTALL_TAILSCALE="yes";;
+Enabled)clear
+show_banner
+echo ""
+gum style --foreground "$HEX_GRAY" "Enter Tailscale authentication key"
+echo ""
+_show_input_footer
+local auth_key
+auth_key=$(gum input \
+--placeholder "tskey-auth-..." \
+--prompt "Auth Key: " \
+--prompt.foreground "$HEX_CYAN" \
+--cursor.foreground "$HEX_ORANGE" \
+--width 60 \
+--no-show-help)
+if [[ -n $auth_key ]];then
+INSTALL_TAILSCALE="yes"
+TAILSCALE_AUTH_KEY="$auth_key"
+TAILSCALE_SSH="yes"
+TAILSCALE_WEBUI="yes"
+TAILSCALE_DISABLE_SSH="yes"
+STEALTH_MODE="yes"
+else
+INSTALL_TAILSCALE="no"
+TAILSCALE_AUTH_KEY=""
+TAILSCALE_SSH=""
+TAILSCALE_WEBUI=""
+TAILSCALE_DISABLE_SSH=""
+STEALTH_MODE=""
+fi
+;;
 Disabled)INSTALL_TAILSCALE="no"
+TAILSCALE_AUTH_KEY=""
+TAILSCALE_SSH=""
+TAILSCALE_WEBUI=""
+TAILSCALE_DISABLE_SSH=""
+STEALTH_MODE=""
 esac
 }
 _edit_ssl(){
