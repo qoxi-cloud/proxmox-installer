@@ -2,7 +2,7 @@ name: deploy
 
 on:
   workflow_run:
-    workflows: ["ci"]
+    workflows: ["CI"]
     types:
       - completed
 
