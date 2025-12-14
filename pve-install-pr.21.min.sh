@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.105-pr.21"
+VERSION="2.0.106-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -2167,7 +2167,7 @@ sleep 0.3
 local dots_count=$((($(date +%s)%3)+1))
 local dots
 dots=$(printf '.%.0s' $(seq 1 $dots_count))
-LOG_LINES[task_idx]="  $CLR_GRAY├─$CLR_RESET $message$dots"
+LOG_LINES[task_idx]="  $CLR_GRAY├─$CLR_RESET $message$CLR_ORANGE$dots$CLR_RESET"
 render_logs
 done
 wait "$pid" 2>/dev/null
