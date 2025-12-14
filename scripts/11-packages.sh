@@ -12,10 +12,15 @@ prepare_packages() {
   log "Adding Proxmox repository"
   echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" >/etc/apt/sources.list.d/pve.list
 
+  # Add live log subtask
+  if type live_log_subtask &>/dev/null 2>&1; then
+    live_log_subtask "Configuring APT sources"
+  fi
+
   # Download Proxmox GPG key
   log "Downloading Proxmox GPG key"
   curl -fsSL -o /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg >>"$LOG_FILE" 2>&1 &
-  show_progress $! "Downloading Proxmox GPG key" "Proxmox GPG key downloaded"
+  show_progress $! "Adding Proxmox repository" "Proxmox repository added"
   wait $!
   local exit_code=$?
   if [[ $exit_code -ne 0 ]]; then
@@ -24,6 +29,11 @@ prepare_packages() {
     exit 1
   fi
   log "Proxmox GPG key downloaded successfully"
+
+  # Add live log subtask
+  if type live_log_subtask &>/dev/null 2>&1; then
+    live_log_subtask "Downloading package lists"
+  fi
 
   # Update package lists
   log "Updating package lists"
@@ -37,6 +47,12 @@ prepare_packages() {
     exit 1
   fi
   log "Package lists updated successfully"
+
+  # Add live log subtasks for packages being installed
+  if type live_log_subtask &>/dev/null 2>&1; then
+    live_log_subtask "Installing proxmox-auto-install-assistant"
+    live_log_subtask "Installing xorriso and ovmf"
+  fi
 
   # Install packages
   log "Installing required packages: proxmox-auto-install-assistant xorriso ovmf wget sshpass"
@@ -393,6 +409,12 @@ make_autoinstall_iso() {
   log "Current directory: $(pwd)"
   log "Files in current directory:"
   ls -la >>"$LOG_FILE" 2>&1
+
+  # Add live log subtasks
+  if type live_log_subtask &>/dev/null 2>&1; then
+    live_log_subtask "Creating answer.toml"
+    live_log_subtask "Packing ISO with xorriso"
+  fi
 
   # Run ISO creation with full logging
   proxmox-auto-install-assistant prepare-iso pve.iso --fetch-from iso --answer-file answer.toml --output pve-autoinstall.iso >>"$LOG_FILE" 2>&1 &
