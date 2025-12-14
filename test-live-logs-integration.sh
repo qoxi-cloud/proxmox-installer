@@ -114,12 +114,14 @@ main() {
   # Proxmox Installation
   live_log_proxmox_installation
 
-  live_log_subtask "QEMU started (16 vCPUs, 8192MB RAM)"
+  test_task_1 &
+  task_pid=$!
+  show_progress $task_pid "QEMU started (16 vCPUs, 8192MB RAM)" "QEMU started (16 vCPUs, 8192MB RAM)"
+
   test_task_3 &
   task_pid=$!
   show_progress $task_pid "Installing Proxmox VE" "Proxmox VE installed"
 
-  live_log_subtask "Waiting for SSH port 5555"
   test_task_2 &
   task_pid=$!
   show_progress $task_pid "Booting installed Proxmox" "Proxmox booted"

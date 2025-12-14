@@ -253,11 +253,6 @@ install_proxmox() {
 
   local qemu_pid=$!
 
-  # Add live log for QEMU startup
-  if type live_log_subtask &>/dev/null 2>&1; then
-    live_log_subtask "QEMU started (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)"
-  fi
-
   # Give QEMU a moment to start or fail
   sleep 2
 
@@ -268,6 +263,13 @@ install_proxmox() {
     cat qemu_install.log >>"$LOG_FILE" 2>&1
     exit 1
   fi
+
+  # Show QEMU startup as a task (not subtask) and then wait for installation
+  (
+    sleep 0.1 # Immediate completion - just to show the message
+  ) &
+  local startup_pid=$!
+  show_progress $startup_pid "QEMU started (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)" "QEMU started (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)"
 
   show_progress $qemu_pid "Installing Proxmox VE" "Proxmox VE installed"
   local exit_code=$?
@@ -304,17 +306,14 @@ boot_proxmox_with_port_forwarding() {
 
   QEMU_PID=$!
 
-  # Add live log for SSH port waiting
-  if type live_log_subtask &>/dev/null 2>&1; then
-    live_log_subtask "Waiting for SSH port 5555"
-  fi
-
   # Wait for port to be open first (in background for show_progress)
   (
     local timeout=300
     local elapsed=0
     while ((elapsed < timeout)); do
-      if echo >/dev/tcp/localhost/5555 2>/dev/null; then
+      # Redirect both stdout and stderr to /dev/null to suppress connection errors
+      if exec 3<>/dev/tcp/localhost/5555 2>/dev/null; then
+        exec 3<&- # Close the file descriptor
         exit 0
       fi
       sleep 3
