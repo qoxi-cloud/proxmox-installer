@@ -99,8 +99,7 @@ start_live_installation() {
   export -f show_progress 2>/dev/null || true
 
   calculate_log_area
-  # Note: screen is already cleared by show_banner_animated_stop
-  # Re-display banner to ensure it's visible (in case terminal was resized)
+  clear
   show_banner
   save_cursor_position
   tput civis # Hide cursor
