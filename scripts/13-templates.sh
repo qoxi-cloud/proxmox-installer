@@ -46,6 +46,7 @@ make_templates() {
     download_template "./templates/letsencrypt-firstboot.service" || exit 1
     # Shell startup
     download_template "./templates/fastfetch.sh" || exit 1
+    download_template "./templates/bat-config" || exit 1
   ) >/dev/null 2>&1 &
   if ! show_progress $! "Downloading template files"; then
     log "ERROR: Failed to download template files"
