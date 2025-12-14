@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.109-pr.21"
+VERSION="2.0.110-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -3049,9 +3049,12 @@ prepare_packages(){
 log "Starting package preparation"
 log "Adding Proxmox repository"
 echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" >/etc/apt/sources.list.d/pve.list
+if type live_log_subtask &>/dev/null 2>&1;then
+live_log_subtask "Configuring APT sources"
+fi
 log "Downloading Proxmox GPG key"
 curl -fsSL -o /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg >>"$LOG_FILE" 2>&1&
-show_progress $! "Downloading Proxmox GPG key" "Proxmox GPG key downloaded"
+show_progress $! "Adding Proxmox repository" "Proxmox repository added"
 wait $!
 local exit_code=$?
 if [[ $exit_code -ne 0 ]];then
@@ -3060,6 +3063,9 @@ print_error "Cannot reach Proxmox repository"
 exit 1
 fi
 log "Proxmox GPG key downloaded successfully"
+if type live_log_subtask &>/dev/null 2>&1;then
+live_log_subtask "Downloading package lists"
+fi
 log "Updating package lists"
 apt clean >>"$LOG_FILE" 2>&1
 apt update >>"$LOG_FILE" 2>&1&
@@ -3071,6 +3077,10 @@ log "ERROR: Failed to update package lists"
 exit 1
 fi
 log "Package lists updated successfully"
+if type live_log_subtask &>/dev/null 2>&1;then
+live_log_subtask "Installing proxmox-auto-install-assistant"
+live_log_subtask "Installing xorriso and ovmf"
+fi
 log "Installing required packages: proxmox-auto-install-assistant xorriso ovmf wget sshpass"
 apt install -yq proxmox-auto-install-assistant xorriso ovmf wget sshpass >>"$LOG_FILE" 2>&1&
 show_progress $! "Installing required packages" "Required packages installed"
@@ -3318,6 +3328,10 @@ log "Input: answer.toml exists: $(test -f answer.toml&&echo 'yes'||echo 'no')"
 log "Current directory: $(pwd)"
 log "Files in current directory:"
 ls -la >>"$LOG_FILE" 2>&1
+if type live_log_subtask &>/dev/null 2>&1;then
+live_log_subtask "Creating answer.toml"
+live_log_subtask "Packing ISO with xorriso"
+fi
 proxmox-auto-install-assistant prepare-iso pve.iso --fetch-from iso --answer-file answer.toml --output pve-autoinstall.iso >>"$LOG_FILE" 2>&1&
 show_progress $! "Creating autoinstall ISO" "Autoinstall ISO created"
 wait $!
