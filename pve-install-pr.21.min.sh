@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.111-pr.21"
+VERSION="2.0.117-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -2065,7 +2065,6 @@ live_show_progress "$@"
 }
 export -f show_progress 2>/dev/null||true
 calculate_log_area
-clear
 show_banner
 save_cursor_position
 tput civis
@@ -3050,9 +3049,6 @@ prepare_packages(){
 log "Starting package preparation"
 log "Adding Proxmox repository"
 echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" >/etc/apt/sources.list.d/pve.list
-if type live_log_subtask &>/dev/null 2>&1;then
-live_log_subtask "Configuring APT sources"
-fi
 log "Downloading Proxmox GPG key"
 curl -fsSL -o /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg >>"$LOG_FILE" 2>&1&
 show_progress $! "Adding Proxmox repository" "Proxmox repository added"
@@ -3065,7 +3061,7 @@ exit 1
 fi
 log "Proxmox GPG key downloaded successfully"
 if type live_log_subtask &>/dev/null 2>&1;then
-live_log_subtask "Downloading package lists"
+live_log_subtask "Configuring APT sources"
 fi
 log "Updating package lists"
 apt clean >>"$LOG_FILE" 2>&1
@@ -3079,8 +3075,7 @@ exit 1
 fi
 log "Package lists updated successfully"
 if type live_log_subtask &>/dev/null 2>&1;then
-live_log_subtask "Installing proxmox-auto-install-assistant"
-live_log_subtask "Installing xorriso and ovmf"
+live_log_subtask "Downloading package lists"
 fi
 log "Installing required packages: proxmox-auto-install-assistant xorriso ovmf wget sshpass"
 apt install -yq proxmox-auto-install-assistant xorriso ovmf wget sshpass >>"$LOG_FILE" 2>&1&
@@ -3092,6 +3087,10 @@ log "ERROR: Failed to install required packages"
 exit 1
 fi
 log "Required packages installed successfully"
+if type live_log_subtask &>/dev/null 2>&1;then
+live_log_subtask "Installing proxmox-auto-install-assistant"
+live_log_subtask "Installing xorriso and ovmf"
+fi
 }
 _ISO_LIST_CACHE=""
 _CHECKSUM_CACHE=""
@@ -3329,10 +3328,6 @@ log "Input: answer.toml exists: $(test -f answer.toml&&echo 'yes'||echo 'no')"
 log "Current directory: $(pwd)"
 log "Files in current directory:"
 ls -la >>"$LOG_FILE" 2>&1
-if type live_log_subtask &>/dev/null 2>&1;then
-live_log_subtask "Creating answer.toml"
-live_log_subtask "Packing ISO with xorriso"
-fi
 proxmox-auto-install-assistant prepare-iso pve.iso --fetch-from iso --answer-file answer.toml --output pve-autoinstall.iso >>"$LOG_FILE" 2>&1&
 show_progress $! "Creating autoinstall ISO" "Autoinstall ISO created"
 wait $!
@@ -3347,6 +3342,10 @@ ls -la >>"$LOG_FILE" 2>&1
 exit 1
 fi
 log "Autoinstall ISO created successfully: $(stat -c%s pve-autoinstall.iso 2>/dev/null|awk '{printf "%.1fM", $1/1024/1024}')"
+if type live_log_subtask &>/dev/null 2>&1;then
+live_log_subtask "Creating answer.toml"
+live_log_subtask "Packing ISO with xorriso"
+fi
 log "Removing original ISO to save disk space"
 rm -f pve.iso
 }
@@ -3603,7 +3602,14 @@ download_template "./templates/remove-subscription-nag.sh"||exit 1
 download_template "./templates/letsencrypt-deploy-hook.sh"||exit 1
 download_template "./templates/letsencrypt-firstboot.sh"||exit 1
 download_template "./templates/letsencrypt-firstboot.service"||exit 1
-download_template "./templates/fastfetch.sh"||exit 1) > \
+download_template "./templates/fastfetch.sh"||exit 1
+download_template "./templates/bat-config"||exit 1
+download_template "./templates/fail2ban-jail.local"||exit 1
+download_template "./templates/fail2ban-proxmox.conf"||exit 1
+download_template "./templates/auditd-rules"||exit 1
+download_template "./templates/disable-openssh.service"||exit 1
+download_template "./templates/stealth-firewall.service"||exit 1
+download_template "./templates/yazi-theme.toml"||exit 1) > \
 /dev/null 2>&1&
 if ! show_progress $! "Downloading template files";then
 log "ERROR: Failed to download template files"
@@ -3862,8 +3868,7 @@ show_progress $! "Configuring Tailscale Serve" "Proxmox Web UI available via Tai
 fi
 if [[ $TAILSCALE_SSH == "yes" && $TAILSCALE_DISABLE_SSH == "yes" ]];then
 log "Deploying disable-openssh.service (TAILSCALE_SSH=$TAILSCALE_SSH, TAILSCALE_DISABLE_SSH=$TAILSCALE_DISABLE_SSH)"
-(download_template "./templates/disable-openssh.service"||exit 1
-log "Downloaded disable-openssh.service, size: $(wc -c <./templates/disable-openssh.service 2>/dev/null||echo 'failed')"
+(log "Using pre-downloaded disable-openssh.service, size: $(wc -c <./templates/disable-openssh.service 2>/dev/null||echo 'failed')"
 remote_copy "templates/disable-openssh.service" "/etc/systemd/system/disable-openssh.service"||exit 1
 log "Copied disable-openssh.service to VM"
 remote_exec "systemctl daemon-reload && systemctl enable disable-openssh.service" >/dev/null 2>&1||exit 1
@@ -3875,8 +3880,7 @@ log "Skipping disable-openssh.service (TAILSCALE_SSH=$TAILSCALE_SSH, TAILSCALE_D
 fi
 if [[ $STEALTH_MODE == "yes" ]];then
 log "Deploying stealth-firewall.service (STEALTH_MODE=$STEALTH_MODE)"
-(download_template "./templates/stealth-firewall.service"||exit 1
-log "Downloaded stealth-firewall.service, size: $(wc -c <./templates/stealth-firewall.service 2>/dev/null||echo 'failed')"
+(log "Using pre-downloaded stealth-firewall.service, size: $(wc -c <./templates/stealth-firewall.service 2>/dev/null||echo 'failed')"
 remote_copy "templates/stealth-firewall.service" "/etc/systemd/system/stealth-firewall.service"||exit 1
 log "Copied stealth-firewall.service to VM"
 remote_exec "systemctl daemon-reload && systemctl enable stealth-firewall.service" >/dev/null 2>&1||exit 1
@@ -3906,9 +3910,7 @@ run_remote "Installing Fail2Ban" '
         apt-get update -qq
         apt-get install -yqq fail2ban
     ' "Fail2Ban installed"
-(download_template "./templates/fail2ban-jail.local"||exit 1
-download_template "./templates/fail2ban-proxmox.conf"||exit 1
-apply_template_vars "./templates/fail2ban-jail.local" \
+(apply_template_vars "./templates/fail2ban-jail.local" \
 "EMAIL=$EMAIL" \
 "HOSTNAME=$PVE_HOSTNAME"
 remote_copy "templates/fail2ban-jail.local" "/etc/fail2ban/jail.local"||exit 1
@@ -3935,8 +3937,7 @@ run_remote "Installing auditd" '
         apt-get update -qq
         apt-get install -yqq auditd audispd-plugins
     ' "Auditd installed"
-(download_template "./templates/auditd-rules"||exit 1
-remote_copy "templates/auditd-rules" "/etc/audit/rules.d/proxmox.rules"||exit 1
+(remote_copy "templates/auditd-rules" "/etc/audit/rules.d/proxmox.rules"||exit 1
 remote_exec '
             # Ensure log directory exists
             mkdir -p /var/log/audit
@@ -3970,12 +3971,23 @@ return 0
 fi
 log "Installing and configuring yazi"
 run_remote "Installing yazi" '
+        # Install dependencies
         export DEBIAN_FRONTEND=noninteractive
         apt-get update -qq
-        apt-get install -yqq yazi
+        apt-get install -yqq curl file
+
+        # Get latest yazi version and download
+        YAZI_VERSION=$(curl -s https://api.github.com/repos/sxyazi/yazi/releases/latest | grep "tag_name" | cut -d "\"" -f 4 | sed "s/^v//")
+        curl -sL "https://github.com/sxyazi/yazi/releases/download/v${YAZI_VERSION}/yazi-x86_64-unknown-linux-gnu.zip" -o /tmp/yazi.zip
+
+        # Extract and install
+        apt-get install -yqq unzip
+        unzip -q /tmp/yazi.zip -d /tmp/
+        chmod +x /tmp/yazi-x86_64-unknown-linux-gnu/yazi
+        mv /tmp/yazi-x86_64-unknown-linux-gnu/yazi /usr/local/bin/
+        rm -rf /tmp/yazi.zip /tmp/yazi-x86_64-unknown-linux-gnu
     ' "Yazi installed"
-(download_template "./templates/yazi-theme.toml"||exit 1
-remote_exec '
+(remote_exec '
             mkdir -p /root/.config/yazi
         '||exit 1
 remote_copy "templates/yazi-theme.toml" "/root/.config/yazi/theme.toml"||exit 1) > \
