@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.120-pr.21"
+VERSION="2.0.121-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -4180,6 +4180,14 @@ local pass_auth
 pass_auth=$(remote_exec "grep -E '^PasswordAuthentication' /etc/ssh/sshd_config 2>/dev/null | awk '{print \$2}'" 2>/dev/null)
 if [[ $pass_auth == "no" ]];then
 _add_validation_result "pass" "Password auth" "DISABLED"
+elif [[ -z $pass_auth ]];then
+local pass_auth_any
+pass_auth_any=$(remote_exec "grep -E 'PasswordAuthentication' /etc/ssh/sshd_config 2>/dev/null | grep -v '^#' | awk '{print \$2}'" 2>/dev/null)
+if [[ -z $pass_auth_any ]];then
+_add_validation_result "pass" "Password auth" "DISABLED (default)"
+else
+_add_validation_result "warn" "Password auth" "enabled"
+fi
 else
 _add_validation_result "warn" "Password auth" "enabled"
 fi
