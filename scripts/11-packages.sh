@@ -273,8 +273,18 @@ download_proxmox_iso() {
     # Skip manual verification if aria2c already validated
     if [[ $download_method == "aria2c" ]]; then
       log "Checksum already verified by aria2c"
+      # Add live log for aria2c auto-verification
+      if type live_log_subtask &>/dev/null 2>&1; then
+        live_log_subtask "SHA256: OK (verified by aria2c)"
+      fi
     else
       log "Verifying ISO checksum"
+      sha256sum pve.iso | awk '{print $1}' >/dev/null &
+      if type show_progress &>/dev/null 2>&1; then
+        show_progress $! "Verifying checksum" "Checksum verified"
+      else
+        wait $!
+      fi
       local actual_checksum
       actual_checksum=$(sha256sum pve.iso | awk '{print $1}')
       if [[ $actual_checksum != "$expected_checksum" ]]; then
@@ -283,6 +293,10 @@ download_proxmox_iso() {
         exit 1
       fi
       log "Checksum verification passed"
+      # Add live log for successful verification
+      if type live_log_subtask &>/dev/null 2>&1; then
+        live_log_subtask "SHA256: OK"
+      fi
     fi
   else
     log "WARNING: Could not find checksum for $ISO_FILENAME"

@@ -224,9 +224,6 @@ show_system_status
 log "Step: show_gum_config_editor"
 show_gum_config_editor
 
-echo ""
-show_timed_progress "Configuring..." 5
-
 # Start live installation display
 start_live_installation || {
   log "WARNING: Failed to start live installation display, falling back to regular mode"
