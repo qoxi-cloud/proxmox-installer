@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.104-pr.21"
+VERSION="2.0.105-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -3265,8 +3265,17 @@ log "ISO file size: $(echo "$iso_size"|awk '{printf "%.1fG", $1/1024/1024/1024}'
 if [[ -n $expected_checksum ]];then
 if [[ $download_method == "aria2c" ]];then
 log "Checksum already verified by aria2c"
+if type live_log_subtask &>/dev/null 2>&1;then
+live_log_subtask "SHA256: OK (verified by aria2c)"
+fi
 else
 log "Verifying ISO checksum"
+sha256sum pve.iso|awk '{print $1}' >/dev/null&
+if type show_progress &>/dev/null 2>&1;then
+show_progress $! "Verifying checksum" "Checksum verified"
+else
+wait $!
+fi
 local actual_checksum
 actual_checksum=$(sha256sum pve.iso|awk '{print $1}')
 if [[ $actual_checksum != "$expected_checksum" ]];then
@@ -3275,6 +3284,9 @@ rm -f pve.iso
 exit 1
 fi
 log "Checksum verification passed"
+if type live_log_subtask &>/dev/null 2>&1;then
+live_log_subtask "SHA256: OK"
+fi
 fi
 else
 log "WARNING: Could not find checksum for $ISO_FILENAME"
@@ -4425,8 +4437,6 @@ log "Step: show_system_status"
 show_system_status
 log "Step: show_gum_config_editor"
 show_gum_config_editor
-echo ""
-show_timed_progress "Configuring..." 5
 start_live_installation||{
 log "WARNING: Failed to start live installation display, falling back to regular mode"
 clear
