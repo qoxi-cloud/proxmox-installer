@@ -241,10 +241,6 @@ install_proxmox() {
     exit 1
   fi
 
-  # Show message immediately so user knows installation is starting
-  local install_msg="Installing Proxmox VE (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)"
-  printf "${CLR_YELLOW}%s %s${CLR_RESET}" "${SPINNER_CHARS[0]}" "$install_msg"
-
   # Release any locks on drives before QEMU starts
   release_drives
 
@@ -257,19 +253,23 @@ install_proxmox() {
 
   local qemu_pid=$!
 
+  # Add live log for QEMU startup
+  if type live_log_subtask &>/dev/null 2>&1; then
+    live_log_subtask "QEMU started (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)"
+  fi
+
   # Give QEMU a moment to start or fail
   sleep 2
 
   # Check if QEMU is still running
   if ! kill -0 $qemu_pid 2>/dev/null; then
-    printf "\r\e[K"
     log "ERROR: QEMU failed to start"
     log "QEMU install log:"
     cat qemu_install.log >>"$LOG_FILE" 2>&1
     exit 1
   fi
 
-  show_progress $qemu_pid "$install_msg" "Proxmox VE installed"
+  show_progress $qemu_pid "Installing Proxmox VE" "Proxmox VE installed"
   local exit_code=$?
 
   # Verify installation completed (QEMU exited cleanly)
