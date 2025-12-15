@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.144-pr.21"
+VERSION="2.0.145-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1085,6 +1085,54 @@ fi
 print_info(){
 echo -e "$CLR_CYANℹ$CLR_RESET $1"
 }
+show_progress(){
+local pid=$1
+local message="${2:-Processing}"
+local done_message="${3:-$message}"
+local silent=false
+[[ ${3:-} == "--silent" || ${4:-} == "--silent" ]]&&silent=true
+[[ ${3:-} == "--silent" ]]&&done_message="$message"
+gum spin --spinner meter --spinner.foreground "#ff8700" --title "$message" -- bash -c "
+    while kill -0 $pid 2>/dev/null; do
+      sleep 0.2
+    done
+  "
+wait "$pid" 2>/dev/null
+local exit_code=$?
+if [[ $exit_code -eq 0 ]];then
+if [[ $silent != true ]];then
+printf "$CLR_CYAN✓$CLR_RESET %s\n" "$done_message"
+fi
+else
+printf "$CLR_RED✗$CLR_RESET %s\n" "$message"
+fi
+return $exit_code
+}
+show_timed_progress(){
+local message="$1"
+local duration="${2:-$((5+RANDOM%3))}"
+local steps=20
+local sleep_interval
+sleep_interval=$(awk "BEGIN {printf \"%.2f\", $duration / $steps}")
+local current=0
+while [[ $current -le $steps ]];do
+local pct=$((current*100/steps))
+local filled=$current
+local empty=$((steps-filled))
+local bar_filled="" bar_empty=""
+printf -v bar_filled '%*s' "$filled" ''
+bar_filled="${bar_filled// /█}"
+printf -v bar_empty '%*s' "$empty" ''
+bar_empty="${bar_empty// /░}"
+printf "\r$CLR_ORANGE%s [$CLR_ORANGE%s$CLR_RESET$CLR_GRAY%s$CLR_RESET$CLR_ORANGE] %3d%%$CLR_RESET" \
+"$message" "$bar_filled" "$bar_empty" "$pct"
+if [[ $current -lt $steps ]];then
+sleep "$sleep_interval"
+fi
+current=$((current+1))
+done
+printf "\r\e[K"
+}
 download_file(){
 local output_file="$1"
 local url="$2"
@@ -1113,6 +1161,21 @@ retry_count=$((retry_count+1))
 done
 log "ERROR: Failed to download $url after $max_retries attempts"
 return 1
+}
+prompt_validated(){
+local prompt="$1"
+local default="$2"
+local validator="$3"
+local error_msg="$4"
+local result=""
+while true;do
+read -r -e -p "$prompt" -i "$default" result
+if $validator "$result";then
+echo "$result"
+return 0
+fi
+print_error "$error_msg"
+done
 }
 apply_template_vars(){
 local file="$1"
@@ -1206,95 +1269,6 @@ fi
 esac
 log "Template $remote_file downloaded and validated successfully"
 return 0
-}
-generate_password(){
-local length="${1:-16}"
-tr -dc 'A-Za-z0-9!@#$%^&*' </dev/urandom|head -c "$length"
-}
-read_password(){
-local prompt="$1"
-local password=""
-local char=""
-echo -n "$prompt" >&2
-while IFS= read -r -s -n1 char;do
-if [[ -z $char ]];then
-break
-fi
-if [[ $char == $'\x7f' || $char == $'\x08' ]];then
-if [[ -n $password ]];then
-password="${password%?}"
-echo -ne "\b \b" >&2
-fi
-else
-password+="$char"
-echo -n "*" >&2
-fi
-done
-echo "" >&2
-echo "$password"
-}
-prompt_validated(){
-local prompt="$1"
-local default="$2"
-local validator="$3"
-local error_msg="$4"
-local result=""
-while true;do
-read -r -e -p "$prompt" -i "$default" result
-if $validator "$result";then
-echo "$result"
-return 0
-fi
-print_error "$error_msg"
-done
-}
-show_progress(){
-local pid=$1
-local message="${2:-Processing}"
-local done_message="${3:-$message}"
-local silent=false
-[[ ${3:-} == "--silent" || ${4:-} == "--silent" ]]&&silent=true
-[[ ${3:-} == "--silent" ]]&&done_message="$message"
-gum spin --spinner meter --spinner.foreground "#ff8700" --title "$message" -- bash -c "
-    while kill -0 $pid 2>/dev/null; do
-      sleep 0.2
-    done
-  "
-wait "$pid" 2>/dev/null
-local exit_code=$?
-if [[ $exit_code -eq 0 ]];then
-if [[ $silent != true ]];then
-printf "$CLR_CYAN✓$CLR_RESET %s\n" "$done_message"
-fi
-else
-printf "$CLR_RED✗$CLR_RESET %s\n" "$message"
-fi
-return $exit_code
-}
-show_timed_progress(){
-local message="$1"
-local duration="${2:-$((5+RANDOM%3))}"
-local steps=20
-local sleep_interval
-sleep_interval=$(awk "BEGIN {printf \"%.2f\", $duration / $steps}")
-local current=0
-while [[ $current -le $steps ]];do
-local pct=$((current*100/steps))
-local filled=$current
-local empty=$((steps-filled))
-local bar_filled="" bar_empty=""
-printf -v bar_filled '%*s' "$filled" ''
-bar_filled="${bar_filled// /█}"
-printf -v bar_empty '%*s' "$empty" ''
-bar_empty="${bar_empty// /░}"
-printf "\r$CLR_ORANGE%s [$CLR_ORANGE%s$CLR_RESET$CLR_GRAY%s$CLR_RESET$CLR_ORANGE] %3d%%$CLR_RESET" \
-"$message" "$bar_filled" "$bar_empty" "$pct"
-if [[ $current -lt $steps ]];then
-sleep "$sleep_interval"
-fi
-current=$((current+1))
-done
-printf "\r\e[K"
 }
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=${SSH_CONNECT_TIMEOUT:-10}"
 SSH_PORT="5555"
@@ -1478,6 +1452,178 @@ get_rescue_ssh_key(){
 if [[ -f /root/.ssh/authorized_keys ]];then
 grep -E "^ssh-(rsa|ed25519|ecdsa)" /root/.ssh/authorized_keys 2>/dev/null|head -1
 fi
+}
+retry_command(){
+local max_retries="${1:-3}"
+local delay="${2:-2}"
+shift 2
+local retry_count=0
+while [ "$retry_count" -lt "$max_retries" ];do
+if "$@";then
+return 0
+fi
+retry_count=$((retry_count+1))
+if [ "$retry_count" -lt "$max_retries" ];then
+log "Retry $retry_count/$max_retries after ${delay}s delay"
+sleep "$delay"
+delay=$((delay*2))
+fi
+done
+log "ERROR: Command failed after $max_retries attempts"
+return 1
+}
+run_with_progress(){
+local message="$1"
+local done_message="$2"
+shift 2
+"$@" >>"$LOG_FILE" 2>&1&
+local pid=$!
+show_progress "$pid" "$message" "$done_message"
+local exit_code=$?
+if [[ $exit_code -ne 0 ]];then
+log "ERROR: $message failed with exit code $exit_code"
+return 1
+fi
+return 0
+}
+run_parallel(){
+local -a pids=()
+local exit_code=0
+for cmd in "$@";do
+eval "$cmd"&
+pids+=($!)
+done
+for pid in "${pids[@]}";do
+if ! wait "$pid";then
+exit_code=1
+fi
+done
+return $exit_code
+}
+install_optional_feature(){
+local feature_name="$1"
+local install_var="$2"
+local install_func="$3"
+local config_func="$4"
+local installed_var="${5:-}"
+if [[ ${!install_var} != "yes" ]];then
+log "Skipping $feature_name (not requested)"
+return 0
+fi
+if ! "$install_func";then
+log "ERROR: $feature_name installation failed"
+print_error "$feature_name installation failed"
+exit 1
+fi
+if ! "$config_func";then
+log "WARNING: $feature_name configuration failed"
+print_warning "$feature_name configuration failed - continuing without it"
+return 0
+fi
+if [[ -n $installed_var ]];then
+eval "$installed_var=yes"
+log "$feature_name installed and configured successfully"
+fi
+return 0
+}
+deploy_template(){
+local template_name="$1"
+local dest_path="$2"
+shift 2
+local -a vars=("$@")
+local local_template="./templates/$template_name"
+if ! download_template "$local_template";then
+log "ERROR: Failed to download template: $template_name"
+return 1
+fi
+if [[ ${#vars[@]} -gt 0 ]];then
+if ! apply_template_vars "$local_template" "${vars[@]}";then
+log "ERROR: Failed to apply variables to template: $template_name"
+return 1
+fi
+else
+if ! apply_common_template_vars "$local_template";then
+log "ERROR: Failed to apply common variables to template: $template_name"
+return 1
+fi
+fi
+if ! remote_copy "$local_template" "$dest_path";then
+log "ERROR: Failed to copy template to remote: $template_name → $dest_path"
+return 1
+fi
+log "Template deployed successfully: $template_name → $dest_path"
+return 0
+}
+deploy_templates(){
+local -a cmds=()
+while [[ $# -gt 0 ]];do
+local template="$1"
+local dest="$2"
+shift 2
+cmds+=("deploy_template '$template' '$dest'")
+done
+run_parallel "${cmds[@]}"
+}
+remote_apt_install(){
+local packages="$*"
+if [[ -z $packages ]];then
+log "ERROR: No packages specified for installation"
+return 1
+fi
+run_remote "Installing packages: $packages" "
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq || exit 1
+    apt-get install -yqq $packages || exit 1
+  " "Packages installed: $packages"
+}
+remote_exec_retry(){
+local max_retries="${1:-3}"
+local message="$2"
+local command="$3"
+local done_message="${4:-$message}"
+retry_command "$max_retries" 2 remote_exec "$message" "$command" "$done_message"
+}
+generate_password(){
+local length="${1:-16}"
+tr -dc 'A-Za-z0-9!@#$%^&*' </dev/urandom|head -c "$length"
+}
+read_password(){
+local prompt="$1"
+local password=""
+local char=""
+echo -n "$prompt" >&2
+while IFS= read -r -s -n1 char;do
+if [[ -z $char ]];then
+break
+fi
+if [[ $char == $'\x7f' || $char == $'\x08' ]];then
+if [[ -n $password ]];then
+password="${password%?}"
+echo -ne "\b \b" >&2
+fi
+else
+password+="$char"
+echo -n "*" >&2
+fi
+done
+echo "" >&2
+echo "$password"
+}
+show_validation_error(){
+local message="$1"
+echo ""
+gum style --foreground "$HEX_RED" "$message"
+sleep 1
+}
+validate_with_error(){
+local validator="$1"
+local value="$2"
+local error_message="$3"
+if ! "$validator" "$value";then
+show_validation_error "$error_message"
+return 1
+fi
+return 0
 }
 validate_hostname(){
 local hostname="$1"
@@ -2053,20 +2199,23 @@ fi
 tput cnorm
 echo ""
 }
+live_log_section(){
+local section_name="$1"
+local first="${2:-}"
+[[ $first != "first" ]]&&add_log ""
+add_log "$CLR_CYAN▼ $section_name$CLR_RESET"
+}
 live_log_system_preparation(){
-add_log "$CLR_CYAN▼ Rescue System Preparation$CLR_RESET"
+live_log_section "Rescue System Preparation" "first"
 }
 live_log_iso_download(){
-add_log ""
-add_log "$CLR_CYAN▼ Proxmox ISO Download$CLR_RESET"
+live_log_section "Proxmox ISO Download"
 }
 live_log_proxmox_installation(){
-add_log ""
-add_log "$CLR_CYAN▼ Proxmox Installation$CLR_RESET"
+live_log_section "Proxmox Installation"
 }
 live_log_system_configuration(){
-add_log ""
-add_log "$CLR_CYAN▼ System Configuration$CLR_RESET"
+live_log_section "System Configuration"
 }
 live_log_security_configuration(){
 if [[ ${INSTALL_TAILSCALE:-} == "yes" ]]||[[ ${FAIL2BAN_INSTALLED:-} == "yes" ]]||[[ ${INSTALL_AUDITD:-} == "yes" ]];then
@@ -2081,8 +2230,7 @@ add_log "$CLR_CYAN▼ SSL Configuration$CLR_RESET"
 fi
 }
 live_log_validation_finalization(){
-add_log ""
-add_log "$CLR_CYAN▼ Validation & Finalization$CLR_RESET"
+live_log_section "Validation & Finalization"
 }
 live_log_installation_complete(){
 add_log ""
@@ -2133,6 +2281,132 @@ add_log "  $CLR_GRAY├─$CLR_RESET $message $CLR_CYAN✓$CLR_RESET"
 live_log_subtask(){
 local message="$1"
 add_subtask_log "$message"
+}
+_wizard_main(){
+local selection=0
+while true;do
+_wiz_render_menu "$selection"
+_wiz_read_key
+case "$WIZ_KEY" in
+up)if
+[[ $selection -gt 0 ]]
+then
+((selection--))
+fi
+;;
+down)if
+[[ $selection -lt $((_WIZ_FIELD_COUNT-1)) ]]
+then
+((selection++))
+fi
+;;
+enter)_wiz_show_cursor
+local field_name="${_WIZ_FIELD_MAP[$selection]}"
+case "$field_name" in
+hostname)_edit_hostname;;
+email)_edit_email;;
+password)_edit_password;;
+timezone)_edit_timezone;;
+keyboard)_edit_keyboard;;
+country)_edit_country;;
+iso_version)_edit_iso_version;;
+repository)_edit_repository;;
+interface)_edit_interface;;
+bridge_mode)_edit_bridge_mode;;
+private_subnet)_edit_private_subnet;;
+ipv6)_edit_ipv6;;
+zfs_mode)_edit_zfs_mode;;
+tailscale)_edit_tailscale;;
+ssl)_edit_ssl;;
+shell)_edit_shell;;
+power_profile)_edit_power_profile;;
+features)_edit_features;;
+ssh_key)_edit_ssh_key
+esac
+_wiz_hide_cursor
+;;
+start)return 0
+;;
+quit|esc)_wiz_show_cursor
+echo ""
+if gum confirm "Quit installation?" --default=false \
+--prompt.foreground "$HEX_ORANGE" \
+--selected.background "$HEX_ORANGE";then
+exit 0
+fi
+_wiz_hide_cursor
+esac
+done
+}
+_show_input_footer(){
+local type="${1:-input}"
+local component_lines="${2:-1}"
+local i
+for ((i=0; i<component_lines; i++));do
+echo ""
+done
+echo ""
+case "$type" in
+filter)echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] select  [${CLR_ORANGE}Esc$CLR_GRAY] cancel$CLR_RESET"
+;;
+checkbox)echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Space$CLR_GRAY] toggle  [${CLR_ORANGE}Enter$CLR_GRAY] confirm  [${CLR_ORANGE}Esc$CLR_GRAY] cancel$CLR_RESET"
+;;
+*)echo -e "$CLR_GRAY[${CLR_ORANGE}Enter$CLR_GRAY] confirm  [${CLR_ORANGE}Esc$CLR_GRAY] cancel$CLR_RESET"
+esac
+tput cuu $((component_lines+2))
+}
+_validate_config(){
+local missing_fields=()
+local missing_count=0
+[[ -z $PVE_HOSTNAME ]]&&missing_fields+=("Hostname")&&((missing_count++))
+[[ -z $DOMAIN_SUFFIX ]]&&missing_fields+=("Domain")&&((missing_count++))
+[[ -z $EMAIL ]]&&missing_fields+=("Email")&&((missing_count++))
+[[ -z $NEW_ROOT_PASSWORD ]]&&missing_fields+=("Password")&&((missing_count++))
+[[ -z $TIMEZONE ]]&&missing_fields+=("Timezone")&&((missing_count++))
+[[ -z $KEYBOARD ]]&&missing_fields+=("Keyboard")&&((missing_count++))
+[[ -z $COUNTRY ]]&&missing_fields+=("Country")&&((missing_count++))
+[[ -z $PROXMOX_ISO_VERSION ]]&&missing_fields+=("Proxmox Version")&&((missing_count++))
+[[ -z $PVE_REPO_TYPE ]]&&missing_fields+=("Repository")&&((missing_count++))
+[[ -z $BRIDGE_MODE ]]&&missing_fields+=("Bridge mode")&&((missing_count++))
+[[ -z $PRIVATE_SUBNET ]]&&missing_fields+=("Private subnet")&&((missing_count++))
+[[ -z $IPV6_MODE ]]&&missing_fields+=("IPv6")&&((missing_count++))
+[[ -z $ZFS_RAID ]]&&missing_fields+=("ZFS mode")&&((missing_count++))
+[[ -z $SHELL_TYPE ]]&&missing_fields+=("Shell")&&((missing_count++))
+[[ -z $CPU_GOVERNOR ]]&&missing_fields+=("Power profile")&&((missing_count++))
+[[ -z $SSH_PUBLIC_KEY ]]&&missing_fields+=("SSH Key")&&((missing_count++))
+if [[ $INSTALL_TAILSCALE != "yes" ]];then
+[[ -z $SSL_TYPE ]]&&missing_fields+=("SSL Certificate")&&((missing_count++))
+fi
+if [[ $missing_count -gt 0 ]];then
+_wiz_show_cursor
+clear
+show_banner
+echo ""
+gum style --foreground "$HEX_RED" --bold "Configuration incomplete!"
+echo ""
+gum style --foreground "$HEX_YELLOW" "Please configure the following required fields:"
+echo ""
+for field in "${missing_fields[@]}";do
+echo "  $CLR_CYAN•$CLR_RESET $field"
+done
+echo ""
+gum confirm "Return to configuration?" --default=true \
+--prompt.foreground "$HEX_ORANGE" \
+--selected.background "$HEX_ORANGE"||exit 1
+_wiz_hide_cursor
+return 1
+fi
+return 0
+}
+show_gum_config_editor(){
+_wiz_hide_cursor
+trap '_wiz_show_cursor' EXIT
+while true;do
+_wizard_main
+if _validate_config;then
+break
+fi
+done
 }
 _wiz_read_key(){
 local key
@@ -2277,79 +2551,6 @@ _WIZ_FIELD_COUNT=$field_idx
 output+="\n"
 output+="$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] edit  [${CLR_ORANGE}S$CLR_GRAY] start  [${CLR_ORANGE}Q$CLR_GRAY] quit$CLR_RESET"
 echo -e "$output"
-}
-_wizard_main(){
-local selection=0
-while true;do
-_wiz_render_menu "$selection"
-_wiz_read_key
-case "$WIZ_KEY" in
-up)if
-[[ $selection -gt 0 ]]
-then
-((selection--))
-fi
-;;
-down)if
-[[ $selection -lt $((_WIZ_FIELD_COUNT-1)) ]]
-then
-((selection++))
-fi
-;;
-enter)_wiz_show_cursor
-local field_name="${_WIZ_FIELD_MAP[$selection]}"
-case "$field_name" in
-hostname)_edit_hostname;;
-email)_edit_email;;
-password)_edit_password;;
-timezone)_edit_timezone;;
-keyboard)_edit_keyboard;;
-country)_edit_country;;
-iso_version)_edit_iso_version;;
-repository)_edit_repository;;
-interface)_edit_interface;;
-bridge_mode)_edit_bridge_mode;;
-private_subnet)_edit_private_subnet;;
-ipv6)_edit_ipv6;;
-zfs_mode)_edit_zfs_mode;;
-tailscale)_edit_tailscale;;
-ssl)_edit_ssl;;
-shell)_edit_shell;;
-power_profile)_edit_power_profile;;
-features)_edit_features;;
-ssh_key)_edit_ssh_key
-esac
-_wiz_hide_cursor
-;;
-start)return 0
-;;
-quit|esc)_wiz_show_cursor
-echo ""
-if gum confirm "Quit installation?" --default=false \
---prompt.foreground "$HEX_ORANGE" \
---selected.background "$HEX_ORANGE";then
-exit 0
-fi
-_wiz_hide_cursor
-esac
-done
-}
-_show_input_footer(){
-local type="${1:-input}"
-local component_lines="${2:-1}"
-local i
-for ((i=0; i<component_lines; i++));do
-echo ""
-done
-echo ""
-case "$type" in
-filter)echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] select  [${CLR_ORANGE}Esc$CLR_GRAY] cancel$CLR_RESET"
-;;
-checkbox)echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Space$CLR_GRAY] toggle  [${CLR_ORANGE}Enter$CLR_GRAY] confirm  [${CLR_ORANGE}Esc$CLR_GRAY] cancel$CLR_RESET"
-;;
-*)echo -e "$CLR_GRAY[${CLR_ORANGE}Enter$CLR_GRAY] confirm  [${CLR_ORANGE}Esc$CLR_GRAY] cancel$CLR_RESET"
-esac
-tput cuu $((component_lines+2))
 }
 _edit_hostname(){
 clear
@@ -3005,59 +3206,6 @@ sleep 1
 if [[ -n $detected_key ]];then
 continue
 fi
-fi
-done
-}
-_validate_config(){
-local missing_fields=()
-local missing_count=0
-[[ -z $PVE_HOSTNAME ]]&&missing_fields+=("Hostname")&&((missing_count++))
-[[ -z $DOMAIN_SUFFIX ]]&&missing_fields+=("Domain")&&((missing_count++))
-[[ -z $EMAIL ]]&&missing_fields+=("Email")&&((missing_count++))
-[[ -z $NEW_ROOT_PASSWORD ]]&&missing_fields+=("Password")&&((missing_count++))
-[[ -z $TIMEZONE ]]&&missing_fields+=("Timezone")&&((missing_count++))
-[[ -z $KEYBOARD ]]&&missing_fields+=("Keyboard")&&((missing_count++))
-[[ -z $COUNTRY ]]&&missing_fields+=("Country")&&((missing_count++))
-[[ -z $PROXMOX_ISO_VERSION ]]&&missing_fields+=("Proxmox Version")&&((missing_count++))
-[[ -z $PVE_REPO_TYPE ]]&&missing_fields+=("Repository")&&((missing_count++))
-[[ -z $BRIDGE_MODE ]]&&missing_fields+=("Bridge mode")&&((missing_count++))
-[[ -z $PRIVATE_SUBNET ]]&&missing_fields+=("Private subnet")&&((missing_count++))
-[[ -z $IPV6_MODE ]]&&missing_fields+=("IPv6")&&((missing_count++))
-[[ -z $ZFS_RAID ]]&&missing_fields+=("ZFS mode")&&((missing_count++))
-[[ -z $SHELL_TYPE ]]&&missing_fields+=("Shell")&&((missing_count++))
-[[ -z $CPU_GOVERNOR ]]&&missing_fields+=("Power profile")&&((missing_count++))
-[[ -z $SSH_PUBLIC_KEY ]]&&missing_fields+=("SSH Key")&&((missing_count++))
-if [[ $INSTALL_TAILSCALE != "yes" ]];then
-[[ -z $SSL_TYPE ]]&&missing_fields+=("SSL Certificate")&&((missing_count++))
-fi
-if [[ $missing_count -gt 0 ]];then
-_wiz_show_cursor
-clear
-show_banner
-echo ""
-gum style --foreground "$HEX_RED" --bold "Configuration incomplete!"
-echo ""
-gum style --foreground "$HEX_YELLOW" "Please configure the following required fields:"
-echo ""
-for field in "${missing_fields[@]}";do
-echo "  $CLR_CYAN•$CLR_RESET $field"
-done
-echo ""
-gum confirm "Return to configuration?" --default=true \
---prompt.foreground "$HEX_ORANGE" \
---selected.background "$HEX_ORANGE"||exit 1
-_wiz_hide_cursor
-return 1
-fi
-return 0
-}
-show_gum_config_editor(){
-_wiz_hide_cursor
-trap '_wiz_show_cursor' EXIT
-while true;do
-_wizard_main
-if _validate_config;then
-break
 fi
 done
 }
@@ -3939,32 +4087,64 @@ print_info "  tailscale up --ssh"
 print_info "  tailscale serve --bg --https=443 https://127.0.0.1:8006"
 fi
 }
+_install_fail2ban(){
+run_remote "Installing Fail2Ban" '
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -yqq fail2ban
+  ' "Fail2Ban installed"
+}
+_config_fail2ban(){
+apply_template_vars "./templates/fail2ban-jail.local" \
+"EMAIL=$EMAIL" \
+"HOSTNAME=$PVE_HOSTNAME"
+remote_copy "templates/fail2ban-jail.local" "/etc/fail2ban/jail.local"||exit 1
+remote_copy "templates/fail2ban-proxmox.conf" "/etc/fail2ban/filter.d/proxmox.conf"||exit 1
+remote_exec "systemctl enable fail2ban && systemctl restart fail2ban"||exit 1
+}
 configure_fail2ban(){
 if [[ $INSTALL_TAILSCALE == "yes" ]];then
 log "Skipping Fail2Ban (Tailscale provides security)"
 return 0
 fi
 log "Installing Fail2Ban (no Tailscale)"
-run_remote "Installing Fail2Ban" '
-        export DEBIAN_FRONTEND=noninteractive
-        apt-get update -qq
-        apt-get install -yqq fail2ban
-    ' "Fail2Ban installed"
-(apply_template_vars "./templates/fail2ban-jail.local" \
-"EMAIL=$EMAIL" \
-"HOSTNAME=$PVE_HOSTNAME"
-remote_copy "templates/fail2ban-jail.local" "/etc/fail2ban/jail.local"||exit 1
-remote_copy "templates/fail2ban-proxmox.conf" "/etc/fail2ban/filter.d/proxmox.conf"||exit 1
-remote_exec "systemctl enable fail2ban && systemctl restart fail2ban"||exit 1) > \
+(_install_fail2ban||exit 1
+_config_fail2ban||exit 1) > \
 /dev/null 2>&1&
-show_progress $! "Configuring Fail2Ban" "Fail2Ban configured"
+show_progress $! "Installing and configuring Fail2Ban" "Fail2Ban configured"
 local exit_code=$?
 if [[ $exit_code -ne 0 ]];then
-log "WARNING: Fail2Ban configuration failed"
-print_warning "Fail2Ban configuration failed - continuing without it"
+log "WARNING: Fail2Ban setup failed"
+print_warning "Fail2Ban setup failed - continuing without it"
 return 0
 fi
 FAIL2BAN_INSTALLED="yes"
+}
+_install_auditd(){
+run_remote "Installing auditd" '
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -yqq auditd audispd-plugins
+  ' "Auditd installed"
+}
+_config_auditd(){
+remote_copy "templates/auditd-rules" "/etc/audit/rules.d/proxmox.rules"||exit 1
+remote_exec '
+    # Ensure log directory exists
+    mkdir -p /var/log/audit
+
+    # Configure auditd.conf for better log retention
+    sed -i "s/^max_log_file = .*/max_log_file = 50/" /etc/audit/auditd.conf 2>/dev/null || true
+    sed -i "s/^num_logs = .*/num_logs = 10/" /etc/audit/auditd.conf 2>/dev/null || true
+    sed -i "s/^max_log_file_action = .*/max_log_file_action = ROTATE/" /etc/audit/auditd.conf 2>/dev/null || true
+
+    # Load new rules
+    augenrules --load 2>/dev/null || true
+
+    # Enable and restart auditd
+    systemctl enable auditd
+    systemctl restart auditd
+  '||exit 1
 }
 configure_auditd(){
 if [[ $INSTALL_AUDITD != "yes" ]];then
@@ -3972,37 +4152,39 @@ log "Skipping auditd (not requested)"
 return 0
 fi
 log "Installing and configuring auditd"
-run_remote "Installing auditd" '
-        export DEBIAN_FRONTEND=noninteractive
-        apt-get update -qq
-        apt-get install -yqq auditd audispd-plugins
-    ' "Auditd installed"
-(remote_copy "templates/auditd-rules" "/etc/audit/rules.d/proxmox.rules"||exit 1
-remote_exec '
-            # Ensure log directory exists
-            mkdir -p /var/log/audit
-
-            # Configure auditd.conf for better log retention
-            sed -i "s/^max_log_file = .*/max_log_file = 50/" /etc/audit/auditd.conf 2>/dev/null || true
-            sed -i "s/^num_logs = .*/num_logs = 10/" /etc/audit/auditd.conf 2>/dev/null || true
-            sed -i "s/^max_log_file_action = .*/max_log_file_action = ROTATE/" /etc/audit/auditd.conf 2>/dev/null || true
-
-            # Load new rules
-            augenrules --load 2>/dev/null || true
-
-            # Enable and restart auditd
-            systemctl enable auditd
-            systemctl restart auditd
-        '||exit 1) > \
+(_install_auditd||exit 1
+_config_auditd||exit 1) > \
 /dev/null 2>&1&
-show_progress $! "Configuring auditd rules" "Auditd configured"
+show_progress $! "Installing and configuring auditd" "Auditd configured"
 local exit_code=$?
 if [[ $exit_code -ne 0 ]];then
-log "WARNING: Auditd configuration failed"
-print_warning "Auditd configuration failed - continuing without it"
+log "WARNING: Auditd setup failed"
+print_warning "Auditd setup failed - continuing without it"
 return 0
 fi
 AUDITD_INSTALLED="yes"
+}
+_install_yazi(){
+run_remote "Installing yazi" '
+    # Install dependencies
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -yqq curl file unzip
+
+    # Get latest yazi version and download
+    YAZI_VERSION=$(curl -s https://api.github.com/repos/sxyazi/yazi/releases/latest | grep "tag_name" | cut -d "\"" -f 4 | sed "s/^v//")
+    curl -sL "https://github.com/sxyazi/yazi/releases/download/v${YAZI_VERSION}/yazi-x86_64-unknown-linux-gnu.zip" -o /tmp/yazi.zip
+
+    # Extract and install
+    unzip -q /tmp/yazi.zip -d /tmp/
+    chmod +x /tmp/yazi-x86_64-unknown-linux-gnu/yazi
+    mv /tmp/yazi-x86_64-unknown-linux-gnu/yazi /usr/local/bin/
+    rm -rf /tmp/yazi.zip /tmp/yazi-x86_64-unknown-linux-gnu
+  ' "Yazi installed"
+}
+_config_yazi(){
+remote_exec 'mkdir -p /root/.config/yazi'||exit 1
+remote_copy "templates/yazi-theme.toml" "/root/.config/yazi/theme.toml"||exit 1
 }
 configure_yazi(){
 if [[ $INSTALL_YAZI != "yes" ]];then
@@ -4010,36 +4192,36 @@ log "Skipping yazi (not requested)"
 return 0
 fi
 log "Installing and configuring yazi"
-run_remote "Installing yazi" '
-        # Install dependencies
-        export DEBIAN_FRONTEND=noninteractive
-        apt-get update -qq
-        apt-get install -yqq curl file
-
-        # Get latest yazi version and download
-        YAZI_VERSION=$(curl -s https://api.github.com/repos/sxyazi/yazi/releases/latest | grep "tag_name" | cut -d "\"" -f 4 | sed "s/^v//")
-        curl -sL "https://github.com/sxyazi/yazi/releases/download/v${YAZI_VERSION}/yazi-x86_64-unknown-linux-gnu.zip" -o /tmp/yazi.zip
-
-        # Extract and install
-        apt-get install -yqq unzip
-        unzip -q /tmp/yazi.zip -d /tmp/
-        chmod +x /tmp/yazi-x86_64-unknown-linux-gnu/yazi
-        mv /tmp/yazi-x86_64-unknown-linux-gnu/yazi /usr/local/bin/
-        rm -rf /tmp/yazi.zip /tmp/yazi-x86_64-unknown-linux-gnu
-    ' "Yazi installed"
-(remote_exec '
-            mkdir -p /root/.config/yazi
-        '||exit 1
-remote_copy "templates/yazi-theme.toml" "/root/.config/yazi/theme.toml"||exit 1) > \
+(_install_yazi||exit 1
+_config_yazi||exit 1) > \
 /dev/null 2>&1&
-show_progress $! "Configuring yazi theme" "Yazi configured"
+show_progress $! "Installing and configuring yazi" "Yazi configured"
 local exit_code=$?
 if [[ $exit_code -ne 0 ]];then
-log "WARNING: Yazi configuration failed"
-print_warning "Yazi configuration failed - continuing without it"
+log "WARNING: Yazi setup failed"
+print_warning "Yazi setup failed - continuing without it"
 return 0
 fi
 YAZI_INSTALLED="yes"
+}
+_install_nvim(){
+run_remote "Installing neovim" '
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -yqq neovim
+  ' "Neovim installed"
+}
+_config_nvim(){
+remote_exec '
+    update-alternatives --install /usr/bin/vi vi /usr/bin/nvim 60
+    update-alternatives --install /usr/bin/vim vim /usr/bin/nvim 60
+    update-alternatives --install /usr/bin/editor editor /usr/bin/nvim 60
+
+    # Set nvim as default
+    update-alternatives --set vi /usr/bin/nvim
+    update-alternatives --set vim /usr/bin/nvim
+    update-alternatives --set editor /usr/bin/nvim
+  '||exit 1
 }
 configure_nvim(){
 if [[ $INSTALL_NVIM != "yes" ]];then
@@ -4047,28 +4229,14 @@ log "Skipping neovim (not requested)"
 return 0
 fi
 log "Installing and configuring neovim"
-run_remote "Installing neovim" '
-        export DEBIAN_FRONTEND=noninteractive
-        apt-get update -qq
-        apt-get install -yqq neovim
-    ' "Neovim installed"
-(remote_exec '
-            # Create alternatives for vi and vim
-            update-alternatives --install /usr/bin/vi vi /usr/bin/nvim 60
-            update-alternatives --install /usr/bin/vim vim /usr/bin/nvim 60
-            update-alternatives --install /usr/bin/editor editor /usr/bin/nvim 60
-
-            # Set nvim as default
-            update-alternatives --set vi /usr/bin/nvim
-            update-alternatives --set vim /usr/bin/nvim
-            update-alternatives --set editor /usr/bin/nvim
-        '||exit 1) > \
+(_install_nvim||exit 1
+_config_nvim||exit 1) > \
 /dev/null 2>&1&
-show_progress $! "Configuring nvim aliases" "Neovim configured"
+show_progress $! "Installing and configuring neovim" "Neovim configured"
 local exit_code=$?
 if [[ $exit_code -ne 0 ]];then
-log "WARNING: Neovim configuration failed"
-print_warning "Neovim configuration failed - continuing without it"
+log "WARNING: Neovim setup failed"
+print_warning "Neovim setup failed - continuing without it"
 return 0
 fi
 NVIM_INSTALLED="yes"
@@ -4132,6 +4300,43 @@ show_progress $! "Deploying SSH hardening" "Security hardening configured"
 local exit_code=$?
 if [[ $exit_code -ne 0 ]];then
 log "ERROR: SSH hardening failed - system may be insecure"
+exit 1
+fi
+}
+validate_installation(){
+(remote_exec '
+      # Check if Proxmox VE packages are installed
+      if ! dpkg -l | grep -q "proxmox-ve"; then
+        echo "ERROR: Proxmox VE package not found"
+        exit 1
+      fi
+
+      # Check if pveproxy service is running (Proxmox web interface)
+      if ! systemctl is-active --quiet pveproxy; then
+        echo "ERROR: pveproxy service is not running"
+        exit 1
+      fi
+
+      # Check if pvedaemon is running (Proxmox API daemon)
+      if ! systemctl is-active --quiet pvedaemon; then
+        echo "ERROR: pvedaemon service is not running"
+        exit 1
+      fi
+
+      # Check if ZFS pool exists
+      if ! zpool list | grep -q "rpool"; then
+        echo "ERROR: ZFS root pool (rpool) not found"
+        exit 1
+      fi
+
+      exit 0
+    '||exit 1) > \
+/dev/null 2>&1&
+show_progress $! "Validating installation" "Installation validated"
+local exit_code=$?
+if [[ $exit_code -ne 0 ]];then
+log "ERROR: Installation validation failed"
+print_error "Installation validation failed - review logs for details"
 exit 1
 fi
 }
