@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.129-pr.21"
+VERSION="2.0.130-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -3214,7 +3214,7 @@ if [[ -s $qemu_config_file ]];then
 source "$qemu_config_file"
 rm -f "$qemu_config_file"
 fi
-show_progress $prep_pid "Preparing QEMU ($QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM)" "QEMU prepared ($QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM)"
+show_progress $prep_pid "Starting QEMU ($QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM)" "QEMU started ($QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM)"
 if [[ $UEFI_MODE == "yes" ]];then
 live_log_subtask "UEFI mode detected"
 else
