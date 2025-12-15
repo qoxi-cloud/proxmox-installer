@@ -277,7 +277,7 @@ EOF
     rm -f "$qemu_config_file"
   fi
 
-  show_progress $prep_pid "Preparing QEMU (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)" "QEMU prepared (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)"
+  show_progress $prep_pid "Starting QEMU (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)" "QEMU started (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)"
 
   # Add subtasks after preparation completes
   if [[ $UEFI_MODE == "yes" ]]; then
