@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.139-pr.21"
+VERSION="2.0.140-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -470,6 +470,280 @@ Pacific/Tongatapu
 Pacific/Wake
 Pacific/Wallis
 UTC"
+readonly WIZ_KEYBOARD_LAYOUTS="de
+de-ch
+dk
+en-gb
+en-us
+es
+fi
+fr
+fr-be
+fr-ca
+fr-ch
+hu
+is
+it
+jp
+lt
+mk
+nl
+no
+pl
+pt
+pt-br
+se
+si
+tr"
+readonly WIZ_COUNTRIES="ad
+ae
+af
+ag
+ai
+al
+am
+ao
+aq
+ar
+as
+at
+au
+aw
+ax
+az
+ba
+bb
+bd
+be
+bf
+bg
+bh
+bi
+bj
+bl
+bm
+bn
+bo
+bq
+br
+bs
+bt
+bv
+bw
+by
+bz
+ca
+cc
+cd
+cf
+cg
+ch
+ci
+ck
+cl
+cm
+cn
+co
+cr
+cu
+cv
+cw
+cx
+cy
+cz
+de
+dj
+dk
+dm
+do
+dz
+ec
+ee
+eg
+eh
+er
+es
+et
+fi
+fj
+fk
+fm
+fo
+fr
+ga
+gb
+gd
+ge
+gf
+gg
+gh
+gi
+gl
+gm
+gn
+gp
+gq
+gr
+gs
+gt
+gu
+gw
+gy
+hk
+hm
+hn
+hr
+ht
+hu
+id
+ie
+il
+im
+in
+io
+iq
+ir
+is
+it
+je
+jm
+jo
+jp
+ke
+kg
+kh
+ki
+km
+kn
+kp
+kr
+kw
+ky
+kz
+la
+lb
+lc
+li
+lk
+lr
+ls
+lt
+lu
+lv
+ly
+ma
+mc
+md
+me
+mf
+mg
+mh
+mk
+ml
+mm
+mn
+mo
+mp
+mq
+mr
+ms
+mt
+mu
+mv
+mw
+mx
+my
+mz
+na
+nc
+ne
+nf
+ng
+ni
+nl
+no
+np
+nr
+nu
+nz
+om
+pa
+pe
+pf
+pg
+ph
+pk
+pl
+pm
+pn
+pr
+ps
+pt
+pw
+py
+qa
+re
+ro
+rs
+ru
+rw
+sa
+sb
+sc
+sd
+se
+sg
+sh
+si
+sj
+sk
+sl
+sm
+sn
+so
+sr
+ss
+st
+sv
+sx
+sy
+sz
+tc
+td
+tf
+tg
+th
+tj
+tk
+tl
+tm
+tn
+to
+tr
+tt
+tv
+tw
+tz
+ua
+ug
+um
+us
+uy
+uz
+va
+vc
+ve
+vg
+vi
+vn
+vu
+wf
+ws
+ye
+yt
+za
+zm
+zw"
 readonly WIZ_REPO_TYPES="no-subscription
 enterprise
 test"
@@ -547,6 +821,8 @@ PVE_REPO_TYPE=""
 PVE_SUBSCRIPTION_KEY=""
 SSL_TYPE=""
 SHELL_TYPE=""
+KEYBOARD="en-us"
+COUNTRY="us"
 FAIL2BAN_INSTALLED=""
 INSTALL_AUDITD=""
 CPU_GOVERNOR=""
@@ -1971,6 +2247,8 @@ _add_field "Hostname         " "$(_wiz_fmt "$hostname_display")" "hostname"
 _add_field "Email            " "$(_wiz_fmt "$EMAIL")" "email"
 _add_field "Password         " "$(_wiz_fmt "$pass_display")" "password"
 _add_field "Timezone         " "$(_wiz_fmt "$TIMEZONE")" "timezone"
+_add_field "Keyboard         " "$(_wiz_fmt "$KEYBOARD")" "keyboard"
+_add_field "Country          " "$(_wiz_fmt "$COUNTRY")" "country"
 _add_section "Proxmox"
 _add_field "Version          " "$(_wiz_fmt "$iso_version_display")" "iso_version"
 _add_field "Repository       " "$(_wiz_fmt "$PVE_REPO_TYPE")" "repository"
@@ -2025,6 +2303,8 @@ hostname)_edit_hostname;;
 email)_edit_email;;
 password)_edit_password;;
 timezone)_edit_timezone;;
+keyboard)_edit_keyboard;;
+country)_edit_country;;
 iso_version)_edit_iso_version;;
 repository)_edit_repository;;
 interface)_edit_interface;;
@@ -2217,6 +2497,44 @@ selected=$(echo "$WIZ_TIMEZONES"|gum filter \
 --match.foreground "$HEX_ORANGE")
 if [[ -n $selected ]];then
 TIMEZONE="$selected"
+fi
+}
+_edit_keyboard(){
+clear
+show_banner
+echo ""
+_show_input_footer "filter" 6
+local selected
+selected=$(echo "$WIZ_KEYBOARD_LAYOUTS"|gum filter \
+--placeholder "Type to search..." \
+--indicator "›" \
+--height 5 \
+--no-show-help \
+--prompt "Keyboard: " \
+--prompt.foreground "$HEX_CYAN" \
+--indicator.foreground "$HEX_ORANGE" \
+--match.foreground "$HEX_ORANGE")
+if [[ -n $selected ]];then
+KEYBOARD="$selected"
+fi
+}
+_edit_country(){
+clear
+show_banner
+echo ""
+_show_input_footer "filter" 6
+local selected
+selected=$(echo "$WIZ_COUNTRIES"|gum filter \
+--placeholder "Type to search..." \
+--indicator "›" \
+--height 5 \
+--no-show-help \
+--prompt "Country: " \
+--prompt.foreground "$HEX_CYAN" \
+--indicator.foreground "$HEX_ORANGE" \
+--match.foreground "$HEX_ORANGE")
+if [[ -n $selected ]];then
+COUNTRY="$selected"
 fi
 }
 _edit_iso_version(){
@@ -2698,6 +3016,8 @@ local missing_count=0
 [[ -z $EMAIL ]]&&missing_fields+=("Email")&&((missing_count++))
 [[ -z $NEW_ROOT_PASSWORD ]]&&missing_fields+=("Password")&&((missing_count++))
 [[ -z $TIMEZONE ]]&&missing_fields+=("Timezone")&&((missing_count++))
+[[ -z $KEYBOARD ]]&&missing_fields+=("Keyboard")&&((missing_count++))
+[[ -z $COUNTRY ]]&&missing_fields+=("Country")&&((missing_count++))
 [[ -z $PROXMOX_ISO_VERSION ]]&&missing_fields+=("Proxmox Version")&&((missing_count++))
 [[ -z $PVE_REPO_TYPE ]]&&missing_fields+=("Repository")&&((missing_count++))
 [[ -z $BRIDGE_MODE ]]&&missing_fields+=("Bridge mode")&&((missing_count++))
@@ -3007,6 +3327,8 @@ apply_template_vars "./answer.toml" \
 "FQDN=$FQDN" \
 "EMAIL=$EMAIL" \
 "TIMEZONE=$TIMEZONE" \
+"KEYBOARD=$KEYBOARD" \
+"COUNTRY=$COUNTRY" \
 "ROOT_PASSWORD=$NEW_ROOT_PASSWORD" \
 "ZFS_RAID=$zfs_raid_value" \
 "DISK_LIST=$DISK_LIST"
