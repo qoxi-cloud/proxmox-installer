@@ -386,6 +386,8 @@ make_answer_toml() {
     "FQDN=$FQDN" \
     "EMAIL=$EMAIL" \
     "TIMEZONE=$TIMEZONE" \
+    "KEYBOARD=$KEYBOARD" \
+    "COUNTRY=$COUNTRY" \
     "ROOT_PASSWORD=$NEW_ROOT_PASSWORD" \
     "ZFS_RAID=$zfs_raid_value" \
     "DISK_LIST=$DISK_LIST"

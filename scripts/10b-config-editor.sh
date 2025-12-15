@@ -165,6 +165,8 @@ _wiz_render_menu() {
   _add_field "Email            " "$(_wiz_fmt "$EMAIL")" "email"
   _add_field "Password         " "$(_wiz_fmt "$pass_display")" "password"
   _add_field "Timezone         " "$(_wiz_fmt "$TIMEZONE")" "timezone"
+  _add_field "Keyboard         " "$(_wiz_fmt "$KEYBOARD")" "keyboard"
+  _add_field "Country          " "$(_wiz_fmt "$COUNTRY")" "country"
 
   # --- Proxmox ---
   _add_section "Proxmox"
@@ -249,6 +251,8 @@ _wizard_main() {
           email) _edit_email ;;
           password) _edit_password ;;
           timezone) _edit_timezone ;;
+          keyboard) _edit_keyboard ;;
+          country) _edit_country ;;
           iso_version) _edit_iso_version ;;
           repository) _edit_repository ;;
           interface) _edit_interface ;;
@@ -504,6 +508,54 @@ _edit_timezone() {
 
   if [[ -n $selected ]]; then
     TIMEZONE="$selected"
+  fi
+}
+
+_edit_keyboard() {
+  clear
+  show_banner
+  echo ""
+
+  # Footer for filter: height=5 items + 1 input line = 6 lines for component
+  _show_input_footer "filter" 6
+
+  local selected
+  selected=$(echo "$WIZ_KEYBOARD_LAYOUTS" | gum filter \
+    --placeholder "Type to search..." \
+    --indicator "›" \
+    --height 5 \
+    --no-show-help \
+    --prompt "Keyboard: " \
+    --prompt.foreground "$HEX_CYAN" \
+    --indicator.foreground "$HEX_ORANGE" \
+    --match.foreground "$HEX_ORANGE")
+
+  if [[ -n $selected ]]; then
+    KEYBOARD="$selected"
+  fi
+}
+
+_edit_country() {
+  clear
+  show_banner
+  echo ""
+
+  # Footer for filter: height=5 items + 1 input line = 6 lines for component
+  _show_input_footer "filter" 6
+
+  local selected
+  selected=$(echo "$WIZ_COUNTRIES" | gum filter \
+    --placeholder "Type to search..." \
+    --indicator "›" \
+    --height 5 \
+    --no-show-help \
+    --prompt "Country: " \
+    --prompt.foreground "$HEX_CYAN" \
+    --indicator.foreground "$HEX_ORANGE" \
+    --match.foreground "$HEX_ORANGE")
+
+  if [[ -n $selected ]]; then
+    COUNTRY="$selected"
   fi
 }
 
@@ -1136,6 +1188,8 @@ _validate_config() {
   [[ -z $EMAIL ]] && missing_fields+=("Email") && ((missing_count++))
   [[ -z $NEW_ROOT_PASSWORD ]] && missing_fields+=("Password") && ((missing_count++))
   [[ -z $TIMEZONE ]] && missing_fields+=("Timezone") && ((missing_count++))
+  [[ -z $KEYBOARD ]] && missing_fields+=("Keyboard") && ((missing_count++))
+  [[ -z $COUNTRY ]] && missing_fields+=("Country") && ((missing_count++))
   [[ -z $PROXMOX_ISO_VERSION ]] && missing_fields+=("Proxmox Version") && ((missing_count++))
   [[ -z $PVE_REPO_TYPE ]] && missing_fields+=("Repository") && ((missing_count++))
   [[ -z $BRIDGE_MODE ]] && missing_fields+=("Bridge mode") && ((missing_count++))
