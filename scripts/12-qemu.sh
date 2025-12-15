@@ -234,12 +234,20 @@ release_drives() {
 # Side effects: Writes to drives, exits on failure
 install_proxmox() {
   # Prepare QEMU and start it in background
-  local qemu_pid_file
+  local qemu_pid_file qemu_config_file
   qemu_pid_file=$(mktemp)
+  qemu_config_file=$(mktemp)
 
   (
     # Setup QEMU configuration
     setup_qemu_config
+
+    # Save config for parent shell (write early so parent can read it)
+    cat >"$qemu_config_file" <<EOF
+QEMU_CORES=$QEMU_CORES
+QEMU_RAM=$QEMU_RAM
+UEFI_MODE=$(is_uefi_mode && echo "yes" || echo "no")
+EOF
 
     # Verify ISO exists
     if [[ ! -f "./pve-autoinstall.iso" ]]; then
@@ -273,7 +281,30 @@ install_proxmox() {
   ) &
   local startup_pid=$!
 
+  # Wait for config file to be ready (with short timeout)
+  local timeout=10
+  while [[ ! -s $qemu_config_file ]] && ((timeout > 0)); do
+    sleep 0.1
+    ((timeout--))
+  done
+
+  # Load QEMU configuration
+  if [[ -s $qemu_config_file ]]; then
+    # shellcheck disable=SC1090
+    source "$qemu_config_file"
+    rm -f "$qemu_config_file"
+  fi
+
   show_progress $startup_pid "Starting QEMU (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)" "QEMU started (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)"
+
+  # Add subtasks after startup completes
+  if [[ $UEFI_MODE == "yes" ]]; then
+    live_log_subtask "UEFI mode detected"
+  else
+    live_log_subtask "Legacy BIOS mode"
+  fi
+  live_log_subtask "KVM acceleration enabled"
+  live_log_subtask "Configured ${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM"
 
   # Read QEMU PID from file
   local qemu_pid
