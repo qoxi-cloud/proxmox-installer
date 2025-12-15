@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.133-pr.21"
+VERSION="2.0.134-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -727,8 +727,8 @@ local line6="$M"
 [[ $h -eq 6 ]]&&line6+=" $A/_/\\_\\$M"||line6+=' /_/\_\'
 line6+="$R"
 local line_hetzner="$CLR_HETZNER            Hetzner ${M}Automated Installer$R"
-printf '\033[H\033[J'
-printf '%s\n' \
+local frame
+frame=$(printf '\033[H\033[J%s\n%s\n%s\n%s\n%s\n%s\n%s\n\n%s\n' \
 "" \
 "$line1" \
 "$line2" \
@@ -736,9 +736,8 @@ printf '%s\n' \
 "$line4" \
 "$line5" \
 "$line6" \
-"" \
-"$line_hetzner" \
-""
+"$line_hetzner")
+printf '%s' "$frame"
 }
 BANNER_ANIMATION_PID=""
 show_banner_animated_start(){
@@ -750,6 +749,7 @@ clear
 (local direction=1
 local current_letter=0
 trap 'exit 0' TERM INT
+trap 'clear' WINCH
 exec 3>&1
 exec 1>/dev/tty
 exec 2>/dev/null
@@ -3896,9 +3896,10 @@ log "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
 log "SSL_TYPE=${SSL_TYPE:-self-signed}"
 log "Step: collect_system_info"
 show_banner_animated_start 0.1
-collect_system_info
+(collect_system_info
 log "Step: prefetch_proxmox_iso_info"
-prefetch_proxmox_iso_info
+prefetch_proxmox_iso_info) > \
+/dev/null 2>&1
 show_banner_animated_stop
 log "Step: show_system_status"
 show_system_status
