@@ -263,7 +263,7 @@ EOF
     nohup qemu-system-x86_64 $KVM_OPTS $UEFI_OPTS \
       $CPU_OPTS -smp "$QEMU_CORES" -m "$QEMU_RAM" \
       -boot d -cdrom ./pve-autoinstall.iso \
-      $DRIVE_ARGS -no-reboot -display none >qemu_install.log 2>&1 &
+      $DRIVE_ARGS -no-reboot >qemu_install.log 2>&1 &
 
     local qemu_pid=$!
     echo "$qemu_pid" >"$qemu_pid_file"
@@ -341,7 +341,7 @@ boot_proxmox_with_port_forwarding() {
     $CPU_OPTS -device e1000,netdev=net0 \
     -netdev user,id=net0,hostfwd=tcp::5555-:22 \
     -smp "$QEMU_CORES" -m "$QEMU_RAM" \
-    $DRIVE_ARGS -display none \
+    $DRIVE_ARGS \
     >qemu_output.log 2>&1 &
 
   QEMU_PID=$!
