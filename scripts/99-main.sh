@@ -69,8 +69,10 @@ SYSTEM_INFO_CACHE=$(mktemp)
   log "Step: prefetch_proxmox_iso_info"
   prefetch_proxmox_iso_info
 
-  # Export all PREFLIGHT_* and other important variables to temp file
-  declare -p | grep -E "^declare -[^ ]* (PREFLIGHT_|DRIVES|INTERFACE_|_ISO_|_CHECKSUM_)" >"$SYSTEM_INFO_CACHE"
+  # Export all important variables to temp file
+  # Include: PREFLIGHT_*, DRIVE_*, INTERFACE_*, CURRENT_INTERFACE, PREDICTABLE_NAME,
+  # DEFAULT_INTERFACE, AVAILABLE_*, MAC_ADDRESS, _ISO_*, _CHECKSUM_*
+  declare -p | grep -E "^declare -[^ ]* (PREFLIGHT_|DRIVE_|INTERFACE_|CURRENT_INTERFACE|PREDICTABLE_NAME|DEFAULT_INTERFACE|AVAILABLE_|MAC_ADDRESS|_ISO_|_CHECKSUM_)" >"$SYSTEM_INFO_CACHE"
 } >/dev/null 2>&1 &
 
 # Wait for background tasks to complete
