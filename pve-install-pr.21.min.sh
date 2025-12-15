@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.134-pr.21"
+VERSION="2.0.135-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -3896,10 +3896,12 @@ log "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
 log "SSL_TYPE=${SSL_TYPE:-self-signed}"
 log "Step: collect_system_info"
 show_banner_animated_start 0.1
-(collect_system_info
+{
+collect_system_info
 log "Step: prefetch_proxmox_iso_info"
-prefetch_proxmox_iso_info) > \
-/dev/null 2>&1
+prefetch_proxmox_iso_info
+} >/dev/null 2>&1&
+wait $!
 show_banner_animated_stop
 log "Step: show_system_status"
 show_system_status
