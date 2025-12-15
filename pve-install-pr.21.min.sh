@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.125-pr.21"
+VERSION="2.0.126-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -3186,9 +3186,15 @@ _kill_drive_holders
 log "Drives released"
 }
 install_proxmox(){
-local qemu_pid_file
+local qemu_pid_file qemu_config_file
 qemu_pid_file=$(mktemp)
+qemu_config_file=$(mktemp)
 (setup_qemu_config
+cat >"$qemu_config_file" <<EOF
+QEMU_CORES=$QEMU_CORES
+QEMU_RAM=$QEMU_RAM
+UEFI_MODE=$(is_uefi_mode&&echo "yes"||echo "no")
+EOF
 if [[ ! -f "./pve-autoinstall.iso" ]];then
 print_error "Autoinstall ISO not found!"
 exit 1
@@ -3209,7 +3215,23 @@ exit 1
 fi) \
 &
 local startup_pid=$!
+local timeout=10
+while [[ ! -s $qemu_config_file ]]&&((timeout>0));do
+sleep 0.1
+((timeout--))
+done
+if [[ -s $qemu_config_file ]];then
+source "$qemu_config_file"
+rm -f "$qemu_config_file"
+fi
 show_progress $startup_pid "Starting QEMU ($QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM)" "QEMU started ($QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM)"
+if [[ $UEFI_MODE == "yes" ]];then
+live_log_subtask "UEFI mode detected"
+else
+live_log_subtask "Legacy BIOS mode"
+fi
+live_log_subtask "KVM acceleration enabled"
+live_log_subtask "Configured $QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM"
 local qemu_pid
 qemu_pid=$(cat "$qemu_pid_file")
 rm -f "$qemu_pid_file"
