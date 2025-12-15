@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.130-pr.21"
+VERSION="2.0.131-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -3263,12 +3263,12 @@ while ((elapsed<timeout));do
 if exec 3<>/dev/tcp/localhost/5555 2>/dev/null;then
 exec 3<&-
 exit 0
-fi
+fi 2>/dev/null
 sleep 3
 ((elapsed+=3))
 done
-exit 1) \
-&
+exit 1) 2> \
+/dev/null&
 local wait_pid=$!
 show_progress $wait_pid "Booting installed Proxmox" "Proxmox booted"
 local exit_code=$?
@@ -3277,9 +3277,6 @@ log "ERROR: Timeout waiting for SSH port"
 log "QEMU output log:"
 cat qemu_output.log >>"$LOG_FILE" 2>&1
 return 1
-fi
-if type live_log_subtask &>/dev/null 2>&1;then
-live_log_subtask "SSH connection established"
 fi
 wait_for_ssh_ready 120||{
 log "ERROR: SSH connection failed"
