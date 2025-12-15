@@ -94,7 +94,7 @@ _show_banner_frame() {
   local line_hetzner="${CLR_HETZNER}            Hetzner ${M}Automated Installer${R}"
 
   # Output all lines
-  printf '\033[H' # Move cursor home
+  printf '\033[H\033[J' # Move cursor home and clear screen from cursor to end
   printf '%s\n' \
     "" \
     "$line1" \
