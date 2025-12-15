@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.132-pr.21"
+VERSION="2.0.133-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -3215,11 +3215,11 @@ log "ERROR: qemu-system-x86_64 not found in PATH"
 exit 1
 fi
 log "DEBUG: Using QEMU binary: $qemu_bin"
-"$qemu_bin" $KVM_OPTS $UEFI_OPTS \
-$CPU_OPTS -smp "$QEMU_CORES" -m "$QEMU_RAM" \
--boot d -cdrom ./pve-autoinstall.iso \
-$DRIVE_ARGS -no-reboot -display none >qemu_install.log 2>&1&
+local qemu_cmd="$qemu_bin $KVM_OPTS $UEFI_OPTS $CPU_OPTS -smp $QEMU_CORES -m $QEMU_RAM -boot d -cdrom ./pve-autoinstall.iso $DRIVE_ARGS -no-reboot -display none"
+log "DEBUG: Full QEMU command: $qemu_cmd"
+$qemu_cmd >qemu_install.log 2>&1&
 local qemu_pid=$!
+log "DEBUG: QEMU process PID: $qemu_pid"
 echo "$qemu_pid" >"$qemu_pid_file"
 sleep 2
 if ! kill -0 $qemu_pid 2>/dev/null;then
