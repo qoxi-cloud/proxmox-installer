@@ -93,9 +93,10 @@ _show_banner_frame() {
   # Hetzner line
   local line_hetzner="${CLR_HETZNER}            Hetzner ${M}Automated Installer${R}"
 
-  # Output all lines
-  printf '\033[H\033[J' # Move cursor home and clear screen from cursor to end
-  printf '%s\n' \
+  # Output all lines atomically to prevent interference
+  # Build the entire frame first, then output it all at once
+  local frame
+  frame=$(printf '\033[H\033[J%s\n%s\n%s\n%s\n%s\n%s\n%s\n\n%s\n' \
     "" \
     "$line1" \
     "$line2" \
@@ -103,9 +104,10 @@ _show_banner_frame() {
     "$line4" \
     "$line5" \
     "$line6" \
-    "" \
-    "$line_hetzner" \
-    ""
+    "$line_hetzner")
+
+  # Output the entire frame at once
+  printf '%s' "$frame"
 }
 
 # =============================================================================
@@ -140,8 +142,9 @@ show_banner_animated_start() {
     local direction=1
     local current_letter=0
 
-    # Trap to ensure clean exit
+    # Trap to ensure clean exit and handle window resize
     trap 'exit 0' TERM INT
+    trap 'clear' WINCH
 
     # Redirect any stray output to /dev/null
     exec 3>&1
