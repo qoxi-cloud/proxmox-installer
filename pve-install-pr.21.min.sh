@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.132-pr.21"
+VERSION="2.0.133-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -750,6 +750,9 @@ clear
 (local direction=1
 local current_letter=0
 trap 'exit 0' TERM INT
+exec 3>&1
+exec 1>/dev/tty
+exec 2>/dev/null
 while true;do
 _show_banner_frame "$current_letter"
 sleep "$frame_delay"
@@ -1398,13 +1401,13 @@ need_charm_repo=true
 packages_to_install+=" gum"
 }
 if [[ $need_charm_repo == true ]];then
-mkdir -p /etc/apt/keyrings
-curl -fsSL https://repo.charm.sh/apt/gpg.key|gpg --dearmor -o /etc/apt/keyrings/charm.gpg 2>/dev/null
-echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" >/etc/apt/sources.list.d/charm.list
+mkdir -p /etc/apt/keyrings 2>/dev/null
+curl -fsSL https://repo.charm.sh/apt/gpg.key 2>/dev/null|gpg --dearmor -o /etc/apt/keyrings/charm.gpg >/dev/null 2>&1
+echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" >/etc/apt/sources.list.d/charm.list 2>/dev/null
 fi
 if [[ -n $packages_to_install ]];then
 apt-get update -qq >/dev/null 2>&1
-apt-get install -qq -y $packages_to_install >/dev/null 2>&1
+DEBIAN_FRONTEND=noninteractive apt-get install -qq -y $packages_to_install >/dev/null 2>&1
 fi
 if [[ $EUID -ne 0 ]];then
 PREFLIGHT_ROOT="✗ Not root"
