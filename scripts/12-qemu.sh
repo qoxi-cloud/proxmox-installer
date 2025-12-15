@@ -233,45 +233,54 @@ release_drives() {
 # Runs QEMU in background with direct drive access.
 # Side effects: Writes to drives, exits on failure
 install_proxmox() {
-  setup_qemu_config
+  # Prepare QEMU and start it in background
+  local qemu_pid_file
+  qemu_pid_file=$(mktemp)
 
-  # Verify ISO exists
-  if [[ ! -f "./pve-autoinstall.iso" ]]; then
-    print_error "Autoinstall ISO not found!"
-    exit 1
-  fi
-
-  # Release any locks on drives before QEMU starts
-  release_drives
-
-  # Run QEMU in background with error logging
-  # shellcheck disable=SC2086
-  qemu-system-x86_64 $KVM_OPTS $UEFI_OPTS \
-    $CPU_OPTS -smp "$QEMU_CORES" -m "$QEMU_RAM" \
-    -boot d -cdrom ./pve-autoinstall.iso \
-    $DRIVE_ARGS -no-reboot -display none >qemu_install.log 2>&1 &
-
-  local qemu_pid=$!
-
-  # Give QEMU a moment to start or fail
-  sleep 2
-
-  # Check if QEMU is still running
-  if ! kill -0 $qemu_pid 2>/dev/null; then
-    log "ERROR: QEMU failed to start"
-    log "QEMU install log:"
-    cat qemu_install.log >>"$LOG_FILE" 2>&1
-    exit 1
-  fi
-
-  # Show QEMU startup as a task (not subtask) and then wait for installation
   (
-    sleep 0.1 # Immediate completion - just to show the message
+    # Setup QEMU configuration
+    setup_qemu_config
+
+    # Verify ISO exists
+    if [[ ! -f "./pve-autoinstall.iso" ]]; then
+      print_error "Autoinstall ISO not found!"
+      exit 1
+    fi
+
+    # Release any locks on drives before QEMU starts
+    release_drives
+
+    # Run QEMU in background with error logging, detached from subshell
+    # shellcheck disable=SC2086
+    nohup qemu-system-x86_64 $KVM_OPTS $UEFI_OPTS \
+      $CPU_OPTS -smp "$QEMU_CORES" -m "$QEMU_RAM" \
+      -boot d -cdrom ./pve-autoinstall.iso \
+      $DRIVE_ARGS -no-reboot -display none >qemu_install.log 2>&1 &
+
+    local qemu_pid=$!
+    echo "$qemu_pid" >"$qemu_pid_file"
+
+    # Give QEMU a moment to start or fail
+    sleep 2
+
+    # Check if QEMU is still running
+    if ! kill -0 $qemu_pid 2>/dev/null; then
+      log "ERROR: QEMU failed to start"
+      log "QEMU install log:"
+      cat qemu_install.log >>"$LOG_FILE" 2>&1
+      exit 1
+    fi
   ) &
   local startup_pid=$!
-  show_progress $startup_pid "QEMU started (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)" "QEMU started (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)"
 
-  show_progress $qemu_pid "Installing Proxmox VE" "Proxmox VE installed"
+  show_progress $startup_pid "Starting QEMU (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)" "QEMU started (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)"
+
+  # Read QEMU PID from file
+  local qemu_pid
+  qemu_pid=$(cat "$qemu_pid_file")
+  rm -f "$qemu_pid_file"
+
+  show_progress "$qemu_pid" "Installing Proxmox VE" "Proxmox VE installed"
   local exit_code=$?
 
   # Verify installation completed (QEMU exited cleanly)
