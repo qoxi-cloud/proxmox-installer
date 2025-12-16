@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.145-pr.21"
+VERSION="2.0.146-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -744,30 +744,30 @@ yt
 za
 zm
 zw"
-readonly WIZ_REPO_TYPES="no-subscription
-enterprise
-test"
-readonly WIZ_BRIDGE_MODES="external
-internal
-both"
-readonly WIZ_IPV6_MODES="auto
-manual
-disabled"
+readonly WIZ_REPO_TYPES="No-subscription (free)
+Enterprise
+Test/Development"
+readonly WIZ_BRIDGE_MODES="External bridge
+Internal NAT
+Both"
+readonly WIZ_IPV6_MODES="Auto
+Manual
+Disabled"
 readonly WIZ_PRIVATE_SUBNETS="10.0.0.0/24
 192.168.1.0/24
 172.16.0.0/24
-custom"
-readonly WIZ_ZFS_MODES="single
-raid1"
-readonly WIZ_SSL_TYPES="self-signed
-letsencrypt"
-readonly WIZ_SHELL_OPTIONS="zsh
-bash"
-readonly WIZ_CPU_GOVERNORS="performance
-ondemand
-powersave
-schedutil
-conservative"
+Custom"
+readonly WIZ_ZFS_MODES="Single disk
+RAID-1 (mirror)"
+readonly WIZ_SSL_TYPES="Self-signed
+Let's Encrypt"
+readonly WIZ_SHELL_OPTIONS="ZSH
+Bash"
+readonly WIZ_CPU_GOVERNORS="Performance
+Balanced
+Power saving
+Adaptive
+Conservative"
 readonly WIZ_OPTIONAL_FEATURES="vnstat (network stats)
 auditd (audit logging)
 yazi (file manager)
@@ -2478,6 +2478,61 @@ else
 tailscale_display="Disabled"
 fi
 fi
+local ssl_display=""
+if [[ -n $SSL_TYPE ]];then
+case "$SSL_TYPE" in
+self-signed)ssl_display="Self-signed";;
+letsencrypt)ssl_display="Let's Encrypt";;
+*)ssl_display="$SSL_TYPE"
+esac
+fi
+local repo_display=""
+if [[ -n $PVE_REPO_TYPE ]];then
+case "$PVE_REPO_TYPE" in
+no-subscription)repo_display="No-subscription (free)";;
+enterprise)repo_display="Enterprise";;
+test)repo_display="Test/Development";;
+*)repo_display="$PVE_REPO_TYPE"
+esac
+fi
+local bridge_display=""
+if [[ -n $BRIDGE_MODE ]];then
+case "$BRIDGE_MODE" in
+external)bridge_display="External bridge";;
+internal)bridge_display="Internal NAT";;
+both)bridge_display="Both";;
+*)bridge_display="$BRIDGE_MODE"
+esac
+fi
+local zfs_display=""
+if [[ -n $ZFS_RAID ]];then
+case "$ZFS_RAID" in
+single)zfs_display="Single disk";;
+raid1)zfs_display="RAID-1 (mirror)";;
+raid5)zfs_display="RAID-5 (parity)";;
+raid10)zfs_display="RAID-10 (striped mirrors)";;
+*)zfs_display="$ZFS_RAID"
+esac
+fi
+local shell_display=""
+if [[ -n $SHELL_TYPE ]];then
+case "$SHELL_TYPE" in
+zsh)shell_display="ZSH";;
+bash)shell_display="Bash";;
+*)shell_display="$SHELL_TYPE"
+esac
+fi
+local power_display=""
+if [[ -n $CPU_GOVERNOR ]];then
+case "$CPU_GOVERNOR" in
+performance)power_display="Performance";;
+ondemand)power_display="Balanced";;
+powersave)power_display="Power saving";;
+schedutil)power_display="Adaptive";;
+conservative)power_display="Conservative";;
+*)power_display="$CPU_GOVERNOR"
+esac
+fi
 local features_display="none"
 if [[ -n $INSTALL_VNSTAT || -n $INSTALL_AUDITD || -n $INSTALL_YAZI || -n $INSTALL_NVIM ]];then
 features_display=""
@@ -2525,25 +2580,25 @@ _add_field "Keyboard         " "$(_wiz_fmt "$KEYBOARD")" "keyboard"
 _add_field "Country          " "$(_wiz_fmt "$COUNTRY")" "country"
 _add_section "Proxmox"
 _add_field "Version          " "$(_wiz_fmt "$iso_version_display")" "iso_version"
-_add_field "Repository       " "$(_wiz_fmt "$PVE_REPO_TYPE")" "repository"
+_add_field "Repository       " "$(_wiz_fmt "$repo_display")" "repository"
 _add_section "Network"
 if [[ ${INTERFACE_COUNT:-1} -gt 1 ]];then
 _add_field "Interface        " "$(_wiz_fmt "$INTERFACE_NAME")" "interface"
 fi
-_add_field "Bridge mode      " "$(_wiz_fmt "$BRIDGE_MODE")" "bridge_mode"
+_add_field "Bridge mode      " "$(_wiz_fmt "$bridge_display")" "bridge_mode"
 _add_field "Private subnet   " "$(_wiz_fmt "$PRIVATE_SUBNET")" "private_subnet"
 _add_field "IPv6             " "$(_wiz_fmt "$ipv6_display")" "ipv6"
 _add_section "Storage"
-_add_field "ZFS mode         " "$(_wiz_fmt "$ZFS_RAID")" "zfs_mode"
+_add_field "ZFS mode         " "$(_wiz_fmt "$zfs_display")" "zfs_mode"
 _add_section "VPN"
 _add_field "Tailscale        " "$(_wiz_fmt "$tailscale_display")" "tailscale"
 if [[ $INSTALL_TAILSCALE != "yes" ]];then
 _add_section "SSL"
-_add_field "Certificate      " "$(_wiz_fmt "$SSL_TYPE")" "ssl"
+_add_field "Certificate      " "$(_wiz_fmt "$ssl_display")" "ssl"
 fi
 _add_section "Optional"
-_add_field "Shell            " "$(_wiz_fmt "$SHELL_TYPE")" "shell"
-_add_field "Power profile    " "$(_wiz_fmt "$CPU_GOVERNOR")" "power_profile"
+_add_field "Shell            " "$(_wiz_fmt "$shell_display")" "shell"
+_add_field "Power profile    " "$(_wiz_fmt "$power_display")" "power_profile"
 _add_field "Features         " "$(_wiz_fmt "$features_display")" "features"
 _add_section "SSH"
 _add_field "SSH Key          " "$(_wiz_fmt "$ssh_display")" "ssh_key"
@@ -2774,8 +2829,14 @@ selected=$(echo "$WIZ_REPO_TYPES"|gum choose \
 --selected.foreground "$HEX_WHITE" \
 --no-show-help)
 if [[ -n $selected ]];then
-PVE_REPO_TYPE="$selected"
-if [[ $selected == "enterprise" ]];then
+local repo_type=""
+case "$selected" in
+"No-subscription (free)")repo_type="no-subscription";;
+"Enterprise")repo_type="enterprise";;
+"Test/Development")repo_type="test"
+esac
+PVE_REPO_TYPE="$repo_type"
+if [[ $repo_type == "enterprise" ]];then
 clear
 show_banner
 echo ""
@@ -2828,7 +2889,13 @@ selected=$(echo "$WIZ_BRIDGE_MODES"|gum choose \
 --cursor.foreground "$HEX_NONE" \
 --selected.foreground "$HEX_WHITE" \
 --no-show-help)
-[[ -n $selected ]]&&BRIDGE_MODE="$selected"
+if [[ -n $selected ]];then
+case "$selected" in
+"External bridge")BRIDGE_MODE="external";;
+"Internal NAT")BRIDGE_MODE="internal";;
+"Both")BRIDGE_MODE="both"
+esac
+fi
 }
 _edit_private_subnet(){
 clear
@@ -2846,7 +2913,7 @@ selected=$(echo "$WIZ_PRIVATE_SUBNETS"|gum choose \
 if [[ -z $selected ]];then
 return
 fi
-if [[ $selected == "custom" ]];then
+if [[ $selected == "Custom" ]];then
 while true;do
 clear
 show_banner
@@ -2897,8 +2964,14 @@ selected=$(echo "$WIZ_IPV6_MODES"|gum choose \
 if [[ -z $selected ]];then
 return
 fi
-IPV6_MODE="$selected"
-if [[ $IPV6_MODE == "manual" ]];then
+local ipv6_mode=""
+case "$selected" in
+"Auto")ipv6_mode="auto";;
+"Manual")ipv6_mode="manual";;
+"Disabled")ipv6_mode="disabled"
+esac
+IPV6_MODE="$ipv6_mode"
+if [[ $ipv6_mode == "manual" ]];then
 while true;do
 clear
 show_banner
@@ -2962,12 +3035,12 @@ gum style --foreground "$HEX_RED" "Invalid IPv6 gateway address"
 sleep 2
 fi
 done
-elif [[ $IPV6_MODE == "disabled" ]];then
+elif [[ $ipv6_mode == "disabled" ]];then
 MAIN_IPV6=""
 IPV6_GATEWAY=""
 FIRST_IPV6_CIDR=""
 IPV6_ADDRESS=""
-elif [[ $IPV6_MODE == "auto" ]];then
+elif [[ $ipv6_mode == "auto" ]];then
 IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
 fi
 }
@@ -2977,10 +3050,10 @@ show_banner
 echo ""
 local options="$WIZ_ZFS_MODES"
 if [[ ${DRIVE_COUNT:-0} -ge 3 ]];then
-options+="\nraid5"
+options+="\nRAID-5 (parity)"
 fi
 if [[ ${DRIVE_COUNT:-0} -ge 4 ]];then
-options+="\nraid10"
+options+="\nRAID-10 (striped mirrors)"
 fi
 local item_count=3
 [[ ${DRIVE_COUNT:-0} -ge 3 ]]&&item_count=4
@@ -2994,7 +3067,14 @@ selected=$(echo -e "$options"|gum choose \
 --cursor.foreground "$HEX_NONE" \
 --selected.foreground "$HEX_WHITE" \
 --no-show-help)
-[[ -n $selected ]]&&ZFS_RAID="$selected"
+if [[ -n $selected ]];then
+case "$selected" in
+"Single disk")ZFS_RAID="single";;
+"RAID-1 (mirror)")ZFS_RAID="raid1";;
+"RAID-5 (parity)")ZFS_RAID="raid5";;
+"RAID-10 (striped mirrors)")ZFS_RAID="raid10"
+esac
+fi
 }
 _edit_tailscale(){
 clear
@@ -3064,7 +3144,79 @@ selected=$(echo "$WIZ_SSL_TYPES"|gum choose \
 --cursor.foreground "$HEX_NONE" \
 --selected.foreground "$HEX_WHITE" \
 --no-show-help)
-[[ -n $selected ]]&&SSL_TYPE="$selected"
+local ssl_type=""
+case "$selected" in
+"Self-signed")ssl_type="self-signed";;
+"Let's Encrypt")ssl_type="letsencrypt"
+esac
+if [[ $ssl_type == "letsencrypt" ]];then
+if [[ -z $FQDN ]];then
+clear
+show_banner
+echo ""
+gum style --foreground "$HEX_RED" "Error: Hostname not configured!"
+echo ""
+gum style --foreground "$HEX_GRAY" "Let's Encrypt requires a fully qualified domain name."
+gum style --foreground "$HEX_GRAY" "Please configure hostname first."
+sleep 3
+SSL_TYPE="self-signed"
+return
+fi
+if [[ $FQDN == *.local ]]||! validate_fqdn "$FQDN";then
+clear
+show_banner
+echo ""
+gum style --foreground "$HEX_RED" "Error: Invalid domain name!"
+echo ""
+gum style --foreground "$HEX_GRAY" "Current hostname: $CLR_ORANGE$FQDN$CLR_RESET"
+gum style --foreground "$HEX_GRAY" "Let's Encrypt requires a valid public FQDN (e.g., pve.example.com)."
+gum style --foreground "$HEX_GRAY" "Domains ending with .local are not supported."
+sleep 3
+SSL_TYPE="self-signed"
+return
+fi
+clear
+show_banner
+echo ""
+gum style --foreground "$HEX_CYAN" "Validating DNS resolution..."
+echo ""
+gum style --foreground "$HEX_GRAY" "Domain: $CLR_ORANGE$FQDN$CLR_RESET"
+gum style --foreground "$HEX_GRAY" "Expected IP: $CLR_ORANGE$MAIN_IPV4$CLR_RESET"
+echo ""
+local dns_result
+validate_dns_resolution "$FQDN" "$MAIN_IPV4"
+dns_result=$?
+if [[ $dns_result -eq 1 ]];then
+gum style --foreground "$HEX_RED" "✗ Domain does not resolve to any IP address"
+echo ""
+gum style --foreground "$HEX_GRAY" "Please configure DNS A record:"
+gum style --foreground "$HEX_GRAY" "  $CLR_ORANGE$FQDN$CLR_RESET → $CLR_ORANGE$MAIN_IPV4$CLR_RESET"
+echo ""
+gum style --foreground "$HEX_GRAY" "Falling back to self-signed certificate."
+sleep 4
+SSL_TYPE="self-signed"
+return
+elif [[ $dns_result -eq 2 ]];then
+gum style --foreground "$HEX_RED" "✗ Domain resolves to wrong IP address"
+echo ""
+gum style --foreground "$HEX_GRAY" "Current DNS: $CLR_ORANGE$FQDN$CLR_RESET → $CLR_RED$DNS_RESOLVED_IP$CLR_RESET"
+gum style --foreground "$HEX_GRAY" "Expected:    $CLR_ORANGE$FQDN$CLR_RESET → $CLR_ORANGE$MAIN_IPV4$CLR_RESET"
+echo ""
+gum style --foreground "$HEX_GRAY" "Please update DNS A record to point to $CLR_ORANGE$MAIN_IPV4$CLR_RESET"
+echo ""
+gum style --foreground "$HEX_GRAY" "Falling back to self-signed certificate."
+sleep 4
+SSL_TYPE="self-signed"
+return
+else
+gum style --foreground "$HEX_GREEN" "✓ DNS resolution successful"
+gum style --foreground "$HEX_GRAY" "  $CLR_ORANGE$FQDN$CLR_RESET → $CLR_GREEN$DNS_RESOLVED_IP$CLR_RESET"
+sleep 1
+SSL_TYPE="$ssl_type"
+fi
+else
+[[ -n $ssl_type ]]&&SSL_TYPE="$ssl_type"
+fi
 }
 _edit_shell(){
 clear
@@ -3079,7 +3231,12 @@ selected=$(echo "$WIZ_SHELL_OPTIONS"|gum choose \
 --cursor.foreground "$HEX_NONE" \
 --selected.foreground "$HEX_WHITE" \
 --no-show-help)
-[[ -n $selected ]]&&SHELL_TYPE="$selected"
+if [[ -n $selected ]];then
+case "$selected" in
+"ZSH")SHELL_TYPE="zsh";;
+"Bash")SHELL_TYPE="bash"
+esac
+fi
 }
 _edit_power_profile(){
 clear
@@ -3094,7 +3251,15 @@ selected=$(echo "$WIZ_CPU_GOVERNORS"|gum choose \
 --cursor.foreground "$HEX_NONE" \
 --selected.foreground "$HEX_WHITE" \
 --no-show-help)
-[[ -n $selected ]]&&CPU_GOVERNOR="$selected"
+if [[ -n $selected ]];then
+case "$selected" in
+"Performance")CPU_GOVERNOR="performance";;
+"Balanced")CPU_GOVERNOR="ondemand";;
+"Power saving")CPU_GOVERNOR="powersave";;
+"Adaptive")CPU_GOVERNOR="schedutil";;
+"Conservative")CPU_GOVERNOR="conservative"
+esac
+fi
 }
 _edit_features(){
 clear
