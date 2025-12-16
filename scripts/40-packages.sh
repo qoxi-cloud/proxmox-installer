@@ -348,31 +348,42 @@ validate_answer_toml() {
 # Side effects: Creates answer.toml file, exits on failure
 make_answer_toml() {
   log "Creating answer.toml for autoinstall"
-  log "ZFS_RAID=$ZFS_RAID, DRIVE_COUNT=$DRIVE_COUNT"
+  log "ZFS_RAID=$ZFS_RAID, BOOT_DISK=$BOOT_DISK"
+  log "ZFS_POOL_DISKS=(${ZFS_POOL_DISKS[*]})"
 
-  # Build disk_list based on ZFS_RAID mode (using vda/vdb for QEMU virtio)
-  case "$ZFS_RAID" in
-    single)
-      DISK_LIST='["/dev/vda"]'
-      ;;
-    raid0 | raid1)
-      DISK_LIST='["/dev/vda", "/dev/vdb"]'
-      ;;
-    *)
-      # Default to raid1 for 2 drives
-      DISK_LIST='["/dev/vda", "/dev/vdb"]'
-      ;;
-  esac
+  # Load virtio mapping from QEMU setup
+  if [[ -f /tmp/virtio_map.env ]]; then
+    # shellcheck disable=SC1091
+    source /tmp/virtio_map.env
+  fi
+
+  # Build DISK_LIST from pool disks
+  local pool_count=${#ZFS_POOL_DISKS[@]}
+  local vdev_letters=(a b c d e f g h i j k l m n o p q r s t u v w x y z)
+  DISK_LIST="["
+  for i in "${!ZFS_POOL_DISKS[@]}"; do
+    local phys_disk="${ZFS_POOL_DISKS[$i]}"
+    # Find vdX from mapping (fallback to index-based naming)
+    local vdev="${VIRTIO_MAP[$phys_disk]:-vd${vdev_letters[$i]}}"
+    DISK_LIST+="\"/dev/${vdev}\""
+    [[ $i -lt $((pool_count - 1)) ]] && DISK_LIST+=", "
+  done
+  DISK_LIST+="]"
+
   log "DISK_LIST=$DISK_LIST"
 
-  # Determine ZFS raid level - always required for ZFS filesystem
+  # Map ZFS_RAID to answer.toml format
   local zfs_raid_value
-  if [[ $DRIVE_COUNT -ge 2 && -n $ZFS_RAID && $ZFS_RAID != "single" ]]; then
-    zfs_raid_value="$ZFS_RAID"
-  else
-    # Single disk or single mode selected - must use raid0 (single disk stripe)
-    zfs_raid_value="raid0"
-  fi
+  case "$ZFS_RAID" in
+    single) zfs_raid_value="raid0" ;; # Single disk uses raid0
+    raid0) zfs_raid_value="raid0" ;;
+    raid1) zfs_raid_value="raid1" ;;
+    raidz1) zfs_raid_value="raidz-1" ;;
+    raidz2) zfs_raid_value="raidz-2" ;;
+    raid5) zfs_raid_value="raidz-1" ;; # legacy → raidz-1
+    raid10) zfs_raid_value="raid10" ;;
+    *) zfs_raid_value="raid0" ;;
+  esac
   log "Using ZFS raid: $zfs_raid_value"
 
   # Download and process answer.toml template

@@ -326,11 +326,69 @@ detect_drives() {
 
 }
 
+# Smart disk allocation based on size differences.
+# If mixed sizes: smallest → boot, rest → pool
+# If identical: all → pool (legacy behavior)
+# Side effects: Sets BOOT_DISK, ZFS_POOL_DISKS
+detect_disk_roles() {
+  [[ $DRIVE_COUNT -eq 0 ]] && return 1
+
+  # Parse sizes to bytes for comparison
+  local size_bytes=()
+  for size in "${DRIVE_SIZES[@]}"; do
+    local bytes
+    if [[ $size =~ ([0-9.]+)T ]]; then
+      bytes=$(awk "BEGIN {printf \"%.0f\", ${BASH_REMATCH[1]} * 1099511627776}")
+    elif [[ $size =~ ([0-9.]+)G ]]; then
+      bytes=$(awk "BEGIN {printf \"%.0f\", ${BASH_REMATCH[1]} * 1073741824}")
+    else
+      bytes=0
+    fi
+    size_bytes+=("$bytes")
+  done
+
+  # Find min/max sizes
+  local min_size=${size_bytes[0]}
+  local max_size=${size_bytes[0]}
+  for size in "${size_bytes[@]}"; do
+    [[ $size -lt $min_size ]] && min_size=$size
+    [[ $size -gt $max_size ]] && max_size=$size
+  done
+
+  # Check if sizes differ by >10%
+  local size_diff=$((max_size - min_size))
+  local threshold=$((min_size / 10))
+
+  if [[ $size_diff -le $threshold ]]; then
+    # All same size → all in pool
+    log "All disks same size, using all for ZFS pool"
+    BOOT_DISK=""
+    ZFS_POOL_DISKS=("${DRIVES[@]}")
+  else
+    # Mixed sizes → smallest = boot, rest = pool
+    log "Mixed disk sizes, using smallest for boot"
+    local smallest_idx=0
+    for i in "${!size_bytes[@]}"; do
+      [[ ${size_bytes[$i]} -lt ${size_bytes[$smallest_idx]} ]] && smallest_idx=$i
+    done
+
+    BOOT_DISK="${DRIVES[$smallest_idx]}"
+    ZFS_POOL_DISKS=()
+    for i in "${!DRIVES[@]}"; do
+      [[ $i -ne $smallest_idx ]] && ZFS_POOL_DISKS+=("${DRIVES[$i]}")
+    done
+  fi
+
+  log "Boot disk: ${BOOT_DISK:-all in pool}"
+  log "Pool disks: ${ZFS_POOL_DISKS[*]}"
+}
+
 # Displays system status summary in formatted table.
 # Shows preflight checks and detected storage drives.
 # Exits with error if critical checks failed or no drives detected.
 show_system_status() {
   detect_drives
+  detect_disk_roles
 
   local no_drives=0
   if [[ $DRIVE_COUNT -eq 0 ]]; then

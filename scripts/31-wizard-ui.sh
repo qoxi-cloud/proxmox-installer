@@ -141,8 +141,11 @@ _wiz_render_menu() {
   if [[ -n $ZFS_RAID ]]; then
     case "$ZFS_RAID" in
       single) zfs_display="Single disk" ;;
+      raid0) zfs_display="RAID-0 (striped)" ;;
       raid1) zfs_display="RAID-1 (mirror)" ;;
-      raid5) zfs_display="RAID-5 (parity)" ;;
+      raidz1) zfs_display="RAID-Z1 (parity)" ;;
+      raidz2) zfs_display="RAID-Z2 (double parity)" ;;
+      raid5) zfs_display="RAID-5 (parity)" ;; # legacy
       raid10) zfs_display="RAID-10 (striped mirrors)" ;;
       *) zfs_display="$ZFS_RAID" ;;
     esac
@@ -244,6 +247,17 @@ _wiz_render_menu() {
 
   # --- Storage ---
   _add_section "Storage"
+
+  # Show boot/pool selectors if multiple disks
+  if [[ $DRIVE_COUNT -gt 1 ]]; then
+    local boot_display="All in pool"
+    [[ -n $BOOT_DISK ]] && boot_display=$(basename "$BOOT_DISK")
+    _add_field "Boot disk        " "$(_wiz_fmt "$boot_display")" "boot_disk"
+
+    local pool_display="${#ZFS_POOL_DISKS[@]} disks"
+    _add_field "Pool disks       " "$(_wiz_fmt "$pool_display")" "pool_disks"
+  fi
+
   _add_field "ZFS mode         " "$(_wiz_fmt "$zfs_display")" "zfs_mode"
 
   # --- VPN ---

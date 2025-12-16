@@ -43,6 +43,8 @@ _wizard_main() {
           bridge_mode) _edit_bridge_mode ;;
           private_subnet) _edit_private_subnet ;;
           ipv6) _edit_ipv6 ;;
+          boot_disk) _edit_boot_disk ;;
+          pool_disks) _edit_pool_disks ;;
           zfs_mode) _edit_zfs_mode ;;
           tailscale) _edit_tailscale ;;
           ssl) _edit_ssl ;;

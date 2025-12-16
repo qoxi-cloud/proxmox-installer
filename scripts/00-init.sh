@@ -857,6 +857,16 @@ auditd (audit logging)
 yazi (file manager)
 nvim (text editor)"
 
+# =============================================================================
+# Disk configuration
+# =============================================================================
+
+# Boot disk selection (empty = all disks in pool)
+BOOT_DISK=""
+
+# ZFS pool disks (array of paths like "/dev/nvme0n1")
+ZFS_POOL_DISKS=()
+
 # System utilities to install on Proxmox
 SYSTEM_UTILITIES="btop iotop ncdu tmux pigz smartmontools jq bat fastfetch"
 OPTIONAL_PACKAGES="libguestfs-tools"
