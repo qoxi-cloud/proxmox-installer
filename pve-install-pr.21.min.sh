@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.147-pr.21"
+VERSION="2.0.148-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -772,6 +772,8 @@ readonly WIZ_OPTIONAL_FEATURES="vnstat (network stats)
 auditd (audit logging)
 yazi (file manager)
 nvim (text editor)"
+BOOT_DISK=""
+ZFS_POOL_DISKS=()
 SYSTEM_UTILITIES="btop iotop ncdu tmux pigz smartmontools jq bat fastfetch"
 OPTIONAL_PACKAGES="libguestfs-tools"
 LOG_FILE="/root/pve-install-$(date +%Y%m%d-%H%M%S).log"
@@ -2032,8 +2034,50 @@ DRIVE_SIZES+=("$size")
 DRIVE_MODELS+=("$model")
 done
 }
+detect_disk_roles(){
+[[ $DRIVE_COUNT -eq 0 ]]&&return 1
+local size_bytes=()
+for size in "${DRIVE_SIZES[@]}";do
+local bytes
+if [[ $size =~ ([0-9.]+)T ]];then
+bytes=$(awk "BEGIN {printf \"%.0f\", ${BASH_REMATCH[1]} * 1099511627776}")
+elif [[ $size =~ ([0-9.]+)G ]];then
+bytes=$(awk "BEGIN {printf \"%.0f\", ${BASH_REMATCH[1]} * 1073741824}")
+else
+bytes=0
+fi
+size_bytes+=("$bytes")
+done
+local min_size=${size_bytes[0]}
+local max_size=${size_bytes[0]}
+for size in "${size_bytes[@]}";do
+[[ $size -lt $min_size ]]&&min_size=$size
+[[ $size -gt $max_size ]]&&max_size=$size
+done
+local size_diff=$((max_size-min_size))
+local threshold=$((min_size/10))
+if [[ $size_diff -le $threshold ]];then
+log "All disks same size, using all for ZFS pool"
+BOOT_DISK=""
+ZFS_POOL_DISKS=("${DRIVES[@]}")
+else
+log "Mixed disk sizes, using smallest for boot"
+local smallest_idx=0
+for i in "${!size_bytes[@]}";do
+[[ ${size_bytes[$i]} -lt ${size_bytes[$smallest_idx]} ]]&&smallest_idx=$i
+done
+BOOT_DISK="${DRIVES[$smallest_idx]}"
+ZFS_POOL_DISKS=()
+for i in "${!DRIVES[@]}";do
+[[ $i -ne $smallest_idx ]]&&ZFS_POOL_DISKS+=("${DRIVES[$i]}")
+done
+fi
+log "Boot disk: ${BOOT_DISK:-all in pool}"
+log "Pool disks: ${ZFS_POOL_DISKS[*]}"
+}
 show_system_status(){
 detect_drives
+detect_disk_roles
 local no_drives=0
 if [[ $DRIVE_COUNT -eq 0 ]];then
 no_drives=1
@@ -2315,6 +2359,8 @@ interface)_edit_interface;;
 bridge_mode)_edit_bridge_mode;;
 private_subnet)_edit_private_subnet;;
 ipv6)_edit_ipv6;;
+boot_disk)_edit_boot_disk;;
+pool_disks)_edit_pool_disks;;
 zfs_mode)_edit_zfs_mode;;
 tailscale)_edit_tailscale;;
 ssl)_edit_ssl;;
@@ -2508,7 +2554,10 @@ local zfs_display=""
 if [[ -n $ZFS_RAID ]];then
 case "$ZFS_RAID" in
 single)zfs_display="Single disk";;
+raid0)zfs_display="RAID-0 (striped)";;
 raid1)zfs_display="RAID-1 (mirror)";;
+raidz1)zfs_display="RAID-Z1 (parity)";;
+raidz2)zfs_display="RAID-Z2 (double parity)";;
 raid5)zfs_display="RAID-5 (parity)";;
 raid10)zfs_display="RAID-10 (striped mirrors)";;
 *)zfs_display="$ZFS_RAID"
@@ -2589,6 +2638,13 @@ _add_field "Bridge mode      " "$(_wiz_fmt "$bridge_display")" "bridge_mode"
 _add_field "Private subnet   " "$(_wiz_fmt "$PRIVATE_SUBNET")" "private_subnet"
 _add_field "IPv6             " "$(_wiz_fmt "$ipv6_display")" "ipv6"
 _add_section "Storage"
+if [[ $DRIVE_COUNT -gt 1 ]];then
+local boot_display="All in pool"
+[[ -n $BOOT_DISK ]]&&boot_display=$(basename "$BOOT_DISK")
+_add_field "Boot disk        " "$(_wiz_fmt "$boot_display")" "boot_disk"
+local pool_display="${#ZFS_POOL_DISKS[@]} disks"
+_add_field "Pool disks       " "$(_wiz_fmt "$pool_display")" "pool_disks"
+fi
 _add_field "ZFS mode         " "$(_wiz_fmt "$zfs_display")" "zfs_mode"
 _add_section "VPN"
 _add_field "Tailscale        " "$(_wiz_fmt "$tailscale_display")" "tailscale"
@@ -3048,20 +3104,23 @@ _edit_zfs_mode(){
 clear
 show_banner
 echo ""
-local options="$WIZ_ZFS_MODES"
-if [[ ${DRIVE_COUNT:-0} -ge 3 ]];then
-options+="\nRAID-5 (parity)"
+local pool_count=${#ZFS_POOL_DISKS[@]}
+local options=""
+if [[ $pool_count -eq 1 ]];then
+options="Single disk"
+elif [[ $pool_count -eq 2 ]];then
+options="RAID-0 (striped)\nRAID-1 (mirror)"
+elif [[ $pool_count -eq 3 ]];then
+options="RAID-0 (striped)\nRAID-1 (mirror)\nRAID-Z1 (parity)"
+elif [[ $pool_count -ge 4 ]];then
+options="RAID-0 (striped)\nRAID-1 (mirror)\nRAID-Z1 (parity)\nRAID-Z2 (double parity)\nRAID-10 (striped mirrors)"
 fi
-if [[ ${DRIVE_COUNT:-0} -ge 4 ]];then
-options+="\nRAID-10 (striped mirrors)"
-fi
-local item_count=3
-[[ ${DRIVE_COUNT:-0} -ge 3 ]]&&item_count=4
-[[ ${DRIVE_COUNT:-0} -ge 4 ]]&&item_count=5
-_show_input_footer "filter" "$item_count"
+local item_count
+item_count=$(echo -e "$options"|wc -l)
+_show_input_footer "filter" "$((item_count+1))"
 local selected
 selected=$(echo -e "$options"|gum choose \
---header="ZFS mode:" \
+--header="ZFS mode ($pool_count disks in pool):" \
 --header.foreground "$HEX_CYAN" \
 --cursor "$CLR_ORANGE›$CLR_RESET " \
 --cursor.foreground "$HEX_NONE" \
@@ -3070,8 +3129,10 @@ selected=$(echo -e "$options"|gum choose \
 if [[ -n $selected ]];then
 case "$selected" in
 "Single disk")ZFS_RAID="single";;
+"RAID-0 (striped)")ZFS_RAID="raid0";;
 "RAID-1 (mirror)")ZFS_RAID="raid1";;
-"RAID-5 (parity)")ZFS_RAID="raid5";;
+"RAID-Z1 (parity)")ZFS_RAID="raidz1";;
+"RAID-Z2 (double parity)")ZFS_RAID="raidz2";;
 "RAID-10 (striped mirrors)")ZFS_RAID="raid10"
 esac
 fi
@@ -3374,6 +3435,89 @@ fi
 fi
 done
 }
+_edit_boot_disk(){
+clear
+show_banner
+echo ""
+local options="None (all in pool)"
+for i in "${!DRIVES[@]}";do
+local disk_name="${DRIVE_NAMES[$i]}"
+local disk_size="${DRIVE_SIZES[$i]}"
+local disk_model="${DRIVE_MODELS[$i]:0:25}"
+options+="\n$disk_name - $disk_size  $disk_model"
+done
+_show_input_footer "filter" "$((DRIVE_COUNT+2))"
+local selected
+selected=$(echo -e "$options"|gum choose \
+--header="Boot disk:" \
+--header.foreground "$HEX_CYAN" \
+--cursor "$CLR_ORANGE›$CLR_RESET " \
+--cursor.foreground "$HEX_NONE" \
+--selected.foreground "$HEX_WHITE" \
+--no-show-help)
+if [[ -n $selected ]];then
+if [[ $selected == "None (all in pool)" ]];then
+BOOT_DISK=""
+else
+local disk_name="${selected%% -*}"
+BOOT_DISK="/dev/$disk_name"
+fi
+_rebuild_pool_disks
+fi
+}
+_edit_pool_disks(){
+clear
+show_banner
+echo ""
+local options=""
+for i in "${!DRIVES[@]}";do
+if [[ -z $BOOT_DISK || ${DRIVES[$i]} != "$BOOT_DISK" ]];then
+local disk_name="${DRIVE_NAMES[$i]}"
+local disk_size="${DRIVE_SIZES[$i]}"
+local disk_model="${DRIVE_MODELS[$i]:0:25}"
+options+="$disk_name - $disk_size  $disk_model\n"
+fi
+done
+options="${options%\\n}"
+local available_count
+if [[ -n $BOOT_DISK ]];then
+available_count=$((DRIVE_COUNT-1))
+else
+available_count=$DRIVE_COUNT
+fi
+_show_input_footer "checkbox" "$available_count"
+local selected
+selected=$(echo -e "$options"|gum choose \
+--header="ZFS pool disks (min 1):" \
+--header.foreground "$HEX_CYAN" \
+--cursor "$CLR_ORANGE›$CLR_RESET " \
+--limit "$available_count" \
+--no-show-help)
+if [[ -n $selected ]];then
+ZFS_POOL_DISKS=()
+while IFS= read -r line;do
+local disk_name="${line%% -*}"
+ZFS_POOL_DISKS+=("/dev/$disk_name")
+done <<<"$selected"
+_update_zfs_mode_options
+fi
+}
+_rebuild_pool_disks(){
+ZFS_POOL_DISKS=()
+for drive in "${DRIVES[@]}";do
+[[ -z $BOOT_DISK || $drive != "$BOOT_DISK" ]]&&ZFS_POOL_DISKS+=("$drive")
+done
+_update_zfs_mode_options
+}
+_update_zfs_mode_options(){
+local pool_count=${#ZFS_POOL_DISKS[@]}
+case "$ZFS_RAID" in
+single)[[ $pool_count -ne 1 ]]&&ZFS_RAID="";;
+raid1|raid0)[[ $pool_count -lt 2 ]]&&ZFS_RAID="";;
+raid5|raidz1)[[ $pool_count -lt 3 ]]&&ZFS_RAID="";;
+raid10|raidz2)[[ $pool_count -lt 4 ]]&&ZFS_RAID=""
+esac
+}
 prepare_packages(){
 log "Starting package preparation"
 log "Adding Proxmox repository"
@@ -3616,21 +3760,33 @@ return 0
 }
 make_answer_toml(){
 log "Creating answer.toml for autoinstall"
-log "ZFS_RAID=$ZFS_RAID, DRIVE_COUNT=$DRIVE_COUNT"
-case "$ZFS_RAID" in
-single)DISK_LIST='["/dev/vda"]'
-;;
-raid0|raid1)DISK_LIST='["/dev/vda", "/dev/vdb"]'
-;;
-*)DISK_LIST='["/dev/vda", "/dev/vdb"]'
-esac
+log "ZFS_RAID=$ZFS_RAID, BOOT_DISK=$BOOT_DISK"
+log "ZFS_POOL_DISKS=(${ZFS_POOL_DISKS[*]})"
+if [[ -f /tmp/virtio_map.env ]];then
+source /tmp/virtio_map.env
+fi
+local pool_count=${#ZFS_POOL_DISKS[@]}
+local vdev_letters=(a b c d e f g h i j k l m n o p q r s t u v w x y z)
+DISK_LIST="["
+for i in "${!ZFS_POOL_DISKS[@]}";do
+local phys_disk="${ZFS_POOL_DISKS[$i]}"
+local vdev="${VIRTIO_MAP[$phys_disk]:-vd${vdev_letters[$i]}}"
+DISK_LIST+="\"/dev/$vdev\""
+[[ $i -lt $((pool_count-1)) ]]&&DISK_LIST+=", "
+done
+DISK_LIST+="]"
 log "DISK_LIST=$DISK_LIST"
 local zfs_raid_value
-if [[ $DRIVE_COUNT -ge 2 && -n $ZFS_RAID && $ZFS_RAID != "single" ]];then
-zfs_raid_value="$ZFS_RAID"
-else
-zfs_raid_value="raid0"
-fi
+case "$ZFS_RAID" in
+single)zfs_raid_value="raid0";;
+raid0)zfs_raid_value="raid0";;
+raid1)zfs_raid_value="raid1";;
+raidz1)zfs_raid_value="raidz-1";;
+raidz2)zfs_raid_value="raidz-2";;
+raid5)zfs_raid_value="raidz-1";;
+raid10)zfs_raid_value="raid10";;
+*)zfs_raid_value="raid0"
+esac
 log "Using ZFS raid: $zfs_raid_value"
 if ! download_template "./answer.toml" "answer.toml";then
 log "ERROR: Failed to download answer.toml template"
@@ -3720,10 +3876,25 @@ QEMU_RAM=$DEFAULT_QEMU_RAM
 fi
 log "QEMU config: $QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM"
 DRIVE_ARGS=""
-for drive in "${DRIVES[@]}";do
+local virtio_idx=0
+declare -A VIRTIO_MAP
+local vdev_letters=(a b c d e f g h i j k l m n o p q r s t u v w x y z)
+if [[ -n $BOOT_DISK ]];then
+local vdev="vd${vdev_letters[$virtio_idx]}"
+DRIVE_ARGS="$DRIVE_ARGS -drive file=$BOOT_DISK,format=raw,media=disk,if=virtio"
+VIRTIO_MAP["$BOOT_DISK"]="$vdev"
+log "Mapped $BOOT_DISK → /dev/$vdev (boot)"
+((virtio_idx++))
+fi
+for drive in "${ZFS_POOL_DISKS[@]}";do
+local vdev="vd${vdev_letters[$virtio_idx]}"
 DRIVE_ARGS="$DRIVE_ARGS -drive file=$drive,format=raw,media=disk,if=virtio"
+VIRTIO_MAP["$drive"]="$vdev"
+log "Mapped $drive → /dev/$vdev (pool)"
+((virtio_idx++))
 done
 log "Drive args: $DRIVE_ARGS"
+declare -p VIRTIO_MAP >/tmp/virtio_map.env
 }
 _signal_process(){
 local pid="$1"
