@@ -52,10 +52,18 @@ _edit_repository() {
     --no-show-help)
 
   if [[ -n $selected ]]; then
-    PVE_REPO_TYPE="$selected"
+    # Map display names to internal values
+    local repo_type=""
+    case "$selected" in
+      "No-subscription (free)") repo_type="no-subscription" ;;
+      "Enterprise") repo_type="enterprise" ;;
+      "Test/Development") repo_type="test" ;;
+    esac
+
+    PVE_REPO_TYPE="$repo_type"
 
     # If enterprise selected, optionally ask for subscription key
-    if [[ $selected == "enterprise" ]]; then
+    if [[ $repo_type == "enterprise" ]]; then
       clear
       show_banner
       echo ""

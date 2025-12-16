@@ -108,6 +108,67 @@ _wiz_render_menu() {
     fi
   fi
 
+  local ssl_display=""
+  if [[ -n $SSL_TYPE ]]; then
+    case "$SSL_TYPE" in
+      self-signed) ssl_display="Self-signed" ;;
+      letsencrypt) ssl_display="Let's Encrypt" ;;
+      *) ssl_display="$SSL_TYPE" ;;
+    esac
+  fi
+
+  local repo_display=""
+  if [[ -n $PVE_REPO_TYPE ]]; then
+    case "$PVE_REPO_TYPE" in
+      no-subscription) repo_display="No-subscription (free)" ;;
+      enterprise) repo_display="Enterprise" ;;
+      test) repo_display="Test/Development" ;;
+      *) repo_display="$PVE_REPO_TYPE" ;;
+    esac
+  fi
+
+  local bridge_display=""
+  if [[ -n $BRIDGE_MODE ]]; then
+    case "$BRIDGE_MODE" in
+      external) bridge_display="External bridge" ;;
+      internal) bridge_display="Internal NAT" ;;
+      both) bridge_display="Both" ;;
+      *) bridge_display="$BRIDGE_MODE" ;;
+    esac
+  fi
+
+  local zfs_display=""
+  if [[ -n $ZFS_RAID ]]; then
+    case "$ZFS_RAID" in
+      single) zfs_display="Single disk" ;;
+      raid1) zfs_display="RAID-1 (mirror)" ;;
+      raid5) zfs_display="RAID-5 (parity)" ;;
+      raid10) zfs_display="RAID-10 (striped mirrors)" ;;
+      *) zfs_display="$ZFS_RAID" ;;
+    esac
+  fi
+
+  local shell_display=""
+  if [[ -n $SHELL_TYPE ]]; then
+    case "$SHELL_TYPE" in
+      zsh) shell_display="ZSH" ;;
+      bash) shell_display="Bash" ;;
+      *) shell_display="$SHELL_TYPE" ;;
+    esac
+  fi
+
+  local power_display=""
+  if [[ -n $CPU_GOVERNOR ]]; then
+    case "$CPU_GOVERNOR" in
+      performance) power_display="Performance" ;;
+      ondemand) power_display="Balanced" ;;
+      powersave) power_display="Power saving" ;;
+      schedutil) power_display="Adaptive" ;;
+      conservative) power_display="Conservative" ;;
+      *) power_display="$CPU_GOVERNOR" ;;
+    esac
+  fi
+
   local features_display="none"
   if [[ -n $INSTALL_VNSTAT || -n $INSTALL_AUDITD || -n $INSTALL_YAZI || -n $INSTALL_NVIM ]]; then
     features_display=""
@@ -169,7 +230,7 @@ _wiz_render_menu() {
   # --- Proxmox ---
   _add_section "Proxmox"
   _add_field "Version          " "$(_wiz_fmt "$iso_version_display")" "iso_version"
-  _add_field "Repository       " "$(_wiz_fmt "$PVE_REPO_TYPE")" "repository"
+  _add_field "Repository       " "$(_wiz_fmt "$repo_display")" "repository"
 
   # --- Network ---
   _add_section "Network"
@@ -177,13 +238,13 @@ _wiz_render_menu() {
   if [[ ${INTERFACE_COUNT:-1} -gt 1 ]]; then
     _add_field "Interface        " "$(_wiz_fmt "$INTERFACE_NAME")" "interface"
   fi
-  _add_field "Bridge mode      " "$(_wiz_fmt "$BRIDGE_MODE")" "bridge_mode"
+  _add_field "Bridge mode      " "$(_wiz_fmt "$bridge_display")" "bridge_mode"
   _add_field "Private subnet   " "$(_wiz_fmt "$PRIVATE_SUBNET")" "private_subnet"
   _add_field "IPv6             " "$(_wiz_fmt "$ipv6_display")" "ipv6"
 
   # --- Storage ---
   _add_section "Storage"
-  _add_field "ZFS mode         " "$(_wiz_fmt "$ZFS_RAID")" "zfs_mode"
+  _add_field "ZFS mode         " "$(_wiz_fmt "$zfs_display")" "zfs_mode"
 
   # --- VPN ---
   _add_section "VPN"
@@ -192,13 +253,13 @@ _wiz_render_menu() {
   # --- SSL --- (hidden when Tailscale enabled - uses Tailscale certs)
   if [[ $INSTALL_TAILSCALE != "yes" ]]; then
     _add_section "SSL"
-    _add_field "Certificate      " "$(_wiz_fmt "$SSL_TYPE")" "ssl"
+    _add_field "Certificate      " "$(_wiz_fmt "$ssl_display")" "ssl"
   fi
 
   # --- Optional ---
   _add_section "Optional"
-  _add_field "Shell            " "$(_wiz_fmt "$SHELL_TYPE")" "shell"
-  _add_field "Power profile    " "$(_wiz_fmt "$CPU_GOVERNOR")" "power_profile"
+  _add_field "Shell            " "$(_wiz_fmt "$shell_display")" "shell"
+  _add_field "Power profile    " "$(_wiz_fmt "$power_display")" "power_profile"
   _add_field "Features         " "$(_wiz_fmt "$features_display")" "features"
 
   # --- SSH ---

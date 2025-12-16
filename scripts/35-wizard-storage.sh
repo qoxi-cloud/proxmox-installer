@@ -12,10 +12,10 @@ _edit_zfs_mode() {
   # Start with base ZFS modes, add more based on drive count
   local options="$WIZ_ZFS_MODES"
   if [[ ${DRIVE_COUNT:-0} -ge 3 ]]; then
-    options+="\nraid5"
+    options+="\nRAID-5 (parity)"
   fi
   if [[ ${DRIVE_COUNT:-0} -ge 4 ]]; then
-    options+="\nraid10"
+    options+="\nRAID-10 (striped mirrors)"
   fi
 
   # Count options (2-4 items depending on drives) + 1 header
@@ -33,5 +33,13 @@ _edit_zfs_mode() {
     --selected.foreground "$HEX_WHITE" \
     --no-show-help)
 
-  [[ -n $selected ]] && ZFS_RAID="$selected"
+  if [[ -n $selected ]]; then
+    # Map display names to internal values
+    case "$selected" in
+      "Single disk") ZFS_RAID="single" ;;
+      "RAID-1 (mirror)") ZFS_RAID="raid1" ;;
+      "RAID-5 (parity)") ZFS_RAID="raid5" ;;
+      "RAID-10 (striped mirrors)") ZFS_RAID="raid10" ;;
+    esac
+  fi
 }

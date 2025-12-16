@@ -46,7 +46,14 @@ _edit_bridge_mode() {
     --selected.foreground "$HEX_WHITE" \
     --no-show-help)
 
-  [[ -n $selected ]] && BRIDGE_MODE="$selected"
+  if [[ -n $selected ]]; then
+    # Map display names to internal values
+    case "$selected" in
+      "External bridge") BRIDGE_MODE="external" ;;
+      "Internal NAT") BRIDGE_MODE="internal" ;;
+      "Both") BRIDGE_MODE="both" ;;
+    esac
+  fi
 }
 
 _edit_private_subnet() {
@@ -72,7 +79,7 @@ _edit_private_subnet() {
   fi
 
   # Handle custom subnet input
-  if [[ $selected == "custom" ]]; then
+  if [[ $selected == "Custom" ]]; then
     while true; do
       clear
       show_banner
@@ -136,10 +143,18 @@ _edit_ipv6() {
     return
   fi
 
-  IPV6_MODE="$selected"
+  # Map display names to internal values
+  local ipv6_mode=""
+  case "$selected" in
+    "Auto") ipv6_mode="auto" ;;
+    "Manual") ipv6_mode="manual" ;;
+    "Disabled") ipv6_mode="disabled" ;;
+  esac
+
+  IPV6_MODE="$ipv6_mode"
 
   # Handle manual mode - need to collect IPv6 address and gateway
-  if [[ $IPV6_MODE == "manual" ]]; then
+  if [[ $ipv6_mode == "manual" ]]; then
     # IPv6 Address input
     while true; do
       clear
@@ -216,13 +231,13 @@ _edit_ipv6() {
         sleep 2
       fi
     done
-  elif [[ $IPV6_MODE == "disabled" ]]; then
+  elif [[ $ipv6_mode == "disabled" ]]; then
     # Clear IPv6 settings when disabled
     MAIN_IPV6=""
     IPV6_GATEWAY=""
     FIRST_IPV6_CIDR=""
     IPV6_ADDRESS=""
-  elif [[ $IPV6_MODE == "auto" ]]; then
+  elif [[ $ipv6_mode == "auto" ]]; then
     # Auto mode - use detected values or defaults
     IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
   fi

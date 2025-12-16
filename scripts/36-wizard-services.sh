@@ -89,7 +89,91 @@ _edit_ssl() {
     --selected.foreground "$HEX_WHITE" \
     --no-show-help)
 
-  [[ -n $selected ]] && SSL_TYPE="$selected"
+  # Map display names to internal values
+  local ssl_type=""
+  case "$selected" in
+    "Self-signed") ssl_type="self-signed" ;;
+    "Let's Encrypt") ssl_type="letsencrypt" ;;
+  esac
+
+  # Validate Let's Encrypt selection
+  if [[ $ssl_type == "letsencrypt" ]]; then
+    # Check if FQDN is set and is a valid domain
+    if [[ -z $FQDN ]]; then
+      clear
+      show_banner
+      echo ""
+      gum style --foreground "$HEX_RED" "Error: Hostname not configured!"
+      echo ""
+      gum style --foreground "$HEX_GRAY" "Let's Encrypt requires a fully qualified domain name."
+      gum style --foreground "$HEX_GRAY" "Please configure hostname first."
+      sleep 3
+      SSL_TYPE="self-signed"
+      return
+    fi
+
+    if [[ $FQDN == *.local ]] || ! validate_fqdn "$FQDN"; then
+      clear
+      show_banner
+      echo ""
+      gum style --foreground "$HEX_RED" "Error: Invalid domain name!"
+      echo ""
+      gum style --foreground "$HEX_GRAY" "Current hostname: ${CLR_ORANGE}${FQDN}${CLR_RESET}"
+      gum style --foreground "$HEX_GRAY" "Let's Encrypt requires a valid public FQDN (e.g., pve.example.com)."
+      gum style --foreground "$HEX_GRAY" "Domains ending with .local are not supported."
+      sleep 3
+      SSL_TYPE="self-signed"
+      return
+    fi
+
+    # Check DNS resolution
+    clear
+    show_banner
+    echo ""
+    gum style --foreground "$HEX_CYAN" "Validating DNS resolution..."
+    echo ""
+    gum style --foreground "$HEX_GRAY" "Domain: ${CLR_ORANGE}${FQDN}${CLR_RESET}"
+    gum style --foreground "$HEX_GRAY" "Expected IP: ${CLR_ORANGE}${MAIN_IPV4}${CLR_RESET}"
+    echo ""
+
+    local dns_result
+    validate_dns_resolution "$FQDN" "$MAIN_IPV4"
+    dns_result=$?
+
+    if [[ $dns_result -eq 1 ]]; then
+      # No DNS resolution
+      gum style --foreground "$HEX_RED" "✗ Domain does not resolve to any IP address"
+      echo ""
+      gum style --foreground "$HEX_GRAY" "Please configure DNS A record:"
+      gum style --foreground "$HEX_GRAY" "  ${CLR_ORANGE}${FQDN}${CLR_RESET} → ${CLR_ORANGE}${MAIN_IPV4}${CLR_RESET}"
+      echo ""
+      gum style --foreground "$HEX_GRAY" "Falling back to self-signed certificate."
+      sleep 4
+      SSL_TYPE="self-signed"
+      return
+    elif [[ $dns_result -eq 2 ]]; then
+      # Wrong IP
+      gum style --foreground "$HEX_RED" "✗ Domain resolves to wrong IP address"
+      echo ""
+      gum style --foreground "$HEX_GRAY" "Current DNS: ${CLR_ORANGE}${FQDN}${CLR_RESET} → ${CLR_RED}${DNS_RESOLVED_IP}${CLR_RESET}"
+      gum style --foreground "$HEX_GRAY" "Expected:    ${CLR_ORANGE}${FQDN}${CLR_RESET} → ${CLR_ORANGE}${MAIN_IPV4}${CLR_RESET}"
+      echo ""
+      gum style --foreground "$HEX_GRAY" "Please update DNS A record to point to ${CLR_ORANGE}${MAIN_IPV4}${CLR_RESET}"
+      echo ""
+      gum style --foreground "$HEX_GRAY" "Falling back to self-signed certificate."
+      sleep 4
+      SSL_TYPE="self-signed"
+      return
+    else
+      # Success
+      gum style --foreground "$HEX_GREEN" "✓ DNS resolution successful"
+      gum style --foreground "$HEX_GRAY" "  ${CLR_ORANGE}${FQDN}${CLR_RESET} → ${CLR_GREEN}${DNS_RESOLVED_IP}${CLR_RESET}"
+      sleep 1
+      SSL_TYPE="$ssl_type"
+    fi
+  else
+    [[ -n $ssl_type ]] && SSL_TYPE="$ssl_type"
+  fi
 }
 
 _edit_shell() {
@@ -109,7 +193,13 @@ _edit_shell() {
     --selected.foreground "$HEX_WHITE" \
     --no-show-help)
 
-  [[ -n $selected ]] && SHELL_TYPE="$selected"
+  if [[ -n $selected ]]; then
+    # Map display names to internal values
+    case "$selected" in
+      "ZSH") SHELL_TYPE="zsh" ;;
+      "Bash") SHELL_TYPE="bash" ;;
+    esac
+  fi
 }
 
 _edit_power_profile() {
@@ -129,7 +219,16 @@ _edit_power_profile() {
     --selected.foreground "$HEX_WHITE" \
     --no-show-help)
 
-  [[ -n $selected ]] && CPU_GOVERNOR="$selected"
+  if [[ -n $selected ]]; then
+    # Map display names to internal values
+    case "$selected" in
+      "Performance") CPU_GOVERNOR="performance" ;;
+      "Balanced") CPU_GOVERNOR="ondemand" ;;
+      "Power saving") CPU_GOVERNOR="powersave" ;;
+      "Adaptive") CPU_GOVERNOR="schedutil" ;;
+      "Conservative") CPU_GOVERNOR="conservative" ;;
+    esac
+  fi
 }
 
 _edit_features() {

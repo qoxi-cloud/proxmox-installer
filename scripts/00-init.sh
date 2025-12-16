@@ -804,51 +804,51 @@ zw"
 
 # Proxmox repository types
 # shellcheck disable=SC2034
-readonly WIZ_REPO_TYPES="no-subscription
-enterprise
-test"
+readonly WIZ_REPO_TYPES="No-subscription (free)
+Enterprise
+Test/Development"
 
 # Network bridge modes
 # shellcheck disable=SC2034
-readonly WIZ_BRIDGE_MODES="external
-internal
-both"
+readonly WIZ_BRIDGE_MODES="External bridge
+Internal NAT
+Both"
 
 # IPv6 configuration modes
 # shellcheck disable=SC2034
-readonly WIZ_IPV6_MODES="auto
-manual
-disabled"
+readonly WIZ_IPV6_MODES="Auto
+Manual
+Disabled"
 
 # Private subnet presets
 # shellcheck disable=SC2034
 readonly WIZ_PRIVATE_SUBNETS="10.0.0.0/24
 192.168.1.0/24
 172.16.0.0/24
-custom"
+Custom"
 
 # ZFS RAID levels (base options, raid5/raid10 added dynamically based on drive count)
 # shellcheck disable=SC2034
-readonly WIZ_ZFS_MODES="single
-raid1"
+readonly WIZ_ZFS_MODES="Single disk
+RAID-1 (mirror)"
 
 # SSL certificate types
 # shellcheck disable=SC2034
-readonly WIZ_SSL_TYPES="self-signed
-letsencrypt"
+readonly WIZ_SSL_TYPES="Self-signed
+Let's Encrypt"
 
 # Shell options
 # shellcheck disable=SC2034
-readonly WIZ_SHELL_OPTIONS="zsh
-bash"
+readonly WIZ_SHELL_OPTIONS="ZSH
+Bash"
 
 # CPU governor / power profile options
 # shellcheck disable=SC2034
-readonly WIZ_CPU_GOVERNORS="performance
-ondemand
-powersave
-schedutil
-conservative"
+readonly WIZ_CPU_GOVERNORS="Performance
+Balanced
+Power saving
+Adaptive
+Conservative"
 
 # Optional features
 # shellcheck disable=SC2034
