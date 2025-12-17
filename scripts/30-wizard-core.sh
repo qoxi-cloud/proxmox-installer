@@ -59,20 +59,7 @@ _wizard_main() {
         _wiz_hide_cursor
         ;;
       start)
-        # Validate required configuration before starting installation
-        if [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]]; then
-          _wiz_start_edit
-          _wiz_hide_cursor
-          _wiz_error "✗ Cannot start installation: No disks selected for ZFS pool"
-          _wiz_blank_line
-          _wiz_dim "Please select at least one disk in the 'Pool disks' field"
-          _wiz_blank_line
-          _wiz_dim "Press any key to continue..."
-          read -r -n 1
-          _wiz_hide_cursor
-          continue
-        fi
-        # Exit wizard loop to proceed with installation
+        # Exit wizard loop to proceed with validation and installation
         return 0
         ;;
       quit | esc)
@@ -153,6 +140,7 @@ _validate_config() {
   [[ -z $SHELL_TYPE ]] && missing_fields+=("Shell") && ((missing_count++))
   [[ -z $CPU_GOVERNOR ]] && missing_fields+=("Power profile") && ((missing_count++))
   [[ -z $SSH_PUBLIC_KEY ]] && missing_fields+=("SSH Key") && ((missing_count++))
+  [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]] && missing_fields+=("Pool disks") && ((missing_count++))
 
   # SSL is required only if Tailscale is disabled
   if [[ $INSTALL_TAILSCALE != "yes" ]]; then
