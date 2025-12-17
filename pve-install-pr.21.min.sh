@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.156-pr.21"
+VERSION="2.0.158-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -2430,7 +2430,8 @@ if [[ $INSTALL_TAILSCALE != "yes" ]];then
 fi
 if [[ $missing_count -gt 0 ]];then
 _wiz_show_cursor
-clear
+tput cup 0 0
+tput ed
 show_banner
 echo ""
 gum style --foreground "$HEX_RED" --bold "Configuration incomplete!"
@@ -2450,8 +2451,9 @@ fi
 return 0
 }
 show_gum_config_editor(){
+tput smcup
 _wiz_hide_cursor
-trap '_wiz_show_cursor' EXIT
+trap '_wiz_show_cursor; tput rmcup' EXIT
 while true;do
 _wizard_main
 if _validate_config;then
@@ -2498,7 +2500,6 @@ _wiz_render_menu(){
 local selection="$1"
 local output=""
 tput cup 0 0
-tput ed
 show_banner
 echo ""
 local pass_display=""
