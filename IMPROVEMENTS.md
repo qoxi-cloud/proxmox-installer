@@ -127,11 +127,11 @@ fi
 
 ---
 
-### 7. DNS Resolution Retry Missing
-**File:** `scripts/20-validation.sh:277+`
-**Current:** Single DNS lookup with timeout, fails immediately
+### ✅ 7. DNS Resolution Retry Missing
+**File:** `scripts/20-validation.sh:273-359`
+**Status:** ✅ Implemented (3-attempt retry with configurable delay)
 
-**Fix around line 301:**
+**What was done:**
 ```bash
 # Add retry logic to DNS validation
 resolve_hostname() {
@@ -159,7 +159,12 @@ resolve_hostname() {
 }
 ```
 
-**Impact:** Prevents installation failures due to transient DNS issues
+- Added retry loop with 3 attempts
+- Uses `DNS_RETRY_DELAY` (default 10s) for delays between attempts
+- Logs warnings on failed attempts with progress indicators
+- Maintains backward compatibility with existing return codes (0/1/2)
+
+**Impact:** ✅ Prevents installation failures due to transient DNS issues
 
 ---
 
@@ -424,7 +429,7 @@ log() {
 
 ### Phase 2: Validation & Error Handling (2 hrs)
 - [ ] Add SSH key validation function
-- [ ] Add DNS retry logic
+- [x] Add DNS retry logic
 - [ ] Add template variable validation
 - [ ] Add ZFS ARC configuration
 
