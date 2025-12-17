@@ -89,6 +89,7 @@ _edit_password() {
         PASSWORD_GENERATED="yes"
 
         _wiz_start_edit
+        _wiz_hide_cursor
         _wiz_warn "Please save this password - it will be required for login"
         _wiz_blank_line
         echo -e "${CLR_CYAN}Generated password:${CLR_RESET} ${CLR_ORANGE}${NEW_ROOT_PASSWORD}${CLR_RESET}"

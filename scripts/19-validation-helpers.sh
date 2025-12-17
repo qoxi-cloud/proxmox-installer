@@ -12,6 +12,9 @@
 show_validation_error() {
   local message="$1"
 
+  # Hide cursor during error display
+  _wiz_hide_cursor
+
   # Show error message (replaces blank line, footer stays below)
   _wiz_error "$message"
   sleep 3

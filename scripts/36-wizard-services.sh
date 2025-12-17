@@ -84,6 +84,7 @@ _edit_ssl() {
     # Check if FQDN is set and is a valid domain
     if [[ -z $FQDN ]]; then
       _wiz_start_edit
+      _wiz_hide_cursor
       _wiz_error "Error: Hostname not configured!"
       _wiz_blank_line
       _wiz_dim "Let's Encrypt requires a fully qualified domain name."
@@ -95,6 +96,7 @@ _edit_ssl() {
 
     if [[ $FQDN == *.local ]] || ! validate_fqdn "$FQDN"; then
       _wiz_start_edit
+      _wiz_hide_cursor
       _wiz_error "Error: Invalid domain name!"
       _wiz_blank_line
       _wiz_dim "Current hostname: ${CLR_ORANGE}${FQDN}${CLR_RESET}"
@@ -107,6 +109,7 @@ _edit_ssl() {
 
     # Check DNS resolution
     _wiz_start_edit
+    _wiz_hide_cursor
     _wiz_info "Validating DNS resolution..."
     _wiz_blank_line
     _wiz_dim "Domain: ${CLR_ORANGE}${FQDN}${CLR_RESET}"
@@ -119,6 +122,7 @@ _edit_ssl() {
 
     if [[ $dns_result -eq 1 ]]; then
       # No DNS resolution
+      _wiz_hide_cursor
       _wiz_error "✗ Domain does not resolve to any IP address"
       _wiz_blank_line
       _wiz_dim "Please configure DNS A record:"
@@ -130,6 +134,7 @@ _edit_ssl() {
       return
     elif [[ $dns_result -eq 2 ]]; then
       # Wrong IP
+      _wiz_hide_cursor
       _wiz_error "✗ Domain resolves to wrong IP address"
       _wiz_blank_line
       _wiz_dim "Current DNS: ${CLR_ORANGE}${FQDN}${CLR_RESET} → ${CLR_RED}${DNS_RESOLVED_IP}${CLR_RESET}"

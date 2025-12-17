@@ -146,8 +146,8 @@ _validate_config() {
 
   # Show error if missing fields
   if [[ $missing_count -gt 0 ]]; then
-    _wiz_show_cursor
     _wiz_start_edit
+    _wiz_hide_cursor
     _wiz_error --bold "Configuration incomplete!"
     _wiz_blank_line
     _wiz_warn "Please configure the following required fields:"
@@ -156,6 +156,7 @@ _validate_config() {
       echo "  ${CLR_CYAN}•${CLR_RESET} $field"
     done
     _wiz_blank_line
+    _wiz_show_cursor
     _wiz_confirm "Return to configuration?" --default=true || exit 1
     _wiz_hide_cursor
     return 1

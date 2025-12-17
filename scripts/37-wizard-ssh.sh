@@ -17,6 +17,7 @@ _edit_ssh_key() {
       # Parse detected key for display
       parse_ssh_key "$detected_key"
 
+      _wiz_hide_cursor
       _wiz_warn "Detected SSH key from Rescue System:"
       _wiz_blank_line
       echo -e "${CLR_GRAY}Type:${CLR_RESET}    ${SSH_KEY_TYPE}"

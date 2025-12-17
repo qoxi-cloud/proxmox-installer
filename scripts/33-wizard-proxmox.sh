@@ -12,6 +12,7 @@ _edit_iso_version() {
   iso_list=$(get_available_proxmox_isos 5)
 
   if [[ -z $iso_list ]]; then
+    _wiz_hide_cursor
     _wiz_error "Failed to fetch ISO list"
     sleep 2
     return
