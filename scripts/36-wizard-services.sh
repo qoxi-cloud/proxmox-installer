@@ -206,13 +206,14 @@ _edit_power_profile() {
 _edit_features() {
   _wiz_start_edit
 
-  # 1 header + 4 items for multi-select checkbox
-  _show_input_footer "checkbox" 5
+  # 1 header + 5 items for multi-select checkbox
+  _show_input_footer "checkbox" 6
 
   # Build pre-selected items based on current configuration
   local preselected=()
   [[ $INSTALL_VNSTAT == "yes" ]] && preselected+=("vnstat")
   [[ $INSTALL_AUDITD == "yes" ]] && preselected+=("auditd")
+  [[ $INSTALL_PROMETHEUS == "yes" ]] && preselected+=("prometheus")
   [[ $INSTALL_YAZI == "yes" ]] && preselected+=("yazi")
   [[ $INSTALL_NVIM == "yes" ]] && preselected+=("nvim")
 
@@ -241,6 +242,7 @@ _edit_features() {
   # Parse selection
   INSTALL_VNSTAT="no"
   INSTALL_AUDITD="no"
+  INSTALL_PROMETHEUS="no"
   INSTALL_YAZI="no"
   INSTALL_NVIM="no"
   if echo "$selected" | grep -q "vnstat"; then
@@ -248,6 +250,9 @@ _edit_features() {
   fi
   if echo "$selected" | grep -q "auditd"; then
     INSTALL_AUDITD="yes"
+  fi
+  if echo "$selected" | grep -q "prometheus"; then
+    INSTALL_PROMETHEUS="yes"
   fi
   if echo "$selected" | grep -q "yazi"; then
     INSTALL_YAZI="yes"

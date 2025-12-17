@@ -1,0 +1,7 @@
+# Prometheus Node Exporter configuration
+# Configuration file for prometheus-node-exporter service
+
+# Command line arguments for node exporter
+# --collector.textfile.directory: Directory for custom metrics in Prometheus text format
+# Place .prom files here for custom metrics (e.g., ZFS health, VM stats, etc.)
+ARGS="--collector.textfile.directory=/var/lib/prometheus/node-exporter"

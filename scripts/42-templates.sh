@@ -56,6 +56,10 @@ make_templates() {
     download_template "./templates/stealth-firewall.service" || exit 1
     # Optional tools
     download_template "./templates/yazi-theme.toml" || exit 1
+    # Prometheus node exporter
+    download_template "./templates/prometheus-node-exporter" || exit 1
+    download_template "./templates/proxmox-metrics.sh" || exit 1
+    download_template "./templates/proxmox-metrics.cron" || exit 1
   ) >/dev/null 2>&1 &
   if ! show_progress $! "Downloading template files"; then
     log "ERROR: Failed to download template files"

@@ -860,6 +860,7 @@ Conservative"
 # shellcheck disable=SC2034
 readonly WIZ_OPTIONAL_FEATURES="vnstat (network stats)
 auditd (audit logging)
+prometheus (metrics exporter)
 yazi (file manager)
 nvim (text editor)"
 
@@ -874,8 +875,8 @@ BOOT_DISK=""
 ZFS_POOL_DISKS=()
 
 # System utilities to install on Proxmox
-SYSTEM_UTILITIES="btop iotop ncdu tmux pigz smartmontools jq bat fastfetch"
-OPTIONAL_PACKAGES="libguestfs-tools"
+SYSTEM_UTILITIES="btop iotop ncdu tmux pigz smartmontools jq bat fastfetch aide chkrootkit sysstat nethogs ethtool"
+OPTIONAL_PACKAGES="libguestfs-tools" # prometheus-node-exporter moved to wizard features
 
 # Log file
 LOG_FILE="/root/pve-install-$(date +%Y%m%d-%H%M%S).log"
@@ -996,6 +997,13 @@ INSTALL_VNSTAT=""
 # vnstat installation flag (set by configure_vnstat)
 # shellcheck disable=SC2034
 VNSTAT_INSTALLED=""
+
+# Prometheus node exporter installation setting (yes/no, default: no)
+INSTALL_PROMETHEUS=""
+
+# Prometheus installation flag (set by configure_prometheus)
+# shellcheck disable=SC2034
+PROMETHEUS_INSTALLED=""
 
 # Yazi file manager installation setting (yes/no, default: no)
 INSTALL_YAZI=""

@@ -120,6 +120,7 @@ configure_proxmox_via_ssh() {
   configure_tailscale
   configure_fail2ban
   configure_auditd
+  configure_prometheus
   configure_yazi
   configure_nvim
 

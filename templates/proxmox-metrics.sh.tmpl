@@ -1,0 +1,124 @@
+#!/bin/bash
+# =============================================================================
+# Proxmox Custom Metrics Exporter
+# Collects ZFS and Proxmox-specific metrics for Prometheus
+# =============================================================================
+#
+# This script is automatically installed and configured when Prometheus is enabled.
+# Runs every 5 minutes via /etc/cron.d/proxmox-metrics
+#
+# Metrics are written to: /var/lib/prometheus/node-exporter/proxmox.prom
+# Prometheus node exporter automatically scrapes these metrics via textfile collector
+#
+# Manual execution: /usr/local/bin/proxmox-metrics.sh
+#
+# =============================================================================
+
+set -euo pipefail
+
+OUTPUT_FILE="/var/lib/prometheus/node-exporter/proxmox.prom"
+TEMP_FILE="${OUTPUT_FILE}.tmp"
+
+# Start fresh
+: > "$TEMP_FILE"
+
+# =============================================================================
+# ZFS Pool Health
+# =============================================================================
+if command -v zpool &>/dev/null; then
+  # ZFS pool health status (1 = ONLINE, 0 = degraded/faulted)
+  for pool in $(zpool list -H -o name); do
+    status=$(zpool status "$pool" | grep -m1 "state:" | awk '{print $2}')
+    health=0
+    [[ $status == "ONLINE" ]] && health=1
+
+    cat >> "$TEMP_FILE" <<EOF
+# HELP zfs_pool_health ZFS pool health status (1=healthy, 0=degraded/faulted)
+# TYPE zfs_pool_health gauge
+zfs_pool_health{pool="$pool",status="$status"} $health
+EOF
+
+    # ZFS pool allocated space (bytes)
+    alloc=$(zpool list -H -o allocated -p "$pool")
+    cat >> "$TEMP_FILE" <<EOF
+# HELP zfs_pool_allocated_bytes ZFS pool allocated space in bytes
+# TYPE zfs_pool_allocated_bytes gauge
+zfs_pool_allocated_bytes{pool="$pool"} $alloc
+EOF
+
+    # ZFS pool free space (bytes)
+    free=$(zpool list -H -o free -p "$pool")
+    cat >> "$TEMP_FILE" <<EOF
+# HELP zfs_pool_free_bytes ZFS pool free space in bytes
+# TYPE zfs_pool_free_bytes gauge
+zfs_pool_free_bytes{pool="$pool"} $free
+EOF
+
+    # ZFS pool fragmentation percentage
+    frag=$(zpool list -H -o frag "$pool" | tr -d '%')
+    [[ -n $frag && $frag != "-" ]] || frag=0
+    cat >> "$TEMP_FILE" <<EOF
+# HELP zfs_pool_fragmentation_percent ZFS pool fragmentation percentage
+# TYPE zfs_pool_fragmentation_percent gauge
+zfs_pool_fragmentation_percent{pool="$pool"} $frag
+EOF
+  done
+fi
+
+# =============================================================================
+# Proxmox VM/Container Statistics
+# =============================================================================
+if command -v qm &>/dev/null; then
+  # Total VMs
+  total_vms=$(qm list 2>/dev/null | tail -n +2 | wc -l)
+  cat >> "$TEMP_FILE" <<EOF
+# HELP proxmox_vms_total Total number of VMs on this host
+# TYPE proxmox_vms_total gauge
+proxmox_vms_total $total_vms
+EOF
+
+  # Running VMs
+  running_vms=$(qm list 2>/dev/null | grep -c "running" || echo 0)
+  cat >> "$TEMP_FILE" <<EOF
+# HELP proxmox_vms_running Number of running VMs
+# TYPE proxmox_vms_running gauge
+proxmox_vms_running $running_vms
+EOF
+fi
+
+if command -v pct &>/dev/null; then
+  # Total containers
+  total_cts=$(pct list 2>/dev/null | tail -n +2 | wc -l)
+  cat >> "$TEMP_FILE" <<EOF
+# HELP proxmox_containers_total Total number of containers on this host
+# TYPE proxmox_containers_total gauge
+proxmox_containers_total $total_cts
+EOF
+
+  # Running containers
+  running_cts=$(pct list 2>/dev/null | grep -c "running" || echo 0)
+  cat >> "$TEMP_FILE" <<EOF
+# HELP proxmox_containers_running Number of running containers
+# TYPE proxmox_containers_running gauge
+proxmox_containers_running $running_cts
+EOF
+fi
+
+# =============================================================================
+# Proxmox Node Information
+# =============================================================================
+if command -v pvesh &>/dev/null; then
+  # Node uptime (seconds)
+  uptime_sec=$(awk '{print int($1)}' /proc/uptime)
+  cat >> "$TEMP_FILE" <<EOF
+# HELP proxmox_node_uptime_seconds Node uptime in seconds
+# TYPE proxmox_node_uptime_seconds counter
+proxmox_node_uptime_seconds $uptime_sec
+EOF
+fi
+
+# =============================================================================
+# Atomic move to final location
+# =============================================================================
+mv "$TEMP_FILE" "$OUTPUT_FILE"
+chmod 644 "$OUTPUT_FILE"
