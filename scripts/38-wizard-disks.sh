@@ -25,6 +25,7 @@ _edit_boot_disk() {
   )
 
   if [[ -n $selected ]]; then
+    local old_boot_disk="$BOOT_DISK"
     if [[ $selected == "None (all in pool)" ]]; then
       BOOT_DISK=""
     else
@@ -32,6 +33,21 @@ _edit_boot_disk() {
       BOOT_DISK="/dev/${disk_name}"
     fi
     _rebuild_pool_disks
+
+    # Validate that pool is not empty after rebuild
+    if [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]]; then
+      _wiz_start_edit
+      _wiz_hide_cursor
+      _wiz_error "✗ Cannot use this boot disk: No disks left for ZFS pool"
+      _wiz_blank_line
+      _wiz_dim "At least one disk must remain for the ZFS pool."
+      _wiz_blank_line
+      _wiz_dim "Press any key to continue..."
+      read -r -n 1
+      # Restore previous boot disk selection
+      BOOT_DISK="$old_boot_disk"
+      _rebuild_pool_disks
+    fi
   fi
 }
 
@@ -90,14 +106,22 @@ _edit_pool_disks() {
   local selected
   selected=$(echo -e "$options" | _wiz_choose "${gum_args[@]}")
 
-  if [[ -n $selected ]]; then
-    ZFS_POOL_DISKS=()
-    while IFS= read -r line; do
-      local disk_name="${line%% -*}"
-      ZFS_POOL_DISKS+=("/dev/${disk_name}")
-    done <<<"$selected"
-    _update_zfs_mode_options
+  if [[ -z $selected ]]; then
+    _wiz_start_edit
+    _wiz_hide_cursor
+    _wiz_error "✗ At least one disk must be selected for ZFS pool"
+    _wiz_blank_line
+    _wiz_dim "Press any key to select disks..."
+    read -r -n 1
+    return 1
   fi
+
+  ZFS_POOL_DISKS=()
+  while IFS= read -r line; do
+    local disk_name="${line%% -*}"
+    ZFS_POOL_DISKS+=("/dev/${disk_name}")
+  done <<<"$selected"
+  _update_zfs_mode_options
 }
 
 # Helper: rebuild pool disks after boot disk change

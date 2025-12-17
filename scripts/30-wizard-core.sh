@@ -59,7 +59,20 @@ _wizard_main() {
         _wiz_hide_cursor
         ;;
       start)
-        # Exit wizard loop to proceed with validation and installation
+        # Validate required configuration before starting installation
+        if [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]]; then
+          _wiz_start_edit
+          _wiz_hide_cursor
+          _wiz_error "✗ Cannot start installation: No disks selected for ZFS pool"
+          _wiz_blank_line
+          _wiz_dim "Please select at least one disk in the 'Pool disks' field"
+          _wiz_blank_line
+          _wiz_dim "Press any key to continue..."
+          read -r -n 1
+          _wiz_hide_cursor
+          continue
+        fi
+        # Exit wizard loop to proceed with installation
         return 0
         ;;
       quit | esc)

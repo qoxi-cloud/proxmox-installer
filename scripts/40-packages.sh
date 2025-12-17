@@ -349,9 +349,10 @@ validate_answer_toml() {
 make_answer_toml() {
   log "Creating answer.toml for autoinstall"
   log "ZFS_RAID=$ZFS_RAID, BOOT_DISK=$BOOT_DISK"
-  log "ZFS_POOL_DISKS=(${ZFS_POOL_DISKS[*]:-})"
+  log "ZFS_POOL_DISKS=(${ZFS_POOL_DISKS[*]})"
 
   # Load virtio mapping from QEMU setup
+  declare -A VIRTIO_MAP  # Initialize as empty associative array
   if [[ -f /tmp/virtio_map.env ]]; then
     # shellcheck disable=SC1091
     source /tmp/virtio_map.env
