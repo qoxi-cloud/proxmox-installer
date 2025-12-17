@@ -66,14 +66,12 @@ collect_system_info() {
     errors=$((errors + 1))
   fi
 
-  # Check available disk space (need at least 3GB in /root for ISO)
-  local free_space_mb
-  free_space_mb=$(df -m /root | awk 'NR==2 {print $4}')
-  if [[ $free_space_mb -ge $MIN_DISK_SPACE_MB ]]; then
-    PREFLIGHT_DISK="${free_space_mb} MB"
+  # Check available disk space (need at least 6GB in /root for ISO + QEMU + overhead)
+  if validate_disk_space "/root" "$MIN_DISK_SPACE_MB"; then
+    PREFLIGHT_DISK="${DISK_SPACE_MB} MB"
     PREFLIGHT_DISK_STATUS="ok"
   else
-    PREFLIGHT_DISK="${free_space_mb} MB (need ${MIN_DISK_SPACE_MB}MB+)"
+    PREFLIGHT_DISK="${DISK_SPACE_MB:-0} MB (need ${MIN_DISK_SPACE_MB}MB+)"
     PREFLIGHT_DISK_STATUS="error"
     errors=$((errors + 1))
   fi

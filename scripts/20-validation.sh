@@ -381,3 +381,37 @@ validate_ssh_key() {
       ;;
   esac
 }
+
+# =============================================================================
+# Disk space validation
+# =============================================================================
+
+# Validates available disk space meets minimum requirements.
+# Parameters:
+#   $1 - Path to check (default: /root)
+#   $2 - Minimum required space in MB (default: MIN_DISK_SPACE_MB)
+# Returns: 0 if sufficient, 1 otherwise
+# Side effects: Sets DISK_SPACE_MB global with available space
+validate_disk_space() {
+  local path="${1:-/root}"
+  local min_required_mb="${2:-${MIN_DISK_SPACE_MB}}"
+  local available_mb
+
+  # Get available space in MB
+  available_mb=$(df -m "$path" 2>/dev/null | awk 'NR==2 {print $4}')
+
+  if [[ -z $available_mb ]]; then
+    log "ERROR: Could not determine disk space for $path"
+    return 1
+  fi
+
+  DISK_SPACE_MB=$available_mb
+
+  if [[ $available_mb -lt $min_required_mb ]]; then
+    log "ERROR: Insufficient disk space: ${available_mb}MB available, ${min_required_mb}MB required"
+    return 1
+  fi
+
+  log "INFO: Disk space OK: ${available_mb}MB available (${min_required_mb}MB required)"
+  return 0
+}
