@@ -48,6 +48,13 @@ _wiz_clear() {
   tput ed
 }
 
+# Clear screen and show banner (common pattern in editors)
+_wiz_start_edit() {
+  _wiz_clear
+  show_banner
+  echo ""
+}
+
 # Format value for display - shows placeholder if empty
 # Parameters:
 #   $1 - value to display
