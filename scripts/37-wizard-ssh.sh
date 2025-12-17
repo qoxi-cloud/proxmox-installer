@@ -58,8 +58,7 @@ _edit_ssh_key() {
       _wiz_input \
         --placeholder "ssh-ed25519 AAAA... user@host" \
         --value "$SSH_PUBLIC_KEY" \
-        --prompt "SSH Key: " \
-        --width 60
+        --prompt "SSH Key: "
     )
 
     # If empty or cancelled, check if we had detected key

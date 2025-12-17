@@ -25,8 +25,7 @@ _edit_tailscale() {
       auth_key=$(
         _wiz_input \
           --placeholder "tskey-auth-..." \
-          --prompt "Auth Key: " \
-          --width 60
+          --prompt "Auth Key: "
       )
 
       # If auth key provided, enable Tailscale with stealth mode
@@ -283,7 +282,6 @@ _edit_api_token() {
       token_name=$(_wiz_input \
         --placeholder "automation" \
         --prompt "Token name: " \
-        --width 40 \
         --no-show-help \
         --value="${API_TOKEN_NAME:-automation}")
 
