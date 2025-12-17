@@ -53,9 +53,8 @@ setup_qemu_config() {
       print_warning "Requested QEMU RAM (${QEMU_RAM}MB) may exceed safe limits (available: ${available_ram_mb}MB)"
     fi
   else
-    # Use half of available RAM (minus reserve for host)
-    local usable_ram=$((available_ram_mb - QEMU_MIN_RAM_RESERVE))
-    QEMU_RAM=$((usable_ram / 2))
+    # Use all available RAM minus reserve for host
+    QEMU_RAM=$((available_ram_mb - QEMU_MIN_RAM_RESERVE))
     [[ $QEMU_RAM -lt $MIN_QEMU_RAM ]] && QEMU_RAM=$MIN_QEMU_RAM
   fi
 
