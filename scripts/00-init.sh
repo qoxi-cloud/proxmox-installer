@@ -832,6 +832,12 @@ Custom"
 readonly WIZ_ZFS_MODES="Single disk
 RAID-1 (mirror)"
 
+# ZFS ARC memory allocation strategies
+# shellcheck disable=SC2034
+readonly WIZ_ZFS_ARC_MODES="VM-focused (4GB fixed)
+Balanced (25-40% of RAM)
+Storage-focused (50% of RAM)"
+
 # SSL certificate types
 # shellcheck disable=SC2034
 readonly WIZ_SSL_TYPES="Self-signed
@@ -976,6 +982,9 @@ INSTALL_AUDITD=""
 
 # CPU governor setting
 CPU_GOVERNOR=""
+
+# ZFS ARC memory allocation strategy (vm-focused, balanced, storage-focused)
+ZFS_ARC_MODE=""
 
 # Auditd installation flag (set by configure_auditd)
 # shellcheck disable=SC2034

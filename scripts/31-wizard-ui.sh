@@ -211,6 +211,16 @@ _wiz_render_menu() {
     esac
   fi
 
+  local zfs_arc_display=""
+  if [[ -n $ZFS_ARC_MODE ]]; then
+    case "$ZFS_ARC_MODE" in
+      vm-focused) zfs_arc_display="VM-focused (4GB)" ;;
+      balanced) zfs_arc_display="Balanced (25-40%)" ;;
+      storage-focused) zfs_arc_display="Storage-focused (50%)" ;;
+      *) zfs_arc_display="$ZFS_ARC_MODE" ;;
+    esac
+  fi
+
   local shell_display=""
   if [[ -n $SHELL_TYPE ]]; then
     case "$SHELL_TYPE" in
@@ -336,6 +346,7 @@ _wiz_render_menu() {
   fi
 
   _add_field "ZFS mode         " "$(_wiz_fmt "$zfs_display")" "zfs_mode"
+  _add_field "ZFS ARC          " "$(_wiz_fmt "$zfs_arc_display")" "zfs_arc"
 
   # --- VPN ---
   _add_section "VPN"

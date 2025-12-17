@@ -46,6 +46,7 @@ _wizard_main() {
           boot_disk) _edit_boot_disk ;;
           pool_disks) _edit_pool_disks ;;
           zfs_mode) _edit_zfs_mode ;;
+          zfs_arc) _edit_zfs_arc ;;
           tailscale) _edit_tailscale ;;
           ssl) _edit_ssl ;;
           shell) _edit_shell ;;
@@ -135,6 +136,7 @@ _validate_config() {
   [[ -z $PRIVATE_SUBNET ]] && missing_fields+=("Private subnet") && ((missing_count++))
   [[ -z $IPV6_MODE ]] && missing_fields+=("IPv6") && ((missing_count++))
   [[ -z $ZFS_RAID ]] && missing_fields+=("ZFS mode") && ((missing_count++))
+  [[ -z $ZFS_ARC_MODE ]] && missing_fields+=("ZFS ARC") && ((missing_count++))
   [[ -z $SHELL_TYPE ]] && missing_fields+=("Shell") && ((missing_count++))
   [[ -z $CPU_GOVERNOR ]] && missing_fields+=("Power profile") && ((missing_count++))
   [[ -z $SSH_PUBLIC_KEY ]] && missing_fields+=("SSH Key") && ((missing_count++))

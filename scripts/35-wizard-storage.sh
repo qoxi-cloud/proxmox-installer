@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # =============================================================================
 # Configuration Wizard - Storage Settings Editors
-# zfs_mode
+# zfs_mode, zfs_arc
 # =============================================================================
 
 _edit_zfs_mode() {
@@ -40,6 +40,27 @@ _edit_zfs_mode() {
       "RAID-Z1 (parity)") ZFS_RAID="raidz1" ;;
       "RAID-Z2 (double parity)") ZFS_RAID="raidz2" ;;
       "RAID-10 (striped mirrors)") ZFS_RAID="raid10" ;;
+    esac
+  fi
+}
+
+_edit_zfs_arc() {
+  _wiz_start_edit
+
+  # 1 header + 3 options
+  _show_input_footer "filter" 4
+
+  local selected
+  selected=$(
+    echo "$WIZ_ZFS_ARC_MODES" | _wiz_choose \
+      --header="ZFS ARC memory strategy:"
+  )
+
+  if [[ -n $selected ]]; then
+    case "$selected" in
+      "VM-focused (4GB fixed)") ZFS_ARC_MODE="vm-focused" ;;
+      "Balanced (25-40% of RAM)") ZFS_ARC_MODE="balanced" ;;
+      "Storage-focused (50% of RAM)") ZFS_ARC_MODE="storage-focused" ;;
     esac
   fi
 }
