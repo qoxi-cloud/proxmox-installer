@@ -121,8 +121,8 @@ You can pre-configure settings via environment variables. Pre-set variables will
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `PROXMOX_ISO_VERSION` | Specific ISO filename | Latest (interactive menu) |
-| `QEMU_RAM_OVERRIDE` | QEMU VM RAM in MB | Auto (4096-8192) |
-| `QEMU_CORES_OVERRIDE` | QEMU VM CPU cores | Auto (half of available, max 16) |
+| `QEMU_RAM_OVERRIDE` | QEMU VM RAM in MB | Auto (half of available RAM minus 2GB reserve, min 4096MB) |
+| `QEMU_CORES_OVERRIDE` | QEMU VM CPU cores | Auto (all available cores, min 2) |
 | `GITHUB_REPO` | GitHub repository for templates | `qoxi-cloud/proxmox-hetzner` |
 | `GITHUB_BRANCH` | GitHub branch for templates | `main` |
 
@@ -142,11 +142,11 @@ You can pre-configure settings via environment variables. Pre-set variables will
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DEFAULT_QEMU_RAM` | Default QEMU RAM in MB | `8192` |
 | `MIN_QEMU_RAM` | Minimum QEMU RAM in MB | `4096` |
-| `MAX_QEMU_CORES` | Maximum QEMU CPU cores | `16` |
+| `MIN_CPU_CORES` | Minimum CPU cores for QEMU | `2` |
 | `QEMU_MIN_RAM_RESERVE` | Minimum RAM to reserve for host in MB | `2048` |
-| `QEMU_LOW_RAM_THRESHOLD` | Threshold for low RAM systems in MB | `16384` |
+
+**Note:** QEMU now automatically uses all available CPU cores and half of available RAM (minus reserve). Legacy constants `DEFAULT_QEMU_RAM` (8192MB) and `MAX_QEMU_CORES` (16) are no longer used in auto-detection.
 
 ### Password Settings
 
