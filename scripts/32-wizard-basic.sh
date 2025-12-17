@@ -9,11 +9,12 @@ _edit_hostname() {
   _show_input_footer
 
   local new_hostname
-  new_hostname=$(_wiz_input \
-    --placeholder "e.g., pve, proxmox, node1" \
-    --value "$PVE_HOSTNAME" \
-    --prompt "Hostname: " \    --width 40 \
-)
+  new_hostname=$(
+    _wiz_input \
+      --placeholder "e.g., pve, proxmox, node1" \
+      --value "$PVE_HOSTNAME" \
+      --prompt "Hostname: " \  --width 40
+  )
 
   if [[ -n $new_hostname ]]; then
     if validate_hostname "$new_hostname"; then
@@ -31,11 +32,12 @@ _edit_hostname() {
   _show_input_footer
 
   local new_domain
-  new_domain=$(_wiz_input \
-    --placeholder "e.g., local, example.com" \
-    --value "$DOMAIN_SUFFIX" \
-    --prompt "Domain: " \    --width 40 \
-)
+  new_domain=$(
+    _wiz_input \
+      --placeholder "e.g., local, example.com" \
+      --value "$DOMAIN_SUFFIX" \
+      --prompt "Domain: " \  --width 40
+  )
 
   if [[ -n $new_domain ]]; then
     DOMAIN_SUFFIX="$new_domain"
@@ -49,11 +51,12 @@ _edit_email() {
   _show_input_footer
 
   local new_email
-  new_email=$(_wiz_input \
-    --placeholder "admin@example.com" \
-    --value "$EMAIL" \
-    --prompt "Email: " \    --width 50 \
-)
+  new_email=$(
+    _wiz_input \
+      --placeholder "admin@example.com" \
+      --value "$EMAIL" \
+      --prompt "Email: " \  --width 50
+  )
 
   if [[ -n $new_email ]]; then
     if validate_email "$new_email"; then
@@ -75,9 +78,10 @@ _edit_password() {
     _show_input_footer "filter" 3
 
     local choice
-    choice=$(echo -e "Manual entry\nGenerate password" | _wiz_choose \
-      --header="Password:" \
-)
+    choice=$(
+      echo -e "Manual entry\nGenerate password" | _wiz_choose \
+        --header="Password:"
+    )
 
     # If user cancelled (Esc)
     if [[ -z $choice ]]; then
@@ -103,11 +107,12 @@ _edit_password() {
         _show_input_footer
 
         local new_password
-        new_password=$(_wiz_input \
-          --password \
-          --placeholder "Enter password" \
-          --prompt "Password: " \          --width 40 \
-)
+        new_password=$(
+          _wiz_input \
+            --password \
+            --placeholder "Enter password" \
+            --prompt "Password: " \  --width 40
+        )
 
         # If empty or cancelled, return to menu
         if [[ -z $new_password ]]; then

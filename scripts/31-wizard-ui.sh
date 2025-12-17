@@ -69,7 +69,7 @@ _wiz_choose() {
 }
 
 _wiz_input() {
-  _wiz_input \
+  gum input \
     --prompt.foreground "$HEX_CYAN" \
     --cursor.foreground "$HEX_ORANGE" \
     --no-show-help \

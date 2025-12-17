@@ -19,9 +19,10 @@ _edit_boot_disk() {
   _show_input_footer "filter" "$((DRIVE_COUNT + 2))"
 
   local selected
-  selected=$(echo -e "$options" | _wiz_choose \
-    --header="Boot disk:" \
-)
+  selected=$(
+    echo -e "$options" | _wiz_choose \
+      --header="Boot disk:"
+  )
 
   if [[ -n $selected ]]; then
     if [[ $selected == "None (all in pool)" ]]; then

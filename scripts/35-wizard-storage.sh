@@ -27,9 +27,10 @@ _edit_zfs_mode() {
   _show_input_footer "filter" "$((item_count + 1))"
 
   local selected
-  selected=$(echo -e "$options" | _wiz_choose \
-    --header="ZFS mode (${pool_count} disks in pool):" \
-)
+  selected=$(
+    echo -e "$options" | _wiz_choose \
+      --header="ZFS mode (${pool_count} disks in pool):"
+  )
 
   if [[ -n $selected ]]; then
     case "$selected" in

@@ -16,9 +16,10 @@ _edit_interface() {
   _show_input_footer "filter" "$footer_size"
 
   local selected
-  selected=$(echo "$available_interfaces" | _wiz_choose \
-    --header="Network Interface:" \
-)
+  selected=$(
+    echo "$available_interfaces" | _wiz_choose \
+      --header="Network Interface:"
+  )
 
   [[ -n $selected ]] && INTERFACE_NAME="$selected"
 }
@@ -30,9 +31,10 @@ _edit_bridge_mode() {
   _show_input_footer "filter" 4
 
   local selected
-  selected=$(echo "$WIZ_BRIDGE_MODES" | _wiz_choose \
-    --header="Bridge mode:" \
-)
+  selected=$(
+    echo "$WIZ_BRIDGE_MODES" | _wiz_choose \
+      --header="Bridge mode:"
+  )
 
   if [[ -n $selected ]]; then
     # Map display names to internal values
@@ -51,9 +53,10 @@ _edit_private_subnet() {
   _show_input_footer "filter" 5
 
   local selected
-  selected=$(echo "$WIZ_PRIVATE_SUBNETS" | _wiz_choose \
-    --header="Private subnet:" \
-)
+  selected=$(
+    echo "$WIZ_PRIVATE_SUBNETS" | _wiz_choose \
+      --header="Private subnet:"
+  )
 
   # If user cancelled (Esc) or no selection
   if [[ -z $selected ]]; then
@@ -68,11 +71,12 @@ _edit_private_subnet() {
         "Example: 10.0.0.0/24"
 
       local new_subnet
-      new_subnet=$(_wiz_input \
-        --placeholder "e.g., 10.10.10.0/24" \
-        --value "$PRIVATE_SUBNET" \
-        --prompt "Private subnet: " \        --width 40 \
-)
+      new_subnet=$(
+        _wiz_input \
+          --placeholder "e.g., 10.10.10.0/24" \
+          --value "$PRIVATE_SUBNET" \
+          --prompt "Private subnet: " \  --width 40
+      )
 
       # If empty or cancelled, return to menu
       if [[ -z $new_subnet ]]; then
@@ -103,9 +107,10 @@ _edit_ipv6() {
   _show_input_footer "filter" 4
 
   local selected
-  selected=$(echo "$WIZ_IPV6_MODES" | _wiz_choose \
-    --header="IPv6:" \
-)
+  selected=$(
+    echo "$WIZ_IPV6_MODES" | _wiz_choose \
+      --header="IPv6:"
+  )
 
   # If user cancelled (Esc) or no selection
   if [[ -z $selected ]]; then
@@ -131,11 +136,12 @@ _edit_ipv6() {
         "Example: 2001:db8::1/64"
 
       local ipv6_addr
-      ipv6_addr=$(_wiz_input \
-        --placeholder "2001:db8::1/64" \
-        --prompt "IPv6 Address: " \        --width 50 \
-        --value "${IPV6_ADDRESS:-${MAIN_IPV6:+${MAIN_IPV6}/64}}" \
-)
+      ipv6_addr=$(
+        _wiz_input \
+          --placeholder "2001:db8::1/64" \
+          --prompt "IPv6 Address: " \  --width 50 \
+          --value "${IPV6_ADDRESS:-${MAIN_IPV6:+${MAIN_IPV6}/64}}"
+      )
 
       # If empty or cancelled, exit manual mode
       if [[ -z $ipv6_addr ]]; then
@@ -163,11 +169,12 @@ _edit_ipv6() {
         "Default for Hetzner: fe80::1 (link-local)"
 
       local ipv6_gw
-      ipv6_gw=$(_wiz_input \
-        --placeholder "fe80::1" \
-        --prompt "Gateway: " \        --width 50 \
-        --value "${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}" \
-)
+      ipv6_gw=$(
+        _wiz_input \
+          --placeholder "fe80::1" \
+          --prompt "Gateway: " \  --width 50 \
+          --value "${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
+      )
 
       # If empty or cancelled, use default
       if [[ -z $ipv6_gw ]]; then

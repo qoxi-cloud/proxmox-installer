@@ -28,9 +28,10 @@ _edit_ssh_key() {
       _show_input_footer "filter" 3
 
       local choice
-      choice=$(echo -e "Use detected key\nEnter different key" | _wiz_choose \
-        --header="SSH Key:" \
-)
+      choice=$(
+        echo -e "Use detected key\nEnter different key" | _wiz_choose \
+          --header="SSH Key:"
+      )
 
       # If user cancelled (Esc)
       if [[ -z $choice ]]; then
@@ -52,11 +53,12 @@ _edit_ssh_key() {
     _wiz_input_screen "Paste your SSH public key (ssh-rsa, ssh-ed25519, etc.)"
 
     local new_key
-    new_key=$(_wiz_input \
-      --placeholder "ssh-ed25519 AAAA... user@host" \
-      --value "$SSH_PUBLIC_KEY" \
-      --prompt "SSH Key: " \      --width 60 \
-)
+    new_key=$(
+      _wiz_input \
+        --placeholder "ssh-ed25519 AAAA... user@host" \
+        --value "$SSH_PUBLIC_KEY" \
+        --prompt "SSH Key: " \  --width 60
+    )
 
     # If empty or cancelled, check if we had detected key
     if [[ -z $new_key ]]; then

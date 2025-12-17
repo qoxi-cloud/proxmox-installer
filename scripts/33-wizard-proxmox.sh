@@ -21,9 +21,10 @@ _edit_iso_version() {
   _show_input_footer "filter" 6
 
   local selected
-  selected=$(echo "$iso_list" | _wiz_choose \
-    --header="Proxmox Version:" \
-)
+  selected=$(
+    echo "$iso_list" | _wiz_choose \
+      --header="Proxmox Version:"
+  )
 
   [[ -n $selected ]] && PROXMOX_ISO_VERSION="$selected"
 }
@@ -35,9 +36,10 @@ _edit_repository() {
   _show_input_footer "filter" 4
 
   local selected
-  selected=$(echo "$WIZ_REPO_TYPES" | _wiz_choose \
-    --header="Repository:" \
-)
+  selected=$(
+    echo "$WIZ_REPO_TYPES" | _wiz_choose \
+      --header="Repository:"
+  )
 
   if [[ -n $selected ]]; then
     # Map display names to internal values
@@ -55,11 +57,12 @@ _edit_repository() {
       _wiz_input_screen "Enter Proxmox subscription key (optional)"
 
       local sub_key
-      sub_key=$(_wiz_input \
-        --placeholder "pve2c-..." \
-        --value "$PVE_SUBSCRIPTION_KEY" \
-        --prompt "Subscription Key: " \        --width 60 \
-)
+      sub_key=$(
+        _wiz_input \
+          --placeholder "pve2c-..." \
+          --value "$PVE_SUBSCRIPTION_KEY" \
+          --prompt "Subscription Key: " \  --width 60
+      )
 
       PVE_SUBSCRIPTION_KEY="$sub_key"
     else

@@ -11,9 +11,10 @@ _edit_tailscale() {
   _show_input_footer "filter" 3
 
   local selected
-  selected=$(echo -e "Disabled\nEnabled" | _wiz_choose \
-    --header="Tailscale:" \
-)
+  selected=$(
+    echo -e "Disabled\nEnabled" | _wiz_choose \
+      --header="Tailscale:"
+  )
 
   case "$selected" in
     Enabled)
@@ -21,10 +22,11 @@ _edit_tailscale() {
       _wiz_input_screen "Enter Tailscale authentication key"
 
       local auth_key
-      auth_key=$(_wiz_input \
-        --placeholder "tskey-auth-..." \
-        --prompt "Auth Key: " \        --width 60 \
-)
+      auth_key=$(
+        _wiz_input \
+          --placeholder "tskey-auth-..." \
+          --prompt "Auth Key: " \  --width 60
+      )
 
       # If auth key provided, enable Tailscale with stealth mode
       if [[ -n $auth_key ]]; then
@@ -65,9 +67,10 @@ _edit_ssl() {
   _show_input_footer "filter" 3
 
   local selected
-  selected=$(echo "$WIZ_SSL_TYPES" | _wiz_choose \
-    --header="SSL Certificate:" \
-)
+  selected=$(
+    echo "$WIZ_SSL_TYPES" | _wiz_choose \
+      --header="SSL Certificate:"
+  )
 
   # Map display names to internal values
   local ssl_type=""
@@ -157,9 +160,10 @@ _edit_shell() {
   _show_input_footer "filter" 3
 
   local selected
-  selected=$(echo "$WIZ_SHELL_OPTIONS" | _wiz_choose \
-    --header="Shell:" \
-)
+  selected=$(
+    echo "$WIZ_SHELL_OPTIONS" | _wiz_choose \
+      --header="Shell:"
+  )
 
   if [[ -n $selected ]]; then
     # Map display names to internal values
@@ -177,9 +181,10 @@ _edit_power_profile() {
   _show_input_footer "filter" 6
 
   local selected
-  selected=$(echo "$WIZ_CPU_GOVERNORS" | _wiz_choose \
-    --header="Power profile:" \
-)
+  selected=$(
+    echo "$WIZ_CPU_GOVERNORS" | _wiz_choose \
+      --header="Power profile:"
+  )
 
   if [[ -n $selected ]]; then
     # Map display names to internal values
@@ -258,9 +263,10 @@ _edit_api_token() {
   _show_input_footer "filter" 3
 
   local selected
-  selected=$(echo -e "Disabled\nEnabled" | _wiz_choose \
-    --header="API Token (privileged, no expiration):" \
-)
+  selected=$(
+    echo -e "Disabled\nEnabled" | _wiz_choose \
+      --header="API Token (privileged, no expiration):"
+  )
 
   case "$selected" in
     Enabled)
@@ -270,7 +276,7 @@ _edit_api_token() {
       local token_name
       token_name=$(_wiz_input \
         --placeholder "automation" \
-        --prompt "Token name: " \        --width 40 \
+        --prompt "Token name: " \  --width 40 \
         --no-show-help \
         --value="${API_TOKEN_NAME:-automation}")
 
