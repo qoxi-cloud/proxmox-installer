@@ -6,6 +6,7 @@
 
 _edit_interface() {
   _wiz_start_edit
+  echo ""
 
   # Get available interfaces (use cached value)
   local interface_count=${INTERFACE_COUNT:-1}
@@ -29,6 +30,7 @@ _edit_interface() {
 
 _edit_bridge_mode() {
   _wiz_start_edit
+  echo ""
 
   # 1 header + 3 items for gum choose
   _show_input_footer "filter" 4
@@ -54,6 +56,7 @@ _edit_bridge_mode() {
 
 _edit_private_subnet() {
   _wiz_start_edit
+  echo ""
 
   # 1 header + 4 items for gum choose
   _show_input_footer "filter" 5
@@ -113,6 +116,7 @@ _edit_private_subnet() {
 
 _edit_ipv6() {
   _wiz_start_edit
+  echo ""
 
   # 1 header + 3 items for gum choose
   _show_input_footer "filter" 4

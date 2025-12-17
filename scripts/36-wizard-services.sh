@@ -6,6 +6,7 @@
 
 _edit_tailscale() {
   _wiz_start_edit
+  echo ""
 
   # 1 header + 2 items for gum choose
   _show_input_footer "filter" 3
@@ -67,6 +68,7 @@ _edit_tailscale() {
 
 _edit_ssl() {
   _wiz_start_edit
+  echo ""
 
   # 1 header + 2 items for gum choose
   _show_input_footer "filter" 3
@@ -115,6 +117,7 @@ _edit_ssl() {
 
     # Check DNS resolution
     _wiz_start_edit
+    echo ""
     gum style --foreground "$HEX_CYAN" "Validating DNS resolution..."
     echo ""
     gum style --foreground "$HEX_GRAY" "Domain: ${CLR_ORANGE}${FQDN}${CLR_RESET}"
@@ -163,6 +166,7 @@ _edit_ssl() {
 
 _edit_shell() {
   _wiz_start_edit
+  echo ""
 
   # 1 header + 2 items for gum choose
   _show_input_footer "filter" 3
@@ -187,6 +191,7 @@ _edit_shell() {
 
 _edit_power_profile() {
   _wiz_start_edit
+  echo ""
 
   # 1 header + 5 items for gum choose
   _show_input_footer "filter" 6
@@ -214,6 +219,7 @@ _edit_power_profile() {
 
 _edit_features() {
   _wiz_start_edit
+  echo ""
 
   # 1 header + 4 items for multi-select checkbox
   _show_input_footer "checkbox" 5
@@ -272,6 +278,7 @@ _edit_features() {
 
 _edit_api_token() {
   _wiz_start_edit
+  echo ""
 
   # 1 header + 2 items for gum choose
   _show_input_footer "filter" 3

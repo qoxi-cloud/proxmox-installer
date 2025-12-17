@@ -6,6 +6,7 @@
 
 _edit_iso_version() {
   _wiz_start_edit
+  echo ""
 
   # Get available ISO versions (last 5, uses cached data from prefetch)
   local iso_list
@@ -34,6 +35,7 @@ _edit_iso_version() {
 
 _edit_repository() {
   _wiz_start_edit
+  echo ""
 
   # 1 header + 3 items for gum choose
   _show_input_footer "filter" 4
