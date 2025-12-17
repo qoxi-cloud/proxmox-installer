@@ -11,13 +11,9 @@ _edit_tailscale() {
   _show_input_footer "filter" 3
 
   local selected
-  selected=$(echo -e "Disabled\nEnabled" | gum choose \
+  selected=$(echo -e "Disabled\nEnabled" | _wiz_choose \
     --header="Tailscale:" \
-    --header.foreground "$HEX_CYAN" \
-    --cursor "${CLR_ORANGE}›${CLR_RESET} " \
-    --cursor.foreground "$HEX_NONE" \
-    --selected.foreground "$HEX_WHITE" \
-    --no-show-help)
+)
 
   case "$selected" in
     Enabled)
@@ -25,13 +21,10 @@ _edit_tailscale() {
       _wiz_input_screen "Enter Tailscale authentication key"
 
       local auth_key
-      auth_key=$(gum input \
+      auth_key=$(_wiz_input \
         --placeholder "tskey-auth-..." \
-        --prompt "Auth Key: " \
-        --prompt.foreground "$HEX_CYAN" \
-        --cursor.foreground "$HEX_ORANGE" \
-        --width 60 \
-        --no-show-help)
+        --prompt "Auth Key: " \        --width 60 \
+)
 
       # If auth key provided, enable Tailscale with stealth mode
       if [[ -n $auth_key ]]; then
@@ -72,13 +65,9 @@ _edit_ssl() {
   _show_input_footer "filter" 3
 
   local selected
-  selected=$(echo "$WIZ_SSL_TYPES" | gum choose \
+  selected=$(echo "$WIZ_SSL_TYPES" | _wiz_choose \
     --header="SSL Certificate:" \
-    --header.foreground "$HEX_CYAN" \
-    --cursor "${CLR_ORANGE}›${CLR_RESET} " \
-    --cursor.foreground "$HEX_NONE" \
-    --selected.foreground "$HEX_WHITE" \
-    --no-show-help)
+)
 
   # Map display names to internal values
   local ssl_type=""
@@ -168,13 +157,9 @@ _edit_shell() {
   _show_input_footer "filter" 3
 
   local selected
-  selected=$(echo "$WIZ_SHELL_OPTIONS" | gum choose \
+  selected=$(echo "$WIZ_SHELL_OPTIONS" | _wiz_choose \
     --header="Shell:" \
-    --header.foreground "$HEX_CYAN" \
-    --cursor "${CLR_ORANGE}›${CLR_RESET} " \
-    --cursor.foreground "$HEX_NONE" \
-    --selected.foreground "$HEX_WHITE" \
-    --no-show-help)
+)
 
   if [[ -n $selected ]]; then
     # Map display names to internal values
@@ -192,13 +177,9 @@ _edit_power_profile() {
   _show_input_footer "filter" 6
 
   local selected
-  selected=$(echo "$WIZ_CPU_GOVERNORS" | gum choose \
+  selected=$(echo "$WIZ_CPU_GOVERNORS" | _wiz_choose \
     --header="Power profile:" \
-    --header.foreground "$HEX_CYAN" \
-    --cursor "${CLR_ORANGE}›${CLR_RESET} " \
-    --cursor.foreground "$HEX_NONE" \
-    --selected.foreground "$HEX_WHITE" \
-    --no-show-help)
+)
 
   if [[ -n $selected ]]; then
     # Map display names to internal values
@@ -225,7 +206,7 @@ _edit_features() {
   [[ $INSTALL_YAZI == "yes" ]] && preselected+=("yazi")
   [[ $INSTALL_NVIM == "yes" ]] && preselected+=("nvim")
 
-  # Use gum choose with --no-limit for multi-select
+  # Use _wiz_choose with --no-limit for multi-select
   local selected
   local gum_args=(
     --no-limit
@@ -245,7 +226,7 @@ _edit_features() {
     gum_args+=(--selected "$item")
   done
 
-  selected=$(echo "$WIZ_OPTIONAL_FEATURES" | gum choose "${gum_args[@]}")
+  selected=$(echo "$WIZ_OPTIONAL_FEATURES" | _wiz_choose "${gum_args[@]}")
 
   # Parse selection
   INSTALL_VNSTAT="no"
@@ -277,13 +258,9 @@ _edit_api_token() {
   _show_input_footer "filter" 3
 
   local selected
-  selected=$(echo -e "Disabled\nEnabled" | gum choose \
+  selected=$(echo -e "Disabled\nEnabled" | _wiz_choose \
     --header="API Token (privileged, no expiration):" \
-    --header.foreground "$HEX_CYAN" \
-    --cursor "${CLR_ORANGE}›${CLR_RESET} " \
-    --cursor.foreground "$HEX_NONE" \
-    --selected.foreground "$HEX_WHITE" \
-    --no-show-help)
+)
 
   case "$selected" in
     Enabled)
@@ -291,12 +268,9 @@ _edit_api_token() {
       _wiz_input_screen "Enter API token name (default: automation)"
 
       local token_name
-      token_name=$(gum input \
+      token_name=$(_wiz_input \
         --placeholder "automation" \
-        --prompt "Token name: " \
-        --prompt.foreground "$HEX_CYAN" \
-        --cursor.foreground "$HEX_ORANGE" \
-        --width 40 \
+        --prompt "Token name: " \        --width 40 \
         --no-show-help \
         --value="${API_TOKEN_NAME:-automation}")
 

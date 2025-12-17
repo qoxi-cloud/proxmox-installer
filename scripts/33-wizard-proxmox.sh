@@ -21,13 +21,9 @@ _edit_iso_version() {
   _show_input_footer "filter" 6
 
   local selected
-  selected=$(echo "$iso_list" | gum choose \
+  selected=$(echo "$iso_list" | _wiz_choose \
     --header="Proxmox Version:" \
-    --header.foreground "$HEX_CYAN" \
-    --cursor "${CLR_ORANGE}›${CLR_RESET} " \
-    --cursor.foreground "$HEX_NONE" \
-    --selected.foreground "$HEX_WHITE" \
-    --no-show-help)
+)
 
   [[ -n $selected ]] && PROXMOX_ISO_VERSION="$selected"
 }
@@ -39,13 +35,9 @@ _edit_repository() {
   _show_input_footer "filter" 4
 
   local selected
-  selected=$(echo "$WIZ_REPO_TYPES" | gum choose \
+  selected=$(echo "$WIZ_REPO_TYPES" | _wiz_choose \
     --header="Repository:" \
-    --header.foreground "$HEX_CYAN" \
-    --cursor "${CLR_ORANGE}›${CLR_RESET} " \
-    --cursor.foreground "$HEX_NONE" \
-    --selected.foreground "$HEX_WHITE" \
-    --no-show-help)
+)
 
   if [[ -n $selected ]]; then
     # Map display names to internal values
@@ -63,14 +55,11 @@ _edit_repository() {
       _wiz_input_screen "Enter Proxmox subscription key (optional)"
 
       local sub_key
-      sub_key=$(gum input \
+      sub_key=$(_wiz_input \
         --placeholder "pve2c-..." \
         --value "$PVE_SUBSCRIPTION_KEY" \
-        --prompt "Subscription Key: " \
-        --prompt.foreground "$HEX_CYAN" \
-        --cursor.foreground "$HEX_ORANGE" \
-        --width 60 \
-        --no-show-help)
+        --prompt "Subscription Key: " \        --width 60 \
+)
 
       PVE_SUBSCRIPTION_KEY="$sub_key"
     else

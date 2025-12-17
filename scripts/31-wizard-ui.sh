@@ -46,10 +46,35 @@ _wiz_show_cursor() { printf '\033[?25h'; }
 _wiz_blank_line() { echo ""; }
 
 # Text styling helpers
-_wiz_error() { _wiz_error "$@"; }
-_wiz_warn() { _wiz_warn "$@"; }
-_wiz_info() { _wiz_info "$@"; }
-_wiz_dim() { _wiz_dim "$@"; }
+_wiz_error() { gum style --foreground "$HEX_RED" "$@"; }
+_wiz_warn() { gum style --foreground "$HEX_YELLOW" "$@"; }
+_wiz_info() { gum style --foreground "$HEX_CYAN" "$@"; }
+_wiz_dim() { gum style --foreground "$HEX_GRAY" "$@"; }
+
+# Gum component wrappers with consistent styling
+_wiz_confirm() {
+  gum confirm "$@" \
+    --prompt.foreground "$HEX_ORANGE" \
+    --selected.background "$HEX_ORANGE"
+}
+
+_wiz_choose() {
+  gum choose \
+    --header.foreground "$HEX_CYAN" \
+    --cursor "${CLR_ORANGE}›${CLR_RESET} " \
+    --cursor.foreground "$HEX_NONE" \
+    --selected.foreground "$HEX_WHITE" \
+    --no-show-help \
+    "$@"
+}
+
+_wiz_input() {
+  _wiz_input \
+    --prompt.foreground "$HEX_CYAN" \
+    --cursor.foreground "$HEX_ORANGE" \
+    --no-show-help \
+    "$@"
+}
 
 # Clear screen in alternate buffer (faster than clear)
 _wiz_clear() {

@@ -9,14 +9,11 @@ _edit_hostname() {
   _show_input_footer
 
   local new_hostname
-  new_hostname=$(gum input \
+  new_hostname=$(_wiz_input \
     --placeholder "e.g., pve, proxmox, node1" \
     --value "$PVE_HOSTNAME" \
-    --prompt "Hostname: " \
-    --prompt.foreground "$HEX_CYAN" \
-    --cursor.foreground "$HEX_ORANGE" \
-    --width 40 \
-    --no-show-help)
+    --prompt "Hostname: " \    --width 40 \
+)
 
   if [[ -n $new_hostname ]]; then
     if validate_hostname "$new_hostname"; then
@@ -34,14 +31,11 @@ _edit_hostname() {
   _show_input_footer
 
   local new_domain
-  new_domain=$(gum input \
+  new_domain=$(_wiz_input \
     --placeholder "e.g., local, example.com" \
     --value "$DOMAIN_SUFFIX" \
-    --prompt "Domain: " \
-    --prompt.foreground "$HEX_CYAN" \
-    --cursor.foreground "$HEX_ORANGE" \
-    --width 40 \
-    --no-show-help)
+    --prompt "Domain: " \    --width 40 \
+)
 
   if [[ -n $new_domain ]]; then
     DOMAIN_SUFFIX="$new_domain"
@@ -55,14 +49,11 @@ _edit_email() {
   _show_input_footer
 
   local new_email
-  new_email=$(gum input \
+  new_email=$(_wiz_input \
     --placeholder "admin@example.com" \
     --value "$EMAIL" \
-    --prompt "Email: " \
-    --prompt.foreground "$HEX_CYAN" \
-    --cursor.foreground "$HEX_ORANGE" \
-    --width 50 \
-    --no-show-help)
+    --prompt "Email: " \    --width 50 \
+)
 
   if [[ -n $new_email ]]; then
     if validate_email "$new_email"; then
@@ -84,13 +75,9 @@ _edit_password() {
     _show_input_footer "filter" 3
 
     local choice
-    choice=$(echo -e "Manual entry\nGenerate password" | gum choose \
+    choice=$(echo -e "Manual entry\nGenerate password" | _wiz_choose \
       --header="Password:" \
-      --header.foreground "$HEX_CYAN" \
-      --cursor "${CLR_ORANGE}›${CLR_RESET} " \
-      --cursor.foreground "$HEX_NONE" \
-      --selected.foreground "$HEX_WHITE" \
-      --no-show-help)
+)
 
     # If user cancelled (Esc)
     if [[ -z $choice ]]; then
@@ -116,14 +103,11 @@ _edit_password() {
         _show_input_footer
 
         local new_password
-        new_password=$(gum input \
+        new_password=$(_wiz_input \
           --password \
           --placeholder "Enter password" \
-          --prompt "Password: " \
-          --prompt.foreground "$HEX_CYAN" \
-          --cursor.foreground "$HEX_ORANGE" \
-          --width 40 \
-          --no-show-help)
+          --prompt "Password: " \          --width 40 \
+)
 
         # If empty or cancelled, return to menu
         if [[ -z $new_password ]]; then

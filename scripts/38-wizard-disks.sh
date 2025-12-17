@@ -19,13 +19,9 @@ _edit_boot_disk() {
   _show_input_footer "filter" "$((DRIVE_COUNT + 2))"
 
   local selected
-  selected=$(echo -e "$options" | gum choose \
+  selected=$(echo -e "$options" | _wiz_choose \
     --header="Boot disk:" \
-    --header.foreground "$HEX_CYAN" \
-    --cursor "${CLR_ORANGE}›${CLR_RESET} " \
-    --cursor.foreground "$HEX_NONE" \
-    --selected.foreground "$HEX_WHITE" \
-    --no-show-help)
+)
 
   if [[ -n $selected ]]; then
     if [[ $selected == "None (all in pool)" ]]; then
@@ -71,7 +67,7 @@ _edit_pool_disks() {
   fi
   _show_input_footer "checkbox" "$((available_count + 1))"
 
-  # Build gum choose args with features-style formatting
+  # Build _wiz_choose args with features-style formatting
   local gum_args=(
     --no-limit
     --header="ZFS pool disks (min 1):"
@@ -91,7 +87,7 @@ _edit_pool_disks() {
   done
 
   local selected
-  selected=$(echo -e "$options" | gum choose "${gum_args[@]}")
+  selected=$(echo -e "$options" | _wiz_choose "${gum_args[@]}")
 
   if [[ -n $selected ]]; then
     ZFS_POOL_DISKS=()

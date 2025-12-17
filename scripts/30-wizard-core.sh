@@ -65,9 +65,7 @@ _wizard_main() {
         # Clear screen and show confirmation with banner
         _wiz_start_edit
         _wiz_show_cursor
-        if gum confirm "Quit installation?" --default=false \
-          --prompt.foreground "$HEX_ORANGE" \
-          --selected.background "$HEX_ORANGE"; then
+        if _wiz_confirm "Quit installation?" --default=false; then
           exit 0
         fi
         # Hide cursor and continue (menu will be redrawn on next iteration)
@@ -158,9 +156,7 @@ _validate_config() {
       echo "  ${CLR_CYAN}•${CLR_RESET} $field"
     done
     _wiz_blank_line
-    gum confirm "Return to configuration?" --default=true \
-      --prompt.foreground "$HEX_ORANGE" \
-      --selected.background "$HEX_ORANGE" || exit 1
+    _wiz_confirm "Return to configuration?" --default=true || exit 1
     _wiz_hide_cursor
     return 1
   fi
