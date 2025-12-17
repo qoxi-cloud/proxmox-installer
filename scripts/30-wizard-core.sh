@@ -64,9 +64,6 @@ _wizard_main() {
       quit | esc)
         # Clear screen and show confirmation with banner
         _wiz_start_edit
-        echo ""
-        echo ""
-        echo ""
         _wiz_show_cursor
         if gum confirm "Quit installation?" --default=false \
           --prompt.foreground "$HEX_ORANGE" \
@@ -153,7 +150,6 @@ _validate_config() {
   if [[ $missing_count -gt 0 ]]; then
     _wiz_show_cursor
     _wiz_start_edit
-    echo ""
     gum style --foreground "$HEX_RED" --bold "Configuration incomplete!"
     echo ""
     gum style --foreground "$HEX_YELLOW" "Please configure the following required fields:"

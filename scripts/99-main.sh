@@ -49,7 +49,6 @@ reboot_to_main_os() {
 
   # Clear screen and show banner
   _wiz_start_edit
-  echo ""
 
   # Show success message
   print_info "Installation completed successfully!"

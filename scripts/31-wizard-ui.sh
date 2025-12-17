@@ -51,13 +51,13 @@ _wiz_clear() {
 _wiz_start_edit() {
   _wiz_clear
   show_banner
+  echo ""
 }
 
 # Show input screen with optional description
 # Usage: _wiz_input_screen "Description line 1" "Description line 2" ...
 _wiz_input_screen() {
   _wiz_start_edit
-  echo ""
   # Show description lines if provided
   for line in "$@"; do
     gum style --foreground "$HEX_GRAY" "$line"
