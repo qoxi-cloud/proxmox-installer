@@ -71,7 +71,7 @@ MIN_CPU_CORES=2
 # QEMU defaults
 DEFAULT_QEMU_RAM=8192 # Deprecated: now uses half of available RAM
 MIN_QEMU_RAM=4096
-MAX_QEMU_CORES=16 # Deprecated: now uses all available cores
+MAX_QEMU_CORES=16            # Deprecated: now uses all available cores
 QEMU_LOW_RAM_THRESHOLD=16384 # Deprecated: now uses dynamic calculation
 
 # Download settings
