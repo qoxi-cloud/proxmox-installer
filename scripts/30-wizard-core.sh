@@ -62,8 +62,9 @@ _wizard_main() {
         return 0
         ;;
       quit | esc)
-        # Clear screen and show confirmation in center
+        # Clear screen and show confirmation with banner
         _wiz_clear
+        show_banner
         echo ""
         echo ""
         echo ""
