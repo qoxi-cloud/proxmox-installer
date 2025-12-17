@@ -292,34 +292,55 @@ _edit_features() {
 # =============================================================================
 
 _edit_api_token() {
-  _show_input_footer "filter" 2
+  clear
+  show_banner
+  echo ""
 
-  local choice
-  choice=$(gum choose \
-    --header="Create Proxmox API token (privileged, no expiration)?" \
-    "Yes - Create API token" \
-    "No - Skip API token")
+  # 1 header + 2 items for gum choose
+  _show_input_footer "filter" 3
 
-  if [[ $choice == "Yes"* ]]; then
-    INSTALL_API_TOKEN="yes"
+  local selected
+  selected=$(echo -e "Disabled\nEnabled" | gum choose \
+    --header="API Token (privileged, no expiration):" \
+    --header.foreground "$HEX_CYAN" \
+    --cursor "${CLR_ORANGE}›${CLR_RESET} " \
+    --cursor.foreground "$HEX_NONE" \
+    --selected.foreground "$HEX_WHITE" \
+    --no-show-help)
 
-    _show_input_footer "input"
+  case "$selected" in
+    Enabled)
+      # Request token name
+      clear
+      show_banner
+      echo ""
+      gum style --foreground "$HEX_GRAY" "Enter API token name (default: automation)"
+      echo ""
+      _show_input_footer
 
-    # Allow custom token name
-    local token_name
-    token_name=$(gum input \
-      --placeholder="automation" \
-      --header="API token name (default: automation)" \
-      --value="${API_TOKEN_NAME:-automation}")
+      local token_name
+      token_name=$(gum input \
+        --placeholder "automation" \
+        --prompt "Token name: " \
+        --prompt.foreground "$HEX_CYAN" \
+        --cursor.foreground "$HEX_ORANGE" \
+        --width 40 \
+        --no-show-help \
+        --value="${API_TOKEN_NAME:-automation}")
 
-    # Validate: alphanumeric, dash, underscore only
-    if [[ -n $token_name && $token_name =~ ^[a-zA-Z0-9_-]+$ ]]; then
-      API_TOKEN_NAME="$token_name"
-    else
-      print_error "Invalid token name, using default: automation"
+      # Validate: alphanumeric, dash, underscore only
+      if [[ -n $token_name && $token_name =~ ^[a-zA-Z0-9_-]+$ ]]; then
+        API_TOKEN_NAME="$token_name"
+        INSTALL_API_TOKEN="yes"
+      else
+        # Invalid name - use default
+        API_TOKEN_NAME="automation"
+        INSTALL_API_TOKEN="yes"
+      fi
+      ;;
+    Disabled)
+      INSTALL_API_TOKEN="no"
       API_TOKEN_NAME="automation"
-    fi
-  else
-    INSTALL_API_TOKEN="no"
-  fi
+      ;;
+  esac
 }
