@@ -352,7 +352,7 @@ make_answer_toml() {
   log "ZFS_POOL_DISKS=(${ZFS_POOL_DISKS[*]})"
 
   # Load virtio mapping from QEMU setup
-  declare -A VIRTIO_MAP  # Initialize as empty associative array
+  declare -A VIRTIO_MAP # Initialize as empty associative array
   if [[ -f /tmp/virtio_map.env ]]; then
     # shellcheck disable=SC1091
     source /tmp/virtio_map.env
