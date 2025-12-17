@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.165-pr.21"
+VERSION="2.0.166-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -2496,6 +2496,14 @@ _wiz_clear
 show_banner
 echo ""
 }
+_wiz_input_screen(){
+_wiz_start_edit
+for line in "$@";do
+gum style --foreground "$HEX_GRAY" "$line"
+done
+[[ $# -gt 0 ]]&&echo ""
+_show_input_footer
+}
 _wiz_fmt(){
 local value="$1"
 local placeholder="${2:-→ set value}"
@@ -2899,10 +2907,7 @@ case "$selected" in
 esac
 PVE_REPO_TYPE="$repo_type"
 if [[ $repo_type == "enterprise" ]];then
-_wiz_start_edit
-gum style --foreground "$HEX_GRAY" "Enter Proxmox subscription key (optional)"
-echo ""
-_show_input_footer
+_wiz_input_screen "Enter Proxmox subscription key (optional)"
 local sub_key
 sub_key=$(gum input \
 --placeholder "pve2c-..." \
@@ -2969,11 +2974,9 @@ return
 fi
 if [[ $selected == "Custom" ]];then
 while true;do
-_wiz_start_edit
-gum style --foreground "$HEX_GRAY" "Enter private subnet in CIDR notation"
-gum style --foreground "$HEX_GRAY" "Example: 10.0.0.0/24"
-echo ""
-_show_input_footer
+_wiz_input_screen \
+"Enter private subnet in CIDR notation" \
+"Example: 10.0.0.0/24"
 local new_subnet
 new_subnet=$(gum input \
 --placeholder "e.g., 10.10.10.0/24" \
@@ -3023,11 +3026,9 @@ esac
 IPV6_MODE="$ipv6_mode"
 if [[ $ipv6_mode == "manual" ]];then
 while true;do
-_wiz_start_edit
-gum style --foreground "$HEX_GRAY" "Enter IPv6 address in CIDR notation"
-gum style --foreground "$HEX_GRAY" "Example: 2001:db8::1/64"
-echo ""
-_show_input_footer
+_wiz_input_screen \
+"Enter IPv6 address in CIDR notation" \
+"Example: 2001:db8::1/64"
 local ipv6_addr
 ipv6_addr=$(gum input \
 --placeholder "2001:db8::1/64" \
@@ -3053,11 +3054,9 @@ sleep 2
 fi
 done
 while true;do
-_wiz_start_edit
-gum style --foreground "$HEX_GRAY" "Enter IPv6 gateway address"
-gum style --foreground "$HEX_GRAY" "Default for Hetzner: fe80::1 (link-local)"
-echo ""
-_show_input_footer
+_wiz_input_screen \
+"Enter IPv6 gateway address" \
+"Default for Hetzner: fe80::1 (link-local)"
 local ipv6_gw
 ipv6_gw=$(gum input \
 --placeholder "fe80::1" \
@@ -3137,10 +3136,7 @@ selected=$(echo -e "Disabled\nEnabled"|gum choose \
 --selected.foreground "$HEX_WHITE" \
 --no-show-help)
 case "$selected" in
-Enabled)_wiz_start_edit
-gum style --foreground "$HEX_GRAY" "Enter Tailscale authentication key"
-echo ""
-_show_input_footer
+Enabled)_wiz_input_screen "Enter Tailscale authentication key"
 local auth_key
 auth_key=$(gum input \
 --placeholder "tskey-auth-..." \
@@ -3347,10 +3343,7 @@ selected=$(echo -e "Disabled\nEnabled"|gum choose \
 --selected.foreground "$HEX_WHITE" \
 --no-show-help)
 case "$selected" in
-Enabled)_wiz_start_edit
-gum style --foreground "$HEX_GRAY" "Enter API token name (default: automation)"
-echo ""
-_show_input_footer
+Enabled)_wiz_input_screen "Enter API token name (default: automation)"
 local token_name
 token_name=$(gum input \
 --placeholder "automation" \
@@ -3404,10 +3397,7 @@ break
 "Enter different key")
 esac
 fi
-_wiz_start_edit
-gum style --foreground "$HEX_GRAY" "Paste your SSH public key (ssh-rsa, ssh-ed25519, etc.)"
-echo ""
-_show_input_footer
+_wiz_input_screen "Paste your SSH public key (ssh-rsa, ssh-ed25519, etc.)"
 local new_key
 new_key=$(gum input \
 --placeholder "ssh-ed25519 AAAA... user@host" \
