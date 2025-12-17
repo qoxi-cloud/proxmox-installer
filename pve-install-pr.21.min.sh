@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.215-pr.21"
+VERSION="2.0.216-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -3899,8 +3899,7 @@ if [[ $QEMU_RAM -gt $((available_ram_mb-QEMU_MIN_RAM_RESERVE)) ]];then
 print_warning "Requested QEMU RAM (${QEMU_RAM}MB) may exceed safe limits (available: ${available_ram_mb}MB)"
 fi
 else
-local usable_ram=$((available_ram_mb-QEMU_MIN_RAM_RESERVE))
-QEMU_RAM=$((usable_ram/2))
+QEMU_RAM=$((available_ram_mb-QEMU_MIN_RAM_RESERVE))
 [[ $QEMU_RAM -lt $MIN_QEMU_RAM ]]&&QEMU_RAM=$MIN_QEMU_RAM
 fi
 log "QEMU config: $QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM"
