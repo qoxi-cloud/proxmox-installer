@@ -100,6 +100,7 @@ start_live_installation() {
 
   calculate_log_area
   clear
+  echo ""
   show_banner
   save_cursor_position
   tput civis # Hide cursor

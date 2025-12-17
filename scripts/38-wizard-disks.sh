@@ -6,6 +6,7 @@
 
 _edit_boot_disk() {
   clear
+  echo ""
   show_banner
   echo ""
 
@@ -42,6 +43,7 @@ _edit_boot_disk() {
 
 _edit_pool_disks() {
   clear
+  echo ""
   show_banner
   echo ""
 

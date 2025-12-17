@@ -494,6 +494,7 @@ Status,Item,Value
 
     # Clear screen and show logo after Start is pressed
     clear
+    echo ""
     show_banner
     echo ""
   fi

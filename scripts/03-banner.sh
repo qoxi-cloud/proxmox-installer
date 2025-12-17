@@ -15,7 +15,6 @@ ANSI_CURSOR_SHOW=$'\033[?25h'
 # Usage: show_banner
 show_banner() {
   printf '%s\n' \
-    "" \
     "${CLR_GRAY} _____                                             ${CLR_RESET}" \
     "${CLR_GRAY}|  __ \\                                            ${CLR_RESET}" \
     "${CLR_GRAY}| |__) | _ __   ___  ${CLR_ORANGE}__  __${CLR_GRAY}  _ __ ___    ___  ${CLR_ORANGE}__  __${CLR_RESET}" \
@@ -96,8 +95,7 @@ _show_banner_frame() {
   # Output all lines atomically to prevent interference
   # Build the entire frame first, then output it all at once
   local frame
-  frame=$(printf '\033[H\033[J%s\n%s\n%s\n%s\n%s\n%s\n%s\n\n%s\n' \
-    "" \
+  frame=$(printf '\033[H\033[J%s\n%s\n%s\n%s\n%s\n%s\n\n%s\n' \
     "$line1" \
     "$line2" \
     "$line3" \

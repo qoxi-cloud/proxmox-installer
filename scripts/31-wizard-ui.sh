@@ -51,6 +51,7 @@ _wiz_clear() {
 # Clear screen and show banner (common pattern in editors)
 _wiz_start_edit() {
   _wiz_clear
+  echo ""
   show_banner
 }
 
@@ -97,8 +98,8 @@ _wiz_render_menu() {
   # Capture banner output
   banner_output=$(show_banner)
 
-  # Start building full screen output
-  output="${banner_output}\n\n"
+  # Start building full screen output with blank line before banner
+  output="\n${banner_output}\n\n"
 
   # Build display values
   local pass_display=""

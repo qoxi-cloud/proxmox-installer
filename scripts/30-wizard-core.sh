@@ -64,6 +64,7 @@ _wizard_main() {
       quit | esc)
         # Clear screen and show confirmation with banner
         _wiz_clear
+        echo ""
         show_banner
         echo ""
         echo ""
@@ -154,6 +155,7 @@ _validate_config() {
   if [[ $missing_count -gt 0 ]]; then
     _wiz_show_cursor
     _wiz_clear
+    echo ""
     show_banner
     echo ""
     gum style --foreground "$HEX_RED" --bold "Configuration incomplete!"
