@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.166-pr.21"
+VERSION="2.0.167-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -2494,10 +2494,10 @@ tput ed
 _wiz_start_edit(){
 _wiz_clear
 show_banner
-echo ""
 }
 _wiz_input_screen(){
 _wiz_start_edit
+echo ""
 for line in "$@";do
 gum style --foreground "$HEX_GRAY" "$line"
 done
@@ -2701,6 +2701,7 @@ printf '%b' "$output"
 }
 _edit_hostname(){
 _wiz_start_edit
+echo ""
 _show_input_footer
 local new_hostname
 new_hostname=$(gum input \
@@ -2722,6 +2723,7 @@ return
 fi
 fi
 _wiz_start_edit
+echo ""
 _show_input_footer
 local new_domain
 new_domain=$(gum input \
@@ -2739,6 +2741,7 @@ FQDN="$PVE_HOSTNAME.$DOMAIN_SUFFIX"
 }
 _edit_email(){
 _wiz_start_edit
+echo ""
 _show_input_footer
 local new_email
 new_email=$(gum input \
@@ -2763,6 +2766,7 @@ fi
 _edit_password(){
 while true;do
 _wiz_start_edit
+echo ""
 _show_input_footer "filter" 3
 local choice
 choice=$(echo -e "Manual entry\nGenerate password"|gum choose \
@@ -2779,6 +2783,7 @@ case "$choice" in
 "Generate password")NEW_ROOT_PASSWORD=$(generate_password "$DEFAULT_PASSWORD_LENGTH")
 PASSWORD_GENERATED="yes"
 _wiz_start_edit
+echo ""
 gum style --foreground "$HEX_YELLOW" "Please save this password - it will be required for login"
 echo ""
 echo -e "${CLR_CYAN}Generated password:$CLR_RESET $CLR_ORANGE$NEW_ROOT_PASSWORD$CLR_RESET"
@@ -2788,6 +2793,7 @@ read -n 1 -s -r
 break
 ;;
 "Manual entry")_wiz_start_edit
+echo ""
 _show_input_footer
 local new_password
 new_password=$(gum input \
@@ -2818,6 +2824,7 @@ done
 }
 _edit_timezone(){
 _wiz_start_edit
+echo ""
 _show_input_footer "filter" 6
 local selected
 selected=$(echo "$WIZ_TIMEZONES"|gum filter \
@@ -2835,6 +2842,7 @@ fi
 }
 _edit_keyboard(){
 _wiz_start_edit
+echo ""
 _show_input_footer "filter" 6
 local selected
 selected=$(echo "$WIZ_KEYBOARD_LAYOUTS"|gum filter \
@@ -2852,6 +2860,7 @@ fi
 }
 _edit_country(){
 _wiz_start_edit
+echo ""
 _show_input_footer "filter" 6
 local selected
 selected=$(echo "$WIZ_COUNTRIES"|gum filter \
@@ -2869,6 +2878,7 @@ fi
 }
 _edit_iso_version(){
 _wiz_start_edit
+echo ""
 local iso_list
 iso_list=$(get_available_proxmox_isos 5)
 if [[ -z $iso_list ]];then
@@ -2889,6 +2899,7 @@ selected=$(echo "$iso_list"|gum choose \
 }
 _edit_repository(){
 _wiz_start_edit
+echo ""
 _show_input_footer "filter" 4
 local selected
 selected=$(echo "$WIZ_REPO_TYPES"|gum choose \
@@ -2925,6 +2936,7 @@ fi
 }
 _edit_interface(){
 _wiz_start_edit
+echo ""
 local interface_count=${INTERFACE_COUNT:-1}
 local available_interfaces=${AVAILABLE_INTERFACES:-$INTERFACE_NAME}
 local footer_size=$((interface_count+1))
@@ -2941,6 +2953,7 @@ selected=$(echo "$available_interfaces"|gum choose \
 }
 _edit_bridge_mode(){
 _wiz_start_edit
+echo ""
 _show_input_footer "filter" 4
 local selected
 selected=$(echo "$WIZ_BRIDGE_MODES"|gum choose \
@@ -2960,6 +2973,7 @@ fi
 }
 _edit_private_subnet(){
 _wiz_start_edit
+echo ""
 _show_input_footer "filter" 5
 local selected
 selected=$(echo "$WIZ_PRIVATE_SUBNETS"|gum choose \
@@ -3005,6 +3019,7 @@ fi
 }
 _edit_ipv6(){
 _wiz_start_edit
+echo ""
 _show_input_footer "filter" 4
 local selected
 selected=$(echo "$WIZ_IPV6_MODES"|gum choose \
@@ -3091,6 +3106,7 @@ fi
 }
 _edit_zfs_mode(){
 _wiz_start_edit
+echo ""
 local pool_count=${#ZFS_POOL_DISKS[@]}
 local options=""
 if [[ $pool_count -eq 1 ]];then
@@ -3126,6 +3142,7 @@ fi
 }
 _edit_tailscale(){
 _wiz_start_edit
+echo ""
 _show_input_footer "filter" 3
 local selected
 selected=$(echo -e "Disabled\nEnabled"|gum choose \
@@ -3174,6 +3191,7 @@ esac
 }
 _edit_ssl(){
 _wiz_start_edit
+echo ""
 _show_input_footer "filter" 3
 local selected
 selected=$(echo "$WIZ_SSL_TYPES"|gum choose \
@@ -3211,6 +3229,7 @@ SSL_TYPE="self-signed"
 return
 fi
 _wiz_start_edit
+echo ""
 gum style --foreground "$HEX_CYAN" "Validating DNS resolution..."
 echo ""
 gum style --foreground "$HEX_GRAY" "Domain: $CLR_ORANGE$FQDN$CLR_RESET"
@@ -3253,6 +3272,7 @@ fi
 }
 _edit_shell(){
 _wiz_start_edit
+echo ""
 _show_input_footer "filter" 3
 local selected
 selected=$(echo "$WIZ_SHELL_OPTIONS"|gum choose \
@@ -3271,6 +3291,7 @@ fi
 }
 _edit_power_profile(){
 _wiz_start_edit
+echo ""
 _show_input_footer "filter" 6
 local selected
 selected=$(echo "$WIZ_CPU_GOVERNORS"|gum choose \
@@ -3292,6 +3313,7 @@ fi
 }
 _edit_features(){
 _wiz_start_edit
+echo ""
 _show_input_footer "checkbox" 5
 local preselected=()
 [[ $INSTALL_VNSTAT == "yes" ]]&&preselected+=("vnstat")
@@ -3333,6 +3355,7 @@ fi
 }
 _edit_api_token(){
 _wiz_start_edit
+echo ""
 _show_input_footer "filter" 3
 local selected
 selected=$(echo -e "Disabled\nEnabled"|gum choose \
@@ -3368,6 +3391,7 @@ esac
 _edit_ssh_key(){
 while true;do
 _wiz_start_edit
+echo ""
 local detected_key
 detected_key=$(get_rescue_ssh_key)
 if [[ -n $detected_key ]];then
