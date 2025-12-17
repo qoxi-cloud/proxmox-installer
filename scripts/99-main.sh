@@ -48,9 +48,7 @@ reboot_to_main_os() {
   finish_live_installation
 
   # Clear screen and show banner
-  clear
-  echo ""
-  show_banner
+  _wiz_start_edit
   echo ""
 
   # Show success message
