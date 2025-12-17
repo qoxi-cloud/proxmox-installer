@@ -99,7 +99,8 @@ start_live_installation() {
   export -f show_progress 2>/dev/null || true
 
   calculate_log_area
-  clear
+  tput smcup # Enter alternate screen buffer
+  _wiz_clear
   echo ""
   show_banner
   save_cursor_position
@@ -108,8 +109,8 @@ start_live_installation() {
   # Add empty line after banner for spacing
   add_log ""
 
-  # Set trap to restore cursor on exit
-  trap 'tput cnorm' EXIT RETURN
+  # Set trap to restore cursor and exit alternate buffer on exit
+  trap 'tput cnorm; tput rmcup' EXIT RETURN
 }
 
 # Finish live installation display
@@ -125,7 +126,7 @@ finish_live_installation() {
   fi
 
   tput cnorm # Show cursor
-  echo ""
+  tput rmcup # Exit alternate screen buffer
 }
 
 # =============================================================================
