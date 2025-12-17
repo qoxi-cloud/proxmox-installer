@@ -148,7 +148,8 @@ _validate_config() {
   # Show error if missing fields
   if [[ $missing_count -gt 0 ]]; then
     _wiz_show_cursor
-    clear
+    tput cup 0 0
+    tput ed
     show_banner
     echo ""
     gum style --foreground "$HEX_RED" --bold "Configuration incomplete!"
@@ -174,9 +175,10 @@ _validate_config() {
 # =============================================================================
 
 show_gum_config_editor() {
-  # Hide cursor during wizard, restore on exit
+  # Enter alternate screen buffer and hide cursor (like vim/less)
+  tput smcup  # alternate screen
   _wiz_hide_cursor
-  trap '_wiz_show_cursor' EXIT
+  trap '_wiz_show_cursor; tput rmcup' EXIT
 
   # Run wizard loop until configuration is complete
   while true; do
