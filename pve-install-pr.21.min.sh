@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.198-pr.21"
+VERSION="2.0.202-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -34,7 +34,7 @@ DNS6_PRIMARY="2606:4700:4700::1111"
 DNS6_SECONDARY="2606:4700:4700::1001"
 DNS6_TERTIARY="2001:4860:4860::8888"
 DNS6_QUATERNARY="2001:4860:4860::8844"
-MIN_DISK_SPACE_MB=3000
+MIN_DISK_SPACE_MB=6000
 MIN_RAM_MB=4000
 MIN_CPU_CORES=2
 DEFAULT_QEMU_RAM=8192
@@ -1814,6 +1814,48 @@ else
 return 2
 fi
 }
+validate_ssh_key(){
+local key="$1"
+if ! echo "$key"|ssh-keygen -l -f - >/dev/null 2>&1;then
+log "ERROR: Invalid SSH public key format"
+return 1
+fi
+local key_type
+key_type=$(echo "$key"|awk '{print $1}')
+case "$key_type" in
+ssh-ed25519)log "INFO: SSH key validated (ED25519)"
+return 0
+;;
+ssh-rsa|ecdsa-*)local bits
+bits=$(echo "$key"|ssh-keygen -l -f - 2>/dev/null|awk '{print $1}')
+if [[ $bits -ge 2048 ]];then
+log "INFO: SSH key validated ($key_type, $bits bits)"
+return 0
+fi
+log "ERROR: RSA/ECDSA key must be >= 2048 bits (current: $bits)"
+return 1
+;;
+*)log "ERROR: Unsupported key type: $key_type"
+return 1
+esac
+}
+validate_disk_space(){
+local path="${1:-/root}"
+local min_required_mb="${2:-$MIN_DISK_SPACE_MB}"
+local available_mb
+available_mb=$(df -m "$path" 2>/dev/null|awk 'NR==2 {print $4}')
+if [[ -z $available_mb ]];then
+log "ERROR: Could not determine disk space for $path"
+return 1
+fi
+DISK_SPACE_MB=$available_mb
+if [[ $available_mb -lt $min_required_mb ]];then
+log "ERROR: Insufficient disk space: ${available_mb}MB available, ${min_required_mb}MB required"
+return 1
+fi
+log "INFO: Disk space OK: ${available_mb}MB available (${min_required_mb}MB required)"
+return 0
+}
 collect_system_info(){
 local errors=0
 local packages_to_install=""
@@ -1855,13 +1897,11 @@ PREFLIGHT_NET="No connection"
 PREFLIGHT_NET_STATUS="error"
 errors=$((errors+1))
 fi
-local free_space_mb
-free_space_mb=$(df -m /root|awk 'NR==2 {print $4}')
-if [[ $free_space_mb -ge $MIN_DISK_SPACE_MB ]];then
-PREFLIGHT_DISK="$free_space_mb MB"
+if validate_disk_space "/root" "$MIN_DISK_SPACE_MB";then
+PREFLIGHT_DISK="$DISK_SPACE_MB MB"
 PREFLIGHT_DISK_STATUS="ok"
 else
-PREFLIGHT_DISK="$free_space_mb MB (need ${MIN_DISK_SPACE_MB}MB+)"
+PREFLIGHT_DISK="${DISK_SPACE_MB:-0} MB (need ${MIN_DISK_SPACE_MB}MB+)"
 PREFLIGHT_DISK_STATUS="error"
 errors=$((errors+1))
 fi
@@ -3363,7 +3403,7 @@ if validate_ssh_key "$new_key";then
 SSH_PUBLIC_KEY="$new_key"
 break
 else
-show_validation_error "Invalid SSH key format"
+show_validation_error "Invalid SSH key. Must be ED25519, RSA/ECDSA ≥2048 bits"
 if [[ -n $detected_key ]];then
 continue
 fi
