@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.160-pr.21"
+VERSION="2.0.161-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -2378,8 +2378,12 @@ _wiz_hide_cursor
 ;;
 start)return 0
 ;;
-quit|esc)_wiz_show_cursor
+quit|esc)tput cup 0 0
+tput ed
 echo ""
+echo ""
+echo ""
+_wiz_show_cursor
 if gum confirm "Quit installation?" --default=false \
 --prompt.foreground "$HEX_ORANGE" \
 --selected.background "$HEX_ORANGE";then
