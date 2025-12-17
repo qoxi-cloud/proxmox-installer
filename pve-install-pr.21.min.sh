@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.164-pr.21"
+VERSION="2.0.165-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -2692,9 +2692,7 @@ _wiz_clear
 printf '%b' "$output"
 }
 _edit_hostname(){
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 _show_input_footer
 local new_hostname
 new_hostname=$(gum input \
@@ -2715,9 +2713,7 @@ sleep 1
 return
 fi
 fi
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 _show_input_footer
 local new_domain
 new_domain=$(gum input \
@@ -2734,9 +2730,7 @@ fi
 FQDN="$PVE_HOSTNAME.$DOMAIN_SUFFIX"
 }
 _edit_email(){
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 _show_input_footer
 local new_email
 new_email=$(gum input \
@@ -2760,9 +2754,7 @@ fi
 }
 _edit_password(){
 while true;do
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 _show_input_footer "filter" 3
 local choice
 choice=$(echo -e "Manual entry\nGenerate password"|gum choose \
@@ -2778,9 +2770,7 @@ fi
 case "$choice" in
 "Generate password")NEW_ROOT_PASSWORD=$(generate_password "$DEFAULT_PASSWORD_LENGTH")
 PASSWORD_GENERATED="yes"
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 gum style --foreground "$HEX_YELLOW" "Please save this password - it will be required for login"
 echo ""
 echo -e "${CLR_CYAN}Generated password:$CLR_RESET $CLR_ORANGE$NEW_ROOT_PASSWORD$CLR_RESET"
@@ -2789,9 +2779,7 @@ echo -e "${CLR_GRAY}Press any key to continue...$CLR_RESET"
 read -n 1 -s -r
 break
 ;;
-"Manual entry")_wiz_clear
-show_banner
-echo ""
+"Manual entry")_wiz_start_edit
 _show_input_footer
 local new_password
 new_password=$(gum input \
@@ -2821,9 +2809,7 @@ esac
 done
 }
 _edit_timezone(){
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 _show_input_footer "filter" 6
 local selected
 selected=$(echo "$WIZ_TIMEZONES"|gum filter \
@@ -2840,9 +2826,7 @@ TIMEZONE="$selected"
 fi
 }
 _edit_keyboard(){
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 _show_input_footer "filter" 6
 local selected
 selected=$(echo "$WIZ_KEYBOARD_LAYOUTS"|gum filter \
@@ -2859,9 +2843,7 @@ KEYBOARD="$selected"
 fi
 }
 _edit_country(){
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 _show_input_footer "filter" 6
 local selected
 selected=$(echo "$WIZ_COUNTRIES"|gum filter \
@@ -2878,9 +2860,7 @@ COUNTRY="$selected"
 fi
 }
 _edit_iso_version(){
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 local iso_list
 iso_list=$(get_available_proxmox_isos 5)
 if [[ -z $iso_list ]];then
@@ -2900,9 +2880,7 @@ selected=$(echo "$iso_list"|gum choose \
 [[ -n $selected ]]&&PROXMOX_ISO_VERSION="$selected"
 }
 _edit_repository(){
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 _show_input_footer "filter" 4
 local selected
 selected=$(echo "$WIZ_REPO_TYPES"|gum choose \
@@ -2921,9 +2899,7 @@ case "$selected" in
 esac
 PVE_REPO_TYPE="$repo_type"
 if [[ $repo_type == "enterprise" ]];then
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 gum style --foreground "$HEX_GRAY" "Enter Proxmox subscription key (optional)"
 echo ""
 _show_input_footer
@@ -2943,9 +2919,7 @@ fi
 fi
 }
 _edit_interface(){
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 local interface_count=${INTERFACE_COUNT:-1}
 local available_interfaces=${AVAILABLE_INTERFACES:-$INTERFACE_NAME}
 local footer_size=$((interface_count+1))
@@ -2961,9 +2935,7 @@ selected=$(echo "$available_interfaces"|gum choose \
 [[ -n $selected ]]&&INTERFACE_NAME="$selected"
 }
 _edit_bridge_mode(){
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 _show_input_footer "filter" 4
 local selected
 selected=$(echo "$WIZ_BRIDGE_MODES"|gum choose \
@@ -2982,9 +2954,7 @@ esac
 fi
 }
 _edit_private_subnet(){
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 _show_input_footer "filter" 5
 local selected
 selected=$(echo "$WIZ_PRIVATE_SUBNETS"|gum choose \
@@ -2999,9 +2969,7 @@ return
 fi
 if [[ $selected == "Custom" ]];then
 while true;do
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 gum style --foreground "$HEX_GRAY" "Enter private subnet in CIDR notation"
 gum style --foreground "$HEX_GRAY" "Example: 10.0.0.0/24"
 echo ""
@@ -3033,9 +3001,7 @@ PRIVATE_SUBNET="$selected"
 fi
 }
 _edit_ipv6(){
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 _show_input_footer "filter" 4
 local selected
 selected=$(echo "$WIZ_IPV6_MODES"|gum choose \
@@ -3057,9 +3023,7 @@ esac
 IPV6_MODE="$ipv6_mode"
 if [[ $ipv6_mode == "manual" ]];then
 while true;do
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 gum style --foreground "$HEX_GRAY" "Enter IPv6 address in CIDR notation"
 gum style --foreground "$HEX_GRAY" "Example: 2001:db8::1/64"
 echo ""
@@ -3089,9 +3053,7 @@ sleep 2
 fi
 done
 while true;do
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 gum style --foreground "$HEX_GRAY" "Enter IPv6 gateway address"
 gum style --foreground "$HEX_GRAY" "Default for Hetzner: fe80::1 (link-local)"
 echo ""
@@ -3129,9 +3091,7 @@ IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
 fi
 }
 _edit_zfs_mode(){
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 local pool_count=${#ZFS_POOL_DISKS[@]}
 local options=""
 if [[ $pool_count -eq 1 ]];then
@@ -3166,9 +3126,7 @@ esac
 fi
 }
 _edit_tailscale(){
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 _show_input_footer "filter" 3
 local selected
 selected=$(echo -e "Disabled\nEnabled"|gum choose \
@@ -3179,9 +3137,7 @@ selected=$(echo -e "Disabled\nEnabled"|gum choose \
 --selected.foreground "$HEX_WHITE" \
 --no-show-help)
 case "$selected" in
-Enabled)_wiz_clear
-show_banner
-echo ""
+Enabled)_wiz_start_edit
 gum style --foreground "$HEX_GRAY" "Enter Tailscale authentication key"
 echo ""
 _show_input_footer
@@ -3221,9 +3177,7 @@ SSL_TYPE=""
 esac
 }
 _edit_ssl(){
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 _show_input_footer "filter" 3
 local selected
 selected=$(echo "$WIZ_SSL_TYPES"|gum choose \
@@ -3240,9 +3194,7 @@ case "$selected" in
 esac
 if [[ $ssl_type == "letsencrypt" ]];then
 if [[ -z $FQDN ]];then
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 gum style --foreground "$HEX_RED" "Error: Hostname not configured!"
 echo ""
 gum style --foreground "$HEX_GRAY" "Let's Encrypt requires a fully qualified domain name."
@@ -3252,9 +3204,7 @@ SSL_TYPE="self-signed"
 return
 fi
 if [[ $FQDN == *.local ]]||! validate_fqdn "$FQDN";then
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 gum style --foreground "$HEX_RED" "Error: Invalid domain name!"
 echo ""
 gum style --foreground "$HEX_GRAY" "Current hostname: $CLR_ORANGE$FQDN$CLR_RESET"
@@ -3264,9 +3214,7 @@ sleep 3
 SSL_TYPE="self-signed"
 return
 fi
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 gum style --foreground "$HEX_CYAN" "Validating DNS resolution..."
 echo ""
 gum style --foreground "$HEX_GRAY" "Domain: $CLR_ORANGE$FQDN$CLR_RESET"
@@ -3308,9 +3256,7 @@ else
 fi
 }
 _edit_shell(){
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 _show_input_footer "filter" 3
 local selected
 selected=$(echo "$WIZ_SHELL_OPTIONS"|gum choose \
@@ -3328,9 +3274,7 @@ esac
 fi
 }
 _edit_power_profile(){
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 _show_input_footer "filter" 6
 local selected
 selected=$(echo "$WIZ_CPU_GOVERNORS"|gum choose \
@@ -3351,9 +3295,7 @@ esac
 fi
 }
 _edit_features(){
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 _show_input_footer "checkbox" 5
 local preselected=()
 [[ $INSTALL_VNSTAT == "yes" ]]&&preselected+=("vnstat")
@@ -3394,9 +3336,7 @@ INSTALL_NVIM="yes"
 fi
 }
 _edit_api_token(){
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 _show_input_footer "filter" 3
 local selected
 selected=$(echo -e "Disabled\nEnabled"|gum choose \
@@ -3407,9 +3347,7 @@ selected=$(echo -e "Disabled\nEnabled"|gum choose \
 --selected.foreground "$HEX_WHITE" \
 --no-show-help)
 case "$selected" in
-Enabled)_wiz_clear
-show_banner
-echo ""
+Enabled)_wiz_start_edit
 gum style --foreground "$HEX_GRAY" "Enter API token name (default: automation)"
 echo ""
 _show_input_footer
@@ -3436,9 +3374,7 @@ esac
 }
 _edit_ssh_key(){
 while true;do
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 local detected_key
 detected_key=$(get_rescue_ssh_key)
 if [[ -n $detected_key ]];then
@@ -3468,9 +3404,7 @@ break
 "Enter different key")
 esac
 fi
-_wiz_clear
-show_banner
-echo ""
+_wiz_start_edit
 gum style --foreground "$HEX_GRAY" "Paste your SSH public key (ssh-rsa, ssh-ed25519, etc.)"
 echo ""
 _show_input_footer
