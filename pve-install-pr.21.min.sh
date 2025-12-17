@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.202-pr.21"
+VERSION="2.0.203-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -4309,11 +4309,6 @@ show_progress $! "Configuring Unattended Upgrades" "Unattended Upgrades configur
 run_remote "Configuring nf_conntrack" '
         if ! grep -q "nf_conntrack" /etc/modules 2>/dev/null; then
             echo "nf_conntrack" >> /etc/modules
-        fi
-
-        if ! grep -q "nf_conntrack_max" /etc/sysctl.d/99-proxmox.conf 2>/dev/null; then
-            echo "net.netfilter.nf_conntrack_max=1048576" >> /etc/sysctl.d/99-proxmox.conf
-            echo "net.netfilter.nf_conntrack_tcp_timeout_established=28800" >> /etc/sysctl.d/99-proxmox.conf
         fi
     ' "nf_conntrack configured"
 local governor="${CPU_GOVERNOR:-performance}"
