@@ -9,6 +9,7 @@
 configure_ssh_hardening() {
   # Deploy SSH hardening LAST (after all other operations)
   # CRITICAL: This must succeed - if it fails, system remains with password auth enabled
+  # NOTE: SSH key already validated in wizard (validate_ssh_key in 20-validation.sh)
 
   # Escape single quotes in SSH key to prevent injection
   local escaped_ssh_key="${SSH_PUBLIC_KEY//\'/\'\\\'\'}"

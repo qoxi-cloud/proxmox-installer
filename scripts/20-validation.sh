@@ -341,3 +341,43 @@ validate_dns_resolution() {
     return 2 # Wrong IP
   fi
 }
+
+# Validates SSH public key format and security requirements.
+# Ensures key is proper OpenSSH format and meets security standards.
+# Parameters:
+#   $1 - SSH public key to validate
+# Returns: 0 if valid, 1 otherwise
+validate_ssh_key() {
+  local key="$1"
+
+  # Validate it's a proper OpenSSH public key
+  if ! echo "$key" | ssh-keygen -l -f - >/dev/null 2>&1; then
+    log "ERROR: Invalid SSH public key format"
+    return 1
+  fi
+
+  # Check key type is secure (no DSA/RSA <2048)
+  local key_type
+  key_type=$(echo "$key" | awk '{print $1}')
+
+  case "$key_type" in
+    ssh-ed25519)
+      log "INFO: SSH key validated (ED25519)"
+      return 0
+      ;;
+    ssh-rsa|ecdsa-*)
+      local bits
+      bits=$(echo "$key" | ssh-keygen -l -f - 2>/dev/null | awk '{print $1}')
+      if [[ $bits -ge 2048 ]]; then
+        log "INFO: SSH key validated ($key_type, $bits bits)"
+        return 0
+      fi
+      log "ERROR: RSA/ECDSA key must be >= 2048 bits (current: $bits)"
+      return 1
+      ;;
+    *)
+      log "ERROR: Unsupported key type: $key_type"
+      return 1
+      ;;
+  esac
+}

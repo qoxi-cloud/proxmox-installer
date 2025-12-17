@@ -77,7 +77,7 @@ _edit_ssh_key() {
       SSH_PUBLIC_KEY="$new_key"
       break
     else
-      show_validation_error "Invalid SSH key format"
+      show_validation_error "Invalid SSH key. Must be ED25519, RSA/ECDSA ≥2048 bits"
       # If we had a detected key, return to menu, otherwise retry manual entry
       if [[ -n $detected_key ]]; then
         continue
