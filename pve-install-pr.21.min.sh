@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.212-pr.21"
+VERSION="2.0.215-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -3889,10 +3889,8 @@ if [[ -n $QEMU_CORES_OVERRIDE ]];then
 QEMU_CORES="$QEMU_CORES_OVERRIDE"
 log "Using user-specified cores: $QEMU_CORES"
 else
-QEMU_CORES=$((available_cores/2))
+QEMU_CORES=$available_cores
 [[ $QEMU_CORES -lt $MIN_CPU_CORES ]]&&QEMU_CORES=$MIN_CPU_CORES
-[[ $QEMU_CORES -gt $available_cores ]]&&QEMU_CORES=$available_cores
-[[ $QEMU_CORES -gt $MAX_QEMU_CORES ]]&&QEMU_CORES=$MAX_QEMU_CORES
 fi
 if [[ -n $QEMU_RAM_OVERRIDE ]];then
 QEMU_RAM="$QEMU_RAM_OVERRIDE"
@@ -3901,8 +3899,9 @@ if [[ $QEMU_RAM -gt $((available_ram_mb-QEMU_MIN_RAM_RESERVE)) ]];then
 print_warning "Requested QEMU RAM (${QEMU_RAM}MB) may exceed safe limits (available: ${available_ram_mb}MB)"
 fi
 else
-QEMU_RAM=$DEFAULT_QEMU_RAM
-[[ $available_ram_mb -lt $QEMU_LOW_RAM_THRESHOLD ]]&&QEMU_RAM=$MIN_QEMU_RAM
+local usable_ram=$((available_ram_mb-QEMU_MIN_RAM_RESERVE))
+QEMU_RAM=$((usable_ram/2))
+[[ $QEMU_RAM -lt $MIN_QEMU_RAM ]]&&QEMU_RAM=$MIN_QEMU_RAM
 fi
 log "QEMU config: $QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM"
 DRIVE_ARGS=""
