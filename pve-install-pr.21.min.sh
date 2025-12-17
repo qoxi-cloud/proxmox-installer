@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.197-pr.21"
+VERSION="2.0.198-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -773,11 +773,12 @@ Adaptive
 Conservative"
 readonly WIZ_OPTIONAL_FEATURES="vnstat (network stats)
 auditd (audit logging)
+prometheus (metrics exporter)
 yazi (file manager)
 nvim (text editor)"
 BOOT_DISK=""
 ZFS_POOL_DISKS=()
-SYSTEM_UTILITIES="btop iotop ncdu tmux pigz smartmontools jq bat fastfetch"
+SYSTEM_UTILITIES="btop iotop ncdu tmux pigz smartmontools jq bat fastfetch aide chkrootkit sysstat nethogs ethtool"
 OPTIONAL_PACKAGES="libguestfs-tools"
 LOG_FILE="/root/pve-install-$(date +%Y%m%d-%H%M%S).log"
 INSTALL_COMPLETED=false
@@ -834,6 +835,8 @@ ZFS_ARC_MODE=""
 AUDITD_INSTALLED=""
 INSTALL_VNSTAT=""
 VNSTAT_INSTALLED=""
+INSTALL_PROMETHEUS=""
+PROMETHEUS_INSTALLED=""
 INSTALL_YAZI=""
 YAZI_INSTALLED=""
 INSTALL_NVIM=""
@@ -3245,10 +3248,11 @@ fi
 }
 _edit_features(){
 _wiz_start_edit
-_show_input_footer "checkbox" 5
+_show_input_footer "checkbox" 6
 local preselected=()
 [[ $INSTALL_VNSTAT == "yes" ]]&&preselected+=("vnstat")
 [[ $INSTALL_AUDITD == "yes" ]]&&preselected+=("auditd")
+[[ $INSTALL_PROMETHEUS == "yes" ]]&&preselected+=("prometheus")
 [[ $INSTALL_YAZI == "yes" ]]&&preselected+=("yazi")
 [[ $INSTALL_NVIM == "yes" ]]&&preselected+=("nvim")
 local selected
@@ -3269,6 +3273,7 @@ done
 selected=$(echo "$WIZ_OPTIONAL_FEATURES"|_wiz_choose "${gum_args[@]}")
 INSTALL_VNSTAT="no"
 INSTALL_AUDITD="no"
+INSTALL_PROMETHEUS="no"
 INSTALL_YAZI="no"
 INSTALL_NVIM="no"
 if echo "$selected"|grep -q "vnstat";then
@@ -3276,6 +3281,9 @@ INSTALL_VNSTAT="yes"
 fi
 if echo "$selected"|grep -q "auditd";then
 INSTALL_AUDITD="yes"
+fi
+if echo "$selected"|grep -q "prometheus";then
+INSTALL_PROMETHEUS="yes"
 fi
 if echo "$selected"|grep -q "yazi";then
 INSTALL_YAZI="yes"
@@ -4068,7 +4076,10 @@ download_template "./templates/fail2ban-proxmox.conf"||exit 1
 download_template "./templates/auditd-rules"||exit 1
 download_template "./templates/disable-openssh.service"||exit 1
 download_template "./templates/stealth-firewall.service"||exit 1
-download_template "./templates/yazi-theme.toml"||exit 1) > \
+download_template "./templates/yazi-theme.toml"||exit 1
+download_template "./templates/prometheus-node-exporter"||exit 1
+download_template "./templates/proxmox-metrics.sh"||exit 1
+download_template "./templates/proxmox-metrics.cron"||exit 1) > \
 /dev/null 2>&1&
 if ! show_progress $! "Downloading template files";then
 log "ERROR: Failed to download template files"
@@ -4646,6 +4657,7 @@ fi
 configure_tailscale
 configure_fail2ban
 configure_auditd
+configure_prometheus
 configure_yazi
 configure_nvim
 if type live_log_ssl_configuration &>/dev/null 2>&1;then
@@ -4734,6 +4746,59 @@ run_remote "Configuring ZFS ARC memory" "
     fi
   "
 log "INFO: ZFS ARC memory limit configured: ${arc_max_mb}MB"
+}
+_install_prometheus(){
+run_remote "Installing prometheus-node-exporter" '
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -yqq prometheus-node-exporter
+  ' "Prometheus node exporter installed"
+}
+_config_prometheus(){
+remote_exec '
+    mkdir -p /var/lib/prometheus/node-exporter
+    chown prometheus:prometheus /var/lib/prometheus/node-exporter
+  '||exit 1
+remote_copy "templates/prometheus-node-exporter" "/etc/default/prometheus-node-exporter"||exit 1
+remote_copy "templates/proxmox-metrics.sh" "/usr/local/bin/proxmox-metrics.sh"||exit 1
+remote_exec "chmod +x /usr/local/bin/proxmox-metrics.sh"||exit 1
+remote_copy "templates/proxmox-metrics.cron" "/etc/cron.d/proxmox-metrics"||exit 1
+remote_exec "/usr/local/bin/proxmox-metrics.sh" >/dev/null 2>&1||log "WARNING: Initial metrics collection failed (non-fatal)"
+remote_exec '
+    systemctl daemon-reload
+    systemctl enable prometheus-node-exporter
+    systemctl restart prometheus-node-exporter
+
+    # Verify service is running
+    systemctl is-active --quiet prometheus-node-exporter || exit 1
+  '||exit 1
+log "Prometheus node exporter listening on :9100 with textfile collector"
+log "Custom metrics cron job installed (/etc/cron.d/proxmox-metrics, runs every 5 minutes)"
+}
+configure_prometheus(){
+if [[ $INSTALL_PROMETHEUS != "yes" ]];then
+log "Skipping prometheus-node-exporter (not requested)"
+return 0
+fi
+log "Installing and configuring prometheus-node-exporter"
+(_install_prometheus||exit 1
+_config_prometheus||exit 1) > \
+/dev/null 2>&1&
+show_progress $! "Installing and configuring prometheus" "Prometheus configured"
+local exit_code=$?
+if [[ $exit_code -ne 0 ]];then
+log "WARNING: Prometheus setup failed"
+print_warning "Prometheus setup failed - continuing without it"
+return 0
+fi
+PROMETHEUS_INSTALLED="yes"
+if [[ $INSTALL_TAILSCALE == "yes" ]];then
+log "Prometheus metrics accessible via Tailscale only (stealth firewall enabled)"
+else
+log "WARNING: Prometheus metrics exposed on public IP $MAIN_IPV4:9100"
+log "Consider using firewall rules to restrict access to trusted IPs only"
+fi
+log "Textfile collector directory: /var/lib/prometheus/node-exporter"
 }
 _show_credentials_info(){
 echo ""
