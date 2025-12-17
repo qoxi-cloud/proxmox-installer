@@ -1614,7 +1614,7 @@ show_validation_error(){
 local message="$1"
 tput cud 2
 _wiz_blank_line
-gum style --foreground "$HEX_RED" "$message"
+_wiz_error "$message"
 sleep 1
 }
 validate_with_error(){
