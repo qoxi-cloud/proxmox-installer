@@ -358,16 +358,22 @@ make_answer_toml() {
     source /tmp/virtio_map.env
   fi
 
-  # Build DISK_LIST from pool disks
-  local pool_count=${#ZFS_POOL_DISKS[@]}
-  local vdev_letters=(a b c d e f g h i j k l m n o p q r s t u v w x y z)
+  # Build DISK_LIST from boot + pool disks
+  # If BOOT_DISK is separate, it goes first; otherwise all disks are in pool
+  local all_disks=()
+  [[ -n $BOOT_DISK ]] && all_disks+=("$BOOT_DISK")
+  all_disks+=("${ZFS_POOL_DISKS[@]}")
+
   DISK_LIST="["
-  for i in "${!ZFS_POOL_DISKS[@]}"; do
-    local phys_disk="${ZFS_POOL_DISKS[$i]}"
-    # Find vdX from mapping (fallback to index-based naming)
-    local vdev="${VIRTIO_MAP[$phys_disk]:-vd${vdev_letters[$i]}}"
+  for i in "${!all_disks[@]}"; do
+    local phys_disk="${all_disks[$i]}"
+    local vdev="${VIRTIO_MAP[$phys_disk]}"
+    if [[ -z $vdev ]]; then
+      log "ERROR: No virtio mapping for $phys_disk"
+      exit 1
+    fi
     DISK_LIST+="\"/dev/${vdev}\""
-    [[ $i -lt $((pool_count - 1)) ]] && DISK_LIST+=", "
+    [[ $i -lt $((${#all_disks[@]} - 1)) ]] && DISK_LIST+=", "
   done
   DISK_LIST+="]"
 
