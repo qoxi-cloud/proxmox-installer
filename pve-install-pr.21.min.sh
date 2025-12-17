@@ -1615,7 +1615,7 @@ local message="$1"
 tput cud 2
 _wiz_blank_line
 _wiz_error "$message"
-sleep 1
+sleep 3
 }
 validate_with_error(){
 local validator="$1"
