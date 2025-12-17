@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.203-pr.21"
+VERSION="2.0.204-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1767,6 +1767,8 @@ local fqdn="$1"
 local expected_ip="$2"
 local resolved_ip=""
 local dns_timeout="${DNS_LOOKUP_TIMEOUT:-5}"
+local retry_delay="${DNS_RETRY_DELAY:-10}"
+local max_attempts=3
 local dns_tool=""
 if command -v dig &>/dev/null;then
 dns_tool="dig"
@@ -1780,6 +1782,8 @@ log "WARNING: No DNS lookup tool available (dig, host, or nslookup)"
 DNS_RESOLVED_IP=""
 return 1
 fi
+for attempt in $(seq 1 "$max_attempts");do
+resolved_ip=""
 for dns_server in "${DNS_SERVERS[@]}";do
 case "$dns_tool" in
 dig)resolved_ip=$(timeout "$dns_timeout" dig +short +time=3 +tries=1 A "$fqdn" "@$dns_server" 2>/dev/null|grep -E '^[0-9]+\.'|head -1)
@@ -1803,16 +1807,22 @@ resolved_ip=$(timeout "$dns_timeout" getent ahosts "$fqdn" 2>/dev/null|grep STRE
 fi
 esac
 fi
-if [[ -z $resolved_ip ]];then
-DNS_RESOLVED_IP=""
-return 1
-fi
+if [[ -n $resolved_ip ]];then
 DNS_RESOLVED_IP="$resolved_ip"
 if [[ $resolved_ip == "$expected_ip" ]];then
 return 0
 else
 return 2
 fi
+fi
+if [[ $attempt -lt $max_attempts ]];then
+log "WARN: DNS lookup for $fqdn failed (attempt $attempt/$max_attempts), retrying in ${retry_delay}s..."
+sleep "$retry_delay"
+fi
+done
+log "ERROR: Failed to resolve $fqdn after $max_attempts attempts"
+DNS_RESOLVED_IP=""
+return 1
 }
 validate_ssh_key(){
 local key="$1"
