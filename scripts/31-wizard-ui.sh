@@ -68,8 +68,9 @@ _wiz_render_menu() {
   local selection="$1"
   local output=""
 
-  # Move cursor to top-left and redraw (no clear needed in alt buffer)
+  # Move cursor to top-left and clear screen
   tput cup 0 0
+  tput ed
   show_banner
   echo ""
 
