@@ -110,15 +110,40 @@ _edit_ssl() {
     # Check DNS resolution
     _wiz_start_edit
     _wiz_hide_cursor
-    _wiz_info "Validating DNS resolution..."
     _wiz_blank_line
     _wiz_dim "Domain: ${CLR_ORANGE}${FQDN}${CLR_RESET}"
     _wiz_dim "Expected IP: ${CLR_ORANGE}${MAIN_IPV4}${CLR_RESET}"
     _wiz_blank_line
 
+    # Run DNS validation in background with animated dots
+    local dns_result_file
+    dns_result_file=$(mktemp)
+
+    (
+      validate_dns_resolution "$FQDN" "$MAIN_IPV4"
+      echo $? > "$dns_result_file"
+    ) >/dev/null 2>&1 &
+
+    local dns_pid=$!
+
+    # Show animated dots while validating (like live logs)
+    printf "%s" "${CLR_CYAN}Validating DNS resolution${CLR_RESET}"
+    while kill -0 "$dns_pid" 2>/dev/null; do
+      sleep 0.3
+      local dots_count=$((($(date +%s) % 3) + 1))
+      local dots
+      dots=$(printf '.%.0s' $(seq 1 $dots_count))
+      # Update line with animated dots (up to 3)
+      printf "\r%sValidating DNS resolution%s%-3s%s" "${CLR_CYAN}" "${CLR_ORANGE}" "$dots" "${CLR_RESET}"
+    done
+
+    wait "$dns_pid" 2>/dev/null
     local dns_result
-    validate_dns_resolution "$FQDN" "$MAIN_IPV4"
-    dns_result=$?
+    dns_result=$(cat "$dns_result_file")
+    rm -f "$dns_result_file"
+
+    # Clear the line
+    printf "\r%-80s\r" " "
 
     if [[ $dns_result -eq 1 ]]; then
       # No DNS resolution
