@@ -109,6 +109,7 @@ configure_proxmox_via_ssh() {
   log "Starting Proxmox configuration via SSH"
   make_templates
   configure_base_system
+  configure_zfs_arc
   configure_shell
   configure_system_services
 
