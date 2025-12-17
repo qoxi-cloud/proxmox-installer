@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.163-pr.21"
+VERSION="2.0.164-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -2490,6 +2490,11 @@ _wiz_show_cursor(){ printf '\033[?25h';}
 _wiz_clear(){
 tput cup 0 0
 tput ed
+}
+_wiz_start_edit(){
+_wiz_clear
+show_banner
+echo ""
 }
 _wiz_fmt(){
 local value="$1"
