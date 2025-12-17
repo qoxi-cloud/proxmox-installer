@@ -358,11 +358,40 @@ make_answer_toml() {
     source /tmp/virtio_map.env
   fi
 
-  # Build DISK_LIST from boot + pool disks
-  # If BOOT_DISK is separate, it goes first; otherwise all disks are in pool
+  # Build DISK_LIST: Proxmox autoinstaller uses first disk for boot + all disks for ZFS
+  # When BOOT_DISK is set, include it first in pool (Proxmox creates boot partitions on it)
+  # When BOOT_DISK is empty, all disks are already in ZFS_POOL_DISKS
   local all_disks=()
-  [[ -n $BOOT_DISK ]] && all_disks+=("$BOOT_DISK")
-  all_disks+=("${ZFS_POOL_DISKS[@]}")
+  if [[ -n $BOOT_DISK ]]; then
+    # BOOT_DISK goes first, then pool disks
+    all_disks+=("$BOOT_DISK")
+    all_disks+=("${ZFS_POOL_DISKS[@]}")
+  else
+    # All disks already in pool
+    all_disks=("${ZFS_POOL_DISKS[@]}")
+  fi
+
+  # Validate RAID vs disk count
+  local disk_count=${#all_disks[@]}
+  case "$ZFS_RAID" in
+    single)
+      if [[ $disk_count -ne 1 ]]; then
+        log "WARNING: Single disk RAID requires exactly 1 disk, have $disk_count"
+      fi
+      ;;
+    raid1)
+      if [[ $disk_count -lt 2 ]]; then
+        log "ERROR: RAID1 requires at least 2 disks, have $disk_count"
+        exit 1
+      fi
+      ;;
+    raid10)
+      if [[ $disk_count -lt 4 ]] || [[ $((disk_count % 2)) -ne 0 ]]; then
+        log "ERROR: RAID10 requires even number of disks (min 4), have $disk_count"
+        exit 1
+      fi
+      ;;
+  esac
 
   DISK_LIST="["
   for i in "${!all_disks[@]}"; do
@@ -377,7 +406,7 @@ make_answer_toml() {
   done
   DISK_LIST+="]"
 
-  log "DISK_LIST=$DISK_LIST"
+  log "DISK_LIST=$DISK_LIST (${disk_count} disks for ZFS ${ZFS_RAID})"
 
   # Map ZFS_RAID to answer.toml format
   local zfs_raid_value
