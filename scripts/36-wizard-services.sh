@@ -121,7 +121,7 @@ _edit_ssl() {
 
     (
       validate_dns_resolution "$FQDN" "$MAIN_IPV4"
-      echo $? > "$dns_result_file"
+      echo $? >"$dns_result_file"
     ) >/dev/null 2>&1 &
 
     local dns_pid=$!
