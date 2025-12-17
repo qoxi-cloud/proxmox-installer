@@ -51,6 +51,7 @@ _wizard_main() {
           shell) _edit_shell ;;
           power_profile) _edit_power_profile ;;
           features) _edit_features ;;
+          api_token) _edit_api_token ;;
           ssh_key) _edit_ssh_key ;;
         esac
         # Hide cursor again

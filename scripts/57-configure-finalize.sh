@@ -128,6 +128,16 @@ configure_proxmox_via_ssh() {
   fi
   configure_ssl_certificate
 
+  # Create API token (non-fatal if fails)
+  if [[ "$INSTALL_API_TOKEN" == "yes" ]]; then
+    (
+      # shellcheck disable=SC1091
+      source "$SCRIPT_DIR/58-configure-api-token.sh"
+      create_api_token || exit 1
+    ) >/dev/null 2>&1 &
+    show_progress $! "Creating API token" "API token created"
+  fi
+
   # Validation & Finalization section
   if type live_log_validation_finalization &>/dev/null 2>&1; then
     live_log_validation_finalization

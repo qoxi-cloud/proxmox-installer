@@ -286,3 +286,40 @@ _edit_features() {
     INSTALL_NVIM="yes"
   fi
 }
+
+# =============================================================================
+# API Token Editor
+# =============================================================================
+
+_edit_api_token() {
+  _show_input_footer "filter" 2
+
+  local choice
+  choice=$(gum choose \
+    --header="Create Proxmox API token (privileged, no expiration)?" \
+    "Yes - Create API token" \
+    "No - Skip API token")
+
+  if [[ "$choice" == "Yes"* ]]; then
+    INSTALL_API_TOKEN="yes"
+
+    _show_input_footer "input"
+
+    # Allow custom token name
+    local token_name
+    token_name=$(gum input \
+      --placeholder="automation" \
+      --header="API token name (default: automation)" \
+      --value="${API_TOKEN_NAME:-automation}")
+
+    # Validate: alphanumeric, dash, underscore only
+    if [[ -n "$token_name" && "$token_name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+      API_TOKEN_NAME="$token_name"
+    else
+      print_error "Invalid token name, using default: automation"
+      API_TOKEN_NAME="automation"
+    fi
+  else
+    INSTALL_API_TOKEN="no"
+  fi
+}

@@ -5,6 +5,32 @@
 
 # Displays installation completion message and prompts for system reboot.
 # Shows success message and interactive reboot dialog.
+_show_api_token_info() {
+  [[ ! -f /tmp/pve-install-api-token.env ]] && return 0
+
+  # shellcheck disable=SC1091
+  source /tmp/pve-install-api-token.env
+
+  [[ -z "$API_TOKEN_VALUE" ]] && return 0
+
+  echo ""
+  print_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "${CLR_YELLOW}${CLR_BOLD}Proxmox API Token${CLR_RESET} ${CLR_RED}(SAVE THIS - shown only once!)${CLR_RESET}"
+  print_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "${CLR_CYAN}Token ID:${CLR_RESET}    ${API_TOKEN_ID}"
+  echo "${CLR_CYAN}Secret:${CLR_RESET}      ${API_TOKEN_VALUE}"
+  echo ""
+  echo "${CLR_DIM}Usage (curl):${CLR_RESET}"
+  echo "${CLR_DIM}  curl -k -H \"Authorization: PVEAPIToken=${API_TOKEN_ID}=${API_TOKEN_VALUE}\" \\${CLR_RESET}"
+  echo "${CLR_DIM}       https://${MAIN_IPV4}:8006/api2/json/nodes${CLR_RESET}"
+  echo ""
+  echo "${CLR_DIM}Properties: privileged (full root@pam rights), never expires${CLR_RESET}"
+  echo "${CLR_DIM}Revoke via: pveum user token remove ${API_TOKEN_ID}${CLR_RESET}"
+  print_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+}
+
 reboot_to_main_os() {
   # Finish live installation display
   finish_live_installation
@@ -18,6 +44,9 @@ reboot_to_main_os() {
   # Show success message
   print_info "Installation completed successfully!"
   echo ""
+
+  # Show API token if created
+  _show_api_token_info
 
   # Ask user to reboot using gum confirm
   if gum confirm "Reboot the system now?" \

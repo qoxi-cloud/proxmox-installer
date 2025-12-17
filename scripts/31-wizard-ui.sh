@@ -182,6 +182,15 @@ _wiz_render_menu() {
     [[ -z $features_display ]] && features_display="none"
   fi
 
+  local api_token_display=""
+  if [[ -n $INSTALL_API_TOKEN ]]; then
+    case "$INSTALL_API_TOKEN" in
+      yes) api_token_display="Yes (${API_TOKEN_NAME})" ;;
+      no) api_token_display="No" ;;
+      *) api_token_display="" ;;
+    esac
+  fi
+
   local ssh_display=""
   if [[ -n $SSH_PUBLIC_KEY ]]; then
     # Show first 20 chars of key type and fingerprint hint
@@ -275,6 +284,7 @@ _wiz_render_menu() {
   _add_field "Shell            " "$(_wiz_fmt "$shell_display")" "shell"
   _add_field "Power profile    " "$(_wiz_fmt "$power_display")" "power_profile"
   _add_field "Features         " "$(_wiz_fmt "$features_display")" "features"
+  _add_field "API Token        " "$(_wiz_fmt "$api_token_display")" "api_token"
 
   # --- SSH ---
   _add_section "SSH"
