@@ -84,7 +84,7 @@ _edit_email() {
 
 _edit_password() {
   while true; do
-    clear
+    _wiz_clear
     show_banner
     echo ""
 
@@ -110,7 +110,7 @@ _edit_password() {
         NEW_ROOT_PASSWORD=$(generate_password "$DEFAULT_PASSWORD_LENGTH")
         PASSWORD_GENERATED="yes"
 
-        clear
+        _wiz_clear
         show_banner
         echo ""
         gum style --foreground "$HEX_YELLOW" "Please save this password - it will be required for login"
@@ -122,7 +122,7 @@ _edit_password() {
         break
         ;;
       "Manual entry")
-        clear
+        _wiz_clear
         show_banner
         echo ""
         _show_input_footer

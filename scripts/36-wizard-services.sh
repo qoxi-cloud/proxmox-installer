@@ -24,7 +24,7 @@ _edit_tailscale() {
   case "$selected" in
     Enabled)
       # Request auth key (required for Tailscale)
-      clear
+      _wiz_clear
       show_banner
       echo ""
       gum style --foreground "$HEX_GRAY" "Enter Tailscale authentication key"
@@ -100,7 +100,7 @@ _edit_ssl() {
   if [[ $ssl_type == "letsencrypt" ]]; then
     # Check if FQDN is set and is a valid domain
     if [[ -z $FQDN ]]; then
-      clear
+      _wiz_clear
       show_banner
       echo ""
       gum style --foreground "$HEX_RED" "Error: Hostname not configured!"
@@ -113,7 +113,7 @@ _edit_ssl() {
     fi
 
     if [[ $FQDN == *.local ]] || ! validate_fqdn "$FQDN"; then
-      clear
+      _wiz_clear
       show_banner
       echo ""
       gum style --foreground "$HEX_RED" "Error: Invalid domain name!"
@@ -127,7 +127,7 @@ _edit_ssl() {
     fi
 
     # Check DNS resolution
-    clear
+    _wiz_clear
     show_banner
     echo ""
     gum style --foreground "$HEX_CYAN" "Validating DNS resolution..."
@@ -311,7 +311,7 @@ _edit_api_token() {
   case "$selected" in
     Enabled)
       # Request token name
-      clear
+      _wiz_clear
       show_banner
       echo ""
       gum style --foreground "$HEX_GRAY" "Enter API token name (default: automation)"

@@ -6,7 +6,7 @@
 
 _edit_ssh_key() {
   while true; do
-    clear
+    _wiz_clear
     show_banner
     echo ""
 
@@ -55,7 +55,7 @@ _edit_ssh_key() {
     fi
 
     # Manual entry
-    clear
+    _wiz_clear
     show_banner
     echo ""
     gum style --foreground "$HEX_GRAY" "Paste your SSH public key (ssh-rsa, ssh-ed25519, etc.)"

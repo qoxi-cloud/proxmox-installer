@@ -63,8 +63,7 @@ _wizard_main() {
         ;;
       quit | esc)
         # Clear screen and show confirmation in center
-        tput cup 0 0
-        tput ed
+        _wiz_clear
         echo ""
         echo ""
         echo ""
@@ -153,8 +152,7 @@ _validate_config() {
   # Show error if missing fields
   if [[ $missing_count -gt 0 ]]; then
     _wiz_show_cursor
-    tput cup 0 0
-    tput ed
+    _wiz_clear
     show_banner
     echo ""
     gum style --foreground "$HEX_RED" --bold "Configuration incomplete!"

@@ -307,7 +307,6 @@ _wiz_render_menu() {
   output+="${CLR_GRAY}[${CLR_ORANGE}↑↓${CLR_GRAY}] navigate  [${CLR_ORANGE}Enter${CLR_GRAY}] edit  [${CLR_ORANGE}S${CLR_GRAY}] start  [${CLR_ORANGE}Q${CLR_GRAY}] quit${CLR_RESET}"
 
   # Clear screen and output everything atomically
-  tput cup 0 0
-  tput ed
+  _wiz_clear
   printf '%b' "$output"
 }

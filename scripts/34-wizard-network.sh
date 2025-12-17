@@ -81,7 +81,7 @@ _edit_private_subnet() {
   # Handle custom subnet input
   if [[ $selected == "Custom" ]]; then
     while true; do
-      clear
+      _wiz_clear
       show_banner
       echo ""
       gum style --foreground "$HEX_GRAY" "Enter private subnet in CIDR notation"
@@ -157,7 +157,7 @@ _edit_ipv6() {
   if [[ $ipv6_mode == "manual" ]]; then
     # IPv6 Address input
     while true; do
-      clear
+      _wiz_clear
       show_banner
       echo ""
       gum style --foreground "$HEX_GRAY" "Enter IPv6 address in CIDR notation"
@@ -196,7 +196,7 @@ _edit_ipv6() {
 
     # IPv6 Gateway input
     while true; do
-      clear
+      _wiz_clear
       show_banner
       echo ""
       gum style --foreground "$HEX_GRAY" "Enter IPv6 gateway address"

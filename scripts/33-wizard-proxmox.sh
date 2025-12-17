@@ -64,7 +64,7 @@ _edit_repository() {
 
     # If enterprise selected, optionally ask for subscription key
     if [[ $repo_type == "enterprise" ]]; then
-      clear
+      _wiz_clear
       show_banner
       echo ""
       gum style --foreground "$HEX_GRAY" "Enter Proxmox subscription key (optional)"
