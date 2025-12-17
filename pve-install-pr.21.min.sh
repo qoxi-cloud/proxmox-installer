@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.180-pr.21"
+VERSION="2.0.181-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -2665,7 +2665,14 @@ _add_field "IPv6             " "$(_wiz_fmt "$ipv6_display")" "ipv6"
 _add_section "Storage"
 if [[ $DRIVE_COUNT -gt 1 ]];then
 local boot_display="All in pool"
-[[ -n $BOOT_DISK ]]&&boot_display=$(basename "$BOOT_DISK")
+if [[ -n $BOOT_DISK ]];then
+for i in "${!DRIVES[@]}";do
+if [[ ${DRIVES[$i]} == "$BOOT_DISK" ]];then
+boot_display="${DRIVE_MODELS[$i]}"
+break
+fi
+done
+fi
 _add_field "Boot disk        " "$(_wiz_fmt "$boot_display")" "boot_disk"
 local pool_display="${#ZFS_POOL_DISKS[@]} disks"
 _add_field "Pool disks       " "$(_wiz_fmt "$pool_display")" "pool_disks"
