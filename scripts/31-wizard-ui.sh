@@ -286,7 +286,15 @@ _wiz_render_menu() {
   # Show boot/pool selectors if multiple disks
   if [[ $DRIVE_COUNT -gt 1 ]]; then
     local boot_display="All in pool"
-    [[ -n $BOOT_DISK ]] && boot_display=$(basename "$BOOT_DISK")
+    if [[ -n $BOOT_DISK ]]; then
+      # Find disk model by matching BOOT_DISK in DRIVES array
+      for i in "${!DRIVES[@]}"; do
+        if [[ ${DRIVES[$i]} == "$BOOT_DISK" ]]; then
+          boot_display="${DRIVE_MODELS[$i]}"
+          break
+        fi
+      done
+    fi
     _add_field "Boot disk        " "$(_wiz_fmt "$boot_display")" "boot_disk"
 
     local pool_display="${#ZFS_POOL_DISKS[@]} disks"
