@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.179-pr.21"
+VERSION="2.0.180-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -2376,9 +2376,6 @@ _wiz_hide_cursor
 start)return 0
 ;;
 quit|esc)_wiz_start_edit
-echo ""
-echo ""
-echo ""
 _wiz_show_cursor
 if gum confirm "Quit installation?" --default=false \
 --prompt.foreground "$HEX_ORANGE" \
@@ -2431,7 +2428,6 @@ fi
 if [[ $missing_count -gt 0 ]];then
 _wiz_show_cursor
 _wiz_start_edit
-echo ""
 gum style --foreground "$HEX_RED" --bold "Configuration incomplete!"
 echo ""
 gum style --foreground "$HEX_YELLOW" "Please configure the following required fields:"
@@ -2489,10 +2485,10 @@ printf '\033[H\033[J'
 _wiz_start_edit(){
 _wiz_clear
 show_banner
+echo ""
 }
 _wiz_input_screen(){
 _wiz_start_edit
-echo ""
 for line in "$@";do
 gum style --foreground "$HEX_GRAY" "$line"
 done
@@ -4797,7 +4793,6 @@ echo ""
 reboot_to_main_os(){
 finish_live_installation
 _wiz_start_edit
-echo ""
 print_info "Installation completed successfully!"
 echo ""
 _show_credentials_info
