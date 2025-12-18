@@ -3613,12 +3613,13 @@ done
 }
 _edit_boot_disk(){
 _wiz_start_edit
-_wiz_dim "Separate boot disk selection (auto-detected by disk size):"
-_wiz_blank_line
-_wiz_dim "  ${CLR_CYAN}None$CLR_RESET: All disks in ZFS rpool (system + VMs)"
-_wiz_dim "  ${CLR_CYAN}Disk$CLR_RESET: Boot disk uses ext4 (system + ISO/templates)"
-_wiz_dim "       Pool disks use ZFS tank (VMs only)"
-_wiz_blank_line
+printf '%b\n' \
+"${CLR_GRAY}Separate boot disk selection (auto-detected by disk size):$CLR_RESET" \
+"" \
+"$CLR_GRAY  ${CLR_CYAN}None$CLR_GRAY: All disks in ZFS rpool (system + VMs)$CLR_RESET" \
+"$CLR_GRAY  ${CLR_CYAN}Disk$CLR_GRAY: Boot disk uses ext4 (system + ISO/templates)$CLR_RESET" \
+"$CLR_GRAY       Pool disks use ZFS tank (VMs only)$CLR_RESET" \
+""
 local options="None (all in pool)"
 for i in "${!DRIVES[@]}";do
 local disk_name="${DRIVE_NAMES[$i]}"
