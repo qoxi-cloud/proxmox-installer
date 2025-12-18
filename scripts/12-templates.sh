@@ -156,7 +156,7 @@ download_template() {
         return 1
       fi
       ;;
-    *.conf | *.sources | *.service)
+    *.conf | *.sources | *.service | *.timer)
       # Config files should have some content
       if [[ $(wc -l <"$local_path" 2>/dev/null || echo 0) -lt 2 ]]; then
         print_error "Template $remote_file appears corrupted (too short)"
