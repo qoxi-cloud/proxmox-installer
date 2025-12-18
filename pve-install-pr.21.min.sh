@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.248-pr.21"
+VERSION="2.0.249-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -779,6 +779,7 @@ auditd (audit logging)
 aide (file integrity)
 chkrootkit (rootkit scanner)
 lynis (security audit)
+needrestart (auto service restart)
 prometheus (metrics exporter)
 yazi (file manager)
 nvim (text editor)"
@@ -846,6 +847,8 @@ INSTALL_CHKROOTKIT=""
 CHKROOTKIT_INSTALLED=""
 INSTALL_LYNIS=""
 LYNIS_INSTALLED=""
+INSTALL_NEEDRESTART=""
+NEEDRESTART_INSTALLED=""
 APPARMOR_INSTALLED=""
 INSTALL_VNSTAT=""
 VNSTAT_INSTALLED=""
@@ -3634,17 +3637,18 @@ _wiz_start_edit
 _wiz_description \
 "Optional features (use Space to toggle):" \
 "" \
-"  {{cyan:vnstat}}:     Network traffic monitoring" \
-"  {{cyan:apparmor}}:   Mandatory access control (MAC)" \
-"  {{cyan:auditd}}:     Security audit logging" \
-"  {{cyan:aide}}:       File integrity monitoring" \
-"  {{cyan:chkrootkit}}: Weekly rootkit scanning" \
-"  {{cyan:lynis}}:      Weekly security auditing" \
-"  {{cyan:prometheus}}: Node exporter for metrics (port 9100)" \
-"  {{cyan:yazi}}:       Terminal file manager" \
-"  {{cyan:nvim}}:       Neovim as default editor" \
+"  {{cyan:vnstat}}:      Network traffic monitoring" \
+"  {{cyan:apparmor}}:    Mandatory access control (MAC)" \
+"  {{cyan:auditd}}:      Security audit logging" \
+"  {{cyan:aide}}:        File integrity monitoring" \
+"  {{cyan:chkrootkit}}:  Weekly rootkit scanning" \
+"  {{cyan:lynis}}:       Weekly security auditing" \
+"  {{cyan:needrestart}}: Auto-restart services after updates" \
+"  {{cyan:prometheus}}:  Node exporter for metrics (port 9100)" \
+"  {{cyan:yazi}}:        Terminal file manager" \
+"  {{cyan:nvim}}:        Neovim as default editor" \
 ""
-_show_input_footer "checkbox" 10
+_show_input_footer "checkbox" 11
 local preselected=()
 [[ $INSTALL_VNSTAT == "yes" ]]&&preselected+=("vnstat")
 [[ $INSTALL_APPARMOR == "yes" ]]&&preselected+=("apparmor")
@@ -3652,6 +3656,7 @@ local preselected=()
 [[ $INSTALL_AIDE == "yes" ]]&&preselected+=("aide")
 [[ $INSTALL_CHKROOTKIT == "yes" ]]&&preselected+=("chkrootkit")
 [[ $INSTALL_LYNIS == "yes" ]]&&preselected+=("lynis")
+[[ $INSTALL_NEEDRESTART == "yes" ]]&&preselected+=("needrestart")
 [[ $INSTALL_PROMETHEUS == "yes" ]]&&preselected+=("prometheus")
 [[ $INSTALL_YAZI == "yes" ]]&&preselected+=("yazi")
 [[ $INSTALL_NVIM == "yes" ]]&&preselected+=("nvim")
@@ -3677,6 +3682,7 @@ INSTALL_AUDITD="no"
 INSTALL_AIDE="no"
 INSTALL_CHKROOTKIT="no"
 INSTALL_LYNIS="no"
+INSTALL_NEEDRESTART="no"
 INSTALL_PROMETHEUS="no"
 INSTALL_YAZI="no"
 INSTALL_NVIM="no"
@@ -3697,6 +3703,9 @@ INSTALL_CHKROOTKIT="yes"
 fi
 if echo "$selected"|grep -q "lynis";then
 INSTALL_LYNIS="yes"
+fi
+if echo "$selected"|grep -q "needrestart";then
+INSTALL_NEEDRESTART="yes"
 fi
 if echo "$selected"|grep -q "prometheus";then
 INSTALL_PROMETHEUS="yes"
@@ -5081,6 +5090,34 @@ return 0
 fi
 LYNIS_INSTALLED="yes"
 }
+_install_needrestart(){
+run_remote "Installing needrestart" '
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -yqq needrestart
+  ' "needrestart installed"
+}
+_config_needrestart(){
+deploy_template "needrestart.conf" "/etc/needrestart/conf.d/50-autorestart.conf"
+}
+configure_needrestart(){
+if [[ $INSTALL_NEEDRESTART != "yes" ]];then
+log "Skipping needrestart (not requested)"
+return 0
+fi
+log "Installing and configuring needrestart"
+(_install_needrestart||exit 1
+_config_needrestart||exit 1) > \
+/dev/null 2>&1&
+show_progress $! "Installing needrestart" "needrestart configured"
+local exit_code=$?
+if [[ $exit_code -ne 0 ]];then
+log "WARNING: needrestart setup failed"
+print_warning "needrestart setup failed - continuing without it"
+return 0
+fi
+NEEDRESTART_INSTALLED="yes"
+}
 _install_auditd(){
 run_remote "Installing auditd" '
     export DEBIAN_FRONTEND=noninteractive
@@ -5388,6 +5425,7 @@ configure_auditd
 configure_aide
 configure_chkrootkit
 configure_lynis
+configure_needrestart
 configure_prometheus
 configure_vnstat
 configure_yazi
