@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.234-pr.21"
+VERSION="2.0.233-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -954,26 +954,6 @@ log_debug "Executing: $*"
 local exit_code=$?
 log_debug "Exit code: $exit_code"
 return $exit_code
-}
-INSTALL_START_TIME=""
-metrics_start(){
-INSTALL_START_TIME=$(date +%s)
-log "METRIC: installation_started"
-}
-log_metric(){
-local step="$1"
-if [[ -n $INSTALL_START_TIME ]];then
-local elapsed=$(($(date +%s)-INSTALL_START_TIME))
-log "METRIC: ${step}_completed elapsed=${elapsed}s"
-fi
-}
-metrics_finish(){
-if [[ -n $INSTALL_START_TIME ]];then
-local total=$(($(date +%s)-INSTALL_START_TIME))
-local minutes=$((total/60))
-local seconds=$((total%60))
-log "METRIC: installation_completed total_time=${total}s (${minutes}m ${seconds}s)"
-fi
 }
 BANNER_LETTER_COUNT=7
 show_banner(){
@@ -5399,7 +5379,6 @@ log "QEMU_RAM_OVERRIDE=$QEMU_RAM_OVERRIDE"
 log "QEMU_CORES_OVERRIDE=$QEMU_CORES_OVERRIDE"
 log "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
 log "SSL_TYPE=${SSL_TYPE:-self-signed}"
-metrics_start
 log "Step: collect_system_info"
 show_banner_animated_start 0.1
 SYSTEM_INFO_CACHE=$(mktemp)
@@ -5417,10 +5396,8 @@ rm -f "$SYSTEM_INFO_CACHE"
 fi
 log "Step: show_system_status"
 show_system_status
-log_metric "system_info"
 log "Step: show_gum_config_editor"
 show_gum_config_editor
-log_metric "config_wizard"
 start_live_installation||{
 log "WARNING: Failed to start live installation display, falling back to regular mode"
 clear
@@ -5429,34 +5406,27 @@ show_banner
 live_log_system_preparation
 log "Step: prepare_packages"
 prepare_packages
-log_metric "packages"
 live_log_iso_download
 log "Step: download_proxmox_iso"
 download_proxmox_iso
-log_metric "iso_download"
 live_log_autoinstall_preparation
 log "Step: make_answer_toml"
 make_answer_toml
 log "Step: make_autoinstall_iso"
 make_autoinstall_iso
-log_metric "autoinstall_prep"
 live_log_proxmox_installation
 log "Step: install_proxmox"
 install_proxmox
-log_metric "proxmox_install"
 log "Step: boot_proxmox_with_port_forwarding"
 boot_proxmox_with_port_forwarding||{
 log "ERROR: Failed to boot Proxmox with port forwarding"
 exit 1
 }
-log_metric "qemu_boot"
 live_log_system_configuration
 log "Step: configure_proxmox_via_ssh"
 configure_proxmox_via_ssh
-log_metric "system_config"
 live_log_installation_complete
 finish_live_installation
-metrics_finish
 INSTALL_COMPLETED=true
 log "Step: reboot_to_main_os"
 reboot_to_main_os
