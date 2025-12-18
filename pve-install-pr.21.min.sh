@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.219-pr.21"
+VERSION="2.0.220-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -3117,8 +3117,10 @@ elif [[ $pool_count -eq 2 ]];then
 options="RAID-0 (striped)\nRAID-1 (mirror)"
 elif [[ $pool_count -eq 3 ]];then
 options="RAID-0 (striped)\nRAID-1 (mirror)\nRAID-Z1 (parity)"
-elif [[ $pool_count -ge 4 ]];then
+elif [[ $pool_count -eq 4 ]];then
 options="RAID-0 (striped)\nRAID-1 (mirror)\nRAID-Z1 (parity)\nRAID-Z2 (double parity)\nRAID-10 (striped mirrors)"
+elif [[ $pool_count -ge 5 ]];then
+options="RAID-0 (striped)\nRAID-1 (mirror)\nRAID-Z1 (parity)\nRAID-Z2 (double parity)\nRAID-Z3 (triple parity)\nRAID-10 (striped mirrors)"
 fi
 local item_count
 item_count=$(echo -e "$options"|wc -l)
@@ -3133,6 +3135,7 @@ case "$selected" in
 "RAID-1 (mirror)")ZFS_RAID="raid1";;
 "RAID-Z1 (parity)")ZFS_RAID="raidz1";;
 "RAID-Z2 (double parity)")ZFS_RAID="raidz2";;
+"RAID-Z3 (triple parity)")ZFS_RAID="raidz3";;
 "RAID-10 (striped mirrors)")ZFS_RAID="raid10"
 esac
 fi
@@ -3551,7 +3554,8 @@ case "$ZFS_RAID" in
 single)[[ $pool_count -ne 1 ]]&&ZFS_RAID="";;
 raid1|raid0)[[ $pool_count -lt 2 ]]&&ZFS_RAID="";;
 raid5|raidz1)[[ $pool_count -lt 3 ]]&&ZFS_RAID="";;
-raid10|raidz2)[[ $pool_count -lt 4 ]]&&ZFS_RAID=""
+raid10|raidz2)[[ $pool_count -lt 4 ]]&&ZFS_RAID="";;
+raidz3)[[ $pool_count -lt 5 ]]&&ZFS_RAID=""
 esac
 }
 prepare_packages(){
@@ -3863,6 +3867,36 @@ DISK_LIST+="\"/dev/$vdev\""
 done
 DISK_LIST+="]"
 log "FILESYSTEM=$FILESYSTEM, DISK_LIST=$DISK_LIST"
+log "Generating answer.toml for autoinstall"
+local ssh_keys_toml=""
+if [[ -n $SSH_PUBLIC_KEY ]];then
+local escaped_key="${SSH_PUBLIC_KEY//\\/\\\\}"
+escaped_key="${escaped_key//\"/\\\"}"
+ssh_keys_toml="root_ssh_keys = [\"$escaped_key\"]"
+fi
+cat >./answer.toml <<EOF
+[global]
+    keyboard = "$KEYBOARD"
+    country = "$COUNTRY"
+    fqdn = "$FQDN"
+    mailto = "$EMAIL"
+    timezone = "$TIMEZONE"
+    root_password = "$NEW_ROOT_PASSWORD"
+    reboot_on_error = false
+EOF
+if [[ -n $ssh_keys_toml ]];then
+echo "    $ssh_keys_toml" >>./answer.toml
+fi
+cat >>./answer.toml <<EOF
+
+[network]
+    source = "from-dhcp"
+
+[disk-setup]
+    filesystem = "$FILESYSTEM"
+    disk_list = $DISK_LIST
+EOF
+if [[ $FILESYSTEM == "zfs" ]];then
 local zfs_raid_value
 case "$ZFS_RAID" in
 single)zfs_raid_value="raid0";;
@@ -3870,25 +3904,23 @@ raid0)zfs_raid_value="raid0";;
 raid1)zfs_raid_value="raid1";;
 raidz1)zfs_raid_value="raidz-1";;
 raidz2)zfs_raid_value="raidz-2";;
+raidz3)zfs_raid_value="raidz-3";;
 raid5)zfs_raid_value="raidz-1";;
 raid10)zfs_raid_value="raid10";;
 *)zfs_raid_value="raid0"
 esac
 log "Using ZFS raid: $zfs_raid_value"
-if ! download_template "./answer.toml" "answer.toml";then
-log "ERROR: Failed to download answer.toml template"
-exit 1
+cat >>./answer.toml <<EOF
+    zfs.raid = "$zfs_raid_value"
+    zfs.compress = "lz4"
+    zfs.checksum = "on"
+EOF
+elif [[ $FILESYSTEM == "ext4" ]]||[[ $FILESYSTEM == "xfs" ]];then
+cat >>./answer.toml <<EOF
+    lvm.swapsize = 0
+    lvm.maxvz = 0
+EOF
 fi
-apply_template_vars "./answer.toml" \
-"FQDN=$FQDN" \
-"EMAIL=$EMAIL" \
-"TIMEZONE=$TIMEZONE" \
-"KEYBOARD=$KEYBOARD" \
-"COUNTRY=$COUNTRY" \
-"ROOT_PASSWORD=$NEW_ROOT_PASSWORD" \
-"FILESYSTEM=$FILESYSTEM" \
-"ZFS_RAID=$zfs_raid_value" \
-"DISK_LIST=$DISK_LIST"
 if ! validate_answer_toml "./answer.toml";then
 log "ERROR: answer.toml validation failed"
 exit 1
@@ -4710,10 +4742,8 @@ LETSENCRYPT_DOMAIN="$cert_domain"
 LETSENCRYPT_FIRSTBOOT=true
 }
 configure_ssh_hardening(){
-local escaped_ssh_key="${SSH_PUBLIC_KEY//\'/\'\\\'\'}"
-(remote_exec "mkdir -p /root/.ssh && chmod 700 /root/.ssh"||exit 1
-remote_exec "echo '$escaped_ssh_key' >> /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys"||exit 1
-remote_copy "templates/sshd_config" "/etc/ssh/sshd_config"||exit 1) > \
+(remote_copy "templates/sshd_config" "/etc/ssh/sshd_config"||exit 1
+remote_exec "chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys"||exit 1) > \
 /dev/null 2>&1&
 show_progress $! "Deploying SSH hardening" "Security hardening configured"
 local exit_code=$?
@@ -4899,6 +4929,12 @@ then
 log "WARNING: RAIDZ2 recommended for 4+ disks, have $vdev_count"
 fi
 ;;
+raidz3)if
+[[ $vdev_count -lt 5 ]]
+then
+log "WARNING: RAIDZ3 recommended for 5+ disks, have $vdev_count"
+fi
+;;
 raid10)if
 [[ $vdev_count -lt 4 ]]||[[ $((vdev_count%2)) -ne 0 ]]
 then
@@ -4917,6 +4953,8 @@ raid1)pool_cmd+=" mirror ${vdevs[*]}"
 raidz1)pool_cmd+=" raidz ${vdevs[*]}"
 ;;
 raidz2)pool_cmd+=" raidz2 ${vdevs[*]}"
+;;
+raidz3)pool_cmd+=" raidz3 ${vdevs[*]}"
 ;;
 raid10)pool_cmd+=""
 for ((i=0; i<vdev_count; i+=2));do
