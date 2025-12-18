@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.258-pr.21"
+VERSION="2.0.259-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1093,11 +1093,10 @@ VIRTIO_MAP["$drive"]="$vdev"
 log "Virtio mapping: $drive → /dev/$vdev (pool)"
 ((virtio_idx++))
 done
-declare -p VIRTIO_MAP >/tmp/virtio_map.env
+declare -p VIRTIO_MAP|sed 's/declare -A/declare -gA/' >/tmp/virtio_map.env
 log "Virtio mapping saved to /tmp/virtio_map.env"
 }
 load_virtio_mapping(){
-declare -g -A VIRTIO_MAP
 if [[ ! -f /tmp/virtio_map.env ]];then
 create_virtio_mapping
 fi
