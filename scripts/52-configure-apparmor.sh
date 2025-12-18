@@ -25,7 +25,7 @@ _config_apparmor() {
   '
 
   # Only copy grub config if AppArmor not enabled in kernel
-  remote_exec 'grep -q "Y" /sys/module/apparmor/parameters/enabled 2>/dev/null' || \
+  remote_exec 'grep -q "Y" /sys/module/apparmor/parameters/enabled 2>/dev/null' ||
     remote_copy "templates/apparmor-grub.cfg" "/etc/default/grub.d/apparmor.cfg"
 
   # Configure AppArmor
