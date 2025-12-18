@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.247-pr.21"
+VERSION="2.0.248-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -778,6 +778,7 @@ apparmor (mandatory access control)
 auditd (audit logging)
 aide (file integrity)
 chkrootkit (rootkit scanner)
+lynis (security audit)
 prometheus (metrics exporter)
 yazi (file manager)
 nvim (text editor)"
@@ -843,6 +844,8 @@ AUDITD_INSTALLED=""
 AIDE_INSTALLED=""
 INSTALL_CHKROOTKIT=""
 CHKROOTKIT_INSTALLED=""
+INSTALL_LYNIS=""
+LYNIS_INSTALLED=""
 APPARMOR_INSTALLED=""
 INSTALL_VNSTAT=""
 VNSTAT_INSTALLED=""
@@ -3636,17 +3639,19 @@ _wiz_description \
 "  {{cyan:auditd}}:     Security audit logging" \
 "  {{cyan:aide}}:       File integrity monitoring" \
 "  {{cyan:chkrootkit}}: Weekly rootkit scanning" \
+"  {{cyan:lynis}}:      Weekly security auditing" \
 "  {{cyan:prometheus}}: Node exporter for metrics (port 9100)" \
 "  {{cyan:yazi}}:       Terminal file manager" \
 "  {{cyan:nvim}}:       Neovim as default editor" \
 ""
-_show_input_footer "checkbox" 9
+_show_input_footer "checkbox" 10
 local preselected=()
 [[ $INSTALL_VNSTAT == "yes" ]]&&preselected+=("vnstat")
 [[ $INSTALL_APPARMOR == "yes" ]]&&preselected+=("apparmor")
 [[ $INSTALL_AUDITD == "yes" ]]&&preselected+=("auditd")
 [[ $INSTALL_AIDE == "yes" ]]&&preselected+=("aide")
 [[ $INSTALL_CHKROOTKIT == "yes" ]]&&preselected+=("chkrootkit")
+[[ $INSTALL_LYNIS == "yes" ]]&&preselected+=("lynis")
 [[ $INSTALL_PROMETHEUS == "yes" ]]&&preselected+=("prometheus")
 [[ $INSTALL_YAZI == "yes" ]]&&preselected+=("yazi")
 [[ $INSTALL_NVIM == "yes" ]]&&preselected+=("nvim")
@@ -3671,6 +3676,7 @@ INSTALL_APPARMOR="no"
 INSTALL_AUDITD="no"
 INSTALL_AIDE="no"
 INSTALL_CHKROOTKIT="no"
+INSTALL_LYNIS="no"
 INSTALL_PROMETHEUS="no"
 INSTALL_YAZI="no"
 INSTALL_NVIM="no"
@@ -3688,6 +3694,9 @@ INSTALL_AIDE="yes"
 fi
 if echo "$selected"|grep -q "chkrootkit";then
 INSTALL_CHKROOTKIT="yes"
+fi
+if echo "$selected"|grep -q "lynis";then
+INSTALL_LYNIS="yes"
 fi
 if echo "$selected"|grep -q "prometheus";then
 INSTALL_PROMETHEUS="yes"
@@ -5034,6 +5043,44 @@ return 0
 fi
 FAIL2BAN_INSTALLED="yes"
 }
+_install_lynis(){
+run_remote "Installing lynis" '
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -yqq lynis
+  ' "lynis installed"
+}
+_config_lynis(){
+deploy_template "lynis-audit.service" "/etc/systemd/system/lynis-audit.service"
+deploy_template "lynis-audit.timer" "/etc/systemd/system/lynis-audit.timer"
+remote_exec '
+    # Ensure log directory exists
+    mkdir -p /var/log/lynis
+
+    # Enable weekly audit timer
+    systemctl daemon-reload
+    systemctl enable lynis-audit.timer
+    systemctl start lynis-audit.timer
+  '||exit 1
+}
+configure_lynis(){
+if [[ $INSTALL_LYNIS != "yes" ]];then
+log "Skipping lynis (not requested)"
+return 0
+fi
+log "Installing and configuring lynis"
+(_install_lynis||exit 1
+_config_lynis||exit 1) > \
+/dev/null 2>&1&
+show_progress $! "Installing lynis" "lynis configured"
+local exit_code=$?
+if [[ $exit_code -ne 0 ]];then
+log "WARNING: lynis setup failed"
+print_warning "lynis setup failed - continuing without it"
+return 0
+fi
+LYNIS_INSTALLED="yes"
+}
 _install_auditd(){
 run_remote "Installing auditd" '
     export DEBIAN_FRONTEND=noninteractive
@@ -5340,6 +5387,7 @@ configure_fail2ban
 configure_auditd
 configure_aide
 configure_chkrootkit
+configure_lynis
 configure_prometheus
 configure_vnstat
 configure_yazi
