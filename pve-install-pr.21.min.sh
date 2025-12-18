@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.220-pr.21"
+VERSION="2.0.223-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -3785,7 +3785,7 @@ fi
 }
 validate_answer_toml(){
 local file="$1"
-local required_fields=("fqdn" "mailto" "timezone" "root_password")
+local required_fields=("fqdn" "mailto" "timezone" "root-password")
 for field in "${required_fields[@]}";do
 if ! grep -q "^\s*$field\s*=" "$file" 2>/dev/null;then
 log "ERROR: Missing required field in answer.toml: $field"
@@ -3872,8 +3872,10 @@ local ssh_keys_toml=""
 if [[ -n $SSH_PUBLIC_KEY ]];then
 local escaped_key="${SSH_PUBLIC_KEY//\\/\\\\}"
 escaped_key="${escaped_key//\"/\\\"}"
-ssh_keys_toml="root_ssh_keys = [\"$escaped_key\"]"
+ssh_keys_toml="root-ssh-keys = [\"$escaped_key\"]"
 fi
+local escaped_password="${NEW_ROOT_PASSWORD//\\/\\\\}"
+escaped_password="${escaped_password//\"/\\\"}"
 cat >./answer.toml <<EOF
 [global]
     keyboard = "$KEYBOARD"
@@ -3881,8 +3883,8 @@ cat >./answer.toml <<EOF
     fqdn = "$FQDN"
     mailto = "$EMAIL"
     timezone = "$TIMEZONE"
-    root_password = "$NEW_ROOT_PASSWORD"
-    reboot_on_error = false
+    root-password = "$escaped_password"
+    reboot-on-error = false
 EOF
 if [[ -n $ssh_keys_toml ]];then
 echo "    $ssh_keys_toml" >>./answer.toml
@@ -3894,7 +3896,7 @@ cat >>./answer.toml <<EOF
 
 [disk-setup]
     filesystem = "$FILESYSTEM"
-    disk_list = $DISK_LIST
+    disk-list = $DISK_LIST
 EOF
 if [[ $FILESYSTEM == "zfs" ]];then
 local zfs_raid_value
@@ -3918,7 +3920,6 @@ EOF
 elif [[ $FILESYSTEM == "ext4" ]]||[[ $FILESYSTEM == "xfs" ]];then
 cat >>./answer.toml <<EOF
     lvm.swapsize = 0
-    lvm.maxvz = 0
 EOF
 fi
 if ! validate_answer_toml "./answer.toml";then
