@@ -15,22 +15,29 @@ _install_vnstat() {
 
 # Configuration function for vnstat
 _config_vnstat() {
+  local iface="${INTERFACE_NAME:-eth0}"
+
+  # Deploy vnstat configuration
+  deploy_template "vnstat.conf" "/etc/vnstat.conf" \
+    "INTERFACE_NAME=${iface}"
+
   remote_exec "
-    # Enable and start vnstat daemon
-    systemctl enable vnstat
-    systemctl start vnstat
+    # Ensure database directory exists
+    mkdir -p /var/lib/vnstat
 
-    # Create database for main interface if not exists
-    if [[ -n \"\$INTERFACE_NAME\" ]]; then
-      vnstat --add -i \"\$INTERFACE_NAME\" 2>/dev/null || true
-    fi
+    # Add main interface to monitor
+    vnstat --add -i '${iface}' 2>/dev/null || true
 
-    # Also monitor bridge interfaces
-    for iface in vmbr0 vmbr1; do
-      if ip link show \"\$iface\" &>/dev/null; then
-        vnstat --add -i \"\$iface\" 2>/dev/null || true
+    # Also monitor bridge interfaces if they exist
+    for bridge in vmbr0 vmbr1; do
+      if ip link show \"\$bridge\" &>/dev/null; then
+        vnstat --add -i \"\$bridge\" 2>/dev/null || true
       fi
     done
+
+    # Enable and start vnstat daemon
+    systemctl enable vnstat
+    systemctl restart vnstat
   " || exit 1
 }
 
