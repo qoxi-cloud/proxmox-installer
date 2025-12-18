@@ -265,13 +265,14 @@ _edit_features() {
     "  {{cyan:auditd}}:     Security audit logging" \
     "  {{cyan:aide}}:       File integrity monitoring" \
     "  {{cyan:chkrootkit}}: Weekly rootkit scanning" \
+    "  {{cyan:lynis}}:      Weekly security auditing" \
     "  {{cyan:prometheus}}: Node exporter for metrics (port 9100)" \
     "  {{cyan:yazi}}:       Terminal file manager" \
     "  {{cyan:nvim}}:       Neovim as default editor" \
     ""
 
-  # 1 header + 8 items for multi-select checkbox
-  _show_input_footer "checkbox" 9
+  # 1 header + 9 items for multi-select checkbox
+  _show_input_footer "checkbox" 10
 
   # Build pre-selected items based on current configuration
   local preselected=()
@@ -280,6 +281,7 @@ _edit_features() {
   [[ $INSTALL_AUDITD == "yes" ]] && preselected+=("auditd")
   [[ $INSTALL_AIDE == "yes" ]] && preselected+=("aide")
   [[ $INSTALL_CHKROOTKIT == "yes" ]] && preselected+=("chkrootkit")
+  [[ $INSTALL_LYNIS == "yes" ]] && preselected+=("lynis")
   [[ $INSTALL_PROMETHEUS == "yes" ]] && preselected+=("prometheus")
   [[ $INSTALL_YAZI == "yes" ]] && preselected+=("yazi")
   [[ $INSTALL_NVIM == "yes" ]] && preselected+=("nvim")
@@ -312,6 +314,7 @@ _edit_features() {
   INSTALL_AUDITD="no"
   INSTALL_AIDE="no"
   INSTALL_CHKROOTKIT="no"
+  INSTALL_LYNIS="no"
   INSTALL_PROMETHEUS="no"
   INSTALL_YAZI="no"
   INSTALL_NVIM="no"
@@ -329,6 +332,9 @@ _edit_features() {
   fi
   if echo "$selected" | grep -q "chkrootkit"; then
     INSTALL_CHKROOTKIT="yes"
+  fi
+  if echo "$selected" | grep -q "lynis"; then
+    INSTALL_LYNIS="yes"
   fi
   if echo "$selected" | grep -q "prometheus"; then
     INSTALL_PROMETHEUS="yes"

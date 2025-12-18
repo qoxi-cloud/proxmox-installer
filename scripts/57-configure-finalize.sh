@@ -124,6 +124,7 @@ configure_proxmox_via_ssh() {
   configure_auditd
   configure_aide
   configure_chkrootkit
+  configure_lynis
   configure_prometheus
   configure_vnstat
   configure_yazi

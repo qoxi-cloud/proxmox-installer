@@ -868,6 +868,7 @@ apparmor (mandatory access control)
 auditd (audit logging)
 aide (file integrity)
 chkrootkit (rootkit scanner)
+lynis (security audit)
 prometheus (metrics exporter)
 yazi (file manager)
 nvim (text editor)"
@@ -1015,6 +1016,13 @@ INSTALL_CHKROOTKIT=""
 # chkrootkit installation flag (set by configure_chkrootkit)
 # shellcheck disable=SC2034
 CHKROOTKIT_INSTALLED=""
+
+# Lynis security auditing (yes/no, default: no)
+INSTALL_LYNIS=""
+
+# Lynis installation flag (set by configure_lynis)
+# shellcheck disable=SC2034
+LYNIS_INSTALLED=""
 
 # AppArmor installation flag (set by configure_apparmor)
 # shellcheck disable=SC2034
