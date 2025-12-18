@@ -74,20 +74,7 @@ configure_tailscale() {
       log "Skipping disable-openssh.service (TAILSCALE_SSH=$TAILSCALE_SSH, TAILSCALE_DISABLE_SSH=$TAILSCALE_DISABLE_SSH)"
     fi
 
-    # Deploy stealth firewall if requested (already downloaded in make_templates)
-    if [[ $STEALTH_MODE == "yes" ]]; then
-      log "Deploying stealth-firewall.service (STEALTH_MODE=$STEALTH_MODE)"
-      (
-        log "Using pre-downloaded stealth-firewall.service, size: $(wc -c <./templates/stealth-firewall.service 2>/dev/null || echo 'failed')"
-        remote_copy "templates/stealth-firewall.service" "/etc/systemd/system/stealth-firewall.service" || exit 1
-        log "Copied stealth-firewall.service to VM"
-        remote_exec "systemctl daemon-reload && systemctl enable stealth-firewall.service" >/dev/null 2>&1 || exit 1
-        log "Enabled stealth-firewall.service"
-      ) &
-      show_progress $! "Configuring stealth firewall" "Stealth firewall configured"
-    else
-      log "Skipping stealth-firewall.service (STEALTH_MODE=$STEALTH_MODE)"
-    fi
+    # Note: Firewall is now configured separately via 52-configure-firewall.sh
   else
     TAILSCALE_IP="not authenticated"
     TAILSCALE_HOSTNAME=""

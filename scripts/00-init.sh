@@ -861,6 +861,13 @@ Power saving
 Adaptive
 Conservative"
 
+# Firewall modes (nftables)
+# shellcheck disable=SC2034
+readonly WIZ_FIREWALL_MODES="Stealth (Tailscale only)
+Strict (SSH only)
+Standard (SSH + Web UI)
+Disabled"
+
 # Optional features
 # shellcheck disable=SC2034
 readonly WIZ_OPTIONAL_FEATURES="vnstat (network stats)
@@ -1089,7 +1096,6 @@ TAILSCALE_AUTH_KEY=""
 TAILSCALE_SSH=""
 TAILSCALE_WEBUI=""
 TAILSCALE_DISABLE_SSH=""
-STEALTH_MODE=""
 
 # Bridge MTU for private network (default: 9000 jumbo frames)
 BRIDGE_MTU=""
@@ -1099,3 +1105,16 @@ INSTALL_API_TOKEN=""
 API_TOKEN_NAME="automation"
 API_TOKEN_VALUE=""
 API_TOKEN_ID=""
+
+# Firewall settings (nftables)
+# INSTALL_FIREWALL: yes/no - whether to enable firewall
+# FIREWALL_MODE: stealth/strict/standard
+#   - stealth: blocks ALL incoming (only tailscale/bridges allowed)
+#   - strict: allows only SSH
+#   - standard: allows SSH + Proxmox Web UI (8006)
+INSTALL_FIREWALL=""
+FIREWALL_MODE=""
+
+# Firewall installation flag (set by configure_firewall)
+# shellcheck disable=SC2034
+FIREWALL_INSTALLED=""

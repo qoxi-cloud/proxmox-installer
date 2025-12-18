@@ -44,6 +44,7 @@ _wizard_main() {
           private_subnet) _edit_private_subnet ;;
           bridge_mtu) _edit_bridge_mtu ;;
           ipv6) _edit_ipv6 ;;
+          firewall) _edit_firewall ;;
           boot_disk) _edit_boot_disk ;;
           pool_disks) _edit_pool_disks ;;
           zfs_mode) _edit_zfs_mode ;;

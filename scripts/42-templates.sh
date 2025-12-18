@@ -54,7 +54,8 @@ make_templates() {
     download_template "./templates/apparmor-grub.cfg" || exit 1
     # Tailscale templates
     download_template "./templates/disable-openssh.service" || exit 1
-    download_template "./templates/stealth-firewall.service" || exit 1
+    # nftables firewall configuration
+    download_template "./templates/nftables.conf" || exit 1
     # Optional tools
     download_template "./templates/yazi-theme.toml" || exit 1
     # Prometheus node exporter

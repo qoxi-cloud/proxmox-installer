@@ -37,15 +37,19 @@ _edit_tailscale() {
           --prompt "Auth Key: "
       )
 
-      # If auth key provided, enable Tailscale with stealth mode
+      # If auth key provided, enable Tailscale
       if [[ -n $auth_key ]]; then
         INSTALL_TAILSCALE="yes"
         TAILSCALE_AUTH_KEY="$auth_key"
         TAILSCALE_SSH="yes"
         TAILSCALE_WEBUI="yes"
         TAILSCALE_DISABLE_SSH="yes"
-        STEALTH_MODE="yes"
         SSL_TYPE="self-signed" # Tailscale uses its own certs
+        # Suggest stealth firewall mode when Tailscale is enabled
+        if [[ -z $INSTALL_FIREWALL ]]; then
+          INSTALL_FIREWALL="yes"
+          FIREWALL_MODE="stealth"
+        fi
       else
         # Auth key required - disable Tailscale if not provided
         INSTALL_TAILSCALE="no"
@@ -53,7 +57,6 @@ _edit_tailscale() {
         TAILSCALE_SSH=""
         TAILSCALE_WEBUI=""
         TAILSCALE_DISABLE_SSH=""
-        STEALTH_MODE=""
         SSL_TYPE="" # Let user choose
       fi
       ;;
@@ -63,8 +66,12 @@ _edit_tailscale() {
       TAILSCALE_SSH=""
       TAILSCALE_WEBUI=""
       TAILSCALE_DISABLE_SSH=""
-      STEALTH_MODE=""
       SSL_TYPE="" # Let user choose
+      # Suggest standard firewall when Tailscale is disabled
+      if [[ -z $INSTALL_FIREWALL ]]; then
+        INSTALL_FIREWALL="yes"
+        FIREWALL_MODE="standard"
+      fi
       ;;
   esac
 }

@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # =============================================================================
 # Configuration Wizard - Network Settings Editors
-# interface, bridge_mode, private_subnet, bridge_mtu, ipv6
+# interface, bridge_mode, private_subnet, bridge_mtu, ipv6, firewall
 # =============================================================================
 
 _edit_interface() {
@@ -226,5 +226,50 @@ _edit_ipv6() {
   elif [[ $ipv6_mode == "auto" ]]; then
     # Auto mode - use detected values or defaults
     IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
+  fi
+}
+
+_edit_firewall() {
+  _wiz_start_edit
+
+  _wiz_description \
+    "Host firewall (nftables):" \
+    "" \
+    "  {{cyan:Stealth}}:  Blocks ALL incoming (Tailscale/bridges only)" \
+    "  {{cyan:Strict}}:   Allows SSH only (port 22)" \
+    "  {{cyan:Standard}}: Allows SSH + Proxmox Web UI (8006)" \
+    "  {{cyan:Disabled}}: No firewall rules" \
+    "" \
+    "  Note: VMs always have full network access via bridges." \
+    ""
+
+  # 1 header + 4 items for gum choose
+  _show_input_footer "filter" 5
+
+  local selected
+  selected=$(
+    echo "$WIZ_FIREWALL_MODES" | _wiz_choose \
+      --header="Firewall mode:"
+  )
+
+  if [[ -n $selected ]]; then
+    case "$selected" in
+      "Stealth (Tailscale only)")
+        INSTALL_FIREWALL="yes"
+        FIREWALL_MODE="stealth"
+        ;;
+      "Strict (SSH only)")
+        INSTALL_FIREWALL="yes"
+        FIREWALL_MODE="strict"
+        ;;
+      "Standard (SSH + Web UI)")
+        INSTALL_FIREWALL="yes"
+        FIREWALL_MODE="standard"
+        ;;
+      "Disabled")
+        INSTALL_FIREWALL="no"
+        FIREWALL_MODE=""
+        ;;
+    esac
   fi
 }

@@ -284,6 +284,20 @@ _wiz_render_menu() {
     ssh_display="${SSH_PUBLIC_KEY:0:20}..."
   fi
 
+  local firewall_display=""
+  if [[ -n $INSTALL_FIREWALL ]]; then
+    if [[ $INSTALL_FIREWALL == "yes" ]]; then
+      case "$FIREWALL_MODE" in
+        stealth) firewall_display="Stealth (Tailscale only)" ;;
+        strict) firewall_display="Strict (SSH only)" ;;
+        standard) firewall_display="Standard (SSH + Web UI)" ;;
+        *) firewall_display="$FIREWALL_MODE" ;;
+      esac
+    else
+      firewall_display="Disabled"
+    fi
+  fi
+
   local iso_version_display=""
   if [[ -n $PROXMOX_ISO_VERSION ]]; then
     iso_version_display=$(get_iso_version "$PROXMOX_ISO_VERSION")
@@ -346,6 +360,7 @@ _wiz_render_menu() {
     _add_field "Bridge MTU       " "$(_wiz_fmt "$mtu_display")" "bridge_mtu"
   fi
   _add_field "IPv6             " "$(_wiz_fmt "$ipv6_display")" "ipv6"
+  _add_field "Firewall         " "$(_wiz_fmt "$firewall_display")" "firewall"
 
   # --- Storage ---
   _add_section "Storage"
