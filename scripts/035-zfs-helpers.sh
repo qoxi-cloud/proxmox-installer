@@ -67,23 +67,32 @@ validate_zfs_raid_disk_count() {
 
 # Creates virtio disk mapping file.
 # Maps boot disk (if set) to vda, then pool disks to vdb, vdc, etc.
-# The mapping is deterministic based on BOOT_DISK and ZFS_POOL_DISKS.
+# Parameters:
+#   $1 - Boot disk (optional, pass "" if none)
+#   $2+ - Pool disks (space-separated)
 # Side effects: Creates /tmp/virtio_map.env
+# Example:
+#   create_virtio_mapping "/dev/nvme2n1" "/dev/nvme0n1" "/dev/nvme1n1"
+#   create_virtio_mapping "" "/dev/sda" "/dev/sdb"  # No separate boot disk
 create_virtio_mapping() {
+  local boot_disk="$1"
+  shift
+  local pool_disks=("$@")
+
   declare -A VIRTIO_MAP
   local virtio_idx=0
   local vdev_letters=(a b c d e f g h i j k l m n o p q r s t u v w x y z)
 
   # Add boot disk first (if separate)
-  if [[ -n $BOOT_DISK ]]; then
+  if [[ -n $boot_disk ]]; then
     local vdev="vd${vdev_letters[$virtio_idx]}"
-    VIRTIO_MAP["$BOOT_DISK"]="$vdev"
-    log "Virtio mapping: $BOOT_DISK → /dev/$vdev (boot)"
+    VIRTIO_MAP["$boot_disk"]="$vdev"
+    log "Virtio mapping: $boot_disk → /dev/$vdev (boot)"
     ((virtio_idx++))
   fi
 
   # Add pool disks
-  for drive in "${ZFS_POOL_DISKS[@]}"; do
+  for drive in "${pool_disks[@]}"; do
     local vdev="vd${vdev_letters[$virtio_idx]}"
     VIRTIO_MAP["$drive"]="$vdev"
     log "Virtio mapping: $drive → /dev/$vdev (pool)"
@@ -96,21 +105,15 @@ create_virtio_mapping() {
 }
 
 # Loads virtio mapping from /tmp/virtio_map.env.
-# Creates the mapping if it doesn't exist.
 # Sets global VIRTIO_MAP associative array.
 # Returns: 0 on success, 1 on failure
 load_virtio_mapping() {
-  # Create mapping if file doesn't exist
-  if [[ ! -f /tmp/virtio_map.env ]]; then
-    create_virtio_mapping
-  fi
-
   if [[ -f /tmp/virtio_map.env ]]; then
     # shellcheck disable=SC1091
     source /tmp/virtio_map.env
     return 0
   else
-    log "ERROR: Failed to create virtio mapping"
+    log "ERROR: Virtio mapping file not found"
     return 1
   fi
 }

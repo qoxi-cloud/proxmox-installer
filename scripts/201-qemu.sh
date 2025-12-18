@@ -60,20 +60,17 @@ setup_qemu_config() {
 
   log "QEMU config: $QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM"
 
-  # Create/load virtio mapping (shared with make_answer_toml)
+  # Load virtio mapping (created by make_answer_toml)
   load_virtio_mapping
 
-  # Build DRIVE_ARGS from virtio mapping
+  # Build DRIVE_ARGS from virtio mapping (iterate over all mapped disks)
+  # This avoids relying on ZFS_POOL_DISKS array which isn't available in backgrounded subshells
   DRIVE_ARGS=""
 
-  # Add boot disk first (if separate)
-  if [[ -n $BOOT_DISK ]]; then
-    DRIVE_ARGS="$DRIVE_ARGS -drive file=$BOOT_DISK,format=raw,media=disk,if=virtio"
-  fi
-
-  # Add pool disks
-  for drive in "${ZFS_POOL_DISKS[@]}"; do
-    DRIVE_ARGS="$DRIVE_ARGS -drive file=$drive,format=raw,media=disk,if=virtio"
+  # Get all disks from VIRTIO_MAP keys (sorted by virtio device for consistent ordering)
+  local disk
+  for disk in "${!VIRTIO_MAP[@]}"; do
+    DRIVE_ARGS="$DRIVE_ARGS -drive file=$disk,format=raw,media=disk,if=virtio"
   done
 
   log "Drive args: $DRIVE_ARGS"

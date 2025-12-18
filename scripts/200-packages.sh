@@ -429,16 +429,13 @@ make_answer_toml() {
   log "ZFS_RAID=$ZFS_RAID, BOOT_DISK=$BOOT_DISK"
   log "ZFS_POOL_DISKS=(${ZFS_POOL_DISKS[*]})"
 
-  # Load virtio mapping (creates if not exists)
+  # Create virtio mapping in background (pass values as args since arrays can't be exported)
   (
-    if ! load_virtio_mapping; then
-      log "ERROR: Failed to load virtio mapping"
-      exit 1
-    fi
+    create_virtio_mapping "$BOOT_DISK" "${ZFS_POOL_DISKS[@]}"
   ) &
   show_progress $! "Creating disk mapping" "Disk mapping created"
 
-  # Reload in main process
+  # Load mapping into current shell
   load_virtio_mapping || {
     log "ERROR: Failed to load virtio mapping"
     exit 1
