@@ -1260,13 +1260,6 @@ fi
 if [[ -z ${MAIN_IPV6:-} ]]||[[ ${IPV6_MODE:-} == "disabled" ]];then
 log "IPv6 disabled - removing inet6 sections from interfaces"
 sed -i '/^iface .* inet6 static$/,/^$/d' "$file"
-sed -i '/inet6.*address.*\/128$/d' "$file"
-sed -i '/inet6.*address[[:space:]]*$/d' "$file"
-else
-log "IPv6 enabled - adding accept_ra 2 to interfaces"
-sed -i '/^iface .* inet6 static$/,/^$/{
-      /gateway/a\    accept_ra 2
-    }' "$file"
 fi
 }
 download_template(){
