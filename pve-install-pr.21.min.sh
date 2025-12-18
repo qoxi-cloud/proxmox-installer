@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.242-pr.21"
+VERSION="2.0.243-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -776,6 +776,7 @@ Conservative"
 readonly WIZ_OPTIONAL_FEATURES="vnstat (network stats)
 apparmor (mandatory access control)
 auditd (audit logging)
+aide (file integrity)
 prometheus (metrics exporter)
 yazi (file manager)
 nvim (text editor)"
@@ -833,10 +834,12 @@ KEYBOARD="en-us"
 COUNTRY="us"
 FAIL2BAN_INSTALLED=""
 INSTALL_AUDITD=""
+INSTALL_AIDE=""
 INSTALL_APPARMOR=""
 CPU_GOVERNOR=""
 ZFS_ARC_MODE=""
 AUDITD_INSTALLED=""
+AIDE_INSTALLED=""
 APPARMOR_INSTALLED=""
 INSTALL_VNSTAT=""
 VNSTAT_INSTALLED=""
@@ -3628,15 +3631,17 @@ _wiz_description \
 "  {{cyan:vnstat}}:     Network traffic monitoring" \
 "  {{cyan:apparmor}}:   Mandatory access control (MAC)" \
 "  {{cyan:auditd}}:     Security audit logging" \
+"  {{cyan:aide}}:       File integrity monitoring" \
 "  {{cyan:prometheus}}: Node exporter for metrics (port 9100)" \
 "  {{cyan:yazi}}:       Terminal file manager" \
 "  {{cyan:nvim}}:       Neovim as default editor" \
 ""
-_show_input_footer "checkbox" 7
+_show_input_footer "checkbox" 8
 local preselected=()
 [[ $INSTALL_VNSTAT == "yes" ]]&&preselected+=("vnstat")
 [[ $INSTALL_APPARMOR == "yes" ]]&&preselected+=("apparmor")
 [[ $INSTALL_AUDITD == "yes" ]]&&preselected+=("auditd")
+[[ $INSTALL_AIDE == "yes" ]]&&preselected+=("aide")
 [[ $INSTALL_PROMETHEUS == "yes" ]]&&preselected+=("prometheus")
 [[ $INSTALL_YAZI == "yes" ]]&&preselected+=("yazi")
 [[ $INSTALL_NVIM == "yes" ]]&&preselected+=("nvim")
@@ -3659,6 +3664,7 @@ selected=$(echo "$WIZ_OPTIONAL_FEATURES"|_wiz_choose "${gum_args[@]}")
 INSTALL_VNSTAT="no"
 INSTALL_APPARMOR="no"
 INSTALL_AUDITD="no"
+INSTALL_AIDE="no"
 INSTALL_PROMETHEUS="no"
 INSTALL_YAZI="no"
 INSTALL_NVIM="no"
@@ -3670,6 +3676,9 @@ INSTALL_APPARMOR="yes"
 fi
 if echo "$selected"|grep -q "auditd";then
 INSTALL_AUDITD="yes"
+fi
+if echo "$selected"|grep -q "aide";then
+INSTALL_AIDE="yes"
 fi
 if echo "$selected"|grep -q "prometheus";then
 INSTALL_PROMETHEUS="yes"
@@ -4849,6 +4858,50 @@ print_info "  tailscale up --ssh"
 print_info "  tailscale serve --bg --https=443 https://127.0.0.1:8006"
 fi
 }
+_install_aide(){
+run_remote "Installing AIDE" '
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -yqq aide aide-common
+  ' "AIDE installed"
+}
+_config_aide(){
+deploy_template "aide-check.service" "/etc/systemd/system/aide-check.service"
+deploy_template "aide-check.timer" "/etc/systemd/system/aide-check.timer"
+remote_exec '
+    # Initialize AIDE database (this takes a while)
+    echo "Initializing AIDE database (this may take several minutes)..."
+    aideinit -y -f 2>/dev/null || true
+
+    # Move new database to active location
+    if [[ -f /var/lib/aide/aide.db.new ]]; then
+      mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+    fi
+
+    # Enable daily integrity check timer
+    systemctl daemon-reload
+    systemctl enable aide-check.timer
+    systemctl start aide-check.timer
+  '||exit 1
+}
+configure_aide(){
+if [[ $INSTALL_AIDE != "yes" ]];then
+log "Skipping AIDE (not requested)"
+return 0
+fi
+log "Installing and configuring AIDE"
+(_install_aide||exit 1
+_config_aide||exit 1) > \
+/dev/null 2>&1&
+show_progress $! "Installing and configuring AIDE" "AIDE configured"
+local exit_code=$?
+if [[ $exit_code -ne 0 ]];then
+log "WARNING: AIDE setup failed"
+print_warning "AIDE setup failed - continuing without it"
+return 0
+fi
+AIDE_INSTALLED="yes"
+}
 _install_apparmor(){
 run_remote "Installing AppArmor" '
     export DEBIAN_FRONTEND=noninteractive
@@ -5190,6 +5243,7 @@ configure_tailscale
 configure_apparmor
 configure_fail2ban
 configure_auditd
+configure_aide
 configure_prometheus
 configure_yazi
 configure_nvim
