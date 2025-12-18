@@ -125,6 +125,7 @@ configure_proxmox_via_ssh() {
   configure_aide
   configure_chkrootkit
   configure_lynis
+  configure_needrestart
   configure_prometheus
   configure_vnstat
   configure_yazi

@@ -260,19 +260,20 @@ _edit_features() {
   _wiz_description \
     "Optional features (use Space to toggle):" \
     "" \
-    "  {{cyan:vnstat}}:     Network traffic monitoring" \
-    "  {{cyan:apparmor}}:   Mandatory access control (MAC)" \
-    "  {{cyan:auditd}}:     Security audit logging" \
-    "  {{cyan:aide}}:       File integrity monitoring" \
-    "  {{cyan:chkrootkit}}: Weekly rootkit scanning" \
-    "  {{cyan:lynis}}:      Weekly security auditing" \
-    "  {{cyan:prometheus}}: Node exporter for metrics (port 9100)" \
-    "  {{cyan:yazi}}:       Terminal file manager" \
-    "  {{cyan:nvim}}:       Neovim as default editor" \
+    "  {{cyan:vnstat}}:      Network traffic monitoring" \
+    "  {{cyan:apparmor}}:    Mandatory access control (MAC)" \
+    "  {{cyan:auditd}}:      Security audit logging" \
+    "  {{cyan:aide}}:        File integrity monitoring" \
+    "  {{cyan:chkrootkit}}:  Weekly rootkit scanning" \
+    "  {{cyan:lynis}}:       Weekly security auditing" \
+    "  {{cyan:needrestart}}: Auto-restart services after updates" \
+    "  {{cyan:prometheus}}:  Node exporter for metrics (port 9100)" \
+    "  {{cyan:yazi}}:        Terminal file manager" \
+    "  {{cyan:nvim}}:        Neovim as default editor" \
     ""
 
-  # 1 header + 9 items for multi-select checkbox
-  _show_input_footer "checkbox" 10
+  # 1 header + 10 items for multi-select checkbox
+  _show_input_footer "checkbox" 11
 
   # Build pre-selected items based on current configuration
   local preselected=()
@@ -282,6 +283,7 @@ _edit_features() {
   [[ $INSTALL_AIDE == "yes" ]] && preselected+=("aide")
   [[ $INSTALL_CHKROOTKIT == "yes" ]] && preselected+=("chkrootkit")
   [[ $INSTALL_LYNIS == "yes" ]] && preselected+=("lynis")
+  [[ $INSTALL_NEEDRESTART == "yes" ]] && preselected+=("needrestart")
   [[ $INSTALL_PROMETHEUS == "yes" ]] && preselected+=("prometheus")
   [[ $INSTALL_YAZI == "yes" ]] && preselected+=("yazi")
   [[ $INSTALL_NVIM == "yes" ]] && preselected+=("nvim")
@@ -315,6 +317,7 @@ _edit_features() {
   INSTALL_AIDE="no"
   INSTALL_CHKROOTKIT="no"
   INSTALL_LYNIS="no"
+  INSTALL_NEEDRESTART="no"
   INSTALL_PROMETHEUS="no"
   INSTALL_YAZI="no"
   INSTALL_NVIM="no"
@@ -335,6 +338,9 @@ _edit_features() {
   fi
   if echo "$selected" | grep -q "lynis"; then
     INSTALL_LYNIS="yes"
+  fi
+  if echo "$selected" | grep -q "needrestart"; then
+    INSTALL_NEEDRESTART="yes"
   fi
   if echo "$selected" | grep -q "prometheus"; then
     INSTALL_PROMETHEUS="yes"

@@ -869,6 +869,7 @@ auditd (audit logging)
 aide (file integrity)
 chkrootkit (rootkit scanner)
 lynis (security audit)
+needrestart (auto service restart)
 prometheus (metrics exporter)
 yazi (file manager)
 nvim (text editor)"
@@ -1023,6 +1024,13 @@ INSTALL_LYNIS=""
 # Lynis installation flag (set by configure_lynis)
 # shellcheck disable=SC2034
 LYNIS_INSTALLED=""
+
+# needrestart automatic service restarts (yes/no, default: no)
+INSTALL_NEEDRESTART=""
+
+# needrestart installation flag (set by configure_needrestart)
+# shellcheck disable=SC2034
+NEEDRESTART_INSTALLED=""
 
 # AppArmor installation flag (set by configure_apparmor)
 # shellcheck disable=SC2034
