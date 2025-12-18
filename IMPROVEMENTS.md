@@ -201,58 +201,6 @@ validate_template "/target/etc/ssh/sshd_config" || exit 1
 
 ## 🟡 Medium Priority Issues
 
-### 11. Parallel Download Optimization
-**File:** `scripts/11-downloads.sh` or `40-packages.sh:221-275`
-**Current:** Tries aria2c → curl → wget sequentially
-
-**Optimization (experimental):**
-```bash
-download_iso_parallel() {
-  local url="$1"
-  local output="$2"
-
-  # Start all downloaders in parallel, first to finish wins
-  local pids=()
-
-  # aria2c
-  (aria2c --max-connection-per-server=16 --split=16 "$url" -o "$output.aria2" && mv "$output.aria2" "$output") &
-  pids+=($!)
-
-  # curl
-  (curl -L --retry 3 --max-time 600 "$url" -o "$output.curl" && mv "$output.curl" "$output") &
-  pids+=($!)
-
-  # Wait for first success
-  local success=0
-  while [[ ${#pids[@]} -gt 0 ]]; do
-    for i in "${!pids[@]}"; do
-      if ! kill -0 "${pids[$i]}" 2>/dev/null; then
-        wait "${pids[$i]}"
-        local exit_code=$?
-
-        if [[ $exit_code -eq 0 ]] && [[ -f "$output" ]]; then
-          # Success! Kill others
-          for pid in "${pids[@]}"; do
-            kill "$pid" 2>/dev/null || true
-          done
-          return 0
-        fi
-
-        unset 'pids[$i]'
-      fi
-    done
-
-    sleep 1
-  done
-
-  return 1
-}
-```
-
-**Note:** Aggressive approach, may waste bandwidth. Use for critical downloads only.
-
----
-
 ### 12. Unattended Upgrades Auto-Reboot
 **File:** `templates/50unattended-upgrades.tmpl:49`
 **Current:**
