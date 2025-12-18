@@ -7,13 +7,13 @@
 _edit_boot_disk() {
   _wiz_start_edit
 
-  # Show description about boot disk modes (all at once to avoid line-by-line rendering)
-  printf '%b\n' \
-    "${CLR_GRAY}Separate boot disk selection (auto-detected by disk size):${CLR_RESET}" \
+  # Show description about boot disk modes
+  _wiz_description \
+    "Separate boot disk selection (auto-detected by disk size):" \
     "" \
-    "${CLR_GRAY}  ${CLR_CYAN}None${CLR_GRAY}: All disks in ZFS rpool (system + VMs)${CLR_RESET}" \
-    "${CLR_GRAY}  ${CLR_CYAN}Disk${CLR_GRAY}: Boot disk uses ext4 (system + ISO/templates)${CLR_RESET}" \
-    "${CLR_GRAY}       Pool disks use ZFS tank (VMs only)${CLR_RESET}" \
+    "  {{cyan:None}}: All disks in ZFS rpool (system + VMs)" \
+    "  {{cyan:Disk}}: Boot disk uses ext4 (system + ISO/templates)" \
+    "       Pool disks use ZFS tank (VMs only)" \
     ""
 
   # Options: "None (all in pool)" + all drives

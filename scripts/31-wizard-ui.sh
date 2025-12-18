@@ -51,6 +51,21 @@ _wiz_warn() { gum style --foreground "$HEX_YELLOW" "$@"; }
 _wiz_info() { gum style --foreground "$HEX_CYAN" "$@"; }
 _wiz_dim() { gum style --foreground "$HEX_GRAY" "$@"; }
 
+# Displays a description block for menu screens.
+# Outputs all lines at once to avoid line-by-line rendering.
+# Supports {{cyan:text}} syntax for inline highlighting.
+# Usage: _wiz_description "Line 1" "Line 2" "" "Line 4 with {{cyan:highlight}}"
+_wiz_description() {
+  local output=""
+  for line in "$@"; do
+    # Replace {{cyan:text}} with actual color codes
+    line="${line//\{\{cyan:/${CLR_CYAN}}"
+    line="${line//\}\}/${CLR_GRAY}}"
+    output+="${CLR_GRAY}${line}${CLR_RESET}\n"
+  done
+  printf '%b' "$output"
+}
+
 # Gum component wrappers with consistent styling
 _wiz_confirm() {
   gum confirm "$@" \
