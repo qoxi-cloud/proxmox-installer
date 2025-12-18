@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.227-pr.21"
+VERSION="2.0.228-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1666,13 +1666,35 @@ return 1
 esac
 return 0
 }
+create_virtio_mapping(){
+declare -A VIRTIO_MAP
+local virtio_idx=0
+local vdev_letters=(a b c d e f g h i j k l m n o p q r s t u v w x y z)
+if [[ -n $BOOT_DISK ]];then
+local vdev="vd${vdev_letters[$virtio_idx]}"
+VIRTIO_MAP["$BOOT_DISK"]="$vdev"
+log "Virtio mapping: $BOOT_DISK → /dev/$vdev (boot)"
+((virtio_idx++))
+fi
+for drive in "${ZFS_POOL_DISKS[@]}";do
+local vdev="vd${vdev_letters[$virtio_idx]}"
+VIRTIO_MAP["$drive"]="$vdev"
+log "Virtio mapping: $drive → /dev/$vdev (pool)"
+((virtio_idx++))
+done
+declare -p VIRTIO_MAP >/tmp/virtio_map.env
+log "Virtio mapping saved to /tmp/virtio_map.env"
+}
 load_virtio_mapping(){
 declare -g -A VIRTIO_MAP
+if [[ ! -f /tmp/virtio_map.env ]];then
+create_virtio_mapping
+fi
 if [[ -f /tmp/virtio_map.env ]];then
 source /tmp/virtio_map.env
 return 0
 else
-log "WARNING: VIRTIO_MAP file not found at /tmp/virtio_map.env"
+log "ERROR: Failed to create virtio mapping"
 return 1
 fi
 }
@@ -2455,6 +2477,9 @@ live_log_section "Rescue System Preparation" "first"
 }
 live_log_iso_download(){
 live_log_section "Proxmox ISO Download"
+}
+live_log_autoinstall_preparation(){
+live_log_section "Autoinstall Preparation"
 }
 live_log_proxmox_installation(){
 live_log_section "Proxmox Installation"
@@ -3629,6 +3654,7 @@ fi
 fi
 }
 _edit_pool_disks(){
+while true;do
 _wiz_start_edit
 local options=""
 local preselected=()
@@ -3670,15 +3696,14 @@ for item in "${preselected[@]}";do
 gum_args+=(--selected "$item")
 done
 local selected
-selected=$(echo -e "$options"|_wiz_choose "${gum_args[@]}")
+local gum_exit_code=0
+selected=$(echo -e "$options"|_wiz_choose "${gum_args[@]}")||gum_exit_code=$?
+if [[ $gum_exit_code -eq 130 ]];then
+return 0
+fi
 if [[ -z $selected ]];then
-_wiz_start_edit
-_wiz_hide_cursor
-_wiz_error "✗ At least one disk must be selected for ZFS pool"
-_wiz_blank_line
-_wiz_dim "Press any key to select disks..."
-read -r -n 1
-return 1
+show_validation_error "✗ At least one disk must be selected for ZFS pool"
+continue
 fi
 ZFS_POOL_DISKS=()
 while IFS= read -r line;do
@@ -3686,6 +3711,8 @@ local disk_name="${line%% -*}"
 ZFS_POOL_DISKS+=("/dev/$disk_name")
 done <<<"$selected"
 _update_zfs_mode_options
+break
+done
 }
 _rebuild_pool_disks(){
 ZFS_POOL_DISKS=()
@@ -3959,10 +3986,18 @@ make_answer_toml(){
 log "Creating answer.toml for autoinstall"
 log "ZFS_RAID=$ZFS_RAID, BOOT_DISK=$BOOT_DISK"
 log "ZFS_POOL_DISKS=(${ZFS_POOL_DISKS[*]})"
-if ! load_virtio_mapping;then
+(if
+! load_virtio_mapping
+then
 log "ERROR: Failed to load virtio mapping"
 exit 1
-fi
+fi) \
+&
+show_progress $! "Creating disk mapping" "Disk mapping created"
+load_virtio_mapping||{
+log "ERROR: Failed to load virtio mapping"
+exit 1
+}
 local FILESYSTEM
 local all_disks=()
 if [[ -n $BOOT_DISK ]];then
@@ -4035,6 +4070,12 @@ exit 1
 fi
 log "answer.toml created and validated:"
 cat answer.toml >>"$LOG_FILE"
+if type live_log_subtask &>/dev/null 2>&1;then
+local total_disks=${#ZFS_POOL_DISKS[@]}
+[[ -n $BOOT_DISK ]]&&((total_disks++))
+live_log_subtask "Mapped $total_disks disk(s) to virtio"
+live_log_subtask "Generated answer.toml ($FILESYSTEM)"
+fi
 }
 make_autoinstall_iso(){
 log "Creating autoinstall ISO"
@@ -4057,8 +4098,7 @@ exit 1
 fi
 log "Autoinstall ISO created successfully: $(stat -c%s pve-autoinstall.iso 2>/dev/null|awk '{printf "%.1fM", $1/1024/1024}')"
 if type live_log_subtask &>/dev/null 2>&1;then
-live_log_subtask "Creating answer.toml"
-live_log_subtask "Packing ISO with xorriso"
+live_log_subtask "Packed ISO with xorriso"
 fi
 log "Removing original ISO to save disk space"
 rm -f pve.iso
@@ -4100,26 +4140,15 @@ QEMU_RAM=$((available_ram_mb-QEMU_MIN_RAM_RESERVE))
 [[ $QEMU_RAM -lt $MIN_QEMU_RAM ]]&&QEMU_RAM=$MIN_QEMU_RAM
 fi
 log "QEMU config: $QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM"
+load_virtio_mapping
 DRIVE_ARGS=""
-local virtio_idx=0
-declare -A VIRTIO_MAP
-local vdev_letters=(a b c d e f g h i j k l m n o p q r s t u v w x y z)
 if [[ -n $BOOT_DISK ]];then
-local vdev="vd${vdev_letters[$virtio_idx]}"
 DRIVE_ARGS="$DRIVE_ARGS -drive file=$BOOT_DISK,format=raw,media=disk,if=virtio"
-VIRTIO_MAP["$BOOT_DISK"]="$vdev"
-log "Mapped $BOOT_DISK → /dev/$vdev (boot)"
-((virtio_idx++))
 fi
 for drive in "${ZFS_POOL_DISKS[@]}";do
-local vdev="vd${vdev_letters[$virtio_idx]}"
 DRIVE_ARGS="$DRIVE_ARGS -drive file=$drive,format=raw,media=disk,if=virtio"
-VIRTIO_MAP["$drive"]="$vdev"
-log "Mapped $drive → /dev/$vdev (pool)"
-((virtio_idx++))
 done
 log "Drive args: $DRIVE_ARGS"
-declare -p VIRTIO_MAP >/tmp/virtio_map.env
 }
 _signal_process(){
 local pid="$1"
@@ -5229,6 +5258,7 @@ prepare_packages
 live_log_iso_download
 log "Step: download_proxmox_iso"
 download_proxmox_iso
+live_log_autoinstall_preparation
 log "Step: make_answer_toml"
 make_answer_toml
 log "Step: make_autoinstall_iso"
