@@ -300,10 +300,10 @@ _load_timezones() {
     WIZ_TIMEZONES=$(timedatectl list-timezones 2>/dev/null)
   else
     # Fallback: parse zoneinfo directory
-    WIZ_TIMEZONES=$(find /usr/share/zoneinfo -type f 2>/dev/null |
-      sed 's|/usr/share/zoneinfo/||' |
-      grep -E '^(Africa|America|Antarctica|Asia|Atlantic|Australia|Europe|Indian|Pacific)/' |
-      sort)
+    WIZ_TIMEZONES=$(find /usr/share/zoneinfo -type f 2>/dev/null \
+      | sed 's|/usr/share/zoneinfo/||' \
+      | grep -E '^(Africa|America|Antarctica|Asia|Atlantic|Australia|Europe|Indian|Pacific)/' \
+      | sort)
   fi
   # Add UTC at the end
   WIZ_TIMEZONES+=$'\nUTC'

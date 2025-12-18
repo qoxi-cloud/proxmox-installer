@@ -221,9 +221,9 @@ _download_iso_parallel() {
   # Start aria2c if available
   if command -v aria2c &>/dev/null; then
     (
-      _download_iso_aria2c "$url" "$temp_dir/iso.aria2" "$checksum" &&
-        [[ -s "$temp_dir/iso.aria2" ]] &&
-        mv "$temp_dir/iso.aria2" "$temp_dir/done.aria2"
+      _download_iso_aria2c "$url" "$temp_dir/iso.aria2" "$checksum" \
+        && [[ -s "$temp_dir/iso.aria2" ]] \
+        && mv "$temp_dir/iso.aria2" "$temp_dir/done.aria2"
     ) 2>/dev/null &
     pids+=($!)
     methods+=("aria2c")
@@ -232,9 +232,9 @@ _download_iso_parallel() {
 
   # Start curl
   (
-    _download_iso_curl "$url" "$temp_dir/iso.curl" &&
-      [[ -s "$temp_dir/iso.curl" ]] &&
-      mv "$temp_dir/iso.curl" "$temp_dir/done.curl"
+    _download_iso_curl "$url" "$temp_dir/iso.curl" \
+      && [[ -s "$temp_dir/iso.curl" ]] \
+      && mv "$temp_dir/iso.curl" "$temp_dir/done.curl"
   ) 2>/dev/null &
   pids+=($!)
   methods+=("curl")
@@ -243,9 +243,9 @@ _download_iso_parallel() {
   # Start wget if available
   if command -v wget &>/dev/null; then
     (
-      _download_iso_wget "$url" "$temp_dir/iso.wget" &&
-        [[ -s "$temp_dir/iso.wget" ]] &&
-        mv "$temp_dir/iso.wget" "$temp_dir/done.wget"
+      _download_iso_wget "$url" "$temp_dir/iso.wget" \
+        && [[ -s "$temp_dir/iso.wget" ]] \
+        && mv "$temp_dir/iso.wget" "$temp_dir/done.wget"
     ) 2>/dev/null &
     pids+=($!)
     methods+=("wget")
