@@ -89,7 +89,7 @@ load_virtio_mapping() {
 # Returns: Formatted string via stdout
 # Example:
 #   map_disks_to_virtio "toml_array" nvme0n1 nvme1n1
-#   → ["/dev/vda", "/dev/vdb"]
+#   → ["vda", "vdb"] (short names for answer.toml)
 #   map_disks_to_virtio "bash_array" nvme0n1 nvme1n1
 #   → (/dev/vda /dev/vdb)
 #   map_disks_to_virtio "space_separated" nvme0n1 nvme1n1
@@ -116,21 +116,23 @@ map_disks_to_virtio() {
 
   case "$format" in
     toml_array)
-      # TOML array format: ["/dev/vda", "/dev/vdb"]
+      # TOML array format for answer.toml: ["vda", "vdb"] (short names, no /dev/)
+      # Proxmox docs: https://pve.proxmox.com/wiki/Automated_Installation
       local result="["
       for i in "${!vdevs[@]}"; do
-        result+="\"${vdevs[$i]}\""
+        local short_name="${vdevs[$i]#/dev/}" # Strip /dev/ prefix
+        result+="\"${short_name}\""
         [[ $i -lt $((${#vdevs[@]} - 1)) ]] && result+=", "
       done
       result+="]"
       echo "$result"
       ;;
     bash_array)
-      # Bash array format: (/dev/vda /dev/vdb)
+      # Bash array format: (/dev/vda /dev/vdb) - for use in scripts
       echo "(${vdevs[*]})"
       ;;
     space_separated)
-      # Space-separated list: /dev/vda /dev/vdb
+      # Space-separated list: /dev/vda /dev/vdb - for use in commands
       echo "${vdevs[*]}"
       ;;
     *)
