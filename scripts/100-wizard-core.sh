@@ -152,6 +152,11 @@ _validate_config() {
     [[ -z $SSL_TYPE ]] && missing_fields+=("SSL Certificate") && ((missing_count++))
   fi
 
+  # Stealth firewall mode requires Tailscale
+  if [[ $FIREWALL_MODE == "stealth" && $INSTALL_TAILSCALE != "yes" ]]; then
+    missing_fields+=("Tailscale (required for Stealth firewall)") && ((missing_count++))
+  fi
+
   # Show error if missing fields
   if [[ $missing_count -gt 0 ]]; then
     _wiz_start_edit
