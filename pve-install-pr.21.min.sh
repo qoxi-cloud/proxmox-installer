@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.246-pr.21"
+VERSION="2.0.247-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -783,7 +783,7 @@ yazi (file manager)
 nvim (text editor)"
 BOOT_DISK=""
 ZFS_POOL_DISKS=()
-SYSTEM_UTILITIES="btop iotop ncdu tmux pigz smartmontools jq bat fastfetch aide chkrootkit sysstat nethogs ethtool"
+SYSTEM_UTILITIES="btop iotop ncdu tmux pigz smartmontools jq bat fastfetch sysstat nethogs ethtool"
 OPTIONAL_PACKAGES="libguestfs-tools"
 LOG_FILE="/root/pve-install-$(date +%Y%m%d-%H%M%S).log"
 INSTALL_COMPLETED=false
@@ -4963,6 +4963,13 @@ return 0
 fi
 APPARMOR_INSTALLED="yes"
 }
+_install_chkrootkit(){
+run_remote "Installing chkrootkit" '
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -yqq chkrootkit
+  ' "chkrootkit installed"
+}
 _config_chkrootkit(){
 deploy_template "chkrootkit-scan.service" "/etc/systemd/system/chkrootkit-scan.service"
 deploy_template "chkrootkit-scan.timer" "/etc/systemd/system/chkrootkit-scan.timer"
@@ -4978,13 +4985,14 @@ remote_exec '
 }
 configure_chkrootkit(){
 if [[ $INSTALL_CHKROOTKIT != "yes" ]];then
-log "Skipping chkrootkit scheduling (not requested)"
+log "Skipping chkrootkit (not requested)"
 return 0
 fi
-log "Configuring chkrootkit scheduled scanning"
-(_config_chkrootkit||exit 1) > \
+log "Installing and configuring chkrootkit"
+(_install_chkrootkit||exit 1
+_config_chkrootkit||exit 1) > \
 /dev/null 2>&1&
-show_progress $! "Configuring chkrootkit" "chkrootkit configured"
+show_progress $! "Installing chkrootkit" "chkrootkit configured"
 local exit_code=$?
 if [[ $exit_code -ne 0 ]];then
 log "WARNING: chkrootkit setup failed"
