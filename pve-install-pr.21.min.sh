@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.233-pr.21"
+VERSION="2.0.235-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -955,6 +955,26 @@ local exit_code=$?
 log_debug "Exit code: $exit_code"
 return $exit_code
 }
+INSTALL_START_TIME=""
+metrics_start(){
+INSTALL_START_TIME=$(date +%s)
+log "METRIC: installation_started"
+}
+log_metric(){
+local step="$1"
+if [[ -n $INSTALL_START_TIME ]];then
+local elapsed=$(($(date +%s)-INSTALL_START_TIME))
+log "METRIC: ${step}_completed elapsed=${elapsed}s"
+fi
+}
+metrics_finish(){
+if [[ -n $INSTALL_START_TIME ]];then
+local total=$(($(date +%s)-INSTALL_START_TIME))
+local minutes=$((total/60))
+local seconds=$((total%60))
+log "METRIC: installation_completed total_time=${total}s (${minutes}m ${seconds}s)"
+fi
+}
 BANNER_LETTER_COUNT=7
 show_banner(){
 printf '%s\n' \
@@ -1230,6 +1250,24 @@ apply_template_vars "$file" \
 "DNS_QUATERNARY=${DNS_QUATERNARY:-8.8.4.4}" \
 "DNS6_PRIMARY=${DNS6_PRIMARY:-2606:4700:4700::1111}" \
 "DNS6_SECONDARY=${DNS6_SECONDARY:-2606:4700:4700::1001}"
+}
+postprocess_interfaces_ipv6(){
+local file="$1"
+if [[ ! -f $file ]];then
+log "ERROR: Interfaces file not found: $file"
+return 1
+fi
+if [[ -z ${MAIN_IPV6:-} ]]||[[ ${IPV6_MODE:-} == "disabled" ]];then
+log "IPv6 disabled - removing inet6 sections from interfaces"
+sed -i '/^iface .* inet6 static$/,/^$/d' "$file"
+sed -i '/inet6.*address.*\/128$/d' "$file"
+sed -i '/inet6.*address[[:space:]]*$/d' "$file"
+else
+log "IPv6 enabled - adding accept_ra 2 to interfaces"
+sed -i '/^iface .* inet6 static$/,/^$/{
+      /gateway/a\    accept_ra 2
+    }' "$file"
+fi
 }
 download_template(){
 local local_path="$1"
@@ -4496,6 +4534,7 @@ exit 1
 fi
 (apply_common_template_vars "./templates/hosts"
 apply_common_template_vars "./templates/interfaces"
+postprocess_interfaces_ipv6 "./templates/interfaces"
 apply_common_template_vars "./templates/resolv.conf"
 apply_template_vars "./templates/cpufrequtils" "CPU_GOVERNOR=${CPU_GOVERNOR:-performance}") \
 &
@@ -5379,6 +5418,7 @@ log "QEMU_RAM_OVERRIDE=$QEMU_RAM_OVERRIDE"
 log "QEMU_CORES_OVERRIDE=$QEMU_CORES_OVERRIDE"
 log "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
 log "SSL_TYPE=${SSL_TYPE:-self-signed}"
+metrics_start
 log "Step: collect_system_info"
 show_banner_animated_start 0.1
 SYSTEM_INFO_CACHE=$(mktemp)
@@ -5396,8 +5436,10 @@ rm -f "$SYSTEM_INFO_CACHE"
 fi
 log "Step: show_system_status"
 show_system_status
+log_metric "system_info"
 log "Step: show_gum_config_editor"
 show_gum_config_editor
+log_metric "config_wizard"
 start_live_installation||{
 log "WARNING: Failed to start live installation display, falling back to regular mode"
 clear
@@ -5406,27 +5448,34 @@ show_banner
 live_log_system_preparation
 log "Step: prepare_packages"
 prepare_packages
+log_metric "packages"
 live_log_iso_download
 log "Step: download_proxmox_iso"
 download_proxmox_iso
+log_metric "iso_download"
 live_log_autoinstall_preparation
 log "Step: make_answer_toml"
 make_answer_toml
 log "Step: make_autoinstall_iso"
 make_autoinstall_iso
+log_metric "autoinstall_prep"
 live_log_proxmox_installation
 log "Step: install_proxmox"
 install_proxmox
+log_metric "proxmox_install"
 log "Step: boot_proxmox_with_port_forwarding"
 boot_proxmox_with_port_forwarding||{
 log "ERROR: Failed to boot Proxmox with port forwarding"
 exit 1
 }
+log_metric "qemu_boot"
 live_log_system_configuration
 log "Step: configure_proxmox_via_ssh"
 configure_proxmox_via_ssh
+log_metric "system_config"
 live_log_installation_complete
 finish_live_installation
+metrics_finish
 INSTALL_COMPLETED=true
 log "Step: reboot_to_main_os"
 reboot_to_main_os
