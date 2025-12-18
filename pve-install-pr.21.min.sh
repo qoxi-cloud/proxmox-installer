@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.252-pr.21"
+VERSION="2.0.253-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -774,6 +774,7 @@ Power saving
 Adaptive
 Conservative"
 readonly WIZ_OPTIONAL_FEATURES="vnstat (network stats)
+ringbuffer (network tuning)
 apparmor (mandatory access control)
 auditd (audit logging)
 aide (file integrity)
@@ -852,6 +853,8 @@ INSTALL_NEEDRESTART=""
 NEEDRESTART_INSTALLED=""
 INSTALL_NETDATA=""
 NETDATA_INSTALLED=""
+INSTALL_RINGBUFFER=""
+RINGBUFFER_INSTALLED=""
 APPARMOR_INSTALLED=""
 INSTALL_VNSTAT=""
 VNSTAT_INSTALLED=""
@@ -3641,6 +3644,7 @@ _wiz_description \
 "Optional features (use Space to toggle):" \
 "" \
 "  {{cyan:vnstat}}:      Network traffic monitoring" \
+"  {{cyan:ringbuffer}}:  Network ring buffer tuning" \
 "  {{cyan:apparmor}}:    Mandatory access control (MAC)" \
 "  {{cyan:auditd}}:      Security audit logging" \
 "  {{cyan:aide}}:        File integrity monitoring" \
@@ -3652,9 +3656,10 @@ _wiz_description \
 "  {{cyan:yazi}}:        Terminal file manager" \
 "  {{cyan:nvim}}:        Neovim as default editor" \
 ""
-_show_input_footer "checkbox" 12
+_show_input_footer "checkbox" 13
 local preselected=()
 [[ $INSTALL_VNSTAT == "yes" ]]&&preselected+=("vnstat")
+[[ $INSTALL_RINGBUFFER == "yes" ]]&&preselected+=("ringbuffer")
 [[ $INSTALL_APPARMOR == "yes" ]]&&preselected+=("apparmor")
 [[ $INSTALL_AUDITD == "yes" ]]&&preselected+=("auditd")
 [[ $INSTALL_AIDE == "yes" ]]&&preselected+=("aide")
@@ -3682,6 +3687,7 @@ gum_args+=(--selected "$item")
 done
 selected=$(echo "$WIZ_OPTIONAL_FEATURES"|_wiz_choose "${gum_args[@]}")
 INSTALL_VNSTAT="no"
+INSTALL_RINGBUFFER="no"
 INSTALL_APPARMOR="no"
 INSTALL_AUDITD="no"
 INSTALL_AIDE="no"
@@ -3694,6 +3700,9 @@ INSTALL_YAZI="no"
 INSTALL_NVIM="no"
 if echo "$selected"|grep -q "vnstat";then
 INSTALL_VNSTAT="yes"
+fi
+if echo "$selected"|grep -q "ringbuffer";then
+INSTALL_RINGBUFFER="yes"
 fi
 if echo "$selected"|grep -q "apparmor";then
 INSTALL_APPARMOR="yes"
@@ -5131,6 +5140,43 @@ return 0
 fi
 NEEDRESTART_INSTALLED="yes"
 }
+_install_ringbuffer(){
+run_remote "Installing ethtool" '
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -yqq ethtool
+  ' "ethtool installed"
+}
+_config_ringbuffer(){
+export RINGBUFFER_INTERFACE="${DEFAULT_INTERFACE:-eth0}"
+deploy_template "network-ringbuffer.service" "/etc/systemd/system/network-ringbuffer.service" RINGBUFFER_INTERFACE
+remote_exec '
+    # Enable service for boot
+    systemctl daemon-reload
+    systemctl enable network-ringbuffer.service
+
+    # Apply immediately
+    systemctl start network-ringbuffer.service 2>/dev/null || true
+  '||exit 1
+}
+configure_ringbuffer(){
+if [[ $INSTALL_RINGBUFFER != "yes" ]];then
+log "Skipping ring buffer tuning (not requested)"
+return 0
+fi
+log "Installing and configuring ring buffer tuning"
+(_install_ringbuffer||exit 1
+_config_ringbuffer||exit 1) > \
+/dev/null 2>&1&
+show_progress $! "Configuring ring buffer" "Ring buffer configured"
+local exit_code=$?
+if [[ $exit_code -ne 0 ]];then
+log "WARNING: ring buffer setup failed"
+print_warning "Ring buffer setup failed - continuing without it"
+return 0
+fi
+RINGBUFFER_INSTALLED="yes"
+}
 _install_auditd(){
 run_remote "Installing auditd" '
     export DEBIAN_FRONTEND=noninteractive
@@ -5442,6 +5488,7 @@ configure_needrestart
 configure_netdata
 configure_prometheus
 configure_vnstat
+configure_ringbuffer
 configure_yazi
 configure_nvim
 if type live_log_ssl_configuration &>/dev/null 2>&1;then
