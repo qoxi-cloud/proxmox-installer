@@ -65,6 +65,26 @@ apply_common_template_vars() {
     "DNS6_SECONDARY=${DNS6_SECONDARY:-2606:4700:4700::1001}"
 }
 
+# Post-processes interfaces template when IPv6 is disabled.
+# Removes inet6 sections to prevent invalid config with empty addresses.
+# Parameters:
+#   $1 - Path to interfaces file
+postprocess_interfaces_ipv6() {
+  local file="$1"
+
+  if [[ ! -f $file ]]; then
+    log "ERROR: Interfaces file not found: $file"
+    return 1
+  fi
+
+  # Only process if IPv6 is disabled
+  if [[ -z ${MAIN_IPV6:-} ]] || [[ ${IPV6_MODE:-} == "disabled" ]]; then
+    log "IPv6 disabled - removing inet6 sections from interfaces"
+    # Remove "iface ... inet6 static" blocks (keeps loopback)
+    sed -i '/^iface .* inet6 static$/,/^$/d' "$file"
+  fi
+}
+
 # Downloads template from GitHub repository with validation.
 # Parameters:
 #   $1 - Local path to save template

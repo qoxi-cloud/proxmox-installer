@@ -242,20 +242,6 @@ BRIDGE_MTU="${BRIDGE_MTU:-1500}"  # Safe default, can enable jumbo frames if sup
 
 ---
 
-### 15. IPv6 Router Advertisement Support
-**File:** `templates/interfaces.both.tmpl:54-55`
-**Current:** Only static IPv6
-
-**Add SLAAC/DHCPv6 option:**
-```bash
-# If IPv6_MODE=auto:
-iface vmbr0 inet6 auto
-    accept_ra 2          # Accept RA even with forwarding enabled
-    dhcp 1               # DHCPv6 for DNS/NTP
-```
-
----
-
 ### 16. Fail2Ban Recidive Jail
 **File:** `templates/fail2ban-jail.local.tmpl`
 **Enhancement:** Ban repeat offenders system-wide

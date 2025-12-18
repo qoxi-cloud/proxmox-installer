@@ -34,6 +34,7 @@ iface vmbr0 inet static
 iface vmbr0 inet6 static
     address {{MAIN_IPV6}}/128
     gateway {{IPV6_GATEWAY}}
+    accept_ra 2
 
 # vmbr1: Private NAT network for VMs
 # VMs connect here for isolated network with NAT to internet
