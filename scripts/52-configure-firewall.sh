@@ -61,26 +61,26 @@ _generate_bridge_input_rules() {
   case "$mode" in
     internal)
       # Internal NAT only - vmbr0
-      rules="# Allow traffic from internal bridge (vmbr0 - private NAT network)
-        iifname \"vmbr0\" accept"
+      rules='# Allow traffic from internal bridge (vmbr0 - private NAT network)
+        iifname "vmbr0" accept'
       ;;
     external)
       # External bridge only - vmbr1
-      rules="# Allow traffic from external bridge (vmbr1 - public IPs)
-        iifname \"vmbr1\" accept"
+      rules='# Allow traffic from external bridge (vmbr1 - public IPs)
+        iifname "vmbr1" accept'
       ;;
     both)
       # Both bridges
-      rules="# Allow traffic from internal bridge (vmbr0 - private NAT network)
-        iifname \"vmbr0\" accept
+      rules='# Allow traffic from internal bridge (vmbr0 - private NAT network)
+        iifname "vmbr0" accept
 
         # Allow traffic from external bridge (vmbr1 - public IPs)
-        iifname \"vmbr1\" accept"
+        iifname "vmbr1" accept'
       ;;
     *)
       log "WARNING: Unknown bridge mode: $mode, using internal"
-      rules="# Allow traffic from internal bridge (vmbr0 - private NAT network)
-        iifname \"vmbr0\" accept"
+      rules='# Allow traffic from internal bridge (vmbr0 - private NAT network)
+        iifname "vmbr0" accept'
       ;;
   esac
 
@@ -94,26 +94,26 @@ _generate_bridge_forward_rules() {
 
   case "$mode" in
     internal)
-      rules="# Allow forwarding for internal bridge (VM traffic)
-        iifname \"vmbr0\" accept
-        oifname \"vmbr0\" accept"
+      rules='# Allow forwarding for internal bridge (VM traffic)
+        iifname "vmbr0" accept
+        oifname "vmbr0" accept'
       ;;
     external)
-      rules="# Allow forwarding for external bridge (VM traffic)
-        iifname \"vmbr1\" accept
-        oifname \"vmbr1\" accept"
+      rules='# Allow forwarding for external bridge (VM traffic)
+        iifname "vmbr1" accept
+        oifname "vmbr1" accept'
       ;;
     both)
-      rules="# Allow forwarding for both bridges (VM traffic)
-        iifname \"vmbr0\" accept
-        iifname \"vmbr1\" accept
-        oifname \"vmbr0\" accept
-        oifname \"vmbr1\" accept"
+      rules='# Allow forwarding for both bridges (VM traffic)
+        iifname "vmbr0" accept
+        iifname "vmbr1" accept
+        oifname "vmbr0" accept
+        oifname "vmbr1" accept'
       ;;
     *)
-      rules="# Allow forwarding for internal bridge (VM traffic)
-        iifname \"vmbr0\" accept
-        oifname \"vmbr0\" accept"
+      rules='# Allow forwarding for internal bridge (VM traffic)
+        iifname "vmbr0" accept
+        oifname "vmbr0" accept'
       ;;
   esac
 
@@ -123,8 +123,8 @@ _generate_bridge_forward_rules() {
 # Generate Tailscale rules if enabled
 _generate_tailscale_rules() {
   if [[ $INSTALL_TAILSCALE == "yes" ]]; then
-    echo "# Allow Tailscale VPN interface
-        iifname \"tailscale0\" accept"
+    echo '# Allow Tailscale VPN interface
+        iifname "tailscale0" accept'
   else
     echo "# Tailscale not installed"
   fi

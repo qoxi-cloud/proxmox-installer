@@ -300,9 +300,9 @@ _load_timezones() {
     WIZ_TIMEZONES=$(timedatectl list-timezones 2>/dev/null)
   else
     # Fallback: parse zoneinfo directory
-    WIZ_TIMEZONES=$(find /usr/share/zoneinfo -type f 2>/dev/null | \
-      sed 's|/usr/share/zoneinfo/||' | \
-      grep -E '^(Africa|America|Antarctica|Asia|Atlantic|Australia|Europe|Indian|Pacific)/' | \
+    WIZ_TIMEZONES=$(find /usr/share/zoneinfo -type f 2>/dev/null |
+      sed 's|/usr/share/zoneinfo/||' |
+      grep -E '^(Africa|America|Antarctica|Asia|Atlantic|Australia|Europe|Indian|Pacific)/' |
       sort)
   fi
   # Add UTC at the end
@@ -332,8 +332,8 @@ _build_tz_to_country() {
   while IFS=$'\t' read -r country _ tz _; do
     [[ $country == \#* ]] && continue
     [[ -z $tz ]] && continue
-    TZ_TO_COUNTRY["$tz"]="${country,,}"  # lowercase
-  done < "$zone_tab"
+    TZ_TO_COUNTRY["$tz"]="${country,,}" # lowercase
+  done <"$zone_tab"
 }
 
 # Loads all wizard data (timezones, countries, TZ mapping)

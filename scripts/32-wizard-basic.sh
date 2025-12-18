@@ -5,221 +5,221 @@
 # =============================================================================
 
 _edit_hostname() {
-	# Hostname input loop
-	while true; do
-		_wiz_start_edit
-		_show_input_footer
+  # Hostname input loop
+  while true; do
+    _wiz_start_edit
+    _show_input_footer
 
-		local new_hostname
-		new_hostname=$(
-			_wiz_input \
-				--placeholder "e.g., pve, proxmox, node1" \
-				--value "$PVE_HOSTNAME" \
-				--prompt "Hostname: "
-		)
+    local new_hostname
+    new_hostname=$(
+      _wiz_input \
+        --placeholder "e.g., pve, proxmox, node1" \
+        --value "$PVE_HOSTNAME" \
+        --prompt "Hostname: "
+    )
 
-		# If empty (cancelled), return to menu
-		if [[ -z $new_hostname ]]; then
-			return
-		fi
+    # If empty (cancelled), return to menu
+    if [[ -z $new_hostname ]]; then
+      return
+    fi
 
-		# Validate hostname
-		if validate_hostname "$new_hostname"; then
-			PVE_HOSTNAME="$new_hostname"
-			break
-		else
-			show_validation_error "Invalid hostname format"
-		fi
-	done
+    # Validate hostname
+    if validate_hostname "$new_hostname"; then
+      PVE_HOSTNAME="$new_hostname"
+      break
+    else
+      show_validation_error "Invalid hostname format"
+    fi
+  done
 
-	# Domain input loop
-	while true; do
-		_wiz_start_edit
-		_show_input_footer
+  # Domain input loop
+  while true; do
+    _wiz_start_edit
+    _show_input_footer
 
-		local new_domain
-		new_domain=$(
-			_wiz_input \
-				--placeholder "e.g., local, example.com" \
-				--value "$DOMAIN_SUFFIX" \
-				--prompt "Domain: "
-		)
+    local new_domain
+    new_domain=$(
+      _wiz_input \
+        --placeholder "e.g., local, example.com" \
+        --value "$DOMAIN_SUFFIX" \
+        --prompt "Domain: "
+    )
 
-		# If empty (cancelled), return to menu
-		if [[ -z $new_domain ]]; then
-			return
-		fi
+    # If empty (cancelled), return to menu
+    if [[ -z $new_domain ]]; then
+      return
+    fi
 
-		# Accept any non-empty domain (validation happens later if Let's Encrypt selected)
-		DOMAIN_SUFFIX="$new_domain"
-		break
-	done
+    # Accept any non-empty domain (validation happens later if Let's Encrypt selected)
+    DOMAIN_SUFFIX="$new_domain"
+    break
+  done
 
-	FQDN="${PVE_HOSTNAME}.${DOMAIN_SUFFIX}"
+  FQDN="${PVE_HOSTNAME}.${DOMAIN_SUFFIX}"
 }
 
 _edit_email() {
-	while true; do
-		_wiz_start_edit
-		_show_input_footer
+  while true; do
+    _wiz_start_edit
+    _show_input_footer
 
-		local new_email
-		new_email=$(
-			_wiz_input \
-				--placeholder "admin@example.com" \
-				--value "$EMAIL" \
-				--prompt "Email: "
-		)
+    local new_email
+    new_email=$(
+      _wiz_input \
+        --placeholder "admin@example.com" \
+        --value "$EMAIL" \
+        --prompt "Email: "
+    )
 
-		# If empty (cancelled), return to menu
-		if [[ -z $new_email ]]; then
-			return
-		fi
+    # If empty (cancelled), return to menu
+    if [[ -z $new_email ]]; then
+      return
+    fi
 
-		# Validate email
-		if validate_email "$new_email"; then
-			EMAIL="$new_email"
-			break
-		else
-			show_validation_error "Invalid email format"
-		fi
-	done
+    # Validate email
+    if validate_email "$new_email"; then
+      EMAIL="$new_email"
+      break
+    else
+      show_validation_error "Invalid email format"
+    fi
+  done
 }
 
 _edit_password() {
-	while true; do
-		_wiz_start_edit
+  while true; do
+    _wiz_start_edit
 
-		# 1 header + 2 options (Manual/Generate)
-		_show_input_footer "filter" 3
+    # 1 header + 2 options (Manual/Generate)
+    _show_input_footer "filter" 3
 
-		local choice
-		choice=$(
-			echo -e "Manual entry\nGenerate password" | _wiz_choose \
-				--header="Password:"
-		)
+    local choice
+    choice=$(
+      echo -e "Manual entry\nGenerate password" | _wiz_choose \
+        --header="Password:"
+    )
 
-		# If user cancelled (Esc)
-		if [[ -z $choice ]]; then
-			return
-		fi
+    # If user cancelled (Esc)
+    if [[ -z $choice ]]; then
+      return
+    fi
 
-		case "$choice" in
-		"Generate password")
-			NEW_ROOT_PASSWORD=$(generate_password "$DEFAULT_PASSWORD_LENGTH")
-			PASSWORD_GENERATED="yes"
+    case "$choice" in
+      "Generate password")
+        NEW_ROOT_PASSWORD=$(generate_password "$DEFAULT_PASSWORD_LENGTH")
+        PASSWORD_GENERATED="yes"
 
-			_wiz_start_edit
-			_wiz_hide_cursor
-			_wiz_warn "Please save this password - it will be required for login"
-			_wiz_blank_line
-			echo -e "${CLR_CYAN}Generated password:${CLR_RESET} ${CLR_ORANGE}${NEW_ROOT_PASSWORD}${CLR_RESET}"
-			_wiz_blank_line
-			echo -e "${CLR_GRAY}Press any key to continue...${CLR_RESET}"
-			read -n 1 -s -r
-			break
-			;;
-		"Manual entry")
-			_wiz_start_edit
-			_show_input_footer
+        _wiz_start_edit
+        _wiz_hide_cursor
+        _wiz_warn "Please save this password - it will be required for login"
+        _wiz_blank_line
+        echo -e "${CLR_CYAN}Generated password:${CLR_RESET} ${CLR_ORANGE}${NEW_ROOT_PASSWORD}${CLR_RESET}"
+        _wiz_blank_line
+        echo -e "${CLR_GRAY}Press any key to continue...${CLR_RESET}"
+        read -n 1 -s -r
+        break
+        ;;
+      "Manual entry")
+        _wiz_start_edit
+        _show_input_footer
 
-			local new_password
-			new_password=$(
-				_wiz_input \
-					--password \
-					--placeholder "Enter password" \
-					--prompt "Password: "
-			)
+        local new_password
+        new_password=$(
+          _wiz_input \
+            --password \
+            --placeholder "Enter password" \
+            --prompt "Password: "
+        )
 
-			# If empty or cancelled, return to menu
-			if [[ -z $new_password ]]; then
-				continue
-			fi
+        # If empty or cancelled, return to menu
+        if [[ -z $new_password ]]; then
+          continue
+        fi
 
-			# Validate password
-			local password_error
-			password_error=$(get_password_error "$new_password")
-			if [[ -n $password_error ]]; then
-				show_validation_error "$password_error"
-				continue
-			fi
+        # Validate password
+        local password_error
+        password_error=$(get_password_error "$new_password")
+        if [[ -n $password_error ]]; then
+          show_validation_error "$password_error"
+          continue
+        fi
 
-			# Password is valid
-			NEW_ROOT_PASSWORD="$new_password"
-			PASSWORD_GENERATED="no"
-			break
-			;;
-		esac
-	done
+        # Password is valid
+        NEW_ROOT_PASSWORD="$new_password"
+        PASSWORD_GENERATED="no"
+        break
+        ;;
+    esac
+  done
 }
 
 _edit_timezone() {
-	_wiz_start_edit
+  _wiz_start_edit
 
-	# Footer for filter: height=5 items + 1 input line = 6 lines for component
-	_show_input_footer "filter" 6
+  # Footer for filter: height=5 items + 1 input line = 6 lines for component
+  _show_input_footer "filter" 6
 
-	local selected
-	selected=$(echo "$WIZ_TIMEZONES" | gum filter \
-		--placeholder "Type to search..." \
-		--indicator "›" \
-		--height 5 \
-		--no-show-help \
-		--prompt "Timezone: " \
-		--prompt.foreground "$HEX_CYAN" \
-		--indicator.foreground "$HEX_ORANGE" \
-		--match.foreground "$HEX_ORANGE")
+  local selected
+  selected=$(echo "$WIZ_TIMEZONES" | gum filter \
+    --placeholder "Type to search..." \
+    --indicator "›" \
+    --height 5 \
+    --no-show-help \
+    --prompt "Timezone: " \
+    --prompt.foreground "$HEX_CYAN" \
+    --indicator.foreground "$HEX_ORANGE" \
+    --match.foreground "$HEX_ORANGE")
 
-	if [[ -n $selected ]]; then
-		TIMEZONE="$selected"
-		# Auto-select country based on timezone (if mapping exists)
-		local country_code="${TZ_TO_COUNTRY[$selected]:-}"
-		if [[ -n $country_code ]]; then
-			COUNTRY="$country_code"
-		fi
-	fi
+  if [[ -n $selected ]]; then
+    TIMEZONE="$selected"
+    # Auto-select country based on timezone (if mapping exists)
+    local country_code="${TZ_TO_COUNTRY[$selected]:-}"
+    if [[ -n $country_code ]]; then
+      COUNTRY="$country_code"
+    fi
+  fi
 }
 
 _edit_keyboard() {
-	_wiz_start_edit
+  _wiz_start_edit
 
-	# Footer for filter: height=5 items + 1 input line = 6 lines for component
-	_show_input_footer "filter" 6
+  # Footer for filter: height=5 items + 1 input line = 6 lines for component
+  _show_input_footer "filter" 6
 
-	local selected
-	selected=$(echo "$WIZ_KEYBOARD_LAYOUTS" | gum filter \
-		--placeholder "Type to search..." \
-		--indicator "›" \
-		--height 5 \
-		--no-show-help \
-		--prompt "Keyboard: " \
-		--prompt.foreground "$HEX_CYAN" \
-		--indicator.foreground "$HEX_ORANGE" \
-		--match.foreground "$HEX_ORANGE")
+  local selected
+  selected=$(echo "$WIZ_KEYBOARD_LAYOUTS" | gum filter \
+    --placeholder "Type to search..." \
+    --indicator "›" \
+    --height 5 \
+    --no-show-help \
+    --prompt "Keyboard: " \
+    --prompt.foreground "$HEX_CYAN" \
+    --indicator.foreground "$HEX_ORANGE" \
+    --match.foreground "$HEX_ORANGE")
 
-	if [[ -n $selected ]]; then
-		KEYBOARD="$selected"
-	fi
+  if [[ -n $selected ]]; then
+    KEYBOARD="$selected"
+  fi
 }
 
 _edit_country() {
-	_wiz_start_edit
+  _wiz_start_edit
 
-	# Footer for filter: height=5 items + 1 input line = 6 lines for component
-	_show_input_footer "filter" 6
+  # Footer for filter: height=5 items + 1 input line = 6 lines for component
+  _show_input_footer "filter" 6
 
-	local selected
-	selected=$(echo "$WIZ_COUNTRIES" | gum filter \
-		--placeholder "Type to search..." \
-		--indicator "›" \
-		--height 5 \
-		--no-show-help \
-		--prompt "Country: " \
-		--prompt.foreground "$HEX_CYAN" \
-		--indicator.foreground "$HEX_ORANGE" \
-		--match.foreground "$HEX_ORANGE")
+  local selected
+  selected=$(echo "$WIZ_COUNTRIES" | gum filter \
+    --placeholder "Type to search..." \
+    --indicator "›" \
+    --height 5 \
+    --no-show-help \
+    --prompt "Country: " \
+    --prompt.foreground "$HEX_CYAN" \
+    --indicator.foreground "$HEX_ORANGE" \
+    --match.foreground "$HEX_ORANGE")
 
-	if [[ -n $selected ]]; then
-		COUNTRY="$selected"
-	fi
+  if [[ -n $selected ]]; then
+    COUNTRY="$selected"
+  fi
 }
