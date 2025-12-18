@@ -34,13 +34,6 @@ configure_zfs_pool() {
 
   log "INFO: Pool disks: ${vdevs[*]} (RAID: $ZFS_RAID)"
 
-  # Validate disk count vs RAID type
-  local vdev_count=${#vdevs[@]}
-  if ! validate_zfs_raid_disk_count "$ZFS_RAID" "$vdev_count"; then
-    log "ERROR: Invalid RAID configuration for ZFS pool: $ZFS_RAID with $vdev_count disk(s)"
-    return 1
-  fi
-
   # Build zpool create command based on RAID type
   local pool_cmd
   pool_cmd=$(build_zpool_command "tank" "$ZFS_RAID" "${vdevs[@]}")

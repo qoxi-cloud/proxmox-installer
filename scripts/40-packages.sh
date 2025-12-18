@@ -396,14 +396,7 @@ make_answer_toml() {
     FILESYSTEM="zfs"
     all_disks=("${ZFS_POOL_DISKS[@]}")
 
-    # Validate RAID vs disk count for all-ZFS mode
-    local disk_count=${#all_disks[@]}
-    if ! validate_zfs_raid_disk_count "$ZFS_RAID" "$disk_count"; then
-      log "ERROR: Invalid RAID configuration: $ZFS_RAID with $disk_count disk(s)"
-      exit 1
-    fi
-
-    log "All-ZFS mode: ${disk_count} disk(s) in ZFS rpool (${ZFS_RAID})"
+    log "All-ZFS mode: ${#all_disks[@]} disk(s) in ZFS rpool (${ZFS_RAID})"
   fi
 
   # Build DISK_LIST from all_disks using virtio mapping

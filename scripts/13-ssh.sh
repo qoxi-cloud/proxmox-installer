@@ -307,10 +307,11 @@ parse_ssh_key() {
 }
 
 # Validates SSH public key format (rsa, ed25519, ecdsa).
+# Basic regex check only - use validate_ssh_key_secure() for security validation.
 # Parameters:
 #   $1 - SSH public key string
 # Returns: 0 if valid format, 1 otherwise
-validate_ssh_key() {
+validate_ssh_key_format() {
   local key="$1"
   [[ $key =~ ^ssh-(rsa|ed25519|ecdsa)[[:space:]] ]]
 }

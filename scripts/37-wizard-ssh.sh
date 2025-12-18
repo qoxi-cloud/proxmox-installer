@@ -72,8 +72,8 @@ _edit_ssh_key() {
       fi
     fi
 
-    # Validate the entered key
-    if validate_ssh_key "$new_key"; then
+    # Validate the entered key (secure validation with ssh-keygen)
+    if validate_ssh_key_secure "$new_key"; then
       SSH_PUBLIC_KEY="$new_key"
       break
     else

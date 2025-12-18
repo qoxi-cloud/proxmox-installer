@@ -360,10 +360,11 @@ validate_dns_resolution() {
 
 # Validates SSH public key format and security requirements.
 # Ensures key is proper OpenSSH format and meets security standards.
+# Uses ssh-keygen for validation and checks key strength.
 # Parameters:
 #   $1 - SSH public key to validate
 # Returns: 0 if valid, 1 otherwise
-validate_ssh_key() {
+validate_ssh_key_secure() {
   local key="$1"
 
   # Validate it's a proper OpenSSH public key
