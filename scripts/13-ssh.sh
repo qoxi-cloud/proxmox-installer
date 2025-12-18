@@ -306,16 +306,6 @@ parse_ssh_key() {
   return 0
 }
 
-# Validates SSH public key format (rsa, ed25519, ecdsa).
-# Basic regex check only - use validate_ssh_key_secure() for security validation.
-# Parameters:
-#   $1 - SSH public key string
-# Returns: 0 if valid format, 1 otherwise
-validate_ssh_key_format() {
-  local key="$1"
-  [[ $key =~ ^ssh-(rsa|ed25519|ecdsa)[[:space:]] ]]
-}
-
 # Retrieves SSH public key from rescue system's authorized_keys.
 # Returns: First valid SSH public key via stdout, empty if none found
 get_rescue_ssh_key() {
