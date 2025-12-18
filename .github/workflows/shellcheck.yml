@@ -17,7 +17,5 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Lint with ShellCheck
-        # SC1003: single quote escape in ASCII art banner (intentional)
-        # SC2001: sed used for complex regex (ANSI escape codes) that bash can't handle
-        # SC2153: false positive for TIMEZONES vs TIMEZONE (both are valid variables)
-        run: shellcheck -e SC1003,SC1091,SC2001,SC2034,SC2086,SC2153 scripts/*.sh
+        # Uses .shellcheckrc for consistent configuration
+        run: shellcheck scripts/*.sh
