@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.240-pr.21"
+VERSION="2.0.241-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -5180,6 +5180,7 @@ make_templates
 configure_base_system
 configure_zfs_arc
 configure_zfs_pool
+configure_zfs_scrub
 configure_shell
 configure_system_services
 if type live_log_security_configuration &>/dev/null 2>&1;then
@@ -5338,6 +5339,27 @@ run_remote "Configuring ZFS ARC memory" "
     fi
   "
 log "INFO: ZFS ARC memory limit configured: ${arc_max_mb}MB"
+}
+configure_zfs_scrub(){
+log "INFO: Configuring ZFS scrub schedule"
+deploy_template "zfs-scrub.service" "/etc/systemd/system/zfs-scrub@.service"
+deploy_template "zfs-scrub.timer" "/etc/systemd/system/zfs-scrub@.timer"
+run_remote "Enabling ZFS scrub timers" "
+    systemctl daemon-reload
+
+    # Enable scrub timer for rpool (boot/system pool)
+    if zpool list rpool &>/dev/null; then
+      systemctl enable --now zfs-scrub@rpool.timer
+      echo 'Enabled scrub timer for rpool'
+    fi
+
+    # Enable scrub timer for tank (data pool) if exists
+    if zpool list tank &>/dev/null; then
+      systemctl enable --now zfs-scrub@tank.timer
+      echo 'Enabled scrub timer for tank'
+    fi
+  "
+log "INFO: ZFS scrub schedule configured (monthly, 1st Sunday at 2:00 AM)"
 }
 _install_prometheus(){
 run_remote "Installing prometheus-node-exporter" '
