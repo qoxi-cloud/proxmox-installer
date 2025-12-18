@@ -288,6 +288,59 @@ collect_system_info() {
     fi
     # If no gateway found, will be set to "auto" in input phase
   fi
+
+  # Load dynamic data for wizard (timezones, countries, TZ mapping)
+  _load_wizard_data
+}
+
+# Loads timezones from system (timedatectl or zoneinfo)
+# Sets: WIZ_TIMEZONES global variable
+_load_timezones() {
+  if command -v timedatectl &>/dev/null; then
+    WIZ_TIMEZONES=$(timedatectl list-timezones 2>/dev/null)
+  else
+    # Fallback: parse zoneinfo directory
+    WIZ_TIMEZONES=$(find /usr/share/zoneinfo -type f 2>/dev/null | \
+      sed 's|/usr/share/zoneinfo/||' | \
+      grep -E '^(Africa|America|Antarctica|Asia|Atlantic|Australia|Europe|Indian|Pacific)/' | \
+      sort)
+  fi
+  # Add UTC at the end
+  WIZ_TIMEZONES+=$'\nUTC'
+}
+
+# Loads country codes from iso-codes package
+# Sets: WIZ_COUNTRIES global variable
+_load_countries() {
+  local iso_file="/usr/share/iso-codes/json/iso_3166-1.json"
+  if [[ -f $iso_file ]]; then
+    # Parse JSON with grep (no jq dependency for this)
+    WIZ_COUNTRIES=$(grep -oP '"alpha_2":\s*"\K[^"]+' "$iso_file" | tr '[:upper:]' '[:lower:]' | sort)
+  else
+    # Fallback: extract from locale data
+    WIZ_COUNTRIES=$(locale -a 2>/dev/null | grep -oP '^[a-z]{2}(?=_)' | sort -u)
+  fi
+}
+
+# Builds timezone to country mapping from zone.tab
+# Sets: TZ_TO_COUNTRY associative array
+_build_tz_to_country() {
+  declare -gA TZ_TO_COUNTRY
+  local zone_tab="/usr/share/zoneinfo/zone.tab"
+  [[ -f $zone_tab ]] || return 0
+
+  while IFS=$'\t' read -r country _ tz _; do
+    [[ $country == \#* ]] && continue
+    [[ -z $tz ]] && continue
+    TZ_TO_COUNTRY["$tz"]="${country,,}"  # lowercase
+  done < "$zone_tab"
+}
+
+# Loads all wizard data (timezones, countries, TZ mapping)
+_load_wizard_data() {
+  _load_timezones
+  _load_countries
+  _build_tz_to_country
 }
 
 # Detects available drives (NVMe preferred, fallback to any disk).
