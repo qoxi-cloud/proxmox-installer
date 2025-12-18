@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.259-pr.21"
+VERSION="2.0.262-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -108,18 +108,6 @@ readonly WIZ_FIREWALL_MODES="Stealth (Tailscale only)
 Strict (SSH only)
 Standard (SSH + Web UI)
 Disabled"
-readonly WIZ_OPTIONAL_FEATURES="vnstat (network stats)
-ringbuffer (network tuning)
-apparmor (mandatory access control)
-auditd (audit logging)
-aide (file integrity)
-chkrootkit (rootkit scanner)
-lynis (security audit)
-needrestart (auto service restart)
-netdata (real-time monitoring)
-prometheus (metrics exporter)
-yazi (file manager)
-nvim (text editor)"
 BOOT_DISK=""
 ZFS_POOL_DISKS=()
 SYSTEM_UTILITIES="btop iotop ncdu tmux pigz smartmontools jq bat fastfetch sysstat nethogs ethtool"
@@ -2037,7 +2025,9 @@ tailscale)_edit_tailscale;;
 ssl)_edit_ssl;;
 shell)_edit_shell;;
 power_profile)_edit_power_profile;;
-features)_edit_features;;
+security)_edit_features_security;;
+monitoring)_edit_features_monitoring;;
+tools)_edit_features_tools;;
 api_token)_edit_api_token;;
 ssh_key)_edit_ssh_key
 esac
@@ -2313,17 +2303,27 @@ conservative)power_display="Conservative";;
 *)power_display="$CPU_GOVERNOR"
 esac
 fi
-local features_display="none"
-if [[ -n $INSTALL_VNSTAT || -n $INSTALL_APPARMOR || -n $INSTALL_AUDITD || -n $INSTALL_PROMETHEUS || -n $INSTALL_YAZI || -n $INSTALL_NVIM ]];then
-features_display=""
-[[ $INSTALL_VNSTAT == "yes" ]]&&features_display+="vnstat"
-[[ $INSTALL_APPARMOR == "yes" ]]&&features_display+="${features_display:+, }apparmor"
-[[ $INSTALL_AUDITD == "yes" ]]&&features_display+="${features_display:+, }auditd"
-[[ $INSTALL_PROMETHEUS == "yes" ]]&&features_display+="${features_display:+, }prometheus"
-[[ $INSTALL_YAZI == "yes" ]]&&features_display+="${features_display:+, }yazi"
-[[ $INSTALL_NVIM == "yes" ]]&&features_display+="${features_display:+, }nvim"
-[[ -z $features_display ]]&&features_display="none"
-fi
+local security_display="none"
+local security_items=()
+[[ $INSTALL_APPARMOR == "yes" ]]&&security_items+=("apparmor")
+[[ $INSTALL_AUDITD == "yes" ]]&&security_items+=("auditd")
+[[ $INSTALL_AIDE == "yes" ]]&&security_items+=("aide")
+[[ $INSTALL_CHKROOTKIT == "yes" ]]&&security_items+=("chkrootkit")
+[[ $INSTALL_LYNIS == "yes" ]]&&security_items+=("lynis")
+[[ $INSTALL_NEEDRESTART == "yes" ]]&&security_items+=("needrestart")
+[[ ${#security_items[@]} -gt 0 ]]&&security_display="${security_items[*]// /, }"
+local monitoring_display="none"
+local monitoring_items=()
+[[ $INSTALL_VNSTAT == "yes" ]]&&monitoring_items+=("vnstat")
+[[ $INSTALL_NETDATA == "yes" ]]&&monitoring_items+=("netdata")
+[[ $INSTALL_PROMETHEUS == "yes" ]]&&monitoring_items+=("prometheus")
+[[ ${#monitoring_items[@]} -gt 0 ]]&&monitoring_display="${monitoring_items[*]// /, }"
+local tools_display="none"
+local tools_items=()
+[[ $INSTALL_YAZI == "yes" ]]&&tools_items+=("yazi")
+[[ $INSTALL_NVIM == "yes" ]]&&tools_items+=("nvim")
+[[ $INSTALL_RINGBUFFER == "yes" ]]&&tools_items+=("ringbuffer")
+[[ ${#tools_items[@]} -gt 0 ]]&&tools_display="${tools_items[*]// /, }"
 local api_token_display=""
 if [[ -n $INSTALL_API_TOKEN ]];then
 case "$INSTALL_API_TOKEN" in
@@ -2423,7 +2423,9 @@ fi
 _add_section "Optional"
 _add_field "Shell            " "$(_wiz_fmt "$shell_display")" "shell"
 _add_field "Power profile    " "$(_wiz_fmt "$power_display")" "power_profile"
-_add_field "Features         " "$(_wiz_fmt "$features_display")" "features"
+_add_field "Security         " "$(_wiz_fmt "$security_display")" "security"
+_add_field "Monitoring       " "$(_wiz_fmt "$monitoring_display")" "monitoring"
+_add_field "Tools            " "$(_wiz_fmt "$tools_display")" "tools"
 _add_field "API Token        " "$(_wiz_fmt "$api_token_display")" "api_token"
 _add_section "SSH"
 _add_field "SSH Key          " "$(_wiz_fmt "$ssh_display")" "ssh_key"
@@ -3063,42 +3065,29 @@ case "$selected" in
 esac
 fi
 }
-_edit_features(){
+_edit_features_security(){
 _wiz_start_edit
 _wiz_description \
-"Optional features (use Space to toggle):" \
+"Security features (use Space to toggle):" \
 "" \
-"  {{cyan:vnstat}}:      Network traffic monitoring" \
-"  {{cyan:ringbuffer}}:  Network ring buffer tuning" \
 "  {{cyan:apparmor}}:    Mandatory access control (MAC)" \
 "  {{cyan:auditd}}:      Security audit logging" \
-"  {{cyan:aide}}:        File integrity monitoring" \
-"  {{cyan:chkrootkit}}:  Weekly rootkit scanning" \
-"  {{cyan:lynis}}:       Weekly security auditing" \
+"  {{cyan:aide}}:        File integrity monitoring (daily)" \
+"  {{cyan:chkrootkit}}:  Rootkit scanning (weekly)" \
+"  {{cyan:lynis}}:       Security auditing (weekly)" \
 "  {{cyan:needrestart}}: Auto-restart services after updates" \
-"  {{cyan:netdata}}:     Real-time monitoring (port 19999)" \
-"  {{cyan:prometheus}}:  Node exporter for metrics (port 9100)" \
-"  {{cyan:yazi}}:        Terminal file manager" \
-"  {{cyan:nvim}}:        Neovim as default editor" \
 ""
-_show_input_footer "checkbox" 13
+_show_input_footer "checkbox" 7
 local preselected=()
-[[ $INSTALL_VNSTAT == "yes" ]]&&preselected+=("vnstat")
-[[ $INSTALL_RINGBUFFER == "yes" ]]&&preselected+=("ringbuffer")
 [[ $INSTALL_APPARMOR == "yes" ]]&&preselected+=("apparmor")
 [[ $INSTALL_AUDITD == "yes" ]]&&preselected+=("auditd")
 [[ $INSTALL_AIDE == "yes" ]]&&preselected+=("aide")
 [[ $INSTALL_CHKROOTKIT == "yes" ]]&&preselected+=("chkrootkit")
 [[ $INSTALL_LYNIS == "yes" ]]&&preselected+=("lynis")
 [[ $INSTALL_NEEDRESTART == "yes" ]]&&preselected+=("needrestart")
-[[ $INSTALL_NETDATA == "yes" ]]&&preselected+=("netdata")
-[[ $INSTALL_PROMETHEUS == "yes" ]]&&preselected+=("prometheus")
-[[ $INSTALL_YAZI == "yes" ]]&&preselected+=("yazi")
-[[ $INSTALL_NVIM == "yes" ]]&&preselected+=("nvim")
-local selected
 local gum_args=(
 --no-limit
---header="Features:"
+--header="Security:"
 --header.foreground "$HEX_CYAN"
 --cursor "$CLR_ORANGE›$CLR_RESET "
 --cursor.foreground "$HEX_NONE"
@@ -3110,55 +3099,94 @@ local gum_args=(
 for item in "${preselected[@]}";do
 gum_args+=(--selected "$item")
 done
-selected=$(echo "$WIZ_OPTIONAL_FEATURES"|_wiz_choose "${gum_args[@]}")
-INSTALL_VNSTAT="no"
-INSTALL_RINGBUFFER="no"
+local selected
+selected=$(printf '%s\n' apparmor auditd aide chkrootkit lynis needrestart|_wiz_choose "${gum_args[@]}")
 INSTALL_APPARMOR="no"
 INSTALL_AUDITD="no"
 INSTALL_AIDE="no"
 INSTALL_CHKROOTKIT="no"
 INSTALL_LYNIS="no"
 INSTALL_NEEDRESTART="no"
+[[ $selected == *apparmor* ]]&&INSTALL_APPARMOR="yes"
+[[ $selected == *auditd* ]]&&INSTALL_AUDITD="yes"
+[[ $selected == *aide* ]]&&INSTALL_AIDE="yes"
+[[ $selected == *chkrootkit* ]]&&INSTALL_CHKROOTKIT="yes"
+[[ $selected == *lynis* ]]&&INSTALL_LYNIS="yes"
+[[ $selected == *needrestart* ]]&&INSTALL_NEEDRESTART="yes"
+}
+_edit_features_monitoring(){
+_wiz_start_edit
+_wiz_description \
+"Monitoring features (use Space to toggle):" \
+"" \
+"  {{cyan:vnstat}}:     Network traffic monitoring" \
+"  {{cyan:netdata}}:    Real-time monitoring (port 19999)" \
+"  {{cyan:prometheus}}: Node exporter for metrics (port 9100)" \
+""
+_show_input_footer "checkbox" 4
+local preselected=()
+[[ $INSTALL_VNSTAT == "yes" ]]&&preselected+=("vnstat")
+[[ $INSTALL_NETDATA == "yes" ]]&&preselected+=("netdata")
+[[ $INSTALL_PROMETHEUS == "yes" ]]&&preselected+=("prometheus")
+local gum_args=(
+--no-limit
+--header="Monitoring:"
+--header.foreground "$HEX_CYAN"
+--cursor "$CLR_ORANGE›$CLR_RESET "
+--cursor.foreground "$HEX_NONE"
+--cursor-prefix "◦ "
+--selected.foreground "$HEX_WHITE"
+--selected-prefix "$CLR_CYAN✓$CLR_RESET "
+--unselected-prefix "◦ "
+--no-show-help)
+for item in "${preselected[@]}";do
+gum_args+=(--selected "$item")
+done
+local selected
+selected=$(printf '%s\n' vnstat netdata prometheus|_wiz_choose "${gum_args[@]}")
+INSTALL_VNSTAT="no"
 INSTALL_NETDATA="no"
 INSTALL_PROMETHEUS="no"
+[[ $selected == *vnstat* ]]&&INSTALL_VNSTAT="yes"
+[[ $selected == *netdata* ]]&&INSTALL_NETDATA="yes"
+[[ $selected == *prometheus* ]]&&INSTALL_PROMETHEUS="yes"
+}
+_edit_features_tools(){
+_wiz_start_edit
+_wiz_description \
+"Tools (use Space to toggle):" \
+"" \
+"  {{cyan:yazi}}:       Terminal file manager (Catppuccin theme)" \
+"  {{cyan:nvim}}:       Neovim as default editor" \
+"  {{cyan:ringbuffer}}: Network ring buffer tuning" \
+""
+_show_input_footer "checkbox" 4
+local preselected=()
+[[ $INSTALL_YAZI == "yes" ]]&&preselected+=("yazi")
+[[ $INSTALL_NVIM == "yes" ]]&&preselected+=("nvim")
+[[ $INSTALL_RINGBUFFER == "yes" ]]&&preselected+=("ringbuffer")
+local gum_args=(
+--no-limit
+--header="Tools:"
+--header.foreground "$HEX_CYAN"
+--cursor "$CLR_ORANGE›$CLR_RESET "
+--cursor.foreground "$HEX_NONE"
+--cursor-prefix "◦ "
+--selected.foreground "$HEX_WHITE"
+--selected-prefix "$CLR_CYAN✓$CLR_RESET "
+--unselected-prefix "◦ "
+--no-show-help)
+for item in "${preselected[@]}";do
+gum_args+=(--selected "$item")
+done
+local selected
+selected=$(printf '%s\n' yazi nvim ringbuffer|_wiz_choose "${gum_args[@]}")
 INSTALL_YAZI="no"
 INSTALL_NVIM="no"
-if echo "$selected"|grep -q "vnstat";then
-INSTALL_VNSTAT="yes"
-fi
-if echo "$selected"|grep -q "ringbuffer";then
-INSTALL_RINGBUFFER="yes"
-fi
-if echo "$selected"|grep -q "apparmor";then
-INSTALL_APPARMOR="yes"
-fi
-if echo "$selected"|grep -q "auditd";then
-INSTALL_AUDITD="yes"
-fi
-if echo "$selected"|grep -q "aide";then
-INSTALL_AIDE="yes"
-fi
-if echo "$selected"|grep -q "chkrootkit";then
-INSTALL_CHKROOTKIT="yes"
-fi
-if echo "$selected"|grep -q "lynis";then
-INSTALL_LYNIS="yes"
-fi
-if echo "$selected"|grep -q "needrestart";then
-INSTALL_NEEDRESTART="yes"
-fi
-if echo "$selected"|grep -q "netdata";then
-INSTALL_NETDATA="yes"
-fi
-if echo "$selected"|grep -q "prometheus";then
-INSTALL_PROMETHEUS="yes"
-fi
-if echo "$selected"|grep -q "yazi";then
-INSTALL_YAZI="yes"
-fi
-if echo "$selected"|grep -q "nvim";then
-INSTALL_NVIM="yes"
-fi
+INSTALL_RINGBUFFER="no"
+[[ $selected == *yazi* ]]&&INSTALL_YAZI="yes"
+[[ $selected == *nvim* ]]&&INSTALL_NVIM="yes"
+[[ $selected == *ringbuffer* ]]&&INSTALL_RINGBUFFER="yes"
 }
 _edit_api_token(){
 _wiz_start_edit
@@ -3584,16 +3612,21 @@ live_log_subtask "SHA256: OK (verified by aria2c)"
 fi
 else
 log "Verifying ISO checksum"
-sha256sum pve.iso|awk '{print $1}' >/dev/null&
-if type show_progress &>/dev/null 2>&1;then
-show_progress $! "Verifying checksum" "Checksum verified"
-else
-wait $!
-fi
 local actual_checksum
-actual_checksum=$(sha256sum pve.iso|awk '{print $1}')
+(actual_checksum=$(sha256sum pve.iso|awk '{print $1}')&&echo "$actual_checksum" >/tmp/checksum_result)&
+local checksum_pid=$!
+if type show_progress &>/dev/null 2>&1;then
+show_progress $checksum_pid "Verifying checksum" "Checksum verified"
+else
+wait $checksum_pid
+fi
+actual_checksum=$(cat /tmp/checksum_result 2>/dev/null)
+rm -f /tmp/checksum_result
 if [[ $actual_checksum != "$expected_checksum" ]];then
 log "ERROR: Checksum mismatch! Expected: $expected_checksum, Got: $actual_checksum"
+if type live_log_subtask &>/dev/null 2>&1;then
+live_log_subtask "SHA256: FAILED"
+fi
 rm -f pve.iso
 exit 1
 fi
