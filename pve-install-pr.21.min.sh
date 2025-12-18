@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.249-pr.21"
+VERSION="2.0.250-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -780,6 +780,7 @@ aide (file integrity)
 chkrootkit (rootkit scanner)
 lynis (security audit)
 needrestart (auto service restart)
+netdata (real-time monitoring)
 prometheus (metrics exporter)
 yazi (file manager)
 nvim (text editor)"
@@ -849,6 +850,8 @@ INSTALL_LYNIS=""
 LYNIS_INSTALLED=""
 INSTALL_NEEDRESTART=""
 NEEDRESTART_INSTALLED=""
+INSTALL_NETDATA=""
+NETDATA_INSTALLED=""
 APPARMOR_INSTALLED=""
 INSTALL_VNSTAT=""
 VNSTAT_INSTALLED=""
@@ -3644,11 +3647,12 @@ _wiz_description \
 "  {{cyan:chkrootkit}}:  Weekly rootkit scanning" \
 "  {{cyan:lynis}}:       Weekly security auditing" \
 "  {{cyan:needrestart}}: Auto-restart services after updates" \
+"  {{cyan:netdata}}:     Real-time monitoring (port 19999)" \
 "  {{cyan:prometheus}}:  Node exporter for metrics (port 9100)" \
 "  {{cyan:yazi}}:        Terminal file manager" \
 "  {{cyan:nvim}}:        Neovim as default editor" \
 ""
-_show_input_footer "checkbox" 11
+_show_input_footer "checkbox" 12
 local preselected=()
 [[ $INSTALL_VNSTAT == "yes" ]]&&preselected+=("vnstat")
 [[ $INSTALL_APPARMOR == "yes" ]]&&preselected+=("apparmor")
@@ -3657,6 +3661,7 @@ local preselected=()
 [[ $INSTALL_CHKROOTKIT == "yes" ]]&&preselected+=("chkrootkit")
 [[ $INSTALL_LYNIS == "yes" ]]&&preselected+=("lynis")
 [[ $INSTALL_NEEDRESTART == "yes" ]]&&preselected+=("needrestart")
+[[ $INSTALL_NETDATA == "yes" ]]&&preselected+=("netdata")
 [[ $INSTALL_PROMETHEUS == "yes" ]]&&preselected+=("prometheus")
 [[ $INSTALL_YAZI == "yes" ]]&&preselected+=("yazi")
 [[ $INSTALL_NVIM == "yes" ]]&&preselected+=("nvim")
@@ -3683,6 +3688,7 @@ INSTALL_AIDE="no"
 INSTALL_CHKROOTKIT="no"
 INSTALL_LYNIS="no"
 INSTALL_NEEDRESTART="no"
+INSTALL_NETDATA="no"
 INSTALL_PROMETHEUS="no"
 INSTALL_YAZI="no"
 INSTALL_NVIM="no"
@@ -3706,6 +3712,9 @@ INSTALL_LYNIS="yes"
 fi
 if echo "$selected"|grep -q "needrestart";then
 INSTALL_NEEDRESTART="yes"
+fi
+if echo "$selected"|grep -q "netdata";then
+INSTALL_NETDATA="yes"
 fi
 if echo "$selected"|grep -q "prometheus";then
 INSTALL_PROMETHEUS="yes"
@@ -5426,6 +5435,7 @@ configure_aide
 configure_chkrootkit
 configure_lynis
 configure_needrestart
+configure_netdata
 configure_prometheus
 configure_vnstat
 configure_yazi
@@ -5597,6 +5607,40 @@ run_remote "Enabling ZFS scrub timers" "
     fi
   "
 log "INFO: ZFS scrub schedule configured (monthly, 1st Sunday at 2:00 AM)"
+}
+_install_netdata(){
+run_remote "Installing netdata" '
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -yqq netdata
+  ' "netdata installed"
+}
+_config_netdata(){
+deploy_template "netdata.conf" "/etc/netdata/netdata.conf"
+remote_exec '
+    # Enable and start netdata service
+    systemctl daemon-reload
+    systemctl enable netdata
+    systemctl restart netdata
+  '||exit 1
+}
+configure_netdata(){
+if [[ $INSTALL_NETDATA != "yes" ]];then
+log "Skipping netdata (not requested)"
+return 0
+fi
+log "Installing and configuring netdata"
+(_install_netdata||exit 1
+_config_netdata||exit 1) > \
+/dev/null 2>&1&
+show_progress $! "Installing netdata" "netdata configured"
+local exit_code=$?
+if [[ $exit_code -ne 0 ]];then
+log "WARNING: netdata setup failed"
+print_warning "netdata setup failed - continuing without it"
+return 0
+fi
+NETDATA_INSTALLED="yes"
 }
 _install_prometheus(){
 run_remote "Installing prometheus-node-exporter" '
