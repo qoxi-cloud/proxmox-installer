@@ -161,16 +161,16 @@ _download_iso_aria2c() {
   local checksum="$3"
   local max_retries="${DOWNLOAD_RETRY_COUNT:-3}"
 
-  log "Downloading with aria2c (2 connections, with retries)"
+  log "Downloading with aria2c (4 connections, with retries)"
   local aria2_args=(
-    -x 2  # 2 connections (conservative to avoid rate limiting)
-    -s 2  # 2 splits
+    -x 4  # 4 connections (optimal for Proxmox server)
+    -s 4  # 4 splits
     -k 4M # 4MB minimum split size
     --max-tries="$max_retries"
     --retry-wait=5
     --timeout=60
     --connect-timeout=30
-    --max-connection-per-server=2
+    --max-connection-per-server=4
     --allow-overwrite=true
     --auto-file-renaming=false
     -o "$output"
