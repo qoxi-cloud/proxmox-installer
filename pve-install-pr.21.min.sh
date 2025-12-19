@@ -17,7 +17,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.328-pr.21"
+readonly VERSION="2.0.329-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1618,7 +1618,7 @@ TERM_HEIGHT=$(tput lines)
 TERM_WIDTH=$(tput cols)
 }
 LOGO_HEIGHT=${BANNER_HEIGHT:-9}
-HEADER_HEIGHT=3
+HEADER_HEIGHT=2
 calculate_log_area(){
 get_terminal_dimensions
 LOG_AREA_HEIGHT=$((TERM_HEIGHT-LOGO_HEIGHT-HEADER_HEIGHT-1))
@@ -1640,8 +1640,7 @@ render_logs
 }
 render_logs(){
 restore_cursor_position
-echo ""
-echo "$CLR_CYAN Live Logs$CLR_RESET"
+echo "$CLR_CYAN Installation Progress$CLR_RESET"
 echo ""
 local start_line=0
 if ((LOG_COUNT>LOG_AREA_HEIGHT));then
@@ -1684,8 +1683,7 @@ tput smcup
 _wiz_clear
 show_banner
 save_cursor_position
-echo ""
-echo "$CLR_CYAN Live Logs$CLR_RESET"
+echo "$CLR_CYAN Installation Progress$CLR_RESET"
 echo ""
 tput civis
 trap 'tput cnorm; tput rmcup' EXIT RETURN
