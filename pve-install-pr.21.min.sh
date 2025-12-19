@@ -1694,13 +1694,6 @@ live_log_section "SSL & API Configuration"
 live_log_validation_finalization(){
 live_log_section "Validation & Finalization"
 }
-live_log_installation_complete(){
-add_log ""
-add_log "$CLR_CYAN━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$CLR_RESET"
-add_log "$CLR_CYAN✓ Installation completed successfully!$CLR_RESET"
-add_log "$CLR_CYAN━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$CLR_RESET"
-add_log ""
-}
 LIVE_LOGS_ACTIVE=false
 live_show_progress(){
 local pid=$1
@@ -5240,8 +5233,6 @@ live_log_base_configuration
 log "Step: configure_proxmox_via_ssh"
 configure_proxmox_via_ssh
 log_metric "system_config"
-live_log_installation_complete
-finish_live_installation
 metrics_finish
 INSTALL_COMPLETED=true
 log "Step: reboot_to_main_os"
