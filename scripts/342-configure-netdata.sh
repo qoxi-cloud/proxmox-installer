@@ -29,8 +29,9 @@ _config_netdata() {
     bind_to="127.0.0.1 100.*"
   fi
 
-  # Deploy netdata configuration
-  deploy_template "netdata.conf" "/etc/netdata/netdata.conf" "NETDATA_BIND_TO=${bind_to}"
+  # Apply runtime variable and deploy
+  apply_template_vars "templates/netdata.conf" "NETDATA_BIND_TO=${bind_to}"
+  remote_copy "templates/netdata.conf" "/etc/netdata/netdata.conf" || exit 1
 
   # Enable netdata to start on boot (don't start now - will activate after reboot)
   remote_exec '

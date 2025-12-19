@@ -16,8 +16,8 @@ _install_lynis() {
 # Configuration function for lynis
 _config_lynis() {
   # Deploy systemd service and timer for weekly scans
-  deploy_template "lynis-audit.service" "/etc/systemd/system/lynis-audit.service"
-  deploy_template "lynis-audit.timer" "/etc/systemd/system/lynis-audit.timer"
+  remote_copy "templates/lynis-audit.service" "/etc/systemd/system/lynis-audit.service" || exit 1
+  remote_copy "templates/lynis-audit.timer" "/etc/systemd/system/lynis-audit.timer" || exit 1
 
   remote_exec '
     # Ensure log directory exists

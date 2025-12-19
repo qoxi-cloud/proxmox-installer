@@ -35,13 +35,13 @@ End
 # ===========================================================================
 Describe "_config_needrestart()"
 It "deploys template successfully"
-MOCK_DEPLOY_TEMPLATE_RESULT=0
+MOCK_REMOTE_COPY_RESULT=0
 When call _config_needrestart
 The status should be success
 End
 
-It "fails when deploy_template fails"
-MOCK_DEPLOY_TEMPLATE_RESULT=1
+It "fails when remote_copy fails"
+MOCK_REMOTE_COPY_RESULT=1
 When call _config_needrestart
 The status should be failure
 End
@@ -71,7 +71,7 @@ It "installs when INSTALL_NEEDRESTART is yes"
 INSTALL_NEEDRESTART="yes"
 NEEDRESTART_INSTALLED=""
 MOCK_RUN_REMOTE_RESULT=0
-MOCK_DEPLOY_TEMPLATE_RESULT=0
+MOCK_REMOTE_COPY_RESULT=0
 When call configure_needrestart
 The status should be success
 The variable NEEDRESTART_INSTALLED should equal "yes"

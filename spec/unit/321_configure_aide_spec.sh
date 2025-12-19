@@ -64,7 +64,7 @@ It "installs when INSTALL_AIDE is yes"
 INSTALL_AIDE="yes"
 AIDE_INSTALLED=""
 MOCK_RUN_REMOTE_RESULT=0
-MOCK_DEPLOY_TEMPLATES_RESULT=0
+MOCK_REMOTE_COPY_RESULT=0
 MOCK_REMOTE_EXEC_RESULT=0
 When call configure_aide
 The status should be success

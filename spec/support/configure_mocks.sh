@@ -8,8 +8,7 @@
 MOCK_RUN_REMOTE_RESULT=0
 MOCK_REMOTE_EXEC_RESULT=0
 MOCK_REMOTE_COPY_RESULT=0
-MOCK_DEPLOY_TEMPLATE_RESULT=0
-MOCK_DEPLOY_TEMPLATES_RESULT=0
+MOCK_APPLY_TEMPLATE_VARS_RESULT=0
 
 # =============================================================================
 # Logging mocks
@@ -42,12 +41,8 @@ remote_copy() {
 # =============================================================================
 # Template mocks
 # =============================================================================
-deploy_template() {
-  return "$MOCK_DEPLOY_TEMPLATE_RESULT"
-}
-
-deploy_templates() {
-  return "$MOCK_DEPLOY_TEMPLATES_RESULT"
+apply_template_vars() {
+  return "$MOCK_APPLY_TEMPLATE_VARS_RESULT"
 }
 
 # =============================================================================

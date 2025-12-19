@@ -16,7 +16,7 @@ _install_needrestart() {
 # Configuration function for needrestart
 _config_needrestart() {
   # Deploy configuration for automatic restarts
-  deploy_template "needrestart.conf" "/etc/needrestart/conf.d/50-autorestart.conf"
+  remote_copy "templates/needrestart.conf" "/etc/needrestart/conf.d/50-autorestart.conf" || return 1
 }
 
 # Installs and configures needrestart for automatic service restarts.

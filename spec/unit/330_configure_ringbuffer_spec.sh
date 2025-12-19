@@ -29,7 +29,8 @@ End
 # ===========================================================================
 Describe "_config_ringbuffer()"
 It "configures successfully"
-MOCK_DEPLOY_TEMPLATE_RESULT=0
+MOCK_APPLY_TEMPLATE_VARS_RESULT=0
+MOCK_REMOTE_COPY_RESULT=0
 MOCK_REMOTE_EXEC_RESULT=0
 DEFAULT_INTERFACE="eth0"
 When call _config_ringbuffer
@@ -54,7 +55,8 @@ INSTALL_RINGBUFFER="yes"
 RINGBUFFER_INSTALLED=""
 DEFAULT_INTERFACE="eth0"
 MOCK_RUN_REMOTE_RESULT=0
-MOCK_DEPLOY_TEMPLATE_RESULT=0
+MOCK_APPLY_TEMPLATE_VARS_RESULT=0
+MOCK_REMOTE_COPY_RESULT=0
 MOCK_REMOTE_EXEC_RESULT=0
 When call configure_ringbuffer
 The status should be success

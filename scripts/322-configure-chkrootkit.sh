@@ -16,8 +16,8 @@ _install_chkrootkit() {
 # Configuration function for chkrootkit
 _config_chkrootkit() {
   # Deploy systemd service and timer for weekly scans
-  deploy_template "chkrootkit-scan.service" "/etc/systemd/system/chkrootkit-scan.service"
-  deploy_template "chkrootkit-scan.timer" "/etc/systemd/system/chkrootkit-scan.timer"
+  remote_copy "templates/chkrootkit-scan.service" "/etc/systemd/system/chkrootkit-scan.service" || exit 1
+  remote_copy "templates/chkrootkit-scan.timer" "/etc/systemd/system/chkrootkit-scan.timer" || exit 1
 
   remote_exec '
     # Ensure log directory exists

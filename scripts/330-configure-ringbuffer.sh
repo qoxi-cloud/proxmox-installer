@@ -17,8 +17,9 @@ _install_ringbuffer() {
 _config_ringbuffer() {
   local ringbuffer_interface="${DEFAULT_INTERFACE:-eth0}"
 
-  # Deploy systemd service for persistent ring buffer settings
-  deploy_template "network-ringbuffer.service" "/etc/systemd/system/network-ringbuffer.service" "RINGBUFFER_INTERFACE=${ringbuffer_interface}"
+  # Apply runtime variable and deploy
+  apply_template_vars "templates/network-ringbuffer.service" "RINGBUFFER_INTERFACE=${ringbuffer_interface}"
+  remote_copy "templates/network-ringbuffer.service" "/etc/systemd/system/network-ringbuffer.service" || exit 1
 
   remote_exec '
     # Enable service for boot (will activate after reboot)

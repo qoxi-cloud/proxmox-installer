@@ -16,8 +16,8 @@ _install_aide() {
 # Configuration function for AIDE
 _config_aide() {
   # Deploy systemd service and timer for daily checks
-  deploy_template "aide-check.service" "/etc/systemd/system/aide-check.service"
-  deploy_template "aide-check.timer" "/etc/systemd/system/aide-check.timer"
+  remote_copy "templates/aide-check.service" "/etc/systemd/system/aide-check.service" || exit 1
+  remote_copy "templates/aide-check.timer" "/etc/systemd/system/aide-check.timer" || exit 1
 
   remote_exec '
     # Initialize AIDE database (this takes a while)

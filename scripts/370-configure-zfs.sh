@@ -65,8 +65,8 @@ configure_zfs_scrub() {
   log "INFO: Configuring ZFS scrub schedule"
 
   # Deploy systemd service and timer templates
-  deploy_template "zfs-scrub.service" "/etc/systemd/system/zfs-scrub@.service"
-  deploy_template "zfs-scrub.timer" "/etc/systemd/system/zfs-scrub@.timer"
+  remote_copy "templates/zfs-scrub.service" "/etc/systemd/system/zfs-scrub@.service" || return 1
+  remote_copy "templates/zfs-scrub.timer" "/etc/systemd/system/zfs-scrub@.timer" || return 1
 
   run_remote "Enabling ZFS scrub timers" "
     systemctl daemon-reload

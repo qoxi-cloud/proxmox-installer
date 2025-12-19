@@ -29,7 +29,8 @@ End
 # ===========================================================================
 Describe "_config_vnstat()"
 It "configures successfully"
-MOCK_DEPLOY_TEMPLATE_RESULT=0
+MOCK_APPLY_TEMPLATE_VARS_RESULT=0
+MOCK_REMOTE_COPY_RESULT=0
 MOCK_REMOTE_EXEC_RESULT=0
 INTERFACE_NAME="eth0"
 When call _config_vnstat
@@ -53,7 +54,8 @@ It "installs when INSTALL_VNSTAT is yes"
 INSTALL_VNSTAT="yes"
 VNSTAT_INSTALLED=""
 MOCK_RUN_REMOTE_RESULT=0
-MOCK_DEPLOY_TEMPLATE_RESULT=0
+MOCK_APPLY_TEMPLATE_VARS_RESULT=0
+MOCK_REMOTE_COPY_RESULT=0
 MOCK_REMOTE_EXEC_RESULT=0
 When call configure_vnstat
 The status should be success

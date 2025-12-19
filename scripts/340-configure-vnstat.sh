@@ -17,9 +17,9 @@ _install_vnstat() {
 _config_vnstat() {
   local iface="${INTERFACE_NAME:-eth0}"
 
-  # Deploy vnstat configuration
-  deploy_template "vnstat.conf" "/etc/vnstat.conf" \
-    "INTERFACE_NAME=${iface}"
+  # Apply runtime variable and deploy
+  apply_template_vars "templates/vnstat.conf" "INTERFACE_NAME=${iface}"
+  remote_copy "templates/vnstat.conf" "/etc/vnstat.conf" || exit 1
 
   remote_exec "
     # Ensure database directory exists
