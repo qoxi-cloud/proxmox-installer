@@ -561,7 +561,7 @@ _wiz_render_menu() {
   _wiz_build_display_values
 
   # Start output with banner + navigation header
-  output+="\n${banner_output}\n\n$(_wiz_render_nav)\n\n"
+  output+="${banner_output}\n\n$(_wiz_render_nav)\n\n"
 
   # Reset field map
   _WIZ_FIELD_MAP=()

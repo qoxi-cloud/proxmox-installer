@@ -8,8 +8,8 @@
 BANNER_LETTER_COUNT=7
 
 # Padding to center banner relative to footer (69 chars)
-# Banner width ~51 chars, padding = (69-51)/2 = 9
-_BANNER_PAD="         "
+# Banner width ~51 chars, padding = 8 spaces
+_BANNER_PAD="        "
 
 # Display main ASCII banner
 # Usage: show_banner
