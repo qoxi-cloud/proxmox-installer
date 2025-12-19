@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.288-pr.21"
+VERSION="2.0.289-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -700,7 +700,13 @@ _SSH_SESSION_PASSFILE=$(mktemp)
 fi
 echo "$NEW_ROOT_PASSWORD" >"$_SSH_SESSION_PASSFILE"
 chmod 600 "$_SSH_SESSION_PASSFILE"
+local existing_trap
+existing_trap=$(trap -p EXIT 2>/dev/null|sed "s/trap -- '\\(.*\\)' EXIT/\\1/"||true)
+if [[ -n $existing_trap ]];then
+trap "$existing_trap; _ssh_session_cleanup" EXIT
+else
 trap '_ssh_session_cleanup' EXIT
+fi
 log "SSH session initialized"
 }
 _ssh_session_cleanup(){
@@ -765,6 +771,7 @@ exit 1) \
 &
 local wait_pid=$!
 show_progress $wait_pid "Waiting for SSH to be ready" "SSH connection established"
+return $?
 }
 remote_exec(){
 local passfile
