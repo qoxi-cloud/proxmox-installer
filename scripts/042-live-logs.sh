@@ -150,7 +150,7 @@ live_log_system_preparation() {
 }
 
 live_log_iso_download() {
-  live_log_section "Proxmox ISO Download"
+  live_log_section "Proxmox ISO Download" "first"
 }
 
 live_log_autoinstall_preparation() {
