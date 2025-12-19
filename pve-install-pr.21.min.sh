@@ -17,7 +17,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.329-pr.21"
+readonly VERSION="2.0.330-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1641,7 +1641,7 @@ render_logs
 render_logs(){
 restore_cursor_position
 echo "$CLR_CYAN Installation Progress$CLR_RESET"
-echo ""
+_wiz_blank_line
 local start_line=0
 if ((LOG_COUNT>LOG_AREA_HEIGHT));then
 start_line=$((LOG_COUNT-LOG_AREA_HEIGHT))
@@ -1684,7 +1684,7 @@ _wiz_clear
 show_banner
 save_cursor_position
 echo "$CLR_CYAN Installation Progress$CLR_RESET"
-echo ""
+_wiz_blank_line
 tput civis
 trap 'tput cnorm; tput rmcup' EXIT RETURN
 }
