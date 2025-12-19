@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.298-pr.21"
+VERSION="2.0.299-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -287,23 +287,6 @@ done
 log(){
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >>"$LOG_FILE"
 }
-log_debug(){
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] [DEBUG] $*" >>"$LOG_FILE"
-}
-log_cmd(){
-log_debug "Running: $*"
-"$@" >>"$LOG_FILE" 2>&1
-local exit_code=$?
-log_debug "Exit code: $exit_code"
-return $exit_code
-}
-run_logged(){
-log_debug "Executing: $*"
-"$@" >>"$LOG_FILE" 2>&1
-local exit_code=$?
-log_debug "Exit code: $exit_code"
-return $exit_code
-}
 INSTALL_START_TIME=""
 metrics_start(){
 INSTALL_START_TIME=$(date +%s)
@@ -492,31 +475,6 @@ printf "$CLR_RED✗$CLR_RESET %s\n" "$message"
 fi
 return $exit_code
 }
-show_timed_progress(){
-local message="$1"
-local duration="${2:-$((5+RANDOM%3))}"
-local steps=20
-local sleep_interval
-sleep_interval=$(awk "BEGIN {printf \"%.2f\", $duration / $steps}")
-local current=0
-while [[ $current -le $steps ]];do
-local pct=$((current*100/steps))
-local filled=$current
-local empty=$((steps-filled))
-local bar_filled="" bar_empty=""
-printf -v bar_filled '%*s' "$filled" ''
-bar_filled="${bar_filled// /█}"
-printf -v bar_empty '%*s' "$empty" ''
-bar_empty="${bar_empty// /░}"
-printf "\r$CLR_ORANGE%s [$CLR_ORANGE%s$CLR_RESET$CLR_GRAY%s$CLR_RESET$CLR_ORANGE] %3d%%$CLR_RESET" \
-"$message" "$bar_filled" "$bar_empty" "$pct"
-if [[ $current -lt $steps ]];then
-sleep "$sleep_interval"
-fi
-current=$((current+1))
-done
-printf "\r\e[K"
-}
 download_file(){
 local output_file="$1"
 local url="$2"
@@ -545,21 +503,6 @@ retry_count=$((retry_count+1))
 done
 log "ERROR: Failed to download $url after $max_retries attempts"
 return 1
-}
-prompt_validated(){
-local prompt="$1"
-local default="$2"
-local validator="$3"
-local error_msg="$4"
-local result=""
-while true;do
-read -r -e -p "$prompt" -i "$default" result
-if $validator "$result";then
-echo "$result"
-return 0
-fi
-print_error "$error_msg"
-done
 }
 validate_template_vars(){
 local file="$1"
@@ -867,53 +810,6 @@ if [[ -f /root/.ssh/authorized_keys ]];then
 grep -E "^ssh-(rsa|ed25519|ecdsa)" /root/.ssh/authorized_keys 2>/dev/null|head -1
 fi
 }
-retry_command(){
-local max_retries="${1:-3}"
-local delay="${2:-2}"
-shift 2
-local retry_count=0
-while [ "$retry_count" -lt "$max_retries" ];do
-if "$@";then
-return 0
-fi
-retry_count=$((retry_count+1))
-if [ "$retry_count" -lt "$max_retries" ];then
-log "Retry $retry_count/$max_retries after ${delay}s delay"
-sleep "$delay"
-delay=$((delay*2))
-fi
-done
-log "ERROR: Command failed after $max_retries attempts"
-return 1
-}
-run_with_progress(){
-local message="$1"
-local done_message="$2"
-shift 2
-"$@" >>"$LOG_FILE" 2>&1&
-local pid=$!
-show_progress "$pid" "$message" "$done_message"
-local exit_code=$?
-if [[ $exit_code -ne 0 ]];then
-log "ERROR: $message failed with exit code $exit_code"
-return 1
-fi
-return 0
-}
-run_parallel(){
-local -a pids=()
-local exit_code=0
-for cmd in "$@";do
-bash -c "$cmd"&
-pids+=($!)
-done
-for pid in "${pids[@]}";do
-if ! wait "$pid";then
-exit_code=1
-fi
-done
-return $exit_code
-}
 install_optional_feature(){
 local feature_name="$1"
 local install_var="$2"
@@ -998,106 +894,9 @@ fi
 log "Template deployed successfully: $template_name → $dest_path"
 return 0
 }
-deploy_templates(){
-local -a cmds=()
-while [[ $# -gt 0 ]];do
-local template="$1"
-local dest="$2"
-shift 2
-cmds+=("deploy_template '$template' '$dest'")
-done
-run_parallel "${cmds[@]}"
-}
-remote_apt_install(){
-local packages="$*"
-if [[ -z $packages ]];then
-log "ERROR: No packages specified for installation"
-return 1
-fi
-run_remote "Installing packages: $packages" "
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq || exit 1
-    apt-get install -yqq $packages || exit 1
-  " "Packages installed: $packages"
-}
 generate_password(){
 local length="${1:-16}"
 tr -dc 'A-Za-z0-9!@#$%^&*' </dev/urandom|head -c "$length"
-}
-read_password(){
-local prompt="$1"
-local password=""
-local char=""
-echo -n "$prompt" >&2
-while IFS= read -r -s -n1 char;do
-if [[ -z $char ]];then
-break
-fi
-if [[ $char == $'\x7f' || $char == $'\x08' ]];then
-if [[ -n $password ]];then
-password="${password%?}"
-echo -ne "\b \b" >&2
-fi
-else
-password+="$char"
-echo -n "*" >&2
-fi
-done
-echo "" >&2
-echo "$password"
-}
-validate_zfs_raid_disk_count(){
-local raid_type="$1"
-local disk_count="$2"
-case "$raid_type" in
-single)if
-[[ $disk_count -ne 1 ]]
-then
-log "WARNING: Single disk RAID expects 1 disk, have $disk_count"
-return 2
-fi
-;;
-raid0)
-;;
-raid1)if
-[[ $disk_count -lt 2 ]]
-then
-log "ERROR: RAID1 requires at least 2 disks, have $disk_count"
-return 1
-fi
-;;
-raidz1)if
-[[ $disk_count -lt 3 ]]
-then
-log "WARNING: RAIDZ1 recommended for 3+ disks, have $disk_count"
-return 2
-fi
-;;
-raidz2)if
-[[ $disk_count -lt 4 ]]
-then
-log "WARNING: RAIDZ2 recommended for 4+ disks, have $disk_count"
-return 2
-fi
-;;
-raidz3)if
-[[ $disk_count -lt 5 ]]
-then
-log "WARNING: RAIDZ3 recommended for 5+ disks, have $disk_count"
-return 2
-fi
-;;
-raid10)if
-[[ $disk_count -lt 4 ]]||[[ $((disk_count%2)) -ne 0 ]]
-then
-log "ERROR: RAID10 requires even number of disks (min 4), have $disk_count"
-return 1
-fi
-;;
-*)log "ERROR: Unknown RAID type: $raid_type"
-return 1
-esac
-return 0
 }
 create_virtio_mapping(){
 local boot_disk="$1"
@@ -1223,16 +1022,6 @@ _wiz_hide_cursor
 _wiz_error "$message"
 sleep 3
 }
-validate_with_error(){
-local validator="$1"
-local value="$2"
-local error_message="$3"
-if ! "$validator" "$value";then
-show_validation_error "$error_message"
-return 1
-fi
-return 0
-}
 validate_hostname(){
 local hostname="$1"
 [[ $hostname =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]]
@@ -1244,10 +1033,6 @@ local fqdn="$1"
 validate_email(){
 local email="$1"
 [[ $email =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]
-}
-validate_password(){
-local password="$1"
-[[ ${#password} -ge 8 ]]&&is_ascii_printable "$password"
 }
 is_ascii_printable(){
 LC_ALL=C bash -c '[[ "$1" =~ ^[[:print:]]+$ ]]' _ "$1"
@@ -1261,16 +1046,6 @@ echo "Password must be at least 8 characters long."
 elif ! is_ascii_printable "$password";then
 echo "Password contains invalid characters (Cyrillic or non-ASCII). Only Latin letters, digits, and special characters are allowed."
 fi
-}
-validate_password_with_error(){
-local password="$1"
-local error
-error=$(get_password_error "$password")
-if [[ -n $error ]];then
-print_error "$error"
-return 1
-fi
-return 0
 }
 validate_subnet(){
 local subnet="$1"
@@ -1332,35 +1107,6 @@ local gateway="$1"
 [[ -z $gateway ]]&&return 0
 [[ $gateway == "auto" ]]&&return 0
 validate_ipv6 "$gateway"
-}
-validate_ipv6_prefix_length(){
-local prefix="$1"
-[[ ! $prefix =~ ^[0-9]+$ ]]&&return 1
-[[ $prefix -lt 48 || $prefix -gt 128 ]]&&return 1
-return 0
-}
-is_ipv6_link_local(){
-local ipv6="$1"
-[[ $ipv6 =~ ^[fF][eE]8[0-9a-fA-F]: ]]||[[ $ipv6 =~ ^[fF][eE][89aAbB][0-9a-fA-F]: ]]
-}
-is_ipv6_ula(){
-local ipv6="$1"
-[[ $ipv6 =~ ^[fF][cCdD] ]]
-}
-is_ipv6_global(){
-local ipv6="$1"
-[[ $ipv6 =~ ^[23] ]]
-}
-validate_timezone(){
-local tz="$1"
-if [[ -f "/usr/share/zoneinfo/$tz" ]];then
-return 0
-fi
-if [[ $tz =~ ^[A-Za-z_]+/[A-Za-z_]+(/[A-Za-z_]+)?$ ]];then
-print_warning "Cannot verify timezone in Rescue System, format looks valid."
-return 0
-fi
-return 1
 }
 validate_dns_resolution(){
 local fqdn="$1"
@@ -1937,14 +1683,13 @@ tput rmcup
 live_log_section(){
 local section_name="$1"
 local first="${2:-}"
-[[ $first != "first" ]]&&add_log ""
 add_log "$CLR_CYAN▼ $section_name$CLR_RESET"
 }
 live_log_system_preparation(){
-live_log_section "Rescue System Preparation" "first"
+live_log_section "Rescue System Preparation"
 }
 live_log_iso_download(){
-live_log_section "Proxmox ISO Download" "first"
+live_log_section "Proxmox ISO Download"
 }
 live_log_autoinstall_preparation(){
 live_log_section "Autoinstall Preparation"
@@ -2011,10 +1756,6 @@ LOG_LINES[task_idx]="  $CLR_GRAY├─$CLR_RESET $message $CLR_RED✗$CLR_RESET"
 render_logs
 fi
 return $exit_code
-}
-live_log_task_complete(){
-local message="$1"
-add_log "  $CLR_GRAY├─$CLR_RESET $message $CLR_CYAN✓$CLR_RESET"
 }
 live_log_subtask(){
 local message="$1"
