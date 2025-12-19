@@ -56,6 +56,9 @@ file() {
 Describe "011-downloads.sh"
 Include "$SCRIPTS_DIR/011-downloads.sh"
 
+# ===========================================================================
+# download_file()
+# ===========================================================================
 Describe "download_file()"
 It "downloads file successfully"
 MOCK_WGET_FAIL=false
@@ -87,6 +90,17 @@ DOWNLOAD_RETRY_DELAY=0
 tmpfile=$(mktemp)
 When call download_file "$tmpfile" "http://example.com/file.txt"
 The status should be failure
+rm -f "$tmpfile"
+End
+
+It "handles custom retry count"
+MOCK_WGET_FAIL=false
+MOCK_WGET_EMPTY=false
+DOWNLOAD_RETRY_COUNT=5
+DOWNLOAD_RETRY_DELAY=0
+tmpfile=$(mktemp)
+When call download_file "$tmpfile" "http://example.com/file.txt"
+The status should be success
 rm -f "$tmpfile"
 End
 End

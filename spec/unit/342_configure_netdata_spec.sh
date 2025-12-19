@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2034
 # =============================================================================
-# Tests for 351-configure-nvim.sh
+# Tests for 342-configure-netdata.sh
 # =============================================================================
 
 %const SCRIPTS_DIR: "${SHELLSPEC_PROJECT_ROOT}/scripts"
@@ -10,51 +10,43 @@
 # Load shared mocks
 eval "$(cat "$SUPPORT_DIR/configure_mocks.sh")"
 
-Describe "351-configure-nvim.sh"
-Include "$SCRIPTS_DIR/351-configure-nvim.sh"
+Describe "342-configure-netdata.sh"
+Include "$SCRIPTS_DIR/342-configure-netdata.sh"
 
 # ===========================================================================
-# _install_nvim()
+# _install_netdata()
 # ===========================================================================
-Describe "_install_nvim()"
+Describe "_install_netdata()"
 It "calls run_remote successfully"
 MOCK_RUN_REMOTE_RESULT=0
-When call _install_nvim
+When call _install_netdata
 The status should be success
 End
 End
 
 # ===========================================================================
-# _config_nvim()
+# configure_netdata()
 # ===========================================================================
-Describe "_config_nvim()"
-It "configures alternatives successfully"
-MOCK_REMOTE_EXEC_RESULT=0
-When call _config_nvim
+Describe "configure_netdata()"
+It "skips when INSTALL_NETDATA is not yes"
+INSTALL_NETDATA="no"
+NETDATA_INSTALLED=""
+When call configure_netdata
 The status should be success
-End
+The variable NETDATA_INSTALLED should equal ""
 End
 
-# ===========================================================================
-# configure_nvim()
-# ===========================================================================
-Describe "configure_nvim()"
-It "skips when INSTALL_NVIM is not yes"
-INSTALL_NVIM="no"
-NVIM_INSTALLED=""
-When call configure_nvim
-The status should be success
-The variable NVIM_INSTALLED should equal ""
-End
-
-It "installs when INSTALL_NVIM is yes"
-INSTALL_NVIM="yes"
-NVIM_INSTALLED=""
+It "installs when INSTALL_NETDATA is yes"
+INSTALL_NETDATA="yes"
+NETDATA_INSTALLED=""
+INSTALL_TAILSCALE="no"
+MAIN_IPV4="1.2.3.4"
 MOCK_RUN_REMOTE_RESULT=0
+MOCK_DEPLOY_TEMPLATE_RESULT=0
 MOCK_REMOTE_EXEC_RESULT=0
-When call configure_nvim
+When call configure_netdata
 The status should be success
-The variable NVIM_INSTALLED should equal "yes"
+The variable NETDATA_INSTALLED should equal "yes"
 End
 End
 End

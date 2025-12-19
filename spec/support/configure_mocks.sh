@@ -1,24 +1,33 @@
 # shellcheck shell=bash
+# shellcheck disable=SC2034
 # =============================================================================
 # Shared mocks for configure script tests
 # =============================================================================
-# Source this file BEFORE Including the configure script under test
 
-# Mock result controls
+# Mock result controls - set these in your tests
 MOCK_RUN_REMOTE_RESULT=0
 MOCK_REMOTE_EXEC_RESULT=0
 MOCK_REMOTE_COPY_RESULT=0
 MOCK_DEPLOY_TEMPLATE_RESULT=0
+MOCK_DEPLOY_TEMPLATES_RESULT=0
 
-# Mock functions
+# =============================================================================
+# Logging mocks
+# =============================================================================
 log() { :; }
+
+# =============================================================================
+# Display mocks
+# =============================================================================
 print_warning() { :; }
 print_error() { :; }
 print_info() { :; }
 print_success() { :; }
 
+# =============================================================================
+# Remote execution mocks
+# =============================================================================
 run_remote() {
-  # $1 = description, $2 = command, $3 = success message
   return "$MOCK_RUN_REMOTE_RESULT"
 }
 
@@ -30,10 +39,20 @@ remote_copy() {
   return "$MOCK_REMOTE_COPY_RESULT"
 }
 
+# =============================================================================
+# Template mocks
+# =============================================================================
 deploy_template() {
   return "$MOCK_DEPLOY_TEMPLATE_RESULT"
 }
 
+deploy_templates() {
+  return "$MOCK_DEPLOY_TEMPLATES_RESULT"
+}
+
+# =============================================================================
+# Progress mock
+# =============================================================================
 show_progress() {
   local pid="$1"
   wait "$pid" 2>/dev/null

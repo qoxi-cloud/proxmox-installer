@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2034
 # =============================================================================
-# Tests for 351-configure-nvim.sh
+# Tests for 330-configure-ringbuffer.sh
 # =============================================================================
 
 %const SCRIPTS_DIR: "${SHELLSPEC_PROJECT_ROOT}/scripts"
@@ -10,51 +10,55 @@
 # Load shared mocks
 eval "$(cat "$SUPPORT_DIR/configure_mocks.sh")"
 
-Describe "351-configure-nvim.sh"
-Include "$SCRIPTS_DIR/351-configure-nvim.sh"
+Describe "330-configure-ringbuffer.sh"
+Include "$SCRIPTS_DIR/330-configure-ringbuffer.sh"
 
 # ===========================================================================
-# _install_nvim()
+# _install_ringbuffer()
 # ===========================================================================
-Describe "_install_nvim()"
+Describe "_install_ringbuffer()"
 It "calls run_remote successfully"
 MOCK_RUN_REMOTE_RESULT=0
-When call _install_nvim
+When call _install_ringbuffer
 The status should be success
 End
 End
 
 # ===========================================================================
-# _config_nvim()
+# _config_ringbuffer()
 # ===========================================================================
-Describe "_config_nvim()"
-It "configures alternatives successfully"
+Describe "_config_ringbuffer()"
+It "configures successfully"
+MOCK_DEPLOY_TEMPLATE_RESULT=0
 MOCK_REMOTE_EXEC_RESULT=0
-When call _config_nvim
+DEFAULT_INTERFACE="eth0"
+When call _config_ringbuffer
 The status should be success
 End
 End
 
 # ===========================================================================
-# configure_nvim()
+# configure_ringbuffer()
 # ===========================================================================
-Describe "configure_nvim()"
-It "skips when INSTALL_NVIM is not yes"
-INSTALL_NVIM="no"
-NVIM_INSTALLED=""
-When call configure_nvim
+Describe "configure_ringbuffer()"
+It "skips when INSTALL_RINGBUFFER is not yes"
+INSTALL_RINGBUFFER="no"
+RINGBUFFER_INSTALLED=""
+When call configure_ringbuffer
 The status should be success
-The variable NVIM_INSTALLED should equal ""
+The variable RINGBUFFER_INSTALLED should equal ""
 End
 
-It "installs when INSTALL_NVIM is yes"
-INSTALL_NVIM="yes"
-NVIM_INSTALLED=""
+It "installs when INSTALL_RINGBUFFER is yes"
+INSTALL_RINGBUFFER="yes"
+RINGBUFFER_INSTALLED=""
+DEFAULT_INTERFACE="eth0"
 MOCK_RUN_REMOTE_RESULT=0
+MOCK_DEPLOY_TEMPLATE_RESULT=0
 MOCK_REMOTE_EXEC_RESULT=0
-When call configure_nvim
+When call configure_ringbuffer
 The status should be success
-The variable NVIM_INSTALLED should equal "yes"
+The variable RINGBUFFER_INSTALLED should equal "yes"
 End
 End
 End

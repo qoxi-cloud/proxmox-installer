@@ -1,4 +1,5 @@
 # shellcheck shell=bash
+# shellcheck disable=SC2016
 # =============================================================================
 # Tests for 020-templates.sh
 # =============================================================================
@@ -11,6 +12,9 @@ log() { :; }
 Describe "020-templates.sh"
 Include "$SCRIPTS_DIR/020-templates.sh"
 
+# ===========================================================================
+# validate_template_vars()
+# ===========================================================================
 Describe "validate_template_vars()"
 It "passes template with no variables"
 template=$(mktemp)
@@ -32,8 +36,28 @@ It "fails for non-existent file"
 When call validate_template_vars "/nonexistent/file.txt"
 The status should be failure
 End
+
+It "passes template with substituted variables"
+template=$(mktemp)
+echo "hostname = my-server" >"$template"
+echo "ip = 192.168.1.1" >>"$template"
+When call validate_template_vars "$template"
+The status should be success
+rm -f "$template"
 End
 
+It "fails template with multiple unfilled variables"
+template=$(mktemp)
+echo "host={{HOST}} gw={{GW}}" >"$template"
+When call validate_template_vars "$template"
+The status should be failure
+rm -f "$template"
+End
+End
+
+# ===========================================================================
+# apply_template_vars()
+# ===========================================================================
 Describe "apply_template_vars()"
 It "substitutes single variable"
 template=$(mktemp)
@@ -56,6 +80,33 @@ End
 It "fails for non-existent file"
 When call apply_template_vars "/nonexistent/file.txt" "VAR=value"
 The status should be failure
+End
+
+It "handles variables with special characters in value"
+template=$(mktemp)
+echo "path={{PATH}}" >"$template"
+When call apply_template_vars "$template" "PATH=/usr/local/bin"
+The status should be success
+The contents of file "$template" should equal "path=/usr/local/bin"
+rm -f "$template"
+End
+
+It "handles empty value"
+template=$(mktemp)
+echo "var={{VAR}}" >"$template"
+When call apply_template_vars "$template" "VAR="
+The status should be success
+The contents of file "$template" should equal "var="
+rm -f "$template"
+End
+
+It "preserves unmatched variables"
+template=$(mktemp)
+echo "a={{A}} b={{B}}" >"$template"
+When call apply_template_vars "$template" "A=1"
+The status should be success
+The contents of file "$template" should equal "a=1 b={{B}}"
+rm -f "$template"
 End
 End
 End

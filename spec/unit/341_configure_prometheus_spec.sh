@@ -13,6 +13,9 @@ eval "$(cat "$SUPPORT_DIR/configure_mocks.sh")"
 Describe "341-configure-prometheus.sh"
 Include "$SCRIPTS_DIR/341-configure-prometheus.sh"
 
+# ===========================================================================
+# _install_prometheus()
+# ===========================================================================
 Describe "_install_prometheus()"
 It "calls run_remote successfully"
 MOCK_RUN_REMOTE_RESULT=0
@@ -21,6 +24,9 @@ The status should be success
 End
 End
 
+# ===========================================================================
+# _config_prometheus()
+# ===========================================================================
 Describe "_config_prometheus()"
 It "configures successfully"
 MOCK_REMOTE_EXEC_RESULT=0
@@ -30,6 +36,9 @@ The status should be success
 End
 End
 
+# ===========================================================================
+# configure_prometheus()
+# ===========================================================================
 Describe "configure_prometheus()"
 It "skips when INSTALL_PROMETHEUS is not yes"
 INSTALL_PROMETHEUS="no"

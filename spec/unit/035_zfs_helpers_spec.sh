@@ -59,6 +59,11 @@ It "defaults unknown to raid0"
 When call map_raid_to_toml "unknown"
 The output should equal "raid0"
 End
+
+It "handles empty input"
+When call map_raid_to_toml ""
+The output should equal "raid0"
+End
 End
 
 # ===========================================================================
@@ -109,6 +114,11 @@ It "fails with unknown raid type"
 When call build_zpool_command "tank" "invalid" /dev/vda /dev/vdb
 The status should be failure
 End
+
+It "handles three-disk mirror"
+When call build_zpool_command "tank" "raid1" /dev/vda /dev/vdb /dev/vdc
+The output should equal "zpool create -f tank mirror /dev/vda /dev/vdb /dev/vdc"
+End
 End
 
 # ===========================================================================
@@ -134,6 +144,11 @@ It "fails loading non-existent mapping"
 rm -f /tmp/virtio_map.env
 When call load_virtio_mapping
 The status should be failure
+End
+
+It "maps boot disk correctly"
+When call create_virtio_mapping "/dev/sda" "/dev/sdb"
+The status should be success
 End
 End
 End

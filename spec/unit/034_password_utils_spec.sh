@@ -44,5 +44,15 @@ password=$(generate_password 50)
 When call bash -c "[[ '$password' =~ ^[A-Za-z0-9!@#\$%^\&*]+$ ]]"
 The status should be success
 End
+
+It "generates minimum length 1"
+When call generate_password 1
+The length of output should equal 1
+End
+
+It "handles large length"
+When call generate_password 100
+The length of output should equal 100
+End
 End
 End

@@ -13,6 +13,9 @@ eval "$(cat "$SUPPORT_DIR/configure_mocks.sh")"
 Describe "324-configure-needrestart.sh"
 Include "$SCRIPTS_DIR/324-configure-needrestart.sh"
 
+# ===========================================================================
+# _install_needrestart()
+# ===========================================================================
 Describe "_install_needrestart()"
 It "calls run_remote successfully"
 MOCK_RUN_REMOTE_RESULT=0
@@ -27,6 +30,9 @@ The status should be failure
 End
 End
 
+# ===========================================================================
+# _config_needrestart()
+# ===========================================================================
 Describe "_config_needrestart()"
 It "deploys template successfully"
 MOCK_DEPLOY_TEMPLATE_RESULT=0
@@ -41,6 +47,9 @@ The status should be failure
 End
 End
 
+# ===========================================================================
+# configure_needrestart()
+# ===========================================================================
 Describe "configure_needrestart()"
 It "skips when INSTALL_NEEDRESTART is not yes"
 INSTALL_NEEDRESTART="no"

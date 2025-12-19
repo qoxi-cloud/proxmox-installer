@@ -39,6 +39,9 @@ remote_copy() {
 Describe "032-template-helpers.sh"
 Include "$SCRIPTS_DIR/032-template-helpers.sh"
 
+# ===========================================================================
+# deploy_template()
+# ===========================================================================
 Describe "deploy_template()"
 It "succeeds with all mocks returning 0"
 MOCK_DOWNLOAD_RESULT=0
@@ -79,6 +82,15 @@ MOCK_VALIDATE_RESULT=0
 MOCK_REMOTE_COPY_RESULT=1
 When call deploy_template "test.tmpl" "/etc/test.conf"
 The status should be failure
+End
+
+It "handles multiple variables"
+MOCK_DOWNLOAD_RESULT=0
+MOCK_APPLY_VARS_RESULT=0
+MOCK_VALIDATE_RESULT=0
+MOCK_REMOTE_COPY_RESULT=0
+When call deploy_template "test.tmpl" "/etc/test.conf" "VAR1=a" "VAR2=b" "VAR3=c"
+The status should be success
 End
 End
 End

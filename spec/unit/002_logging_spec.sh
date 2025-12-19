@@ -15,6 +15,9 @@ BeforeEach 'echo -n > "$LOG_FILE"'
 
 Include "$SCRIPTS_DIR/002-logging.sh"
 
+# ===========================================================================
+# log()
+# ===========================================================================
 Describe "log()"
 It "writes message to LOG_FILE"
 When call log "Test message"
@@ -30,8 +33,21 @@ It "handles multiple arguments"
 When call log "First" "Second" "Third"
 The contents of file "$LOG_FILE" should include "First Second Third"
 End
+
+It "handles empty message"
+When call log ""
+The status should be success
 End
 
+It "handles special characters"
+When call log "Test with \$pecial ch@rs!"
+The contents of file "$LOG_FILE" should include "Test with"
+End
+End
+
+# ===========================================================================
+# metrics_start()
+# ===========================================================================
 Describe "metrics_start()"
 It "sets INSTALL_START_TIME"
 When call metrics_start
@@ -42,8 +58,16 @@ It "logs installation_started metric"
 When call metrics_start
 The contents of file "$LOG_FILE" should include "METRIC: installation_started"
 End
+
+It "sets numeric timestamp"
+When call metrics_start
+The variable INSTALL_START_TIME should match pattern '[0-9]*'
+End
 End
 
+# ===========================================================================
+# log_metric()
+# ===========================================================================
 Describe "log_metric()"
 BeforeEach 'INSTALL_START_TIME=$(date +%s)'
 
@@ -56,8 +80,16 @@ It "includes elapsed time"
 When call log_metric "test_step"
 The contents of file "$LOG_FILE" should include "elapsed="
 End
+
+It "handles different step names"
+When call log_metric "qemu_boot"
+The contents of file "$LOG_FILE" should include "qemu_boot_completed"
+End
 End
 
+# ===========================================================================
+# metrics_finish()
+# ===========================================================================
 Describe "metrics_finish()"
 BeforeEach 'INSTALL_START_TIME=$(date +%s)'
 
@@ -69,6 +101,11 @@ End
 It "includes total_time"
 When call metrics_finish
 The contents of file "$LOG_FILE" should include "total_time="
+End
+
+It "logs METRIC prefix"
+When call metrics_finish
+The contents of file "$LOG_FILE" should include "METRIC:"
 End
 End
 End

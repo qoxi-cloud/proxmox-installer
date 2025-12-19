@@ -61,6 +61,16 @@ It "rejects hostname over 63 characters"
 When call validate_hostname "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 The status should be failure
 End
+
+It "rejects hostname with spaces"
+When call validate_hostname "my server"
+The status should be failure
+End
+
+It "rejects hostname with dots"
+When call validate_hostname "my.server"
+The status should be failure
+End
 End
 
 # ===========================================================================
@@ -77,6 +87,11 @@ When call validate_fqdn "pve.dc1.example.com"
 The status should be success
 End
 
+It "accepts two-level FQDN"
+When call validate_fqdn "server.com"
+The status should be success
+End
+
 It "rejects single label (no dots)"
 When call validate_fqdn "localhost"
 The status should be failure
@@ -84,6 +99,16 @@ End
 
 It "rejects empty FQDN"
 When call validate_fqdn ""
+The status should be failure
+End
+
+It "rejects FQDN starting with dot"
+When call validate_fqdn ".example.com"
+The status should be failure
+End
+
+It "rejects FQDN ending with dot only"
+When call validate_fqdn "example."
 The status should be failure
 End
 End
@@ -107,6 +132,16 @@ When call validate_email "user+tag@example.com"
 The status should be success
 End
 
+It "accepts email with dots in local part"
+When call validate_email "first.last@example.com"
+The status should be success
+End
+
+It "accepts email with numbers"
+When call validate_email "user123@example123.com"
+The status should be success
+End
+
 It "rejects email without @"
 When call validate_email "notanemail"
 The status should be failure
@@ -117,8 +152,18 @@ When call validate_email "user@"
 The status should be failure
 End
 
+It "rejects email without local part"
+When call validate_email "@example.com"
+The status should be failure
+End
+
 It "rejects empty email"
 When call validate_email ""
+The status should be failure
+End
+
+It "rejects email with spaces"
+When call validate_email "user @example.com"
 The status should be failure
 End
 End
@@ -138,7 +183,12 @@ The status should be success
 End
 
 It "accepts ASCII special characters"
-When call is_ascii_printable "P@ssword!"
+When call is_ascii_printable 'P@ssword!#$%'
+The status should be success
+End
+
+It "accepts spaces"
+When call is_ascii_printable "hello world"
 The status should be success
 End
 
@@ -149,6 +199,11 @@ End
 
 It "rejects empty string"
 When call is_ascii_printable ""
+The status should be failure
+End
+
+It "rejects Chinese characters"
+When call is_ascii_printable "密码"
 The status should be failure
 End
 End
@@ -176,6 +231,16 @@ It "returns empty for exactly 8 char password"
 When call get_password_error "12345678"
 The output should equal ""
 End
+
+It "returns empty for long password"
+When call get_password_error "ThisIsAVeryLongPasswordThatShouldBeValid123!"
+The output should equal ""
+End
+
+It "returns error for 7 char password"
+When call get_password_error "1234567"
+The output should equal "Password must be at least 8 characters long."
+End
 End
 
 # ===========================================================================
@@ -197,6 +262,16 @@ When call validate_subnet "0.0.0.0/0"
 The status should be success
 End
 
+It "accepts valid /16 subnet"
+When call validate_subnet "172.16.0.0/16"
+The status should be success
+End
+
+It "accepts valid /8 subnet"
+When call validate_subnet "10.0.0.0/8"
+The status should be success
+End
+
 It "rejects prefix over 32"
 When call validate_subnet "10.0.0.0/33"
 The status should be failure
@@ -214,6 +289,16 @@ End
 
 It "rejects empty string"
 When call validate_subnet ""
+The status should be failure
+End
+
+It "rejects negative prefix"
+When call validate_subnet "10.0.0.0/-1"
+The status should be failure
+End
+
+It "rejects incomplete IP"
+When call validate_subnet "10.0.0/24"
 The status should be failure
 End
 End
@@ -242,6 +327,11 @@ When call validate_ipv6 "fe80::1"
 The status should be success
 End
 
+It "accepts all zeros ::"
+When call validate_ipv6 "::"
+The status should be success
+End
+
 It "rejects multiple :: sequences"
 When call validate_ipv6 "2001::db8::1"
 The status should be failure
@@ -254,6 +344,11 @@ End
 
 It "rejects empty string"
 When call validate_ipv6 ""
+The status should be failure
+End
+
+It "rejects invalid hex characters"
+When call validate_ipv6 "2001:db8::ghij"
 The status should be failure
 End
 End
@@ -272,6 +367,11 @@ When call validate_ipv6_cidr "2001:db8::1/128"
 The status should be success
 End
 
+It "accepts valid IPv6 with /48"
+When call validate_ipv6_cidr "2001:db8::/48"
+The status should be success
+End
+
 It "rejects prefix over 128"
 When call validate_ipv6_cidr "2001:db8::1/129"
 The status should be failure
@@ -279,6 +379,11 @@ End
 
 It "rejects missing prefix"
 When call validate_ipv6_cidr "2001:db8::1"
+The status should be failure
+End
+
+It "rejects empty string"
+When call validate_ipv6_cidr ""
 The status should be failure
 End
 End
@@ -302,8 +407,18 @@ When call validate_ipv6_gateway "fe80::1"
 The status should be success
 End
 
+It "accepts full IPv6 address"
+When call validate_ipv6_gateway "2001:db8::1"
+The status should be success
+End
+
 It "rejects invalid IPv6"
 When call validate_ipv6_gateway "invalid"
+The status should be failure
+End
+
+It "rejects IPv4 address"
+When call validate_ipv6_gateway "192.168.1.1"
 The status should be failure
 End
 End
