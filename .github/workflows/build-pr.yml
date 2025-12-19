@@ -65,7 +65,7 @@ jobs:
           done
 
           # Replace version placeholder with calculated version
-          sed -i "s/^VERSION=\"[0-9]*\"$/VERSION=\"${VERSION}\"/" pve-install.sh
+          sed -i "s/^readonly VERSION=\"[0-9]*\"$/readonly VERSION=\"${VERSION}\"/" pve-install.sh
 
           # Update GITHUB_BRANCH to use PR branch for templates
           # For fork PRs, templates will come from fork's branch

@@ -62,7 +62,7 @@ jobs:
           done
 
           # Replace version placeholder with calculated version
-          sed -i "s/^VERSION=\"[0-9]*\"$/VERSION=\"${VERSION}\"/" pve-install.sh
+          sed -i "s/^readonly VERSION=\"[0-9]*\"$/readonly VERSION=\"${VERSION}\"/" pve-install.sh
 
           chmod +x pve-install.sh
 
