@@ -45,10 +45,9 @@ When call print_error "Something failed"
 The output should include "Something failed"
 End
 
-It "prints label and value when two args"
-When call print_error "Error:" "File not found"
-The output should include "Error:"
-The output should include "File not found"
+It "prints message with colon"
+When call print_error "Error: File not found"
+The output should include "Error: File not found"
 End
 End
 
@@ -76,10 +75,9 @@ When call print_info "For your information"
 The output should include "For your information"
 End
 
-It "prints label and value when two args"
-When call print_info "Version:" "1.0.0"
-The output should include "Version:"
-The output should include "1.0.0"
+It "prints message with colon"
+When call print_info "Version: 1.0.0"
+The output should include "Version: 1.0.0"
 End
 End
 End

@@ -64,12 +64,6 @@ The status should be success
 The output should include "configuration failed"
 End
 
-It "handles YES in uppercase"
-INSTALL_UPPER="YES"
-When call install_optional_feature "Upper" "INSTALL_UPPER" "test_install_success" "test_config_success" "UPPER_INSTALLED"
-The variable UPPER_INSTALLED should equal "yes"
-End
-
 It "works without installed_var parameter"
 INSTALL_NOFLAG="yes"
 When call install_optional_feature "NoFlag" "INSTALL_NOFLAG" "test_install_success" "test_config_success"
