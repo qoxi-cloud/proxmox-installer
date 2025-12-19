@@ -257,6 +257,35 @@ _wiz_fmt() {
 _WIZ_FIELD_COUNT=0
 _WIZ_FIELD_MAP=()
 
+# Check if all required configuration fields are set
+# Returns: 0 if complete, 1 if missing fields
+_wiz_config_complete() {
+  [[ -z $PVE_HOSTNAME ]] && return 1
+  [[ -z $DOMAIN_SUFFIX ]] && return 1
+  [[ -z $EMAIL ]] && return 1
+  [[ -z $NEW_ROOT_PASSWORD ]] && return 1
+  [[ -z $TIMEZONE ]] && return 1
+  [[ -z $KEYBOARD ]] && return 1
+  [[ -z $COUNTRY ]] && return 1
+  [[ -z $PROXMOX_ISO_VERSION ]] && return 1
+  [[ -z $PVE_REPO_TYPE ]] && return 1
+  [[ -z $INTERFACE_NAME ]] && return 1
+  [[ -z $BRIDGE_MODE ]] && return 1
+  [[ -z $PRIVATE_SUBNET ]] && return 1
+  [[ -z $IPV6_MODE ]] && return 1
+  [[ -z $ZFS_RAID ]] && return 1
+  [[ -z $ZFS_ARC_MODE ]] && return 1
+  [[ -z $SHELL_TYPE ]] && return 1
+  [[ -z $CPU_GOVERNOR ]] && return 1
+  [[ -z $SSH_PUBLIC_KEY ]] && return 1
+  [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]] && return 1
+  # SSL required if Tailscale disabled
+  [[ $INSTALL_TAILSCALE != "yes" && -z $SSL_TYPE ]] && return 1
+  # Stealth firewall requires Tailscale
+  [[ $FIREWALL_MODE == "stealth" && $INSTALL_TAILSCALE != "yes" ]] && return 1
+  return 0
+}
+
 # =============================================================================
 # Display value formatters
 # =============================================================================
@@ -561,16 +590,17 @@ _wiz_render_menu() {
   output+="\n"
 
   # Footer with navigation hints
-  # Left/right hints: orange when active, gray when inactive
-  local left_clr right_clr
+  # Left/right/start hints: orange when active, gray when inactive
+  local left_clr right_clr start_clr
   left_clr=$([[ $WIZ_CURRENT_SCREEN -gt 0 ]] && echo "$CLR_ORANGE" || echo "$CLR_GRAY")
   right_clr=$([[ $WIZ_CURRENT_SCREEN -lt $((${#WIZ_SCREENS[@]} - 1)) ]] && echo "$CLR_ORANGE" || echo "$CLR_GRAY")
+  start_clr=$(_wiz_config_complete && echo "$CLR_ORANGE" || echo "$CLR_GRAY")
 
   local nav_hint=""
   nav_hint+="[${left_clr}←${CLR_GRAY}] prev  "
   nav_hint+="[${CLR_ORANGE}↑↓${CLR_GRAY}] navigate  [${CLR_ORANGE}Enter${CLR_GRAY}] edit  "
   nav_hint+="[${right_clr}→${CLR_GRAY}] next  "
-  nav_hint+="[${CLR_ORANGE}S${CLR_GRAY}] start  [${CLR_ORANGE}Q${CLR_GRAY}] quit"
+  nav_hint+="[${start_clr}S${CLR_GRAY}] start  [${CLR_ORANGE}Q${CLR_GRAY}] quit"
 
   output+="${CLR_GRAY}${nav_hint}${CLR_RESET}"
 
