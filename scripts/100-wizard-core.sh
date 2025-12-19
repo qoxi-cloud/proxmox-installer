@@ -134,45 +134,38 @@ _show_input_footer() {
 # Configuration validation
 # =============================================================================
 
-# Validates that all required configuration fields are set.
+# Validates configuration and shows UI with missing fields
 # Returns: 0 if valid, 1 if missing required fields
 _validate_config() {
+  # Quick check first
+  _wiz_config_complete && return 0
+
+  # Collect missing fields for display
   local missing_fields=()
-  local missing_count=0
+  [[ -z $PVE_HOSTNAME ]] && missing_fields+=("Hostname")
+  [[ -z $DOMAIN_SUFFIX ]] && missing_fields+=("Domain")
+  [[ -z $EMAIL ]] && missing_fields+=("Email")
+  [[ -z $NEW_ROOT_PASSWORD ]] && missing_fields+=("Password")
+  [[ -z $TIMEZONE ]] && missing_fields+=("Timezone")
+  [[ -z $KEYBOARD ]] && missing_fields+=("Keyboard")
+  [[ -z $COUNTRY ]] && missing_fields+=("Country")
+  [[ -z $PROXMOX_ISO_VERSION ]] && missing_fields+=("Proxmox Version")
+  [[ -z $PVE_REPO_TYPE ]] && missing_fields+=("Repository")
+  [[ -z $INTERFACE_NAME ]] && missing_fields+=("Network Interface")
+  [[ -z $BRIDGE_MODE ]] && missing_fields+=("Bridge mode")
+  [[ -z $PRIVATE_SUBNET ]] && missing_fields+=("Private subnet")
+  [[ -z $IPV6_MODE ]] && missing_fields+=("IPv6")
+  [[ -z $ZFS_RAID ]] && missing_fields+=("ZFS mode")
+  [[ -z $ZFS_ARC_MODE ]] && missing_fields+=("ZFS ARC")
+  [[ -z $SHELL_TYPE ]] && missing_fields+=("Shell")
+  [[ -z $CPU_GOVERNOR ]] && missing_fields+=("Power profile")
+  [[ -z $SSH_PUBLIC_KEY ]] && missing_fields+=("SSH Key")
+  [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]] && missing_fields+=("Pool disks")
+  [[ $INSTALL_TAILSCALE != "yes" && -z $SSL_TYPE ]] && missing_fields+=("SSL Certificate")
+  [[ $FIREWALL_MODE == "stealth" && $INSTALL_TAILSCALE != "yes" ]] && missing_fields+=("Tailscale (required for Stealth firewall)")
 
-  # Required fields
-  [[ -z $PVE_HOSTNAME ]] && missing_fields+=("Hostname") && ((missing_count++))
-  [[ -z $DOMAIN_SUFFIX ]] && missing_fields+=("Domain") && ((missing_count++))
-  [[ -z $EMAIL ]] && missing_fields+=("Email") && ((missing_count++))
-  [[ -z $NEW_ROOT_PASSWORD ]] && missing_fields+=("Password") && ((missing_count++))
-  [[ -z $TIMEZONE ]] && missing_fields+=("Timezone") && ((missing_count++))
-  [[ -z $KEYBOARD ]] && missing_fields+=("Keyboard") && ((missing_count++))
-  [[ -z $COUNTRY ]] && missing_fields+=("Country") && ((missing_count++))
-  [[ -z $PROXMOX_ISO_VERSION ]] && missing_fields+=("Proxmox Version") && ((missing_count++))
-  [[ -z $PVE_REPO_TYPE ]] && missing_fields+=("Repository") && ((missing_count++))
-  [[ -z $INTERFACE_NAME ]] && missing_fields+=("Network Interface") && ((missing_count++))
-  [[ -z $BRIDGE_MODE ]] && missing_fields+=("Bridge mode") && ((missing_count++))
-  [[ -z $PRIVATE_SUBNET ]] && missing_fields+=("Private subnet") && ((missing_count++))
-  [[ -z $IPV6_MODE ]] && missing_fields+=("IPv6") && ((missing_count++))
-  [[ -z $ZFS_RAID ]] && missing_fields+=("ZFS mode") && ((missing_count++))
-  [[ -z $ZFS_ARC_MODE ]] && missing_fields+=("ZFS ARC") && ((missing_count++))
-  [[ -z $SHELL_TYPE ]] && missing_fields+=("Shell") && ((missing_count++))
-  [[ -z $CPU_GOVERNOR ]] && missing_fields+=("Power profile") && ((missing_count++))
-  [[ -z $SSH_PUBLIC_KEY ]] && missing_fields+=("SSH Key") && ((missing_count++))
-  [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]] && missing_fields+=("Pool disks") && ((missing_count++))
-
-  # SSL is required only if Tailscale is disabled
-  if [[ $INSTALL_TAILSCALE != "yes" ]]; then
-    [[ -z $SSL_TYPE ]] && missing_fields+=("SSL Certificate") && ((missing_count++))
-  fi
-
-  # Stealth firewall mode requires Tailscale
-  if [[ $FIREWALL_MODE == "stealth" && $INSTALL_TAILSCALE != "yes" ]]; then
-    missing_fields+=("Tailscale (required for Stealth firewall)") && ((missing_count++))
-  fi
-
-  # Show error if missing fields
-  if [[ $missing_count -gt 0 ]]; then
+  # Show error with missing fields
+  if [[ ${#missing_fields[@]} -gt 0 ]]; then
     _wiz_start_edit
     _wiz_hide_cursor
     _wiz_error --bold "Configuration incomplete!"
