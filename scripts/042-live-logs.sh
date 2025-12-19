@@ -13,8 +13,8 @@ get_terminal_dimensions() {
 # Fallback to 9 if not defined (6 ASCII art + 1 empty + 1 tagline + 1 spacing)
 LOGO_HEIGHT=${BANNER_HEIGHT:-9}
 
-# Fixed header height (empty + Live Logs title + empty line)
-HEADER_HEIGHT=3
+# Fixed header height (title + empty line)
+HEADER_HEIGHT=2
 
 # Calculate available space for logs
 calculate_log_area() {
@@ -50,8 +50,7 @@ render_logs() {
   restore_cursor_position
 
   # Print fixed header each time
-  echo ""
-  echo "${CLR_CYAN} Live Logs${CLR_RESET}"
+  echo "${CLR_CYAN} Installation Progress${CLR_RESET}"
   echo ""
 
   local start_line=0
@@ -119,8 +118,7 @@ start_live_installation() {
   save_cursor_position
 
   # Print fixed header
-  echo ""
-  echo "${CLR_CYAN} Live Logs${CLR_RESET}"
+  echo "${CLR_CYAN} Installation Progress${CLR_RESET}"
   echo ""
 
   tput civis # Hide cursor
