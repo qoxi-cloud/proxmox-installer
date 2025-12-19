@@ -298,10 +298,6 @@ LOCALE="en_US.UTF-8"
 # Timezone (default: UTC)
 TIMEZONE="UTC"
 
-# Fail2Ban installation flag (set by configure_fail2ban)
-# shellcheck disable=SC2034
-FAIL2BAN_INSTALLED=""
-
 # Auditd installation setting (yes/no, default: no)
 INSTALL_AUDITD=""
 
@@ -317,80 +313,32 @@ CPU_GOVERNOR=""
 # ZFS ARC memory allocation strategy (vm-focused, balanced, storage-focused)
 ZFS_ARC_MODE=""
 
-# Auditd installation flag (set by configure_auditd)
-# shellcheck disable=SC2034
-AUDITD_INSTALLED=""
-
-# AIDE installation flag (set by configure_aide)
-# shellcheck disable=SC2034
-AIDE_INSTALLED=""
-
 # chkrootkit scheduled scanning (yes/no, default: no)
 INSTALL_CHKROOTKIT=""
-
-# chkrootkit installation flag (set by configure_chkrootkit)
-# shellcheck disable=SC2034
-CHKROOTKIT_INSTALLED=""
 
 # Lynis security auditing (yes/no, default: no)
 INSTALL_LYNIS=""
 
-# Lynis installation flag (set by configure_lynis)
-# shellcheck disable=SC2034
-LYNIS_INSTALLED=""
-
 # needrestart automatic service restarts (yes/no, default: no)
 INSTALL_NEEDRESTART=""
-
-# needrestart installation flag (set by configure_needrestart)
-# shellcheck disable=SC2034
-NEEDRESTART_INSTALLED=""
 
 # Netdata real-time monitoring (yes/no, default: no)
 INSTALL_NETDATA=""
 
-# Netdata installation flag (set by configure_netdata)
-# shellcheck disable=SC2034
-NETDATA_INSTALLED=""
-
 # Network ring buffer tuning (yes/no, default: no)
 INSTALL_RINGBUFFER=""
-
-# Ring buffer installation flag (set by configure_ringbuffer)
-# shellcheck disable=SC2034
-RINGBUFFER_INSTALLED=""
-
-# AppArmor installation flag (set by configure_apparmor)
-# shellcheck disable=SC2034
-APPARMOR_INSTALLED=""
 
 # vnstat bandwidth monitoring setting (yes/no, default: yes)
 INSTALL_VNSTAT=""
 
-# vnstat installation flag (set by configure_vnstat)
-# shellcheck disable=SC2034
-VNSTAT_INSTALLED=""
-
 # Prometheus node exporter installation setting (yes/no, default: no)
 INSTALL_PROMETHEUS=""
-
-# Prometheus installation flag (set by configure_prometheus)
-# shellcheck disable=SC2034
-PROMETHEUS_INSTALLED=""
 
 # Yazi file manager installation setting (yes/no, default: no)
 INSTALL_YAZI=""
 
-# Yazi installation flag (set by configure_yazi)
-# shellcheck disable=SC2034
-YAZI_INSTALLED=""
-
 # Neovim installation setting (yes/no, default: no)
 INSTALL_NVIM=""
-
-# Neovim installation flag (set by configure_nvim)
-# shellcheck disable=SC2034
-NVIM_INSTALLED=""
 
 # Unattended upgrades setting (yes/no, default: yes)
 INSTALL_UNATTENDED_UPGRADES=""
@@ -418,7 +366,3 @@ API_TOKEN_ID=""
 #   - standard: allows SSH + Proxmox Web UI (8006)
 INSTALL_FIREWALL=""
 FIREWALL_MODE=""
-
-# Firewall installation flag (set by configure_firewall)
-# shellcheck disable=SC2034
-FIREWALL_INSTALLED=""

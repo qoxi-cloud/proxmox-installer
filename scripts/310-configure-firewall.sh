@@ -241,7 +241,6 @@ $nat_rules")
 #   - stealth: blocks ALL incoming (only tailscale/bridges/loopback)
 #   - strict: allows SSH only (port 22)
 #   - standard: allows SSH + Proxmox Web UI (8006)
-# Side effects: Sets FIREWALL_INSTALLED global, installs and configures nftables
 configure_firewall() {
   # Skip if firewall is disabled
   if [[ $INSTALL_FIREWALL != "yes" ]]; then
@@ -274,6 +273,4 @@ configure_firewall() {
     return 0 # Non-fatal error
   fi
 
-  # Set flag for summary display
-  FIREWALL_INSTALLED="yes"
 }

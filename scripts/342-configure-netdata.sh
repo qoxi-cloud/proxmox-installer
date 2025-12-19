@@ -44,7 +44,6 @@ _config_netdata() {
 # Provides web dashboard accessible on port 19999.
 # If Tailscale enabled: accessible via Tailscale network
 # Otherwise: localhost only (use reverse proxy for external access)
-# Side effects: Sets NETDATA_INSTALLED global, installs netdata package
 configure_netdata() {
   # Skip if netdata is not requested
   if [[ $INSTALL_NETDATA != "yes" ]]; then
@@ -68,7 +67,4 @@ configure_netdata() {
     return 0 # Non-fatal error
   fi
 
-  # Set flag for summary display
-  # shellcheck disable=SC2034
-  NETDATA_INSTALLED="yes"
 }

@@ -30,15 +30,12 @@ End
 Describe "configure_netdata()"
 It "skips when INSTALL_NETDATA is not yes"
 INSTALL_NETDATA="no"
-NETDATA_INSTALLED=""
 When call configure_netdata
 The status should be success
-The variable NETDATA_INSTALLED should equal ""
 End
 
 It "installs when INSTALL_NETDATA is yes"
 INSTALL_NETDATA="yes"
-NETDATA_INSTALLED=""
 INSTALL_TAILSCALE="no"
 MAIN_IPV4="1.2.3.4"
 MOCK_RUN_REMOTE_RESULT=0
@@ -47,7 +44,6 @@ MOCK_REMOTE_COPY_RESULT=0
 MOCK_REMOTE_EXEC_RESULT=0
 When call configure_netdata
 The status should be success
-The variable NETDATA_INSTALLED should equal "yes"
 End
 End
 End

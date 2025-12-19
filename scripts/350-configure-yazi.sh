@@ -36,7 +36,6 @@ _config_yazi() {
 
 # Installs and configures yazi file manager with Catppuccin theme.
 # Deploys custom theme configuration.
-# Side effects: Sets YAZI_INSTALLED global, installs yazi package
 configure_yazi() {
   # Skip if yazi installation is not requested
   if [[ $INSTALL_YAZI != "yes" ]]; then
@@ -60,7 +59,4 @@ configure_yazi() {
     return 0 # Non-fatal error
   fi
 
-  # Set flag for summary display
-  # shellcheck disable=SC2034
-  YAZI_INSTALLED="yes"
 }

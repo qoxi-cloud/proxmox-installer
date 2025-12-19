@@ -126,22 +126,3 @@ run_parallel_group() {
 
   return 0
 }
-
-# Collects function names based on enabled features.
-# Parameters:
-#   $1 - Variable name to store result array
-#   $@ - Pairs of "INSTALL_VAR:function_name"
-# Example: collect_enabled_funcs result_array "INSTALL_FIREWALL:_config_nftables" "INSTALL_AIDE:_config_aide"
-collect_enabled_funcs() {
-  local -n result_arr=$1
-  shift
-  result_arr=()
-
-  for pair in "$@"; do
-    local var="${pair%%:*}"
-    local func="${pair#*:}"
-    if [[ ${!var} == "yes" ]]; then
-      result_arr+=("$func")
-    fi
-  done
-}
