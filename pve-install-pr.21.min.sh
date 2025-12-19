@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.284-pr.21"
+VERSION="2.0.285-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1909,7 +1909,7 @@ live_log_system_preparation(){
 live_log_section "Rescue System Preparation" "first"
 }
 live_log_iso_download(){
-live_log_section "Proxmox ISO Download"
+live_log_section "Proxmox ISO Download" "first"
 }
 live_log_autoinstall_preparation(){
 live_log_section "Autoinstall Preparation"
