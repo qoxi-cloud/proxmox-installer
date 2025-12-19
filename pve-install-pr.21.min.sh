@@ -2,6 +2,7 @@
 cd /root||exit 1
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
+readonly CLR_BOLD=$'\033[1m'
 readonly CLR_RED=$'\033[1;31m'
 readonly CLR_CYAN=$'\033[38;2;0;177;255m'
 readonly CLR_YELLOW=$'\033[1;33m'
@@ -183,7 +184,6 @@ INSTALL_TAILSCALE=""
 TAILSCALE_AUTH_KEY=""
 TAILSCALE_SSH=""
 TAILSCALE_WEBUI=""
-TAILSCALE_DISABLE_SSH=""
 BRIDGE_MTU=""
 INSTALL_API_TOKEN=""
 API_TOKEN_NAME="automation"
@@ -848,38 +848,6 @@ fi
 declare -g "$installed_var=yes"
 return 0
 }
-deploy_template(){
-local template_name="$1"
-local dest_path="$2"
-shift 2
-local -a vars=("$@")
-local local_template="./templates/$template_name"
-if ! download_template "$local_template";then
-log "ERROR: Failed to download template: $template_name"
-return 1
-fi
-if [[ ${#vars[@]} -gt 0 ]];then
-if ! apply_template_vars "$local_template" "${vars[@]}";then
-log "ERROR: Failed to apply variables to template: $template_name"
-return 1
-fi
-else
-if ! apply_common_template_vars "$local_template";then
-log "ERROR: Failed to apply common variables to template: $template_name"
-return 1
-fi
-fi
-if ! validate_template_vars "$local_template";then
-log "ERROR: Template has unfilled variables: $template_name"
-return 1
-fi
-if ! remote_copy "$local_template" "$dest_path";then
-log "ERROR: Failed to copy template to remote: $template_name → $dest_path"
-return 1
-fi
-log "Template deployed successfully: $template_name → $dest_path"
-return 0
-}
 generate_password(){
 local length="${1:-16}"
 tr -dc 'A-Za-z0-9!@#$%^&*' </dev/urandom|head -c "$length"
@@ -1197,6 +1165,14 @@ return 1
 fi
 log "INFO: Disk space OK: ${available_mb}MB available (${min_required_mb}MB required)"
 return 0
+}
+validate_tailscale_key(){
+local key="$1"
+[[ -z $key ]]&&return 1
+if [[ $key =~ ^tskey-(auth|client)-[a-zA-Z0-9]+-[a-zA-Z0-9]+$ ]];then
+return 0
+fi
+return 1
 }
 collect_system_info(){
 local errors=0
@@ -2834,17 +2810,24 @@ local selected
 selected=$(echo -e "Disabled\nEnabled"|_wiz_choose \
 --header="Tailscale:")
 case "$selected" in
-Enabled)_wiz_input_screen "Enter Tailscale authentication key"
-local auth_key
+Enabled)local auth_key=""
+while true;do
+_wiz_start_edit
+_show_input_footer
 auth_key=$(_wiz_input \
 --placeholder "tskey-auth-..." \
 --prompt "Auth Key: ")
+[[ -z $auth_key ]]&&break
+if validate_tailscale_key "$auth_key";then
+break
+fi
+show_validation_error "Invalid key format. Expected: tskey-auth-xxx-xxx"
+done
 if [[ -n $auth_key ]];then
 INSTALL_TAILSCALE="yes"
 TAILSCALE_AUTH_KEY="$auth_key"
 TAILSCALE_SSH="yes"
 TAILSCALE_WEBUI="yes"
-TAILSCALE_DISABLE_SSH="yes"
 SSL_TYPE="self-signed"
 if [[ -z $INSTALL_FIREWALL ]];then
 INSTALL_FIREWALL="yes"
@@ -2855,7 +2838,6 @@ INSTALL_TAILSCALE="no"
 TAILSCALE_AUTH_KEY=""
 TAILSCALE_SSH=""
 TAILSCALE_WEBUI=""
-TAILSCALE_DISABLE_SSH=""
 SSL_TYPE=""
 fi
 ;;
@@ -2863,7 +2845,6 @@ Disabled)INSTALL_TAILSCALE="no"
 TAILSCALE_AUTH_KEY=""
 TAILSCALE_SSH=""
 TAILSCALE_WEBUI=""
-TAILSCALE_DISABLE_SSH=""
 SSL_TYPE=""
 if [[ -z $INSTALL_FIREWALL ]];then
 INSTALL_FIREWALL="yes"
@@ -3994,34 +3975,47 @@ local -a template_list=(
 "./templates/debian.sources:debian.sources"
 "./templates/proxmox.sources:$proxmox_sources_template"
 "./templates/sshd_config:sshd_config"
-"./templates/zshrc:zshrc"
-"./templates/p10k.zsh:p10k.zsh"
-"./templates/chrony:chrony"
-"./templates/50unattended-upgrades:50unattended-upgrades"
-"./templates/20auto-upgrades:20auto-upgrades"
-"./templates/interfaces:$interfaces_template"
 "./templates/resolv.conf:resolv.conf"
-"./templates/configure-zfs-arc.sh:configure-zfs-arc.sh"
+"./templates/interfaces:$interfaces_template"
 "./templates/locale.sh:locale.sh"
 "./templates/default-locale:default-locale"
 "./templates/environment:environment"
+"./templates/zshrc:zshrc"
+"./templates/p10k.zsh:p10k.zsh"
+"./templates/fastfetch.sh:fastfetch.sh"
+"./templates/bat-config:bat-config"
+"./templates/chrony:chrony"
+"./templates/50unattended-upgrades:50unattended-upgrades"
+"./templates/20auto-upgrades:20auto-upgrades"
 "./templates/cpufrequtils:cpufrequtils"
+"./templates/60-io-scheduler.rules:60-io-scheduler.rules"
 "./templates/remove-subscription-nag.sh:remove-subscription-nag.sh"
+"./templates/configure-zfs-arc.sh:configure-zfs-arc.sh"
+"./templates/zfs-scrub.service:zfs-scrub.service"
+"./templates/zfs-scrub.timer:zfs-scrub.timer"
 "./templates/letsencrypt-deploy-hook.sh:letsencrypt-deploy-hook.sh"
 "./templates/letsencrypt-firstboot.sh:letsencrypt-firstboot.sh"
 "./templates/letsencrypt-firstboot.service:letsencrypt-firstboot.service"
-"./templates/fastfetch.sh:fastfetch.sh"
-"./templates/bat-config:bat-config"
-"./templates/fail2ban-jail.local:fail2ban-jail.local"
-"./templates/fail2ban-proxmox.conf:fail2ban-proxmox.conf"
-"./templates/auditd-rules:auditd-rules"
-"./templates/apparmor-grub.cfg:apparmor-grub.cfg"
 "./templates/disable-openssh.service:disable-openssh.service"
 "./templates/nftables.conf:nftables.conf"
-"./templates/yazi-theme.toml:yazi-theme.toml"
+"./templates/fail2ban-jail.local:fail2ban-jail.local"
+"./templates/fail2ban-proxmox.conf:fail2ban-proxmox.conf"
+"./templates/apparmor-grub.cfg:apparmor-grub.cfg"
+"./templates/auditd-rules:auditd-rules"
+"./templates/aide-check.service:aide-check.service"
+"./templates/aide-check.timer:aide-check.timer"
+"./templates/chkrootkit-scan.service:chkrootkit-scan.service"
+"./templates/chkrootkit-scan.timer:chkrootkit-scan.timer"
+"./templates/lynis-audit.service:lynis-audit.service"
+"./templates/lynis-audit.timer:lynis-audit.timer"
+"./templates/needrestart.conf:needrestart.conf"
+"./templates/vnstat.conf:vnstat.conf"
+"./templates/netdata.conf:netdata.conf"
 "./templates/prometheus-node-exporter:prometheus-node-exporter"
 "./templates/proxmox-metrics.sh:proxmox-metrics.sh"
-"./templates/proxmox-metrics.cron:proxmox-metrics.cron")
+"./templates/proxmox-metrics.cron:proxmox-metrics.cron"
+"./templates/yazi-theme.toml:yazi-theme.toml"
+"./templates/network-ringbuffer.service:network-ringbuffer.service")
 (_download_templates_parallel "${template_list[@]}"||exit 1) > \
 /dev/null 2>&1&
 if ! show_progress $! "Downloading template files";then
@@ -4283,8 +4277,8 @@ if [[ $TAILSCALE_WEBUI == "yes" ]];then
 remote_exec "tailscale serve --bg --https=443 https://127.0.0.1:8006" >/dev/null 2>&1&
 show_progress $! "Configuring Tailscale Serve" "Proxmox Web UI available via Tailscale Serve"
 fi
-if [[ $TAILSCALE_SSH == "yes" && $TAILSCALE_DISABLE_SSH == "yes" ]];then
-log "Deploying disable-openssh.service (TAILSCALE_SSH=$TAILSCALE_SSH, TAILSCALE_DISABLE_SSH=$TAILSCALE_DISABLE_SSH)"
+if [[ ${FIREWALL_MODE:-standard} == "stealth" ]];then
+log "Deploying disable-openssh.service (FIREWALL_MODE=$FIREWALL_MODE)"
 (log "Using pre-downloaded disable-openssh.service, size: $(wc -c <./templates/disable-openssh.service 2>/dev/null||echo 'failed')"
 remote_copy "templates/disable-openssh.service" "/etc/systemd/system/disable-openssh.service"||exit 1
 log "Copied disable-openssh.service to VM"
@@ -4293,7 +4287,7 @@ log "Enabled disable-openssh.service") \
 &
 show_progress $! "Configuring OpenSSH disable on boot" "OpenSSH disable configured"
 else
-log "Skipping disable-openssh.service (TAILSCALE_SSH=$TAILSCALE_SSH, TAILSCALE_DISABLE_SSH=$TAILSCALE_DISABLE_SSH)"
+log "Skipping disable-openssh.service (FIREWALL_MODE=${FIREWALL_MODE:-standard})"
 fi
 else
 TAILSCALE_IP="not authenticated"
@@ -4598,8 +4592,8 @@ run_remote "Installing AIDE" '
   ' "AIDE installed"
 }
 _config_aide(){
-deploy_template "aide-check.service" "/etc/systemd/system/aide-check.service"
-deploy_template "aide-check.timer" "/etc/systemd/system/aide-check.timer"
+remote_copy "templates/aide-check.service" "/etc/systemd/system/aide-check.service"||exit 1
+remote_copy "templates/aide-check.timer" "/etc/systemd/system/aide-check.timer"||exit 1
 remote_exec '
     # Initialize AIDE database (this takes a while)
     echo "Initializing AIDE database (this may take several minutes)..."
@@ -4641,8 +4635,8 @@ run_remote "Installing chkrootkit" '
   ' "chkrootkit installed"
 }
 _config_chkrootkit(){
-deploy_template "chkrootkit-scan.service" "/etc/systemd/system/chkrootkit-scan.service"
-deploy_template "chkrootkit-scan.timer" "/etc/systemd/system/chkrootkit-scan.timer"
+remote_copy "templates/chkrootkit-scan.service" "/etc/systemd/system/chkrootkit-scan.service"||exit 1
+remote_copy "templates/chkrootkit-scan.timer" "/etc/systemd/system/chkrootkit-scan.timer"||exit 1
 remote_exec '
     # Ensure log directory exists
     mkdir -p /var/log/chkrootkit
@@ -4678,8 +4672,8 @@ run_remote "Installing lynis" '
   ' "lynis installed"
 }
 _config_lynis(){
-deploy_template "lynis-audit.service" "/etc/systemd/system/lynis-audit.service"
-deploy_template "lynis-audit.timer" "/etc/systemd/system/lynis-audit.timer"
+remote_copy "templates/lynis-audit.service" "/etc/systemd/system/lynis-audit.service"||exit 1
+remote_copy "templates/lynis-audit.timer" "/etc/systemd/system/lynis-audit.timer"||exit 1
 remote_exec '
     # Ensure log directory exists
     mkdir -p /var/log/lynis
@@ -4715,7 +4709,7 @@ run_remote "Installing needrestart" '
   ' "needrestart installed"
 }
 _config_needrestart(){
-deploy_template "needrestart.conf" "/etc/needrestart/conf.d/50-autorestart.conf"
+remote_copy "templates/needrestart.conf" "/etc/needrestart/conf.d/50-autorestart.conf"||return 1
 }
 configure_needrestart(){
 if [[ $INSTALL_NEEDRESTART != "yes" ]];then
@@ -4744,7 +4738,8 @@ run_remote "Installing ethtool" '
 }
 _config_ringbuffer(){
 local ringbuffer_interface="${DEFAULT_INTERFACE:-eth0}"
-deploy_template "network-ringbuffer.service" "/etc/systemd/system/network-ringbuffer.service" "RINGBUFFER_INTERFACE=$ringbuffer_interface"
+apply_template_vars "templates/network-ringbuffer.service" "RINGBUFFER_INTERFACE=$ringbuffer_interface"
+remote_copy "templates/network-ringbuffer.service" "/etc/systemd/system/network-ringbuffer.service"||exit 1
 remote_exec '
     # Enable service for boot (will activate after reboot)
     systemctl daemon-reload
@@ -4778,8 +4773,8 @@ run_remote "Installing vnstat" '
 }
 _config_vnstat(){
 local iface="${INTERFACE_NAME:-eth0}"
-deploy_template "vnstat.conf" "/etc/vnstat.conf" \
-"INTERFACE_NAME=$iface"
+apply_template_vars "templates/vnstat.conf" "INTERFACE_NAME=$iface"
+remote_copy "templates/vnstat.conf" "/etc/vnstat.conf"||exit 1
 remote_exec "
     # Ensure database directory exists
     mkdir -p /var/lib/vnstat
@@ -4882,7 +4877,8 @@ local bind_to="127.0.0.1"
 if [[ $INSTALL_TAILSCALE == "yes" ]];then
 bind_to="127.0.0.1 100.*"
 fi
-deploy_template "netdata.conf" "/etc/netdata/netdata.conf" "NETDATA_BIND_TO=$bind_to"
+apply_template_vars "templates/netdata.conf" "NETDATA_BIND_TO=$bind_to"
+remote_copy "templates/netdata.conf" "/etc/netdata/netdata.conf"||exit 1
 remote_exec '
     systemctl daemon-reload
     systemctl enable netdata
@@ -5108,8 +5104,8 @@ log "INFO: ZFS ARC memory limit configured: ${arc_max_mb}MB"
 }
 configure_zfs_scrub(){
 log "INFO: Configuring ZFS scrub schedule"
-deploy_template "zfs-scrub.service" "/etc/systemd/system/zfs-scrub@.service"
-deploy_template "zfs-scrub.timer" "/etc/systemd/system/zfs-scrub@.timer"
+remote_copy "templates/zfs-scrub.service" "/etc/systemd/system/zfs-scrub@.service"||return 1
+remote_copy "templates/zfs-scrub.timer" "/etc/systemd/system/zfs-scrub@.timer"||return 1
 run_remote "Enabling ZFS scrub timers" "
     systemctl daemon-reload
 
@@ -5310,22 +5306,54 @@ configure_ssh_hardening
 validate_installation
 finalize_vm
 }
+_print_field(){
+local label="$1" value="$2" note="${3:-}"
+printf "$CLR_CYAN  %-9s$CLR_RESET %s" "$label:" "$value"
+[[ -n $note ]]&&printf " $CLR_GRAY%s$CLR_RESET" "$note"
+printf "\n"
+}
+_print_header(){
+echo "$CLR_CYAN$CLR_BOLD$1$CLR_RESET"
+}
 _show_credentials_info(){
 echo ""
 echo "$CLR_YELLOW${CLR_BOLD}Access Credentials$CLR_RESET $CLR_RED(SAVE THIS!)$CLR_RESET"
 echo ""
-echo "$CLR_CYAN${CLR_BOLD}Root Access:$CLR_RESET"
-echo "$CLR_CYAN  Hostname:$CLR_RESET  $PVE_HOSTNAME.$DOMAIN_SUFFIX"
-echo "$CLR_CYAN  Username:$CLR_RESET  root"
-echo "$CLR_CYAN  Password:$CLR_RESET  $NEW_ROOT_PASSWORD"
-echo "$CLR_CYAN  Web UI:$CLR_RESET    https://$MAIN_IPV4:8006"
+_print_header "Root Access:"
+_print_field "Hostname" "$PVE_HOSTNAME.$DOMAIN_SUFFIX"
+_print_field "Username" "root"
+_print_field "Password" "$NEW_ROOT_PASSWORD"
+local has_tailscale=""
+[[ -n $TAILSCALE_IP && $TAILSCALE_IP != "pending" && $TAILSCALE_IP != "not authenticated" ]]&&has_tailscale="yes"
+case "${FIREWALL_MODE:-standard}" in
+stealth)if
+[[ $has_tailscale == "yes" ]]
+then
+_print_field "Web UI" "https://$TAILSCALE_IP:8006" "(Tailscale only)"
+else
+_print_field "Web UI" "${CLR_YELLOW}blocked$CLR_RESET" "(stealth mode, no Tailscale)"
+fi
+;;
+strict)if
+[[ $has_tailscale == "yes" ]]
+then
+_print_field "Web UI" "https://$TAILSCALE_IP:8006" "(Tailscale only)"
+else
+_print_field "Web UI" "${CLR_YELLOW}blocked$CLR_RESET" "(strict mode blocks :8006)"
+fi
+;;
+*)_print_field "Web UI" "https://$MAIN_IPV4:8006"
+if [[ $has_tailscale == "yes" ]];then
+_print_field "" "https://$TAILSCALE_IP:8006" "(Tailscale)"
+fi
+esac
 if [[ -f /tmp/pve-install-api-token.env ]];then
 source /tmp/pve-install-api-token.env
 if [[ -n $API_TOKEN_VALUE ]];then
 echo ""
-echo "$CLR_CYAN${CLR_BOLD}API Token:$CLR_RESET"
-echo "$CLR_CYAN  Token ID:$CLR_RESET  $API_TOKEN_ID"
-echo "$CLR_CYAN  Secret:$CLR_RESET    $API_TOKEN_VALUE"
+_print_header "API Token:"
+_print_field "Token ID" "$API_TOKEN_ID"
+_print_field "Secret" "$API_TOKEN_VALUE"
 fi
 fi
 echo ""
