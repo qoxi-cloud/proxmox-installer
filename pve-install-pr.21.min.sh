@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.274-pr.21"
+VERSION="2.0.275-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -4490,7 +4490,14 @@ log "  Bridge mode: $BRIDGE_MODE"
 log "  Firewall mode: $FIREWALL_MODE"
 log "  Private subnet: ${PRIVATE_SUBNET:-N/A}"
 remote_copy "templates/nftables.conf.generated" "/etc/nftables.conf"||exit 1
+remote_exec "nft -c -f /etc/nftables.conf"||{
+log "ERROR: nftables config syntax validation failed"
+exit 1
+}
 remote_exec "systemctl enable nftables && systemctl restart nftables"||exit 1
+if [[ $FIREWALL_MODE == "stealth" ]];then
+log "Stealth mode enabled - SSH blocked, skipping remote verification (config pre-validated)"
+else
 sleep 2
 local retry_count=0
 local max_retries=5
@@ -4503,6 +4510,7 @@ fi
 log "Waiting for nftables rules to load (attempt $retry_count/$max_retries)..."
 sleep 2
 done
+fi
 rm -f "./templates/nftables.conf.generated"
 }
 configure_firewall(){
