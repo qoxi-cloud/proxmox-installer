@@ -161,25 +161,24 @@ live_log_proxmox_installation() {
   live_log_section "Proxmox Installation"
 }
 
-live_log_system_configuration() {
-  live_log_section "System Configuration"
+live_log_base_configuration() {
+  live_log_section "Base Configuration"
 }
 
-# Security Configuration section - shown conditionally
+live_log_storage_configuration() {
+  live_log_section "Storage Configuration"
+}
+
 live_log_security_configuration() {
-  # Only show if any security feature is being configured
-  if [[ ${INSTALL_TAILSCALE:-} == "yes" ]] || [[ ${INSTALL_APPARMOR:-} == "yes" ]] || [[ ${FAIL2BAN_INSTALLED:-} == "yes" ]] || [[ ${INSTALL_AUDITD:-} == "yes" ]]; then
-    add_log ""
-    add_log "${CLR_CYAN}▼ Security Configuration${CLR_RESET}"
-  fi
+  live_log_section "Security Configuration"
 }
 
-# SSL Configuration section - shown conditionally
+live_log_monitoring_configuration() {
+  live_log_section "Monitoring & Tools"
+}
+
 live_log_ssl_configuration() {
-  if [[ ${SSL_TYPE:-} == "letsencrypt" ]]; then
-    add_log ""
-    add_log "${CLR_CYAN}▼ SSL Configuration${CLR_RESET}"
-  fi
+  live_log_section "SSL & API Configuration"
 }
 
 # Validation & Finalization section

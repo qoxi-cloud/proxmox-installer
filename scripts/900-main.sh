@@ -181,9 +181,9 @@ boot_proxmox_with_port_forwarding || {
 log_metric "qemu_boot"
 
 # ============================================================================
-# System Configuration
+# Base Configuration
 # ============================================================================
-live_log_system_configuration
+live_log_base_configuration
 
 log "Step: configure_proxmox_via_ssh"
 configure_proxmox_via_ssh

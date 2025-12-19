@@ -109,15 +109,22 @@ finalize_vm() {
 # Orchestrates all configuration steps: templates, base, services, security.
 configure_proxmox_via_ssh() {
   log "Starting Proxmox configuration via SSH"
+
+  # Base Configuration
   make_templates
   configure_base_system
-  configure_zfs_arc
-  configure_zfs_pool
-  configure_zfs_scrub
   configure_shell
   configure_system_services
 
-  # Security Configuration section (if applicable)
+  # Storage Configuration
+  if type live_log_storage_configuration &>/dev/null 2>&1; then
+    live_log_storage_configuration
+  fi
+  configure_zfs_arc
+  configure_zfs_pool
+  configure_zfs_scrub
+
+  # Security Configuration
   if type live_log_security_configuration &>/dev/null 2>&1; then
     live_log_security_configuration
   fi
@@ -130,6 +137,11 @@ configure_proxmox_via_ssh() {
   configure_chkrootkit
   configure_lynis
   configure_needrestart
+
+  # Monitoring & Tools
+  if type live_log_monitoring_configuration &>/dev/null 2>&1; then
+    live_log_monitoring_configuration
+  fi
   configure_netdata
   configure_prometheus
   configure_vnstat
@@ -137,13 +149,11 @@ configure_proxmox_via_ssh() {
   configure_yazi
   configure_nvim
 
-  # SSL Configuration section (if applicable)
+  # SSL & API Configuration
   if type live_log_ssl_configuration &>/dev/null 2>&1; then
     live_log_ssl_configuration
   fi
   configure_ssl_certificate
-
-  # Create API token (non-fatal if fails)
   if [[ $INSTALL_API_TOKEN == "yes" ]]; then
     (
       # shellcheck disable=SC1091
@@ -153,7 +163,7 @@ configure_proxmox_via_ssh() {
     show_progress $! "Creating API token" "API token created"
   fi
 
-  # Validation & Finalization section
+  # Validation & Finalization
   if type live_log_validation_finalization &>/dev/null 2>&1; then
     live_log_validation_finalization
   fi
