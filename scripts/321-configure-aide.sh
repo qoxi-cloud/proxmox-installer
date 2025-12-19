@@ -2,22 +2,15 @@
 # =============================================================================
 # AIDE (Advanced Intrusion Detection Environment) configuration
 # File integrity monitoring for detecting unauthorized changes
+# Package installed via batch_install_packages() in 037-parallel-helpers.sh
 # =============================================================================
 
-# Installation function for AIDE
-_install_aide() {
-  run_remote "Installing AIDE" '
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
-    apt-get install -yqq aide aide-common
-  ' "AIDE installed"
-}
-
 # Configuration function for AIDE
+# Initializes database and sets up daily checks via systemd timer
 _config_aide() {
   # Deploy systemd service and timer for daily checks
-  remote_copy "templates/aide-check.service" "/etc/systemd/system/aide-check.service" || exit 1
-  remote_copy "templates/aide-check.timer" "/etc/systemd/system/aide-check.timer" || exit 1
+  remote_copy "templates/aide-check.service" "/etc/systemd/system/aide-check.service" || return 1
+  remote_copy "templates/aide-check.timer" "/etc/systemd/system/aide-check.timer" || return 1
 
   remote_exec '
     # Initialize AIDE database (this takes a while)
@@ -32,36 +25,5 @@ _config_aide() {
     # Enable daily integrity check timer (will activate after reboot)
     systemctl daemon-reload
     systemctl enable aide-check.timer
-  ' || exit 1
-}
-
-# Installs and configures AIDE for file integrity monitoring.
-# Initializes the baseline database and sets up daily checks via systemd timer.
-# Side effects: Sets AIDE_INSTALLED global, installs aide package
-configure_aide() {
-  # Skip if AIDE installation is not requested
-  if [[ $INSTALL_AIDE != "yes" ]]; then
-    log "Skipping AIDE (not requested)"
-    return 0
-  fi
-
-  log "Installing and configuring AIDE"
-
-  # Install and configure using helper (with background progress)
-  (
-    _install_aide || exit 1
-    _config_aide || exit 1
-  ) >/dev/null 2>&1 &
-  show_progress $! "Installing and configuring AIDE" "AIDE configured"
-
-  local exit_code=$?
-  if [[ $exit_code -ne 0 ]]; then
-    log "WARNING: AIDE setup failed"
-    print_warning "AIDE setup failed - continuing without it"
-    return 0 # Non-fatal error
-  fi
-
-  # Set flag for summary display
-  # shellcheck disable=SC2034
-  AIDE_INSTALLED="yes"
+  ' || return 1
 }

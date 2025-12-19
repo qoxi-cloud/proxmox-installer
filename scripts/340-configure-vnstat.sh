@@ -2,24 +2,17 @@
 # =============================================================================
 # vnstat - Network traffic monitoring
 # Lightweight daemon for monitoring network bandwidth usage
+# Package installed via batch_install_packages() in 037-parallel-helpers.sh
 # =============================================================================
 
-# Installation function for vnstat
-_install_vnstat() {
-  run_remote "Installing vnstat" '
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
-    apt-get install -yqq vnstat
-  ' "vnstat installed"
-}
-
 # Configuration function for vnstat
+# Deploys config and initializes database for network interfaces
 _config_vnstat() {
   local iface="${INTERFACE_NAME:-eth0}"
 
   # Apply runtime variable and deploy
   apply_template_vars "templates/vnstat.conf" "INTERFACE_NAME=${iface}"
-  remote_copy "templates/vnstat.conf" "/etc/vnstat.conf" || exit 1
+  remote_copy "templates/vnstat.conf" "/etc/vnstat.conf" || return 1
 
   remote_exec "
     # Ensure database directory exists
@@ -37,36 +30,5 @@ _config_vnstat() {
 
     # Enable vnstat to start on boot (don't start now - will activate after reboot)
     systemctl enable vnstat
-  " || exit 1
-}
-
-# Installs and configures vnstat for network traffic monitoring.
-# Enables daemon and initializes database for network interfaces.
-# Side effects: Sets VNSTAT_INSTALLED global, installs vnstat package
-configure_vnstat() {
-  # Skip if vnstat installation is not requested
-  if [[ $INSTALL_VNSTAT != "yes" ]]; then
-    log "Skipping vnstat (not requested)"
-    return 0
-  fi
-
-  log "Installing and configuring vnstat"
-
-  # Install and configure using helper (with background progress)
-  (
-    _install_vnstat || exit 1
-    _config_vnstat || exit 1
-  ) >/dev/null 2>&1 &
-  show_progress $! "Installing vnstat" "vnstat configured"
-
-  local exit_code=$?
-  if [[ $exit_code -ne 0 ]]; then
-    log "WARNING: vnstat setup failed"
-    print_warning "vnstat setup failed - continuing without it"
-    return 0 # Non-fatal error
-  fi
-
-  # Set flag for summary display
-  # shellcheck disable=SC2034
-  VNSTAT_INSTALLED="yes"
+  " || return 1
 }

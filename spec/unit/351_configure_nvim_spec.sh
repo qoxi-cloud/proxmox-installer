@@ -14,47 +14,19 @@ Describe "351-configure-nvim.sh"
 Include "$SCRIPTS_DIR/351-configure-nvim.sh"
 
 # ===========================================================================
-# _install_nvim()
-# ===========================================================================
-Describe "_install_nvim()"
-It "calls run_remote successfully"
-MOCK_RUN_REMOTE_RESULT=0
-When call _install_nvim
-The status should be success
-End
-End
-
-# ===========================================================================
 # _config_nvim()
 # ===========================================================================
 Describe "_config_nvim()"
-It "configures alternatives successfully"
+It "creates vi/vim alternatives"
 MOCK_REMOTE_EXEC_RESULT=0
 When call _config_nvim
 The status should be success
 End
-End
 
-# ===========================================================================
-# configure_nvim()
-# ===========================================================================
-Describe "configure_nvim()"
-It "skips when INSTALL_NVIM is not yes"
-INSTALL_NVIM="no"
-NVIM_INSTALLED=""
-When call configure_nvim
-The status should be success
-The variable NVIM_INSTALLED should equal ""
-End
-
-It "installs when INSTALL_NVIM is yes"
-INSTALL_NVIM="yes"
-NVIM_INSTALLED=""
-MOCK_RUN_REMOTE_RESULT=0
-MOCK_REMOTE_EXEC_RESULT=0
-When call configure_nvim
-The status should be success
-The variable NVIM_INSTALLED should equal "yes"
+It "fails when remote_exec fails"
+MOCK_REMOTE_EXEC_RESULT=1
+When call _config_nvim
+The status should be failure
 End
 End
 End

@@ -2,21 +2,14 @@
 # =============================================================================
 # Auditd configuration for administrative action logging
 # Provides audit trail for security compliance and forensics
+# Package installed via batch_install_packages() in 037-parallel-helpers.sh
 # =============================================================================
 
-# Installation function for auditd
-_install_auditd() {
-  run_remote "Installing auditd" '
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
-    apt-get install -yqq auditd audispd-plugins
-  ' "Auditd installed"
-}
-
 # Configuration function for auditd
+# Deploys audit rules and configures log retention
 _config_auditd() {
   # Copy rules to VM
-  remote_copy "templates/auditd-rules" "/etc/audit/rules.d/proxmox.rules" || exit 1
+  remote_copy "templates/auditd-rules" "/etc/audit/rules.d/proxmox.rules" || return 1
 
   # Configure auditd for persistent logging
   remote_exec '
@@ -33,20 +26,5 @@ _config_auditd() {
 
     # Enable auditd to start on boot (will activate after reboot)
     systemctl enable auditd
-  ' || exit 1
-}
-
-# Installs and configures auditd for system audit logging.
-# Deploys custom audit rules for Proxmox administrative actions.
-# Configures log rotation and persistence settings.
-# Side effects: Sets AUDITD_INSTALLED global, installs auditd package
-configure_auditd() {
-  install_optional_feature_with_progress \
-    "Auditd" \
-    "INSTALL_AUDITD" \
-    "_install_auditd" \
-    "_config_auditd" \
-    "AUDITD_INSTALLED" \
-    "Installing and configuring auditd" \
-    "Auditd configured"
+  ' || return 1
 }

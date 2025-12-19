@@ -17,59 +17,24 @@ Describe "311-configure-fail2ban.sh"
 Include "$SCRIPTS_DIR/311-configure-fail2ban.sh"
 
 # ===========================================================================
-# _install_fail2ban()
+# _config_fail2ban()
 # ===========================================================================
-Describe "_install_fail2ban()"
-It "calls run_remote successfully"
-MOCK_RUN_REMOTE_RESULT=0
-When call _install_fail2ban
-The status should be success
-End
-End
-
-# ===========================================================================
-# configure_fail2ban()
-# ===========================================================================
-Describe "configure_fail2ban()"
-It "skips when INSTALL_FIREWALL is not yes"
-INSTALL_FIREWALL="no"
-FAIL2BAN_INSTALLED=""
-When call configure_fail2ban
-The status should be success
-The variable FAIL2BAN_INSTALLED should equal ""
-End
-
-It "skips in stealth mode"
-INSTALL_FIREWALL="yes"
-FIREWALL_MODE="stealth"
-FAIL2BAN_INSTALLED=""
-When call configure_fail2ban
-The status should be success
-The variable FAIL2BAN_INSTALLED should equal ""
-End
-
-It "installs when firewall enabled and not stealth"
-INSTALL_FIREWALL="yes"
-FIREWALL_MODE="standard"
-FAIL2BAN_INSTALLED=""
-MOCK_RUN_REMOTE_RESULT=0
+Describe "_config_fail2ban()"
+It "deploys jail config and filter"
+EMAIL="test@example.com"
+PVE_HOSTNAME="testhost"
 MOCK_REMOTE_COPY_RESULT=0
 MOCK_REMOTE_EXEC_RESULT=0
-When call configure_fail2ban
+When call _config_fail2ban
 The status should be success
-The variable FAIL2BAN_INSTALLED should equal "yes"
 End
 
-It "installs in strict mode"
-INSTALL_FIREWALL="yes"
-FIREWALL_MODE="strict"
-FAIL2BAN_INSTALLED=""
-MOCK_RUN_REMOTE_RESULT=0
-MOCK_REMOTE_COPY_RESULT=0
-MOCK_REMOTE_EXEC_RESULT=0
-When call configure_fail2ban
-The status should be success
-The variable FAIL2BAN_INSTALLED should equal "yes"
+It "fails when remote_copy fails"
+EMAIL="test@example.com"
+PVE_HOSTNAME="testhost"
+MOCK_REMOTE_COPY_RESULT=1
+When call _config_fail2ban
+The status should be failure
 End
 End
 End

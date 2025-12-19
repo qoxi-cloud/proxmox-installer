@@ -2,18 +2,11 @@
 # =============================================================================
 # Fail2Ban configuration for brute-force protection
 # Protects SSH and Proxmox API from brute-force attacks
+# Package installed via batch_install_packages() in 037-parallel-helpers.sh
 # =============================================================================
 
-# Installation function for Fail2Ban
-_install_fail2ban() {
-  run_remote "Installing Fail2Ban" '
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
-    apt-get install -yqq fail2ban
-  ' "Fail2Ban installed"
-}
-
 # Configuration function for Fail2Ban
+# Deploys jail config and Proxmox filter, enables service
 _config_fail2ban() {
   # Apply template variables
   apply_template_vars "./templates/fail2ban-jail.local" \
@@ -21,47 +14,9 @@ _config_fail2ban() {
     "HOSTNAME=${PVE_HOSTNAME}"
 
   # Copy configurations to VM
-  remote_copy "templates/fail2ban-jail.local" "/etc/fail2ban/jail.local" || exit 1
-  remote_copy "templates/fail2ban-proxmox.conf" "/etc/fail2ban/filter.d/proxmox.conf" || exit 1
+  remote_copy "templates/fail2ban-jail.local" "/etc/fail2ban/jail.local" || return 1
+  remote_copy "templates/fail2ban-proxmox.conf" "/etc/fail2ban/filter.d/proxmox.conf" || return 1
 
   # Enable fail2ban to start on boot (don't start now - will activate after reboot)
-  remote_exec "systemctl enable fail2ban" || exit 1
-}
-
-# Installs and configures Fail2Ban for brute-force protection.
-# Requires firewall to be installed (uses nftables for banning).
-# Skips installation in stealth mode (no public ports to protect).
-# Configures jails for SSH and Proxmox API protection.
-# Side effects: Sets FAIL2BAN_INSTALLED global, installs fail2ban package
-configure_fail2ban() {
-  # Skip if firewall is not installed (Fail2Ban requires nftables)
-  if [[ $INSTALL_FIREWALL != "yes" ]]; then
-    log "Skipping Fail2Ban (no firewall installed)"
-    return 0
-  fi
-
-  # Skip if stealth mode - all public ports blocked, nothing to protect
-  if [[ $FIREWALL_MODE == "stealth" ]]; then
-    log "Skipping Fail2Ban (stealth mode - no public ports)"
-    return 0
-  fi
-
-  log "Installing and configuring Fail2Ban"
-
-  # Install and configure using helper (with background progress)
-  (
-    _install_fail2ban || exit 1
-    _config_fail2ban || exit 1
-  ) >/dev/null 2>&1 &
-  show_progress $! "Installing and configuring Fail2Ban" "Fail2Ban configured"
-
-  local exit_code=$?
-  if [[ $exit_code -ne 0 ]]; then
-    log "WARNING: Fail2Ban setup failed"
-    print_warning "Fail2Ban setup failed - continuing without it"
-    return 0 # Non-fatal error
-  fi
-
-  # Set flag for summary display
-  FAIL2BAN_INSTALLED="yes"
+  remote_exec "systemctl enable fail2ban" || return 1
 }
