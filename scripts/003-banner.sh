@@ -7,6 +7,9 @@
 # Banner letter count for animation (P=0, r=1, o=2, x=3, m=4, o=5, x=6)
 BANNER_LETTER_COUNT=7
 
+# Banner height in lines (6 ASCII art + 1 empty + 1 tagline = 8, +1 for spacing = 9)
+BANNER_HEIGHT=9
+
 # Padding to center banner relative to footer (69 chars)
 # Banner width ~51 chars, padding = 8 spaces
 _BANNER_PAD="        "

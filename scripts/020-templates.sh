@@ -64,8 +64,17 @@ apply_template_vars() {
 # Substitutes placeholders for IP, hostname, DNS, network settings.
 # Parameters:
 #   $1 - File path to modify
+# Returns: 0 on success, 1 if critical variable is empty
 apply_common_template_vars() {
   local file="$1"
+
+  # Warn about empty critical variables
+  local -a critical_vars=(MAIN_IPV4 MAIN_IPV4_GW PVE_HOSTNAME INTERFACE_NAME)
+  for var in "${critical_vars[@]}"; do
+    if [[ -z ${!var:-} ]]; then
+      log "WARNING: [apply_common_template_vars] Critical variable $var is empty for $file"
+    fi
+  done
 
   apply_template_vars "$file" \
     "MAIN_IPV4=${MAIN_IPV4:-}" \

@@ -29,7 +29,7 @@ install_optional_feature() {
   if ! "$install_func"; then
     log "ERROR: $feature_name installation failed"
     print_error "$feature_name installation failed"
-    exit 1
+    return 1
   fi
 
   # Run configuration function (non-fatal on failure)
@@ -41,7 +41,7 @@ install_optional_feature() {
 
   # Mark as installed if variable name provided
   if [[ -n $installed_var ]]; then
-    eval "$installed_var=yes"
+    declare -g "$installed_var=yes"
     log "$feature_name installed and configured successfully"
   fi
 

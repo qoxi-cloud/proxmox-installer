@@ -8,34 +8,33 @@
 # Side effects: Modifies remote system configuration
 configure_base_system() {
   # Copy template files to VM (parallel for better performance)
-  remote_copy "templates/hosts" "/etc/hosts" >/dev/null 2>&1 &
-  local pid1=$!
-  remote_copy "templates/interfaces" "/etc/network/interfaces" >/dev/null 2>&1 &
-  local pid2=$!
-  remote_copy "templates/99-proxmox.conf" "/etc/sysctl.d/99-proxmox.conf" >/dev/null 2>&1 &
-  local pid3=$!
-  remote_copy "templates/debian.sources" "/etc/apt/sources.list.d/debian.sources" >/dev/null 2>&1 &
-  local pid4=$!
-  remote_copy "templates/proxmox.sources" "/etc/apt/sources.list.d/proxmox.sources" >/dev/null 2>&1 &
-  local pid5=$!
-  remote_copy "templates/resolv.conf" "/etc/resolv.conf" >/dev/null 2>&1 &
-  local pid6=$!
+  local -a copy_pids=()
 
-  # Wait for all copies to complete and check each exit code
+  remote_copy "templates/hosts" "/etc/hosts" >/dev/null 2>&1 &
+  copy_pids+=($!)
+  remote_copy "templates/interfaces" "/etc/network/interfaces" >/dev/null 2>&1 &
+  copy_pids+=($!)
+  remote_copy "templates/99-proxmox.conf" "/etc/sysctl.d/99-proxmox.conf" >/dev/null 2>&1 &
+  copy_pids+=($!)
+  remote_copy "templates/debian.sources" "/etc/apt/sources.list.d/debian.sources" >/dev/null 2>&1 &
+  copy_pids+=($!)
+  remote_copy "templates/proxmox.sources" "/etc/apt/sources.list.d/proxmox.sources" >/dev/null 2>&1 &
+  copy_pids+=($!)
+  remote_copy "templates/resolv.conf" "/etc/resolv.conf" >/dev/null 2>&1 &
+  copy_pids+=($!)
+
+  # Wait for all copies to complete
   local exit_code=0
-  wait $pid1 || exit_code=1
-  wait $pid2 || exit_code=1
-  wait $pid3 || exit_code=1
-  wait $pid4 || exit_code=1
-  wait $pid5 || exit_code=1
-  wait $pid6 || exit_code=1
+  for pid in "${copy_pids[@]}"; do
+    wait "$pid" || exit_code=1
+  done
 
   if [[ $exit_code -eq 0 ]]; then
     printf '\r\e[K%s✓ Configuration files copied%s\n' "${CLR_CYAN}" "${CLR_RESET}"
   else
     printf '\r\e[K%s✗ Copying configuration files%s\n' "${CLR_RED}" "${CLR_RESET}"
     log "ERROR: Failed to copy some configuration files"
-    exit 1
+    return 1
   fi
 
   # Basic system configuration

@@ -69,8 +69,10 @@ run_parallel() {
   local exit_code=0
 
   # Start all commands in background
+  # Using bash -c instead of eval for slightly better safety
+  # Commands are still strings, but executed in isolated subshell
   for cmd in "$@"; do
-    eval "$cmd" &
+    bash -c "$cmd" &
     pids+=($!)
   done
 

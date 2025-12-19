@@ -12,26 +12,29 @@ collect_system_info() {
   local errors=0
 
   # Install required tools and display utilities
-  # column: alignment, iproute2: ip command
-  # udev: udevadm for interface detection, timeout: command timeouts
-  # jq: JSON parsing for API responses
-  # aria2c: optional multi-connection downloads (fallback: curl, wget)
-  # findmnt: efficient mount point queries
-  # gum: interactive prompts and spinners (from Charm repo)
+  # Mapping: command -> package name
+  local -A required_commands=(
+    [column]="bsdmainutils"
+    [ip]="iproute2"
+    [udevadm]="udev"
+    [timeout]="coreutils"
+    [curl]="curl"
+    [jq]="jq"
+    [aria2c]="aria2"
+    [findmnt]="util-linux"
+    [gum]="gum"
+  )
+
   local packages_to_install=""
   local need_charm_repo=false
-  command -v column &>/dev/null || packages_to_install+=" bsdmainutils"
-  command -v ip &>/dev/null || packages_to_install+=" iproute2"
-  command -v udevadm &>/dev/null || packages_to_install+=" udev"
-  command -v timeout &>/dev/null || packages_to_install+=" coreutils"
-  command -v curl &>/dev/null || packages_to_install+=" curl"
-  command -v jq &>/dev/null || packages_to_install+=" jq"
-  command -v aria2c &>/dev/null || packages_to_install+=" aria2"
-  command -v findmnt &>/dev/null || packages_to_install+=" util-linux"
-  command -v gum &>/dev/null || {
-    need_charm_repo=true
-    packages_to_install+=" gum"
-  }
+
+  for cmd in "${!required_commands[@]}"; do
+    if ! command -v "$cmd" &>/dev/null; then
+      packages_to_install+=" ${required_commands[$cmd]}"
+      # gum requires Charm repo (not in default Debian repos)
+      [[ $cmd == "gum" ]] && need_charm_repo=true
+    fi
+  done
 
   # Add Charm repo for gum if needed (not in default Debian repos)
   if [[ $need_charm_repo == true ]]; then

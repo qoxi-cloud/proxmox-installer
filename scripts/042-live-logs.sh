@@ -9,8 +9,9 @@ get_terminal_dimensions() {
   TERM_WIDTH=$(tput cols)
 }
 
-# Logo height (number of lines) - ASCII banner from show_banner()
-LOGO_HEIGHT=9
+# Logo height uses BANNER_HEIGHT constant from 003-banner.sh
+# Fallback to 9 if not defined (6 ASCII art + 1 empty + 1 tagline + 1 spacing)
+LOGO_HEIGHT=${BANNER_HEIGHT:-9}
 
 # Calculate available space for logs
 calculate_log_area() {
@@ -85,8 +86,10 @@ start_live_installation() {
   LIVE_LOGS_ACTIVE=true
 
   # Save original show_progress function if it exists
-  if type show_progress &>/dev/null 2>&1; then
-    eval "$(declare -f show_progress | sed '1s/show_progress/show_progress_original/')"
+  # Using source with process substitution instead of eval for safety
+  if type show_progress &>/dev/null; then
+    # shellcheck disable=SC1090
+    source <(declare -f show_progress | sed '1s/show_progress/show_progress_original/')
   fi
 
   # Override show_progress with our live version
