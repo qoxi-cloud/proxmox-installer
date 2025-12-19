@@ -4260,29 +4260,37 @@ run_remote "Installing Tailscale VPN" '
         apt-get install -yqq tailscale
         systemctl enable tailscaled
         systemctl start tailscaled
-        # Wait for tailscaled socket to exist and be connectable (up to 30s)
+        # Wait for tailscaled socket to be ready (up to 30s)
         for i in {1..30}; do
-          if [[ -S /var/run/tailscale/tailscaled.sock ]] && tailscale debug prefs &>/dev/null; then
-            break
-          fi
+          tailscale status &>/dev/null && break
           sleep 1
         done
     ' "Tailscale VPN installed"
 if [[ -n $TAILSCALE_AUTH_KEY ]];then
-local ts_cmd="tailscale up --authkey=$TAILSCALE_AUTH_KEY"
-if [[ ${TAILSCALE_SSH:-no} == "yes" ]];then
-ts_cmd="$ts_cmd --ssh"
+local tmp_ip tmp_hostname
+tmp_ip=$(mktemp)
+tmp_hostname=$(mktemp)
+trap "rm -f '$tmp_ip' '$tmp_hostname'" RETURN
+(if
+[[ $TAILSCALE_SSH == "yes" ]]
+then
+remote_exec "tailscale up --authkey='$TAILSCALE_AUTH_KEY' --ssh"||exit 1
+else
+remote_exec "tailscale up --authkey='$TAILSCALE_AUTH_KEY'"||exit 1
 fi
-run_remote "Authenticating Tailscale" "$ts_cmd" "Tailscale authenticated"
-TAILSCALE_IP=$(remote_exec "tailscale ip -4 2>/dev/null || echo pending" 2>/dev/null||echo "pending")
-TAILSCALE_HOSTNAME=$(remote_exec "tailscale status --json 2>/dev/null | jq -r '.Self.DNSName // \"\" | rtrimstr(\".\")'" 2>/dev/null||echo "")
-if [[ $TAILSCALE_IP != "pending" ]];then
+remote_exec "tailscale status --json | jq -r '[(.Self.TailscaleIPs[0] // \"pending\"), (.Self.DNSName // \"\" | rtrimstr(\".\"))] | @tsv'" 2>/dev/null|{
+IFS=$'\t' read -r ip hostname
+echo "$ip" >"$tmp_ip"
+echo "$hostname" >"$tmp_hostname"
+}||true) > \
+/dev/null 2>&1&
+show_progress $! "Authenticating Tailscale"
+TAILSCALE_IP=$(cat "$tmp_ip" 2>/dev/null||echo "pending")
+TAILSCALE_HOSTNAME=$(cat "$tmp_hostname" 2>/dev/null||echo "")
 printf "\033[1A\r%s✓ Tailscale authenticated. IP: %s%s                              \n" "$CLR_CYAN" "$TAILSCALE_IP" "$CLR_RESET"
-fi
-if [[ ${TAILSCALE_WEBUI:-no} == "yes" ]];then
-run_remote "Configuring Tailscale Serve" \
-"tailscale serve --bg --https=443 https://127.0.0.1:8006" \
-"Proxmox Web UI available via Tailscale Serve"
+if [[ $TAILSCALE_WEBUI == "yes" ]];then
+remote_exec "tailscale serve --bg --https=443 https://127.0.0.1:8006" >/dev/null 2>&1&
+show_progress $! "Configuring Tailscale Serve" "Proxmox Web UI available via Tailscale Serve"
 fi
 if [[ ${FIREWALL_MODE:-standard} == "stealth" ]];then
 log "Deploying disable-openssh.service (FIREWALL_MODE=$FIREWALL_MODE)"
