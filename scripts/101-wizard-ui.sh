@@ -68,8 +68,15 @@ _wiz_render_nav() {
   local total=${#WIZ_SCREENS[@]}
   local col=$_NAV_COL_WIDTH
 
+  # Calculate padding to center relative to footer width (69 chars)
+  local nav_width=$((col * total))
+  local footer_width=69
+  local pad_left=$(((footer_width - nav_width) / 2))
+  local padding=""
+  ((pad_left > 0)) && padding=$(printf '%*s' $pad_left '')
+
   # Screen names row
-  local labels=""
+  local labels="$padding"
   for i in "${!WIZ_SCREENS[@]}"; do
     local name="${WIZ_SCREENS[$i]}"
     local name_len=${#name}
@@ -81,7 +88,7 @@ _wiz_render_nav() {
   done
 
   # Dots with connecting lines row
-  local dots=""
+  local dots="$padding"
   local center_pad=$(((col - 1) / 2))
   local right_pad=$((col - center_pad - 1))
 
@@ -516,12 +523,16 @@ _wiz_render_screen_content() {
 _wiz_render_menu() {
   local selection="$1"
   local output=""
+  local banner_output
+
+  # Capture banner output
+  banner_output=$(show_banner)
 
   # Build display values
   _wiz_build_display_values
 
-  # Start output with navigation header
-  output+="\n$(_wiz_render_nav)\n\n"
+  # Start output with banner + navigation header
+  output+="\n${banner_output}\n\n$(_wiz_render_nav)\n\n"
 
   # Reset field map
   _WIZ_FIELD_MAP=()
@@ -550,15 +561,16 @@ _wiz_render_menu() {
   output+="\n"
 
   # Footer with navigation hints
+  # Left/right hints: orange when active, gray when inactive
+  local left_clr right_clr
+  left_clr=$([[ $WIZ_CURRENT_SCREEN -gt 0 ]] && echo "$CLR_ORANGE" || echo "$CLR_GRAY")
+  right_clr=$([[ $WIZ_CURRENT_SCREEN -lt $((${#WIZ_SCREENS[@]} - 1)) ]] && echo "$CLR_ORANGE" || echo "$CLR_GRAY")
+
   local nav_hint=""
-  if [[ $WIZ_CURRENT_SCREEN -gt 0 ]]; then
-    nav_hint+="[${CLR_ORANGE}←${CLR_GRAY}] prev  "
-  fi
-  nav_hint+="[${CLR_ORANGE}↑↓${CLR_GRAY}] navigate  [${CLR_ORANGE}Enter${CLR_GRAY}] edit"
-  if [[ $WIZ_CURRENT_SCREEN -lt $((${#WIZ_SCREENS[@]} - 1)) ]]; then
-    nav_hint+="  [${CLR_ORANGE}→${CLR_GRAY}] next"
-  fi
-  nav_hint+="  [${CLR_ORANGE}S${CLR_GRAY}] start  [${CLR_ORANGE}Q${CLR_GRAY}] quit"
+  nav_hint+="[${left_clr}←${CLR_GRAY}] prev  "
+  nav_hint+="[${CLR_ORANGE}↑↓${CLR_GRAY}] navigate  [${CLR_ORANGE}Enter${CLR_GRAY}] edit  "
+  nav_hint+="[${right_clr}→${CLR_GRAY}] next  "
+  nav_hint+="[${CLR_ORANGE}S${CLR_GRAY}] start  [${CLR_ORANGE}Q${CLR_GRAY}] quit"
 
   output+="${CLR_GRAY}${nav_hint}${CLR_RESET}"
 
