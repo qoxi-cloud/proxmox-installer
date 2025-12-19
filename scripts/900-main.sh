@@ -183,39 +183,19 @@ start_live_installation || {
   show_banner
 }
 
-# ============================================================================
-# Rescue System Preparation
-# ============================================================================
-live_log_system_preparation
-
 log "Step: prepare_packages"
 prepare_packages
 log_metric "packages"
 
-# ============================================================================
-# Proxmox ISO Download
-# ============================================================================
-live_log_iso_download
-
 log "Step: download_proxmox_iso"
 download_proxmox_iso
 log_metric "iso_download"
-
-# ============================================================================
-# Autoinstall Preparation
-# ============================================================================
-live_log_autoinstall_preparation
 
 log "Step: make_answer_toml"
 make_answer_toml
 log "Step: make_autoinstall_iso"
 make_autoinstall_iso
 log_metric "autoinstall_prep"
-
-# ============================================================================
-# Proxmox Installation
-# ============================================================================
-live_log_proxmox_installation
 
 log "Step: install_proxmox"
 install_proxmox
@@ -227,11 +207,6 @@ boot_proxmox_with_port_forwarding || {
   exit 1
 }
 log_metric "qemu_boot"
-
-# ============================================================================
-# Base Configuration
-# ============================================================================
-live_log_base_configuration
 
 log "Step: configure_proxmox_via_ssh"
 configure_proxmox_via_ssh

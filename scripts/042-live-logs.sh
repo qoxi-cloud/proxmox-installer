@@ -135,23 +135,6 @@ finish_live_installation() {
   tput rmcup # Exit alternate screen buffer
 }
 
-# =============================================================================
-# Installation process sections (no-ops, kept for backward compatibility)
-# =============================================================================
-
-# Section functions are no-ops - all logs appear in single scrolling area
-live_log_section() { :; }
-live_log_system_preparation() { :; }
-live_log_iso_download() { :; }
-live_log_autoinstall_preparation() { :; }
-live_log_proxmox_installation() { :; }
-live_log_base_configuration() { :; }
-live_log_storage_configuration() { :; }
-live_log_security_configuration() { :; }
-live_log_monitoring_configuration() { :; }
-live_log_ssl_configuration() { :; }
-live_log_validation_finalization() { :; }
-
 # Flag to track if live logs are active
 LIVE_LOGS_ACTIVE=false
 

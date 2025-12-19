@@ -188,9 +188,6 @@ configure_proxmox_via_ssh() {
   # ==========================================================================
   # PHASE 2: Storage Configuration (sequential - ZFS dependencies)
   # ==========================================================================
-  if type live_log_storage_configuration &>/dev/null 2>&1; then
-    live_log_storage_configuration
-  fi
   configure_zfs_arc
   configure_zfs_pool
   configure_zfs_scrub
@@ -198,10 +195,6 @@ configure_proxmox_via_ssh() {
   # ==========================================================================
   # PHASE 3: Security Configuration (parallel after batch install)
   # ==========================================================================
-  if type live_log_security_configuration &>/dev/null 2>&1; then
-    live_log_security_configuration
-  fi
-
   # Tailscale first (uses curl installer, needed for firewall rules)
   configure_tailscale
 
@@ -224,10 +217,6 @@ configure_proxmox_via_ssh() {
   # ==========================================================================
   # PHASE 4: Monitoring & Tools (parallel where possible)
   # ==========================================================================
-  if type live_log_monitoring_configuration &>/dev/null 2>&1; then
-    live_log_monitoring_configuration
-  fi
-
   # Special installers (non-apt) - run in parallel
   (
     local pids=()
@@ -256,9 +245,6 @@ configure_proxmox_via_ssh() {
   # ==========================================================================
   # PHASE 5: SSL & API Configuration
   # ==========================================================================
-  if type live_log_ssl_configuration &>/dev/null 2>&1; then
-    live_log_ssl_configuration
-  fi
   configure_ssl_certificate
   if [[ $INSTALL_API_TOKEN == "yes" ]]; then
     (create_api_token || exit 1) >/dev/null 2>&1 &
@@ -268,9 +254,6 @@ configure_proxmox_via_ssh() {
   # ==========================================================================
   # PHASE 6: Validation & Finalization
   # ==========================================================================
-  if type live_log_validation_finalization &>/dev/null 2>&1; then
-    live_log_validation_finalization
-  fi
   configure_ssh_hardening
   validate_installation
   finalize_vm
