@@ -72,49 +72,75 @@ make_templates() {
   esac
   log "Using repository template: $proxmox_sources_template"
 
-  # Build list of templates: "local_path:remote_name"
+  # Build list of ALL templates: "local_path:remote_name"
+  # All templates are pre-downloaded, used as needed
   local -a template_list=(
+    # System base
     "./templates/99-proxmox.conf:99-proxmox.conf"
     "./templates/hosts:hosts"
     "./templates/debian.sources:debian.sources"
     "./templates/proxmox.sources:${proxmox_sources_template}"
     "./templates/sshd_config:sshd_config"
-    "./templates/zshrc:zshrc"
-    "./templates/p10k.zsh:p10k.zsh"
-    "./templates/chrony:chrony"
-    "./templates/50unattended-upgrades:50unattended-upgrades"
-    "./templates/20auto-upgrades:20auto-upgrades"
-    "./templates/interfaces:${interfaces_template}"
     "./templates/resolv.conf:resolv.conf"
-    "./templates/configure-zfs-arc.sh:configure-zfs-arc.sh"
+    "./templates/interfaces:${interfaces_template}"
+    # Locale
     "./templates/locale.sh:locale.sh"
     "./templates/default-locale:default-locale"
     "./templates/environment:environment"
+    # Shell
+    "./templates/zshrc:zshrc"
+    "./templates/p10k.zsh:p10k.zsh"
+    "./templates/fastfetch.sh:fastfetch.sh"
+    "./templates/bat-config:bat-config"
+    # System services
+    "./templates/chrony:chrony"
+    "./templates/50unattended-upgrades:50unattended-upgrades"
+    "./templates/20auto-upgrades:20auto-upgrades"
     "./templates/cpufrequtils:cpufrequtils"
     "./templates/60-io-scheduler.rules:60-io-scheduler.rules"
     "./templates/remove-subscription-nag.sh:remove-subscription-nag.sh"
+    # ZFS
+    "./templates/configure-zfs-arc.sh:configure-zfs-arc.sh"
+    "./templates/zfs-scrub.service:zfs-scrub.service"
+    "./templates/zfs-scrub.timer:zfs-scrub.timer"
     # Let's Encrypt
     "./templates/letsencrypt-deploy-hook.sh:letsencrypt-deploy-hook.sh"
     "./templates/letsencrypt-firstboot.sh:letsencrypt-firstboot.sh"
     "./templates/letsencrypt-firstboot.service:letsencrypt-firstboot.service"
-    # Shell startup and tools
-    "./templates/fastfetch.sh:fastfetch.sh"
-    "./templates/bat-config:bat-config"
-    # Security
-    "./templates/fail2ban-jail.local:fail2ban-jail.local"
-    "./templates/fail2ban-proxmox.conf:fail2ban-proxmox.conf"
-    "./templates/auditd-rules:auditd-rules"
-    "./templates/apparmor-grub.cfg:apparmor-grub.cfg"
     # Tailscale
     "./templates/disable-openssh.service:disable-openssh.service"
     # Firewall
     "./templates/nftables.conf:nftables.conf"
-    # Optional tools
-    "./templates/yazi-theme.toml:yazi-theme.toml"
-    # Prometheus
+    # Security - Fail2Ban
+    "./templates/fail2ban-jail.local:fail2ban-jail.local"
+    "./templates/fail2ban-proxmox.conf:fail2ban-proxmox.conf"
+    # Security - AppArmor
+    "./templates/apparmor-grub.cfg:apparmor-grub.cfg"
+    # Security - Auditd
+    "./templates/auditd-rules:auditd-rules"
+    # Security - AIDE
+    "./templates/aide-check.service:aide-check.service"
+    "./templates/aide-check.timer:aide-check.timer"
+    # Security - chkrootkit
+    "./templates/chkrootkit-scan.service:chkrootkit-scan.service"
+    "./templates/chkrootkit-scan.timer:chkrootkit-scan.timer"
+    # Security - Lynis
+    "./templates/lynis-audit.service:lynis-audit.service"
+    "./templates/lynis-audit.timer:lynis-audit.timer"
+    # Security - needrestart
+    "./templates/needrestart.conf:needrestart.conf"
+    # Monitoring - vnStat
+    "./templates/vnstat.conf:vnstat.conf"
+    # Monitoring - Netdata
+    "./templates/netdata.conf:netdata.conf"
+    # Monitoring - Prometheus
     "./templates/prometheus-node-exporter:prometheus-node-exporter"
     "./templates/proxmox-metrics.sh:proxmox-metrics.sh"
     "./templates/proxmox-metrics.cron:proxmox-metrics.cron"
+    # Tools - Yazi
+    "./templates/yazi-theme.toml:yazi-theme.toml"
+    # Network tuning
+    "./templates/network-ringbuffer.service:network-ringbuffer.service"
   )
 
   # Download all templates in parallel
