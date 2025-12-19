@@ -17,7 +17,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.330-pr.21"
+readonly VERSION="2.0.331-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -425,6 +425,9 @@ fi
 }
 print_info(){
 echo -e "$CLR_CYANℹ$CLR_RESET $1"
+}
+print_section(){
+echo "$CLR_CYAN$CLR_BOLD$1$CLR_RESET"
 }
 show_progress(){
 local pid=$1
@@ -1640,7 +1643,7 @@ render_logs
 }
 render_logs(){
 restore_cursor_position
-echo "$CLR_CYAN Installation Progress$CLR_RESET"
+print_section " Installation Progress"
 _wiz_blank_line
 local start_line=0
 if ((LOG_COUNT>LOG_AREA_HEIGHT));then
@@ -1683,7 +1686,7 @@ tput smcup
 _wiz_clear
 show_banner
 save_cursor_position
-echo "$CLR_CYAN Installation Progress$CLR_RESET"
+print_section " Installation Progress"
 _wiz_blank_line
 tput civis
 trap 'tput cnorm; tput rmcup' EXIT RETURN
@@ -5000,14 +5003,11 @@ printf "$CLR_CYAN  %-9s$CLR_RESET %s" "$label:" "$value"
 [[ -n $note ]]&&printf " $CLR_GRAY%s$CLR_RESET" "$note"
 printf "\n"
 }
-_print_header(){
-echo "$CLR_CYAN$CLR_BOLD$1$CLR_RESET"
-}
 _show_credentials_info(){
 echo ""
 echo "$CLR_YELLOW${CLR_BOLD}Access Credentials$CLR_RESET $CLR_RED(SAVE THIS!)$CLR_RESET"
 echo ""
-_print_header "Root Access:"
+print_section "Root Access:"
 _print_field "Hostname" "$PVE_HOSTNAME.$DOMAIN_SUFFIX"
 _print_field "Username" "root"
 _print_field "Password" "$NEW_ROOT_PASSWORD"
@@ -5039,7 +5039,7 @@ if [[ -f /tmp/pve-install-api-token.env ]];then
 source /tmp/pve-install-api-token.env
 if [[ -n $API_TOKEN_VALUE ]];then
 echo ""
-_print_header "API Token:"
+print_section "API Token:"
 _print_field "Token ID" "$API_TOKEN_ID"
 _print_field "Secret" "$API_TOKEN_VALUE"
 fi
