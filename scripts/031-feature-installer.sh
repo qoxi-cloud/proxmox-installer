@@ -47,3 +47,52 @@ install_optional_feature() {
 
   return 0
 }
+
+# Enhanced optional feature installer with progress display.
+# Runs installation and configuration in background with progress indicator.
+# Parameters:
+#   $1 - Feature name (for display)
+#   $2 - Install variable name (e.g., "INSTALL_FEATURE")
+#   $3 - Installation function name (must use || exit 1 pattern)
+#   $4 - Configuration function name (must use || exit 1 pattern)
+#   $5 - Installed variable name (e.g., "FEATURE_INSTALLED")
+#   $6 - Optional: Progress message (default: "Installing $feature_name")
+#   $7 - Optional: Success message (default: "$feature_name configured")
+# Returns: 0 on success or skip, 0 on non-fatal error (with warning)
+# Side effects: Updates installed variable on success
+install_optional_feature_with_progress() {
+  local feature_name="$1"
+  local install_var="$2"
+  local install_func="$3"
+  local config_func="$4"
+  local installed_var="$5"
+  local progress_msg="${6:-Installing $feature_name}"
+  local success_msg="${7:-$feature_name configured}"
+
+  # Check if feature should be installed
+  if [[ ${!install_var} != "yes" ]]; then
+    log "Skipping $feature_name (not requested)"
+    return 0
+  fi
+
+  log "Installing and configuring $feature_name"
+
+  # Run installation and configuration in background with progress
+  (
+    "$install_func" || exit 1
+    "$config_func" || exit 1
+  ) >/dev/null 2>&1 &
+  show_progress $! "$progress_msg" "$success_msg"
+
+  local exit_code=$?
+  if [[ $exit_code -ne 0 ]]; then
+    log "WARNING: $feature_name setup failed"
+    print_warning "$feature_name setup failed - continuing without it"
+    return 0 # Non-fatal error
+  fi
+
+  # Mark as installed
+  # shellcheck disable=SC2034
+  declare -g "$installed_var=yes"
+  return 0
+}

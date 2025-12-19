@@ -24,7 +24,8 @@ elif [ "$TOTAL_RAM_GB" -ge 32 ]; then
     ARC_MAX=$((16 * 1024 * 1024 * 1024))
 else
     ARC_MIN=$((1 * 1024 * 1024 * 1024))
-    ARC_MAX=$((TOTAL_RAM_KB * 1024 / 2))
+    # 50% of RAM in bytes: KB * 1024 / 2 = KB * 512
+    ARC_MAX=$((TOTAL_RAM_KB * 512))
 fi
 
 mkdir -p /etc/modprobe.d

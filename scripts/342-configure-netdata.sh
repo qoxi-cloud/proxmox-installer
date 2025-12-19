@@ -29,11 +29,8 @@ _config_netdata() {
     bind_to="127.0.0.1 100.*"
   fi
 
-  # Export for template
-  export NETDATA_BIND_TO="$bind_to"
-
   # Deploy netdata configuration
-  deploy_template "netdata.conf" "/etc/netdata/netdata.conf" NETDATA_BIND_TO
+  deploy_template "netdata.conf" "/etc/netdata/netdata.conf" "NETDATA_BIND_TO=${bind_to}"
 
   # Enable netdata to start on boot (don't start now - will activate after reboot)
   remote_exec '

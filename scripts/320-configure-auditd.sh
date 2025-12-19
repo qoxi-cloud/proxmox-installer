@@ -41,29 +41,12 @@ _config_auditd() {
 # Configures log rotation and persistence settings.
 # Side effects: Sets AUDITD_INSTALLED global, installs auditd package
 configure_auditd() {
-  # Skip if auditd installation is not requested
-  if [[ $INSTALL_AUDITD != "yes" ]]; then
-    log "Skipping auditd (not requested)"
-    return 0
-  fi
-
-  log "Installing and configuring auditd"
-
-  # Install and configure using helper (with background progress)
-  (
-    _install_auditd || exit 1
-    _config_auditd || exit 1
-  ) >/dev/null 2>&1 &
-  show_progress $! "Installing and configuring auditd" "Auditd configured"
-
-  local exit_code=$?
-  if [[ $exit_code -ne 0 ]]; then
-    log "WARNING: Auditd setup failed"
-    print_warning "Auditd setup failed - continuing without it"
-    return 0 # Non-fatal error
-  fi
-
-  # Set flag for summary display
-  # shellcheck disable=SC2034
-  AUDITD_INSTALLED="yes"
+  install_optional_feature_with_progress \
+    "Auditd" \
+    "INSTALL_AUDITD" \
+    "_install_auditd" \
+    "_config_auditd" \
+    "AUDITD_INSTALLED" \
+    "Installing and configuring auditd" \
+    "Auditd configured"
 }

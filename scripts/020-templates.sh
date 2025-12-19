@@ -93,7 +93,11 @@ apply_common_template_vars() {
     "DNS_TERTIARY=${DNS_TERTIARY:-8.8.8.8}" \
     "DNS_QUATERNARY=${DNS_QUATERNARY:-8.8.4.4}" \
     "DNS6_PRIMARY=${DNS6_PRIMARY:-2606:4700:4700::1111}" \
-    "DNS6_SECONDARY=${DNS6_SECONDARY:-2606:4700:4700::1001}"
+    "DNS6_SECONDARY=${DNS6_SECONDARY:-2606:4700:4700::1001}" \
+    "LOCALE=${LOCALE:-en_US.UTF-8}" \
+    "KEYBOARD=${KEYBOARD:-us}" \
+    "COUNTRY=${COUNTRY:-US}" \
+    "BAT_THEME=${BAT_THEME:-Catppuccin Mocha}"
 }
 
 # Post-processes interfaces template when IPv6 is disabled.

@@ -43,12 +43,15 @@ create_api_token() {
   API_TOKEN_VALUE="$token_value"
   API_TOKEN_ID="root@pam!${API_TOKEN_NAME}"
 
-  # Save to temp file for display after installation
-  cat >/tmp/pve-install-api-token.env <<EOF
+  # Save to temp file for display after installation (restricted permissions)
+  (
+    umask 0077
+    cat >/tmp/pve-install-api-token.env <<EOF
 API_TOKEN_VALUE=$token_value
 API_TOKEN_ID=$API_TOKEN_ID
 API_TOKEN_NAME=$API_TOKEN_NAME
 EOF
+  )
 
   log "INFO: API token created successfully: ${API_TOKEN_ID}"
   return 0

@@ -39,16 +39,16 @@ configure_base_system() {
 
   # Basic system configuration
   (
-    remote_exec "[ -f /etc/apt/sources.list ] && mv /etc/apt/sources.list /etc/apt/sources.list.bak"
-    remote_exec "echo '$PVE_HOSTNAME' > /etc/hostname"
-    remote_exec "systemctl disable --now rpcbind rpcbind.socket 2>/dev/null"
+    remote_exec "[ -f /etc/apt/sources.list ] && mv /etc/apt/sources.list /etc/apt/sources.list.bak" || exit 1
+    remote_exec "echo '$PVE_HOSTNAME' > /etc/hostname" || exit 1
+    remote_exec "systemctl disable --now rpcbind rpcbind.socket 2>/dev/null" || true
   ) >/dev/null 2>&1 &
   show_progress $! "Applying basic system settings" "Basic system settings applied"
 
   # Configure ZFS ARC memory limits using template script
   (
-    remote_copy "templates/configure-zfs-arc.sh" "/tmp/configure-zfs-arc.sh"
-    remote_exec "chmod +x /tmp/configure-zfs-arc.sh && /tmp/configure-zfs-arc.sh && rm -f /tmp/configure-zfs-arc.sh"
+    remote_copy "templates/configure-zfs-arc.sh" "/tmp/configure-zfs-arc.sh" || exit 1
+    remote_exec "chmod +x /tmp/configure-zfs-arc.sh && /tmp/configure-zfs-arc.sh && rm -f /tmp/configure-zfs-arc.sh" || exit 1
   ) >/dev/null 2>&1 &
   show_progress $! "Configuring ZFS ARC memory limits" "ZFS ARC memory limits configured"
 
@@ -148,26 +148,26 @@ configure_base_system() {
 
   # Copy locale template files
   (
-    remote_copy "templates/locale.sh" "/etc/profile.d/locale.sh"
-    remote_exec "chmod +x /etc/profile.d/locale.sh"
-    remote_copy "templates/default-locale" "/etc/default/locale"
-    remote_copy "templates/environment" "/etc/environment"
+    remote_copy "templates/locale.sh" "/etc/profile.d/locale.sh" || exit 1
+    remote_exec "chmod +x /etc/profile.d/locale.sh" || exit 1
+    remote_copy "templates/default-locale" "/etc/default/locale" || exit 1
+    remote_copy "templates/environment" "/etc/environment" || exit 1
   ) >/dev/null 2>&1 &
   show_progress $! "Installing locale configuration files" "Locale files installed"
 
   # Configure fastfetch to run on shell login
   (
-    remote_copy "templates/fastfetch.sh" "/etc/profile.d/fastfetch.sh"
-    remote_exec "chmod +x /etc/profile.d/fastfetch.sh"
+    remote_copy "templates/fastfetch.sh" "/etc/profile.d/fastfetch.sh" || exit 1
+    remote_exec "chmod +x /etc/profile.d/fastfetch.sh" || exit 1
     # Also source from bash.bashrc for non-login interactive shells
-    remote_exec "grep -q 'profile.d/fastfetch.sh' /etc/bash.bashrc || echo '[ -f /etc/profile.d/fastfetch.sh ] && . /etc/profile.d/fastfetch.sh' >> /etc/bash.bashrc"
+    remote_exec "grep -q 'profile.d/fastfetch.sh' /etc/bash.bashrc || echo '[ -f /etc/profile.d/fastfetch.sh ] && . /etc/profile.d/fastfetch.sh' >> /etc/bash.bashrc" || exit 1
   ) >/dev/null 2>&1 &
   show_progress $! "Configuring fastfetch" "Fastfetch configured"
 
   # Configure bat with Visual Studio Dark+ theme
   (
-    remote_exec "mkdir -p /root/.config/bat"
-    remote_copy "templates/bat-config" "/root/.config/bat/config"
+    remote_exec "mkdir -p /root/.config/bat" || exit 1
+    remote_copy "templates/bat-config" "/root/.config/bat/config" || exit 1
   ) >/dev/null 2>&1 &
   show_progress $! "Configuring bat" "Bat configured"
 }
@@ -199,9 +199,9 @@ configure_shell() {
         ' "ZSH plugins installed"
 
     (
-      remote_copy "templates/zshrc" "/root/.zshrc"
-      remote_copy "templates/p10k.zsh" "/root/.p10k.zsh"
-      remote_exec "chsh -s /bin/zsh root"
+      remote_copy "templates/zshrc" "/root/.zshrc" || exit 1
+      remote_copy "templates/p10k.zsh" "/root/.p10k.zsh" || exit 1
+      remote_exec "chsh -s /bin/zsh root" || exit 1
     ) >/dev/null 2>&1 &
     show_progress $! "Configuring ZSH" "ZSH with Powerlevel10k configured"
   else
@@ -219,9 +219,9 @@ configure_system_services() {
         systemctl stop chrony
     ' "NTP (chrony) installed"
   (
-    remote_copy "templates/chrony" "/etc/chrony/chrony.conf"
+    remote_copy "templates/chrony" "/etc/chrony/chrony.conf" || exit 1
     # Enable chrony to start on boot (don't start now - will activate after reboot)
-    remote_exec "systemctl enable chrony"
+    remote_exec "systemctl enable chrony" || exit 1
   ) >/dev/null 2>&1 &
   show_progress $! "Configuring chrony" "Chrony configured"
 
@@ -231,9 +231,9 @@ configure_system_services() {
         apt-get install -yqq unattended-upgrades apt-listchanges
     ' "Unattended Upgrades installed"
   (
-    remote_copy "templates/50unattended-upgrades" "/etc/apt/apt.conf.d/50unattended-upgrades"
-    remote_copy "templates/20auto-upgrades" "/etc/apt/apt.conf.d/20auto-upgrades"
-    remote_exec "systemctl enable unattended-upgrades"
+    remote_copy "templates/50unattended-upgrades" "/etc/apt/apt.conf.d/50unattended-upgrades" || exit 1
+    remote_copy "templates/20auto-upgrades" "/etc/apt/apt.conf.d/20auto-upgrades" || exit 1
+    remote_exec "systemctl enable unattended-upgrades" || exit 1
   ) >/dev/null 2>&1 &
   show_progress $! "Configuring Unattended Upgrades" "Unattended Upgrades configured"
 
@@ -247,7 +247,7 @@ configure_system_services() {
   # Configure CPU governor using template
   local governor="${CPU_GOVERNOR:-performance}"
   (
-    remote_copy "templates/cpufrequtils" "/tmp/cpufrequtils"
+    remote_copy "templates/cpufrequtils" "/tmp/cpufrequtils" || exit 1
     remote_exec "
             apt-get update -qq && apt-get install -yqq cpufrequtils 2>/dev/null || true
             mv /tmp/cpufrequtils /etc/default/cpufrequtils
@@ -257,14 +257,14 @@ configure_system_services() {
                     [ -f \"\$cpu\" ] && echo '$governor' > \"\$cpu\" 2>/dev/null || true
                 done
             fi
-        "
+        " || exit 1
   ) >/dev/null 2>&1 &
   show_progress $! "Configuring CPU governor (${governor})" "CPU governor configured"
 
   # Configure I/O scheduler udev rules (NVMe: none, SSD: mq-deadline, HDD: bfq)
   (
-    remote_copy "templates/60-io-scheduler.rules" "/etc/udev/rules.d/60-io-scheduler.rules"
-    remote_exec "udevadm control --reload-rules && udevadm trigger"
+    remote_copy "templates/60-io-scheduler.rules" "/etc/udev/rules.d/60-io-scheduler.rules" || exit 1
+    remote_exec "udevadm control --reload-rules && udevadm trigger" || exit 1
   ) >/dev/null 2>&1 &
   show_progress $! "Configuring I/O scheduler" "I/O scheduler configured"
 
@@ -272,8 +272,8 @@ configure_system_services() {
   if [[ ${PVE_REPO_TYPE:-no-subscription} != "enterprise" ]]; then
     log "configure_system_services: removing subscription notice (non-enterprise)"
     (
-      remote_copy "templates/remove-subscription-nag.sh" "/tmp/remove-subscription-nag.sh"
-      remote_exec "chmod +x /tmp/remove-subscription-nag.sh && /tmp/remove-subscription-nag.sh && rm -f /tmp/remove-subscription-nag.sh"
+      remote_copy "templates/remove-subscription-nag.sh" "/tmp/remove-subscription-nag.sh" || exit 1
+      remote_exec "chmod +x /tmp/remove-subscription-nag.sh && /tmp/remove-subscription-nag.sh && rm -f /tmp/remove-subscription-nag.sh" || exit 1
     ) >/dev/null 2>&1 &
     show_progress $! "Removing Proxmox subscription notice" "Subscription notice removed"
   fi

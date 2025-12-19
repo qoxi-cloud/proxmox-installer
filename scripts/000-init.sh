@@ -218,12 +218,15 @@ INSTALL_COMPLETED=false
 # Behavior depends on INSTALL_COMPLETED flag - preserves files if installation succeeded.
 # Uses secure deletion for password files when available.
 cleanup_temp_files() {
-  # Clean up standard temporary files
-  rm -f /tmp/tailscale_*.txt /tmp/iso_checksum.txt /tmp/*.tmp 2>/dev/null || true
+  # Clean up standard temporary files (including API token file with secrets)
+  rm -f /tmp/tailscale_*.txt /tmp/iso_checksum.txt /tmp/*.tmp /tmp/pve-install-api-token.env 2>/dev/null || true
+
+  # Always clean up answer.toml (contains root password)
+  rm -f /root/answer.toml 2>/dev/null || true
 
   # Clean up ISO and installation files (only if installation failed)
   if [[ $INSTALL_COMPLETED != "true" ]]; then
-    rm -f /root/pve.iso /root/pve-autoinstall.iso /root/answer.toml /root/SHA256SUMS 2>/dev/null || true
+    rm -f /root/pve.iso /root/pve-autoinstall.iso /root/SHA256SUMS 2>/dev/null || true
     rm -f /root/qemu_*.log 2>/dev/null || true
   fi
 

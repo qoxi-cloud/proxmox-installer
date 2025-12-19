@@ -28,7 +28,7 @@ TEMP_FILE="${OUTPUT_FILE}.tmp"
 if command -v zpool &>/dev/null; then
   # ZFS pool health status (1 = ONLINE, 0 = degraded/faulted)
   for pool in $(zpool list -H -o name); do
-    status=$(zpool status "$pool" | grep -m1 "state:" | awk '{print $2}')
+    status=$(zpool get health "$pool" -H -o value)
     health=0
     [[ $status == "ONLINE" ]] && health=1
 

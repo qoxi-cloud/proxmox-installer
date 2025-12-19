@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 # =============================================================================
-# Fail2Ban configuration (when Tailscale is not installed)
+# Fail2Ban configuration for brute-force protection
 # Protects SSH and Proxmox API from brute-force attacks
 # =============================================================================
 
@@ -29,18 +29,24 @@ _config_fail2ban() {
 }
 
 # Installs and configures Fail2Ban for brute-force protection.
-# Only installs when Tailscale is not used (Tailscale provides its own security).
+# Requires firewall to be installed (uses nftables for banning).
+# Skips installation in stealth mode (no public ports to protect).
 # Configures jails for SSH and Proxmox API protection.
 # Side effects: Sets FAIL2BAN_INSTALLED global, installs fail2ban package
 configure_fail2ban() {
-  # Only install Fail2Ban if Tailscale is NOT installed
-  # Tailscale provides its own security through authenticated mesh network
-  if [[ $INSTALL_TAILSCALE == "yes" ]]; then
-    log "Skipping Fail2Ban (Tailscale provides security)"
+  # Skip if firewall is not installed (Fail2Ban requires nftables)
+  if [[ $INSTALL_FIREWALL != "yes" ]]; then
+    log "Skipping Fail2Ban (no firewall installed)"
     return 0
   fi
 
-  log "Installing Fail2Ban (no Tailscale)"
+  # Skip if stealth mode - all public ports blocked, nothing to protect
+  if [[ $FIREWALL_MODE == "stealth" ]]; then
+    log "Skipping Fail2Ban (stealth mode - no public ports)"
+    return 0
+  fi
+
+  log "Installing and configuring Fail2Ban"
 
   # Install and configure using helper (with background progress)
   (

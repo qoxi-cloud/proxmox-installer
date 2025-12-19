@@ -15,11 +15,10 @@ _install_ringbuffer() {
 
 # Configuration function for ring buffer tuning
 _config_ringbuffer() {
-  # Export interface for template
-  export RINGBUFFER_INTERFACE="${DEFAULT_INTERFACE:-eth0}"
+  local ringbuffer_interface="${DEFAULT_INTERFACE:-eth0}"
 
   # Deploy systemd service for persistent ring buffer settings
-  deploy_template "network-ringbuffer.service" "/etc/systemd/system/network-ringbuffer.service" RINGBUFFER_INTERFACE
+  deploy_template "network-ringbuffer.service" "/etc/systemd/system/network-ringbuffer.service" "RINGBUFFER_INTERFACE=${ringbuffer_interface}"
 
   remote_exec '
     # Enable service for boot (will activate after reboot)
