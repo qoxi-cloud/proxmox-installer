@@ -187,111 +187,55 @@ _download_iso_aria2c() {
   aria2c "${aria2_args[@]}" "$url" >>"$LOG_FILE" 2>&1
 }
 
-# Internal: downloads ISO using parallel downloaders (first wins).
-# Starts all available downloaders simultaneously, uses first successful result.
+# Internal: downloads ISO with fallback chain (aria2c → curl → wget).
+# Tries aria2c first (fastest with parallel connections), then falls back to others.
 # Parameters:
 #   $1 - URL to download
 #   $2 - Output filename
 #   $3 - Optional SHA256 checksum
 # Returns: 0 on success (sets DOWNLOAD_METHOD), 1 on all failures
-# Side effects: Creates output file, cleans up temp files
-_download_iso_parallel() {
+_download_iso_with_fallback() {
   local url="$1"
   local output="$2"
   local checksum="$3"
-  local temp_dir
-  temp_dir=$(mktemp -d)
-  local pids=()
-  local methods=()
 
-  log "Starting parallel download race"
-
-  # Cleanup function
-  _cleanup_parallel_download() {
-    # Kill remaining processes immediately (no waiting needed)
-    for pid in "${pids[@]}"; do
-      kill "$pid" 2>/dev/null || true
-    done
-    # Remove temp files
-    rm -rf "$temp_dir"
-    rm -f "${output}.aria2" "${output}.curl" "${output}.wget" 2>/dev/null
-  }
-
-  # Start aria2c if available
+  # Try aria2c first (fastest - uses parallel connections)
   if command -v aria2c &>/dev/null; then
-    (
-      _download_iso_aria2c "$url" "$temp_dir/iso.aria2" "$checksum" \
-        && [[ -s "$temp_dir/iso.aria2" ]] \
-        && mv "$temp_dir/iso.aria2" "$temp_dir/done.aria2"
-    ) 2>/dev/null &
-    pids+=($!)
-    methods+=("aria2c")
-    log "Started aria2c downloader (PID: $!)"
-  fi
-
-  # Start curl
-  (
-    _download_iso_curl "$url" "$temp_dir/iso.curl" \
-      && [[ -s "$temp_dir/iso.curl" ]] \
-      && mv "$temp_dir/iso.curl" "$temp_dir/done.curl"
-  ) 2>/dev/null &
-  pids+=($!)
-  methods+=("curl")
-  log "Started curl downloader (PID: $!)"
-
-  # Start wget if available
-  if command -v wget &>/dev/null; then
-    (
-      _download_iso_wget "$url" "$temp_dir/iso.wget" \
-        && [[ -s "$temp_dir/iso.wget" ]] \
-        && mv "$temp_dir/iso.wget" "$temp_dir/done.wget"
-    ) 2>/dev/null &
-    pids+=($!)
-    methods+=("wget")
-    log "Started wget downloader (PID: $!)"
-  fi
-
-  # Wait for first success
-  while true; do
-    # Check for completed downloads
-    for ext in aria2 curl wget; do
-      if [[ -f "$temp_dir/done.$ext" ]] && [[ -s "$temp_dir/done.$ext" ]]; then
-        log "Download completed by $ext"
-        mv "$temp_dir/done.$ext" "$output"
-
-        # Set method for caller
-        case "$ext" in
-          aria2) DOWNLOAD_METHOD="aria2c" ;;
-          *) DOWNLOAD_METHOD="$ext" ;;
-        esac
-
-        _cleanup_parallel_download
-        return 0
-      fi
-    done
-
-    # Check if all processes have exited
-    local all_dead=true
-    for pid in "${pids[@]}"; do
-      if kill -0 "$pid" 2>/dev/null; then
-        all_dead=false
-        break
-      fi
-    done
-
-    if $all_dead; then
-      log "All download methods failed"
-      _cleanup_parallel_download
-      return 1
+    log "Trying aria2c (parallel download)..."
+    if _download_iso_aria2c "$url" "$output" "$checksum" && [[ -s "$output" ]]; then
+      DOWNLOAD_METHOD="aria2c"
+      return 0
     fi
+    log "aria2c failed, trying fallback..."
+    rm -f "$output" 2>/dev/null
+  fi
 
-    sleep 1
-  done
+  # Fallback to curl
+  log "Trying curl..."
+  if _download_iso_curl "$url" "$output" && [[ -s "$output" ]]; then
+    DOWNLOAD_METHOD="curl"
+    return 0
+  fi
+  log "curl failed, trying fallback..."
+  rm -f "$output" 2>/dev/null
+
+  # Fallback to wget
+  if command -v wget &>/dev/null; then
+    log "Trying wget..."
+    if _download_iso_wget "$url" "$output" && [[ -s "$output" ]]; then
+      DOWNLOAD_METHOD="wget"
+      return 0
+    fi
+    rm -f "$output" 2>/dev/null
+  fi
+
+  log "All download methods failed"
+  return 1
 }
 
-# Downloads Proxmox ISO with parallel downloaders and checksum verification.
+# Downloads Proxmox ISO with fallback chain and checksum verification.
 # Requires PROXMOX_ISO_VERSION to be set (user selects version in wizard).
-# Runs aria2c, curl, wget in parallel - first to finish wins.
+# Tries aria2c first (parallel connections), then curl, then wget as fallback.
 # Side effects: Creates pve.iso file, exits on failure
 download_proxmox_iso() {
   log "Starting Proxmox ISO download"
@@ -320,11 +264,11 @@ download_proxmox_iso() {
   fi
   log "Expected checksum: ${expected_checksum:-not available}"
 
-  # Download with parallel race: aria2c, curl, wget simultaneously
-  log "Downloading ISO: $ISO_FILENAME (parallel mode)"
+  # Download with fallback chain: aria2c → curl → wget
+  log "Downloading ISO: $ISO_FILENAME"
   DOWNLOAD_METHOD=""
 
-  _download_iso_parallel "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum" &
+  _download_iso_with_fallback "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum" &
   show_progress $! "Downloading $ISO_FILENAME" "$ISO_FILENAME downloaded"
   wait $!
   local exit_code=$?
