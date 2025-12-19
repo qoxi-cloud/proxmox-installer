@@ -7,18 +7,23 @@
 # Banner letter count for animation (P=0, r=1, o=2, x=3, m=4, o=5, x=6)
 BANNER_LETTER_COUNT=7
 
+# Padding to center banner relative to footer (69 chars)
+# Banner width ~51 chars, padding = (69-51)/2 = 9
+_BANNER_PAD="         "
+
 # Display main ASCII banner
 # Usage: show_banner
 show_banner() {
+  local p="$_BANNER_PAD"
   printf '%s\n' \
-    "${CLR_GRAY} _____                                             ${CLR_RESET}" \
-    "${CLR_GRAY}|  __ \\                                            ${CLR_RESET}" \
-    "${CLR_GRAY}| |__) | _ __   ___  ${CLR_ORANGE}__  __${CLR_GRAY}  _ __ ___    ___  ${CLR_ORANGE}__  __${CLR_RESET}" \
-    "${CLR_GRAY}|  ___/ | '__| / _ \\ ${CLR_ORANGE}\\ \\/ /${CLR_GRAY} | '_ \` _ \\  / _ \\ ${CLR_ORANGE}\\ \\/ /${CLR_RESET}" \
-    "${CLR_GRAY}| |     | |   | (_) |${CLR_ORANGE} >  <${CLR_GRAY}  | | | | | || (_) |${CLR_ORANGE} >  <${CLR_RESET}" \
-    "${CLR_GRAY}|_|     |_|    \\___/ ${CLR_ORANGE}/_/\\_\\${CLR_GRAY} |_| |_| |_| \\___/ ${CLR_ORANGE}/_/\\_\\${CLR_RESET}" \
+    "${p}${CLR_GRAY} _____                                             ${CLR_RESET}" \
+    "${p}${CLR_GRAY}|  __ \\                                            ${CLR_RESET}" \
+    "${p}${CLR_GRAY}| |__) | _ __   ___  ${CLR_ORANGE}__  __${CLR_GRAY}  _ __ ___    ___  ${CLR_ORANGE}__  __${CLR_RESET}" \
+    "${p}${CLR_GRAY}|  ___/ | '__| / _ \\ ${CLR_ORANGE}\\ \\/ /${CLR_GRAY} | '_ \` _ \\  / _ \\ ${CLR_ORANGE}\\ \\/ /${CLR_RESET}" \
+    "${p}${CLR_GRAY}| |     | |   | (_) |${CLR_ORANGE} >  <${CLR_GRAY}  | | | | | || (_) |${CLR_ORANGE} >  <${CLR_RESET}" \
+    "${p}${CLR_GRAY}|_|     |_|    \\___/ ${CLR_ORANGE}/_/\\_\\${CLR_GRAY} |_| |_| |_| \\___/ ${CLR_ORANGE}/_/\\_\\${CLR_RESET}" \
     "" \
-    "${CLR_HETZNER}            Hetzner ${CLR_GRAY}Automated Installer${CLR_RESET}"
+    "${p}${CLR_HETZNER}            Hetzner ${CLR_GRAY}Automated Installer${CLR_RESET}"
 }
 
 # Displays animated banner with highlighted letter.
@@ -30,19 +35,20 @@ _show_banner_frame() {
   local M="${CLR_GRAY}"
   local A="${CLR_ORANGE}"
   local R="${CLR_RESET}"
+  local p="$_BANNER_PAD"
 
   # Line 1: _____ is top of P
-  local line1="${M} "
+  local line1="${p}${M} "
   [[ $h -eq 0 ]] && line1+="${A}_____${M}" || line1+="_____"
   line1+="                                             ${R}"
 
   # Line 2: |  __ \
-  local line2="${M}"
+  local line2="${p}${M}"
   [[ $h -eq 0 ]] && line2+="${A}|  __ \\${M}" || line2+='|  __ \'
   line2+="                                            ${R}"
 
   # Line 3: | |__) | _ __   ___  __  __  _ __ ___    ___  __  __
-  local line3="${M}"
+  local line3="${p}${M}"
   [[ $h -eq 0 ]] && line3+="${A}| |__) |${M}" || line3+="| |__) |"
   [[ $h -eq 1 ]] && line3+=" ${A}_ __${M}" || line3+=" _ __"
   [[ $h -eq 2 ]] && line3+="   ${A}___${M}" || line3+="   ___"
@@ -53,7 +59,7 @@ _show_banner_frame() {
   line3+="${R}"
 
   # Line 4: |  ___/ | '__| / _ \ \ \/ / | '_ ` _ \  / _ \ \ \/ /
-  local line4="${M}"
+  local line4="${p}${M}"
   [[ $h -eq 0 ]] && line4+="${A}|  ___/ ${M}" || line4+="|  ___/ "
   [[ $h -eq 1 ]] && line4+="${A}| '__|${M}" || line4+="| '__|"
   [[ $h -eq 2 ]] && line4+=" ${A}/ _ \\${M}" || line4+=' / _ \'
@@ -64,7 +70,7 @@ _show_banner_frame() {
   line4+="${R}"
 
   # Line 5: | |     | |   | (_) | >  <  | | | | | || (_) | >  <
-  local line5="${M}"
+  local line5="${p}${M}"
   [[ $h -eq 0 ]] && line5+="${A}| |     ${M}" || line5+="| |     "
   [[ $h -eq 1 ]] && line5+="${A}| |${M}" || line5+="| |"
   [[ $h -eq 2 ]] && line5+="   ${A}| (_) |${M}" || line5+="   | (_) |"
@@ -75,7 +81,7 @@ _show_banner_frame() {
   line5+="${R}"
 
   # Line 6: |_|     |_|    \___/ /_/\_\ |_| |_| |_| \___/ /_/\_\
-  local line6="${M}"
+  local line6="${p}${M}"
   [[ $h -eq 0 ]] && line6+="${A}|_|     ${M}" || line6+="|_|     "
   [[ $h -eq 1 ]] && line6+="${A}|_|${M}" || line6+="|_|"
   [[ $h -eq 2 ]] && line6+="    ${A}\\___/${M}" || line6+='    \___/'
@@ -86,7 +92,7 @@ _show_banner_frame() {
   line6+="${R}"
 
   # Hetzner line
-  local line_hetzner="${CLR_HETZNER}            Hetzner ${M}Automated Installer${R}"
+  local line_hetzner="${p}${CLR_HETZNER}            Hetzner ${M}Automated Installer${R}"
 
   # Output all lines atomically to prevent interference
   # Build the entire frame first, then output it all at once
