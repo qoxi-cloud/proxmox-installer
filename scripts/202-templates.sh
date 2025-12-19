@@ -3,6 +3,58 @@
 # Template preparation and download
 # =============================================================================
 
+# Downloads all templates in parallel using aria2c.
+# Falls back to sequential wget if aria2c unavailable.
+# Parameters:
+#   $@ - List of "local_path:remote_name" pairs
+# Returns: 0 on success, 1 on failure
+_download_templates_parallel() {
+  local -a templates=("$@")
+  local input_file
+  input_file=$(mktemp)
+
+  # Build aria2c input file
+  for entry in "${templates[@]}"; do
+    local local_path="${entry%%:*}"
+    local remote_name="${entry#*:}"
+    local url="${GITHUB_BASE_URL}/templates/${remote_name}.tmpl"
+    echo "$url"
+    echo "  out=$local_path"
+  done >"$input_file"
+
+  log "Downloading ${#templates[@]} templates in parallel"
+
+  # Use aria2c for parallel download if available
+  if command -v aria2c &>/dev/null; then
+    if aria2c -q \
+      -j 16 \
+      --max-connection-per-server=4 \
+      --file-allocation=none \
+      --max-tries=3 \
+      --retry-wait=2 \
+      --timeout=30 \
+      --connect-timeout=10 \
+      -i "$input_file" \
+      >>"$LOG_FILE" 2>&1; then
+      rm -f "$input_file"
+      return 0
+    fi
+    log "WARNING: aria2c failed, falling back to sequential download"
+  fi
+
+  rm -f "$input_file"
+
+  # Fallback: sequential download with wget
+  for entry in "${templates[@]}"; do
+    local local_path="${entry%%:*}"
+    local remote_name="${entry#*:}"
+    if ! download_template "$local_path" "$remote_name"; then
+      return 1
+    fi
+  done
+  return 0
+}
+
 # Downloads and prepares all template files for Proxmox configuration.
 # Selects appropriate templates based on bridge mode and repository type.
 # Side effects: Creates templates directory, downloads and modifies templates
@@ -20,48 +72,53 @@ make_templates() {
   esac
   log "Using repository template: $proxmox_sources_template"
 
-  # Download template files in background with progress
-  (
-    download_template "./templates/99-proxmox.conf" || exit 1
-    download_template "./templates/hosts" || exit 1
-    download_template "./templates/debian.sources" || exit 1
-    download_template "./templates/proxmox.sources" "$proxmox_sources_template" || exit 1
-    download_template "./templates/sshd_config" || exit 1
-    download_template "./templates/zshrc" || exit 1
-    download_template "./templates/p10k.zsh" || exit 1
-    download_template "./templates/chrony" || exit 1
-    download_template "./templates/50unattended-upgrades" || exit 1
-    download_template "./templates/20auto-upgrades" || exit 1
-    download_template "./templates/interfaces" "$interfaces_template" || exit 1
-    download_template "./templates/resolv.conf" || exit 1
-    download_template "./templates/configure-zfs-arc.sh" || exit 1
-    download_template "./templates/locale.sh" || exit 1
-    download_template "./templates/default-locale" || exit 1
-    download_template "./templates/environment" || exit 1
-    download_template "./templates/cpufrequtils" || exit 1
-    download_template "./templates/remove-subscription-nag.sh" || exit 1
-    # Let's Encrypt templates
-    download_template "./templates/letsencrypt-deploy-hook.sh" || exit 1
-    download_template "./templates/letsencrypt-firstboot.sh" || exit 1
-    download_template "./templates/letsencrypt-firstboot.service" || exit 1
+  # Build list of templates: "local_path:remote_name"
+  local -a template_list=(
+    "./templates/99-proxmox.conf:99-proxmox.conf"
+    "./templates/hosts:hosts"
+    "./templates/debian.sources:debian.sources"
+    "./templates/proxmox.sources:${proxmox_sources_template}"
+    "./templates/sshd_config:sshd_config"
+    "./templates/zshrc:zshrc"
+    "./templates/p10k.zsh:p10k.zsh"
+    "./templates/chrony:chrony"
+    "./templates/50unattended-upgrades:50unattended-upgrades"
+    "./templates/20auto-upgrades:20auto-upgrades"
+    "./templates/interfaces:${interfaces_template}"
+    "./templates/resolv.conf:resolv.conf"
+    "./templates/configure-zfs-arc.sh:configure-zfs-arc.sh"
+    "./templates/locale.sh:locale.sh"
+    "./templates/default-locale:default-locale"
+    "./templates/environment:environment"
+    "./templates/cpufrequtils:cpufrequtils"
+    "./templates/remove-subscription-nag.sh:remove-subscription-nag.sh"
+    # Let's Encrypt
+    "./templates/letsencrypt-deploy-hook.sh:letsencrypt-deploy-hook.sh"
+    "./templates/letsencrypt-firstboot.sh:letsencrypt-firstboot.sh"
+    "./templates/letsencrypt-firstboot.service:letsencrypt-firstboot.service"
     # Shell startup and tools
-    download_template "./templates/fastfetch.sh" || exit 1
-    download_template "./templates/bat-config" || exit 1
-    # Security templates (downloaded unconditionally, used conditionally)
-    download_template "./templates/fail2ban-jail.local" || exit 1
-    download_template "./templates/fail2ban-proxmox.conf" || exit 1
-    download_template "./templates/auditd-rules" || exit 1
-    download_template "./templates/apparmor-grub.cfg" || exit 1
-    # Tailscale templates
-    download_template "./templates/disable-openssh.service" || exit 1
-    # nftables firewall configuration
-    download_template "./templates/nftables.conf" || exit 1
+    "./templates/fastfetch.sh:fastfetch.sh"
+    "./templates/bat-config:bat-config"
+    # Security
+    "./templates/fail2ban-jail.local:fail2ban-jail.local"
+    "./templates/fail2ban-proxmox.conf:fail2ban-proxmox.conf"
+    "./templates/auditd-rules:auditd-rules"
+    "./templates/apparmor-grub.cfg:apparmor-grub.cfg"
+    # Tailscale
+    "./templates/disable-openssh.service:disable-openssh.service"
+    # Firewall
+    "./templates/nftables.conf:nftables.conf"
     # Optional tools
-    download_template "./templates/yazi-theme.toml" || exit 1
-    # Prometheus node exporter
-    download_template "./templates/prometheus-node-exporter" || exit 1
-    download_template "./templates/proxmox-metrics.sh" || exit 1
-    download_template "./templates/proxmox-metrics.cron" || exit 1
+    "./templates/yazi-theme.toml:yazi-theme.toml"
+    # Prometheus
+    "./templates/prometheus-node-exporter:prometheus-node-exporter"
+    "./templates/proxmox-metrics.sh:proxmox-metrics.sh"
+    "./templates/proxmox-metrics.cron:proxmox-metrics.cron"
+  )
+
+  # Download all templates in parallel
+  (
+    _download_templates_parallel "${template_list[@]}" || exit 1
   ) >/dev/null 2>&1 &
   if ! show_progress $! "Downloading template files"; then
     log "ERROR: Failed to download template files"
