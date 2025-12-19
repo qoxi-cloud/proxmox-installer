@@ -135,7 +135,8 @@ wait_for_ssh_ready() {
     local elapsed=0
     while ((elapsed < timeout)); do
       # shellcheck disable=SC2086
-      if sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' >/dev/null 2>&1; then
+      # Use timeout to prevent hanging if SSH connects but command doesn't return
+      if timeout 15 sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' >/dev/null 2>&1; then
         exit 0
       fi
       sleep 2
@@ -143,7 +144,7 @@ wait_for_ssh_ready() {
     done
     # Debug: log failure reason
     # shellcheck disable=SC2086
-    sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' 2>&1 | head -5 >>/tmp/ssh-debug.log
+    timeout 15 sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' 2>&1 | head -5 >>/tmp/ssh-debug.log
     exit 1
   ) &
   local wait_pid=$!
