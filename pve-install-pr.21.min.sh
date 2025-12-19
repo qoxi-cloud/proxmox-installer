@@ -796,58 +796,6 @@ if [[ -f /root/.ssh/authorized_keys ]];then
 grep -E "^ssh-(rsa|ed25519|ecdsa)" /root/.ssh/authorized_keys 2>/dev/null|head -1
 fi
 }
-install_optional_feature(){
-local feature_name="$1"
-local install_var="$2"
-local install_func="$3"
-local config_func="$4"
-local installed_var="${5:-}"
-if [[ ${!install_var} != "yes" ]];then
-log "Skipping $feature_name (not requested)"
-return 0
-fi
-if ! "$install_func";then
-log "ERROR: $feature_name installation failed"
-print_error "$feature_name installation failed"
-return 1
-fi
-if ! "$config_func";then
-log "WARNING: $feature_name configuration failed"
-print_warning "$feature_name configuration failed - continuing without it"
-return 0
-fi
-if [[ -n $installed_var ]];then
-declare -g "$installed_var=yes"
-log "$feature_name installed and configured successfully"
-fi
-return 0
-}
-install_optional_feature_with_progress(){
-local feature_name="$1"
-local install_var="$2"
-local install_func="$3"
-local config_func="$4"
-local installed_var="$5"
-local progress_msg="${6:-Installing $feature_name}"
-local success_msg="${7:-$feature_name configured}"
-if [[ ${!install_var} != "yes" ]];then
-log "Skipping $feature_name (not requested)"
-return 0
-fi
-log "Installing and configuring $feature_name"
-("$install_func"||exit 1
-"$config_func"||exit 1) > \
-/dev/null 2>&1&
-show_progress $! "$progress_msg" "$success_msg"
-local exit_code=$?
-if [[ $exit_code -ne 0 ]];then
-log "WARNING: $feature_name setup failed"
-print_warning "$feature_name setup failed - continuing without it"
-return 0
-fi
-declare -g "$installed_var=yes"
-return 0
-}
 generate_password(){
 local length="${1:-16}"
 tr -dc 'A-Za-z0-9!@#$%^&*' </dev/urandom|head -c "$length"
@@ -4562,49 +4510,13 @@ return 0
 fi
 FIREWALL_INSTALLED="yes"
 }
-_install_fail2ban(){
-run_remote "Installing Fail2Ban" '
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
-    apt-get install -yqq fail2ban
-  ' "Fail2Ban installed"
-}
 _config_fail2ban(){
 apply_template_vars "./templates/fail2ban-jail.local" \
 "EMAIL=$EMAIL" \
 "HOSTNAME=$PVE_HOSTNAME"
-remote_copy "templates/fail2ban-jail.local" "/etc/fail2ban/jail.local"||exit 1
-remote_copy "templates/fail2ban-proxmox.conf" "/etc/fail2ban/filter.d/proxmox.conf"||exit 1
-remote_exec "systemctl enable fail2ban"||exit 1
-}
-configure_fail2ban(){
-if [[ $INSTALL_FIREWALL != "yes" ]];then
-log "Skipping Fail2Ban (no firewall installed)"
-return 0
-fi
-if [[ $FIREWALL_MODE == "stealth" ]];then
-log "Skipping Fail2Ban (stealth mode - no public ports)"
-return 0
-fi
-log "Installing and configuring Fail2Ban"
-(_install_fail2ban||exit 1
-_config_fail2ban||exit 1) > \
-/dev/null 2>&1&
-show_progress $! "Installing and configuring Fail2Ban" "Fail2Ban configured"
-local exit_code=$?
-if [[ $exit_code -ne 0 ]];then
-log "WARNING: Fail2Ban setup failed"
-print_warning "Fail2Ban setup failed - continuing without it"
-return 0
-fi
-FAIL2BAN_INSTALLED="yes"
-}
-_install_apparmor(){
-run_remote "Installing AppArmor" '
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
-    apt-get install -yqq apparmor apparmor-utils
-  ' "AppArmor installed"
+remote_copy "templates/fail2ban-jail.local" "/etc/fail2ban/jail.local"||return 1
+remote_copy "templates/fail2ban-proxmox.conf" "/etc/fail2ban/filter.d/proxmox.conf"||return 1
+remote_exec "systemctl enable fail2ban"||return 1
 }
 _config_apparmor(){
 remote_exec '
@@ -4623,35 +4535,10 @@ remote_exec '
 
     # Enable AppArmor to start on boot (will activate after reboot)
     systemctl enable apparmor.service
-  '||exit 1
-}
-configure_apparmor(){
-if [[ ${INSTALL_APPARMOR:-} != "yes" ]];then
-log "Skipping AppArmor (not requested)"
-return 0
-fi
-log "Installing and configuring AppArmor"
-(_install_apparmor||exit 1
-_config_apparmor||exit 1) > \
-/dev/null 2>&1&
-show_progress $! "Installing and configuring AppArmor" "AppArmor configured"
-local exit_code=$?
-if [[ $exit_code -ne 0 ]];then
-log "WARNING: AppArmor setup failed"
-print_warning "AppArmor setup failed - continuing without it"
-return 0
-fi
-APPARMOR_INSTALLED="yes"
-}
-_install_auditd(){
-run_remote "Installing auditd" '
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
-    apt-get install -yqq auditd audispd-plugins
-  ' "Auditd installed"
+  '||return 1
 }
 _config_auditd(){
-remote_copy "templates/auditd-rules" "/etc/audit/rules.d/proxmox.rules"||exit 1
+remote_copy "templates/auditd-rules" "/etc/audit/rules.d/proxmox.rules"||return 1
 remote_exec '
     # Ensure log directory exists
     mkdir -p /var/log/audit
@@ -4666,28 +4553,11 @@ remote_exec '
 
     # Enable auditd to start on boot (will activate after reboot)
     systemctl enable auditd
-  '||exit 1
-}
-configure_auditd(){
-install_optional_feature_with_progress \
-"Auditd" \
-"INSTALL_AUDITD" \
-"_install_auditd" \
-"_config_auditd" \
-"AUDITD_INSTALLED" \
-"Installing and configuring auditd" \
-"Auditd configured"
-}
-_install_aide(){
-run_remote "Installing AIDE" '
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
-    apt-get install -yqq aide aide-common
-  ' "AIDE installed"
+  '||return 1
 }
 _config_aide(){
-remote_copy "templates/aide-check.service" "/etc/systemd/system/aide-check.service"||exit 1
-remote_copy "templates/aide-check.timer" "/etc/systemd/system/aide-check.timer"||exit 1
+remote_copy "templates/aide-check.service" "/etc/systemd/system/aide-check.service"||return 1
+remote_copy "templates/aide-check.timer" "/etc/systemd/system/aide-check.timer"||return 1
 remote_exec '
     # Initialize AIDE database (this takes a while)
     echo "Initializing AIDE database (this may take several minutes)..."
@@ -4701,36 +4571,11 @@ remote_exec '
     # Enable daily integrity check timer (will activate after reboot)
     systemctl daemon-reload
     systemctl enable aide-check.timer
-  '||exit 1
-}
-configure_aide(){
-if [[ $INSTALL_AIDE != "yes" ]];then
-log "Skipping AIDE (not requested)"
-return 0
-fi
-log "Installing and configuring AIDE"
-(_install_aide||exit 1
-_config_aide||exit 1) > \
-/dev/null 2>&1&
-show_progress $! "Installing and configuring AIDE" "AIDE configured"
-local exit_code=$?
-if [[ $exit_code -ne 0 ]];then
-log "WARNING: AIDE setup failed"
-print_warning "AIDE setup failed - continuing without it"
-return 0
-fi
-AIDE_INSTALLED="yes"
-}
-_install_chkrootkit(){
-run_remote "Installing chkrootkit" '
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
-    apt-get install -yqq chkrootkit
-  ' "chkrootkit installed"
+  '||return 1
 }
 _config_chkrootkit(){
-remote_copy "templates/chkrootkit-scan.service" "/etc/systemd/system/chkrootkit-scan.service"||exit 1
-remote_copy "templates/chkrootkit-scan.timer" "/etc/systemd/system/chkrootkit-scan.timer"||exit 1
+remote_copy "templates/chkrootkit-scan.service" "/etc/systemd/system/chkrootkit-scan.service"||return 1
+remote_copy "templates/chkrootkit-scan.timer" "/etc/systemd/system/chkrootkit-scan.timer"||return 1
 remote_exec '
     # Ensure log directory exists
     mkdir -p /var/log/chkrootkit
@@ -4738,36 +4583,11 @@ remote_exec '
     # Enable weekly scan timer (will activate after reboot)
     systemctl daemon-reload
     systemctl enable chkrootkit-scan.timer
-  '||exit 1
-}
-configure_chkrootkit(){
-if [[ $INSTALL_CHKROOTKIT != "yes" ]];then
-log "Skipping chkrootkit (not requested)"
-return 0
-fi
-log "Installing and configuring chkrootkit"
-(_install_chkrootkit||exit 1
-_config_chkrootkit||exit 1) > \
-/dev/null 2>&1&
-show_progress $! "Installing chkrootkit" "chkrootkit configured"
-local exit_code=$?
-if [[ $exit_code -ne 0 ]];then
-log "WARNING: chkrootkit setup failed"
-print_warning "chkrootkit setup failed - continuing without it"
-return 0
-fi
-CHKROOTKIT_INSTALLED="yes"
-}
-_install_lynis(){
-run_remote "Installing lynis" '
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
-    apt-get install -yqq lynis
-  ' "lynis installed"
+  '||return 1
 }
 _config_lynis(){
-remote_copy "templates/lynis-audit.service" "/etc/systemd/system/lynis-audit.service"||exit 1
-remote_copy "templates/lynis-audit.timer" "/etc/systemd/system/lynis-audit.timer"||exit 1
+remote_copy "templates/lynis-audit.service" "/etc/systemd/system/lynis-audit.service"||return 1
+remote_copy "templates/lynis-audit.timer" "/etc/systemd/system/lynis-audit.timer"||return 1
 remote_exec '
     # Ensure log directory exists
     mkdir -p /var/log/lynis
@@ -4775,100 +4595,25 @@ remote_exec '
     # Enable weekly audit timer (will activate after reboot)
     systemctl daemon-reload
     systemctl enable lynis-audit.timer
-  '||exit 1
-}
-configure_lynis(){
-if [[ $INSTALL_LYNIS != "yes" ]];then
-log "Skipping lynis (not requested)"
-return 0
-fi
-log "Installing and configuring lynis"
-(_install_lynis||exit 1
-_config_lynis||exit 1) > \
-/dev/null 2>&1&
-show_progress $! "Installing lynis" "lynis configured"
-local exit_code=$?
-if [[ $exit_code -ne 0 ]];then
-log "WARNING: lynis setup failed"
-print_warning "lynis setup failed - continuing without it"
-return 0
-fi
-LYNIS_INSTALLED="yes"
-}
-_install_needrestart(){
-run_remote "Installing needrestart" '
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
-    apt-get install -yqq needrestart
-  ' "needrestart installed"
+  '||return 1
 }
 _config_needrestart(){
 remote_copy "templates/needrestart.conf" "/etc/needrestart/conf.d/50-autorestart.conf"||return 1
 }
-configure_needrestart(){
-if [[ $INSTALL_NEEDRESTART != "yes" ]];then
-log "Skipping needrestart (not requested)"
-return 0
-fi
-log "Installing and configuring needrestart"
-(_install_needrestart||exit 1
-_config_needrestart||exit 1) > \
-/dev/null 2>&1&
-show_progress $! "Installing needrestart" "needrestart configured"
-local exit_code=$?
-if [[ $exit_code -ne 0 ]];then
-log "WARNING: needrestart setup failed"
-print_warning "needrestart setup failed - continuing without it"
-return 0
-fi
-NEEDRESTART_INSTALLED="yes"
-}
-_install_ringbuffer(){
-run_remote "Installing ethtool" '
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
-    apt-get install -yqq ethtool
-  ' "ethtool installed"
-}
 _config_ringbuffer(){
 local ringbuffer_interface="${DEFAULT_INTERFACE:-eth0}"
 apply_template_vars "templates/network-ringbuffer.service" "RINGBUFFER_INTERFACE=$ringbuffer_interface"
-remote_copy "templates/network-ringbuffer.service" "/etc/systemd/system/network-ringbuffer.service"||exit 1
+remote_copy "templates/network-ringbuffer.service" "/etc/systemd/system/network-ringbuffer.service"||return 1
 remote_exec '
     # Enable service for boot (will activate after reboot)
     systemctl daemon-reload
     systemctl enable network-ringbuffer.service
-  '||exit 1
-}
-configure_ringbuffer(){
-if [[ $INSTALL_RINGBUFFER != "yes" ]];then
-log "Skipping ring buffer tuning (not requested)"
-return 0
-fi
-log "Installing and configuring ring buffer tuning"
-(_install_ringbuffer||exit 1
-_config_ringbuffer||exit 1) > \
-/dev/null 2>&1&
-show_progress $! "Configuring ring buffer" "Ring buffer configured"
-local exit_code=$?
-if [[ $exit_code -ne 0 ]];then
-log "WARNING: ring buffer setup failed"
-print_warning "Ring buffer setup failed - continuing without it"
-return 0
-fi
-RINGBUFFER_INSTALLED="yes"
-}
-_install_vnstat(){
-run_remote "Installing vnstat" '
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
-    apt-get install -yqq vnstat
-  ' "vnstat installed"
+  '||return 1
 }
 _config_vnstat(){
 local iface="${INTERFACE_NAME:-eth0}"
 apply_template_vars "templates/vnstat.conf" "INTERFACE_NAME=$iface"
-remote_copy "templates/vnstat.conf" "/etc/vnstat.conf"||exit 1
+remote_copy "templates/vnstat.conf" "/etc/vnstat.conf"||return 1
 remote_exec "
     # Ensure database directory exists
     mkdir -p /var/lib/vnstat
@@ -4885,74 +4630,23 @@ remote_exec "
 
     # Enable vnstat to start on boot (don't start now - will activate after reboot)
     systemctl enable vnstat
-  "||exit 1
-}
-configure_vnstat(){
-if [[ $INSTALL_VNSTAT != "yes" ]];then
-log "Skipping vnstat (not requested)"
-return 0
-fi
-log "Installing and configuring vnstat"
-(_install_vnstat||exit 1
-_config_vnstat||exit 1) > \
-/dev/null 2>&1&
-show_progress $! "Installing vnstat" "vnstat configured"
-local exit_code=$?
-if [[ $exit_code -ne 0 ]];then
-log "WARNING: vnstat setup failed"
-print_warning "vnstat setup failed - continuing without it"
-return 0
-fi
-VNSTAT_INSTALLED="yes"
-}
-_install_prometheus(){
-run_remote "Installing prometheus-node-exporter" '
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
-    apt-get install -yqq prometheus-node-exporter
-  ' "Prometheus node exporter installed"
+  "||return 1
 }
 _config_prometheus(){
 remote_exec '
     mkdir -p /var/lib/prometheus/node-exporter
     chown prometheus:prometheus /var/lib/prometheus/node-exporter
-  '||exit 1
-remote_copy "templates/prometheus-node-exporter" "/etc/default/prometheus-node-exporter"||exit 1
-remote_copy "templates/proxmox-metrics.sh" "/usr/local/bin/proxmox-metrics.sh"||exit 1
-remote_exec "chmod +x /usr/local/bin/proxmox-metrics.sh"||exit 1
-remote_copy "templates/proxmox-metrics.cron" "/etc/cron.d/proxmox-metrics"||exit 1
+  '||return 1
+remote_copy "templates/prometheus-node-exporter" "/etc/default/prometheus-node-exporter"||return 1
+remote_copy "templates/proxmox-metrics.sh" "/usr/local/bin/proxmox-metrics.sh"||return 1
+remote_exec "chmod +x /usr/local/bin/proxmox-metrics.sh"||return 1
+remote_copy "templates/proxmox-metrics.cron" "/etc/cron.d/proxmox-metrics"||return 1
 remote_exec "/usr/local/bin/proxmox-metrics.sh" >/dev/null 2>&1||log "WARNING: Initial metrics collection failed (non-fatal)"
 remote_exec '
     systemctl daemon-reload
     systemctl enable prometheus-node-exporter
-  '||exit 1
+  '||return 1
 log "Prometheus node exporter listening on :9100 with textfile collector"
-log "Custom metrics cron job installed (/etc/cron.d/proxmox-metrics, runs every 5 minutes)"
-}
-configure_prometheus(){
-if [[ $INSTALL_PROMETHEUS != "yes" ]];then
-log "Skipping prometheus-node-exporter (not requested)"
-return 0
-fi
-log "Installing and configuring prometheus-node-exporter"
-(_install_prometheus||exit 1
-_config_prometheus||exit 1) > \
-/dev/null 2>&1&
-show_progress $! "Installing and configuring prometheus" "Prometheus configured"
-local exit_code=$?
-if [[ $exit_code -ne 0 ]];then
-log "WARNING: Prometheus setup failed"
-print_warning "Prometheus setup failed - continuing without it"
-return 0
-fi
-PROMETHEUS_INSTALLED="yes"
-if [[ $INSTALL_TAILSCALE == "yes" ]];then
-log "Prometheus metrics accessible via Tailscale only (stealth firewall enabled)"
-else
-log "WARNING: Prometheus metrics exposed on public IP $MAIN_IPV4:9100"
-log "Consider using firewall rules to restrict access to trusted IPs only"
-fi
-log "Textfile collector directory: /var/lib/prometheus/node-exporter"
 }
 _install_netdata(){
 run_remote "Installing netdata" '
@@ -5036,13 +4730,6 @@ return 0
 fi
 YAZI_INSTALLED="yes"
 }
-_install_nvim(){
-run_remote "Installing neovim" '
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
-    apt-get install -yqq neovim
-  ' "Neovim installed"
-}
 _config_nvim(){
 remote_exec '
     update-alternatives --install /usr/bin/vi vi /usr/bin/nvim 60
@@ -5053,25 +4740,7 @@ remote_exec '
     update-alternatives --set vi /usr/bin/nvim
     update-alternatives --set vim /usr/bin/nvim
     update-alternatives --set editor /usr/bin/nvim
-  '||exit 1
-}
-configure_nvim(){
-if [[ $INSTALL_NVIM != "yes" ]];then
-log "Skipping neovim (not requested)"
-return 0
-fi
-log "Installing and configuring neovim"
-(_install_nvim||exit 1
-_config_nvim||exit 1) > \
-/dev/null 2>&1&
-show_progress $! "Installing and configuring neovim" "Neovim configured"
-local exit_code=$?
-if [[ $exit_code -ne 0 ]];then
-log "WARNING: Neovim setup failed"
-print_warning "Neovim setup failed - continuing without it"
-return 0
-fi
-NVIM_INSTALLED="yes"
+  '||return 1
 }
 configure_ssl_certificate(){
 log "configure_ssl_certificate: SSL_TYPE=$SSL_TYPE"
