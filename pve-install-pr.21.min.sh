@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.296-pr.21"
+VERSION="2.0.297-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -3701,16 +3701,16 @@ local url="$1"
 local output="$2"
 local checksum="$3"
 local max_retries="${DOWNLOAD_RETRY_COUNT:-3}"
-log "Downloading with aria2c (2 connections, with retries)"
+log "Downloading with aria2c (4 connections, with retries)"
 local aria2_args=(
--x 2
--s 2
+-x 4
+-s 4
 -k 4M
 --max-tries="$max_retries"
 --retry-wait=5
 --timeout=60
 --connect-timeout=30
---max-connection-per-server=2
+--max-connection-per-server=4
 --allow-overwrite=true
 --auto-file-renaming=false
 -o "$output"
