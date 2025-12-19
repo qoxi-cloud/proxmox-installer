@@ -18,6 +18,11 @@ configure_tailscale() {
         apt-get install -yqq tailscale
         systemctl enable tailscaled
         systemctl start tailscaled
+        # Wait for tailscaled socket to be ready (up to 30s)
+        for i in {1..30}; do
+          tailscale status &>/dev/null && break
+          sleep 1
+        done
     ' "Tailscale VPN installed"
 
   # If auth key is provided, authenticate Tailscale
