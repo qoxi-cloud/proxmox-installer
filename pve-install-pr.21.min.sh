@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.280-pr.21"
+VERSION="2.0.281-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -323,29 +323,32 @@ log "METRIC: installation_completed total_time=${total}s (${minutes}m ${seconds}
 fi
 }
 BANNER_LETTER_COUNT=7
+_BANNER_PAD="         "
 show_banner(){
+local p="$_BANNER_PAD"
 printf '%s\n' \
-"$CLR_GRAY _____                                             $CLR_RESET" \
-"$CLR_GRAY|  __ \\                                            $CLR_RESET" \
-"$CLR_GRAY| |__) | _ __   ___  ${CLR_ORANGE}__  __$CLR_GRAY  _ __ ___    ___  ${CLR_ORANGE}__  __$CLR_RESET" \
-"$CLR_GRAY|  ___/ | '__| / _ \\ $CLR_ORANGE\\ \\/ /$CLR_GRAY | '_ \` _ \\  / _ \\ $CLR_ORANGE\\ \\/ /$CLR_RESET" \
-"$CLR_GRAY| |     | |   | (_) |$CLR_ORANGE >  <$CLR_GRAY  | | | | | || (_) |$CLR_ORANGE >  <$CLR_RESET" \
-"$CLR_GRAY|_|     |_|    \\___/ $CLR_ORANGE/_/\\_\\$CLR_GRAY |_| |_| |_| \\___/ $CLR_ORANGE/_/\\_\\$CLR_RESET" \
+"$p$CLR_GRAY _____                                             $CLR_RESET" \
+"$p$CLR_GRAY|  __ \\                                            $CLR_RESET" \
+"$p$CLR_GRAY| |__) | _ __   ___  ${CLR_ORANGE}__  __$CLR_GRAY  _ __ ___    ___  ${CLR_ORANGE}__  __$CLR_RESET" \
+"$p$CLR_GRAY|  ___/ | '__| / _ \\ $CLR_ORANGE\\ \\/ /$CLR_GRAY | '_ \` _ \\  / _ \\ $CLR_ORANGE\\ \\/ /$CLR_RESET" \
+"$p$CLR_GRAY| |     | |   | (_) |$CLR_ORANGE >  <$CLR_GRAY  | | | | | || (_) |$CLR_ORANGE >  <$CLR_RESET" \
+"$p$CLR_GRAY|_|     |_|    \\___/ $CLR_ORANGE/_/\\_\\$CLR_GRAY |_| |_| |_| \\___/ $CLR_ORANGE/_/\\_\\$CLR_RESET" \
 "" \
-"$CLR_HETZNER            Hetzner ${CLR_GRAY}Automated Installer$CLR_RESET"
+"$p$CLR_HETZNER            Hetzner ${CLR_GRAY}Automated Installer$CLR_RESET"
 }
 _show_banner_frame(){
 local h="${1:--1}"
 local M="$CLR_GRAY"
 local A="$CLR_ORANGE"
 local R="$CLR_RESET"
-local line1="$M "
+local p="$_BANNER_PAD"
+local line1="$p$M "
 [[ $h -eq 0 ]]&&line1+="${A}_____$M"||line1+="_____"
 line1+="                                             $R"
-local line2="$M"
+local line2="$p$M"
 [[ $h -eq 0 ]]&&line2+="$A|  __ \\$M"||line2+='|  __ \'
 line2+="                                            $R"
-local line3="$M"
+local line3="$p$M"
 [[ $h -eq 0 ]]&&line3+="$A| |__) |$M"||line3+="| |__) |"
 [[ $h -eq 1 ]]&&line3+=" ${A}_ __$M"||line3+=" _ __"
 [[ $h -eq 2 ]]&&line3+="   ${A}___$M"||line3+="   ___"
@@ -354,7 +357,7 @@ local line3="$M"
 [[ $h -eq 5 ]]&&line3+="    ${A}___$M"||line3+="    ___"
 [[ $h -eq 6 ]]&&line3+="  ${A}__  __$M"||line3+="  __  __"
 line3+="$R"
-local line4="$M"
+local line4="$p$M"
 [[ $h -eq 0 ]]&&line4+="$A|  ___/ $M"||line4+="|  ___/ "
 [[ $h -eq 1 ]]&&line4+="$A| '__|$M"||line4+="| '__|"
 [[ $h -eq 2 ]]&&line4+=" $A/ _ \\$M"||line4+=' / _ \'
@@ -363,7 +366,7 @@ local line4="$M"
 [[ $h -eq 5 ]]&&line4+="  $A/ _ \\$M"||line4+='  / _ \'
 [[ $h -eq 6 ]]&&line4+=" $A\\ \\/ /$M"||line4+=' \ \/ /'
 line4+="$R"
-local line5="$M"
+local line5="$p$M"
 [[ $h -eq 0 ]]&&line5+="$A| |     $M"||line5+="| |     "
 [[ $h -eq 1 ]]&&line5+="$A| |$M"||line5+="| |"
 [[ $h -eq 2 ]]&&line5+="   $A| (_) |$M"||line5+="   | (_) |"
@@ -372,7 +375,7 @@ local line5="$M"
 [[ $h -eq 5 ]]&&line5+="$A| (_) |$M"||line5+="| (_) |"
 [[ $h -eq 6 ]]&&line5+="$A >  <$M"||line5+=" >  <"
 line5+="$R"
-local line6="$M"
+local line6="$p$M"
 [[ $h -eq 0 ]]&&line6+="$A|_|     $M"||line6+="|_|     "
 [[ $h -eq 1 ]]&&line6+="$A|_|$M"||line6+="|_|"
 [[ $h -eq 2 ]]&&line6+="    $A\\___/$M"||line6+='    \___/'
@@ -381,7 +384,7 @@ local line6="$M"
 [[ $h -eq 5 ]]&&line6+=" $A\\___/$M"||line6+=' \___/'
 [[ $h -eq 6 ]]&&line6+=" $A/_/\\_\\$M"||line6+=' /_/\_\'
 line6+="$R"
-local line_hetzner="$CLR_HETZNER            Hetzner ${M}Automated Installer$R"
+local line_hetzner="$p$CLR_HETZNER            Hetzner ${M}Automated Installer$R"
 local frame
 frame=$(printf '\033[H\033[J%s\n%s\n%s\n%s\n%s\n%s\n\n%s\n' \
 "$line1" \
