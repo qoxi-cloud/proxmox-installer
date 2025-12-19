@@ -51,7 +51,7 @@ render_logs() {
 
   # Print fixed header each time
   echo "${CLR_CYAN} Installation Progress${CLR_RESET}"
-  echo ""
+  _wiz_blank_line
 
   local start_line=0
   if ((LOG_COUNT > LOG_AREA_HEIGHT)); then
@@ -119,7 +119,7 @@ start_live_installation() {
 
   # Print fixed header
   echo "${CLR_CYAN} Installation Progress${CLR_RESET}"
-  echo ""
+  _wiz_blank_line
 
   tput civis # Hide cursor
 
