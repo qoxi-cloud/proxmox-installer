@@ -51,6 +51,13 @@ print_info() {
   echo -e "${CLR_CYAN}ℹ${CLR_RESET} $1"
 }
 
+# Prints section header in cyan bold.
+# Parameters:
+#   $1 - Section header text
+print_section() {
+  echo "${CLR_CYAN}${CLR_BOLD}$1${CLR_RESET}"
+}
+
 # =============================================================================
 # Progress indicators
 # =============================================================================

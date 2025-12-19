@@ -50,7 +50,7 @@ render_logs() {
   restore_cursor_position
 
   # Print fixed header each time
-  echo "${CLR_CYAN} Installation Progress${CLR_RESET}"
+  print_section " Installation Progress"
   _wiz_blank_line
 
   local start_line=0
@@ -118,7 +118,7 @@ start_live_installation() {
   save_cursor_position
 
   # Print fixed header
-  echo "${CLR_CYAN} Installation Progress${CLR_RESET}"
+  print_section " Installation Progress"
   _wiz_blank_line
 
   tput civis # Hide cursor

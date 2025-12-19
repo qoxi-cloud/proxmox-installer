@@ -15,13 +15,6 @@ _print_field() {
   printf "\n"
 }
 
-# Prints a section header.
-# Parameters:
-#   $1 - Header text
-_print_header() {
-  echo "${CLR_CYAN}${CLR_BOLD}$1${CLR_RESET}"
-}
-
 # Displays installation completion message and prompts for system reboot.
 # Shows success message and interactive reboot dialog.
 _show_credentials_info() {
@@ -30,7 +23,7 @@ _show_credentials_info() {
   echo ""
 
   # Root credentials (always shown)
-  _print_header "Root Access:"
+  print_section "Root Access:"
   _print_field "Hostname" "${PVE_HOSTNAME}.${DOMAIN_SUFFIX}"
   _print_field "Username" "root"
   _print_field "Password" "${NEW_ROOT_PASSWORD}"
@@ -72,7 +65,7 @@ _show_credentials_info() {
 
     if [[ -n $API_TOKEN_VALUE ]]; then
       echo ""
-      _print_header "API Token:"
+      print_section "API Token:"
       _print_field "Token ID" "${API_TOKEN_ID}"
       _print_field "Secret" "${API_TOKEN_VALUE}"
     fi
