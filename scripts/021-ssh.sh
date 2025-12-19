@@ -125,6 +125,11 @@ wait_for_ssh_ready() {
   local passfile
   passfile=$(_ssh_get_passfile)
 
+  # Debug: log passfile info
+  log "DEBUG: passfile=$passfile"
+  log "DEBUG: passfile exists=$(test -f "$passfile" && echo yes || echo no)"
+  log "DEBUG: passfile size=$(wc -c <"$passfile" 2>/dev/null || echo 0)"
+
   # Wait for SSH to be ready with background process
   (
     local elapsed=0
@@ -136,6 +141,9 @@ wait_for_ssh_ready() {
       sleep 2
       ((elapsed += 2))
     done
+    # Debug: log failure reason
+    # shellcheck disable=SC2086
+    sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' 2>&1 | head -5 >>/tmp/ssh-debug.log
     exit 1
   ) &
   local wait_pid=$!
