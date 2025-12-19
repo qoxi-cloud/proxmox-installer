@@ -22,19 +22,3 @@ remote_apt_install() {
     apt-get install -yqq $packages || exit 1
   " "Packages installed: $packages"
 }
-
-# Executes remote command with automatic retry on failure.
-# Parameters:
-#   $1 - Maximum retries (default: 3)
-#   $2 - Message describing the operation
-#   $3 - Command to execute remotely
-#   $4 - Optional: done message
-# Returns: 0 on success, 1 if all retries exhausted
-remote_exec_retry() {
-  local max_retries="${1:-3}"
-  local message="$2"
-  local command="$3"
-  local done_message="${4:-$message}"
-
-  retry_command "$max_retries" 2 remote_exec "$message" "$command" "$done_message"
-}

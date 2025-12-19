@@ -8,6 +8,68 @@
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=${SSH_CONNECT_TIMEOUT:-10}"
 SSH_PORT="5555"
 
+# Session passfile - created once, reused for all SSH operations
+_SSH_SESSION_PASSFILE=""
+
+# =============================================================================
+# Session management
+# =============================================================================
+
+# Initializes SSH session with persistent passfile.
+# Creates passfile once for reuse across all remote operations.
+# Side effects: Sets _SSH_SESSION_PASSFILE, registers cleanup trap
+_ssh_session_init() {
+  # Already initialized
+  [[ -n $_SSH_SESSION_PASSFILE ]] && [[ -f $_SSH_SESSION_PASSFILE ]] && return 0
+
+  # Create passfile in RAM if possible
+  if [[ -d /dev/shm ]] && [[ -w /dev/shm ]]; then
+    _SSH_SESSION_PASSFILE=$(mktemp --tmpdir=/dev/shm pve-ssh-session.XXXXXX 2>/dev/null || mktemp)
+  else
+    _SSH_SESSION_PASSFILE=$(mktemp)
+  fi
+
+  echo "$NEW_ROOT_PASSWORD" >"$_SSH_SESSION_PASSFILE"
+  chmod 600 "$_SSH_SESSION_PASSFILE"
+
+  # Register cleanup on exit (append to existing trap)
+  trap '_ssh_session_cleanup' EXIT
+
+  log "SSH session initialized"
+}
+
+# Cleans up SSH session passfile securely.
+# Uses shred if available, otherwise overwrites with zeros.
+_ssh_session_cleanup() {
+  [[ -z $_SSH_SESSION_PASSFILE ]] && return 0
+  [[ ! -f $_SSH_SESSION_PASSFILE ]] && return 0
+
+  if command -v shred &>/dev/null; then
+    shred -u -z "$_SSH_SESSION_PASSFILE" 2>/dev/null || rm -f "$_SSH_SESSION_PASSFILE"
+  else
+    # Fallback: overwrite with zeros
+    if command -v dd &>/dev/null; then
+      local file_size
+      file_size=$(stat -c%s "$_SSH_SESSION_PASSFILE" 2>/dev/null || echo 1024)
+      dd if=/dev/zero of="$_SSH_SESSION_PASSFILE" bs=1 count="$file_size" 2>/dev/null || true
+    fi
+    rm -f "$_SSH_SESSION_PASSFILE"
+  fi
+
+  _SSH_SESSION_PASSFILE=""
+}
+
+# Gets session passfile, initializing if needed.
+# Returns: Path to passfile via stdout
+_ssh_get_passfile() {
+  _ssh_session_init
+  echo "$_SSH_SESSION_PASSFILE"
+}
+
+# =============================================================================
+# Port and connection checks
+# =============================================================================
+
 # Checks if specified port is available (not in use).
 # Parameters:
 #   $1 - Port number to check
@@ -26,54 +88,11 @@ check_port_available() {
   return 0
 }
 
-# Creates secure temporary file for password storage.
-# Uses /dev/shm if available (RAM-based, faster and more secure).
-# Falls back to regular /tmp if /dev/shm is not available.
-# Returns: Path to temporary file via stdout
-# Side effects: Creates file with NEW_ROOT_PASSWORD content
-create_passfile() {
-  local passfile
-  # Try /dev/shm first (RAM-based, not on disk)
-  if [[ -d /dev/shm ]] && [[ -w /dev/shm ]]; then
-    passfile=$(mktemp --tmpdir=/dev/shm pve-passfile.XXXXXX 2>/dev/null || mktemp)
-  else
-    passfile=$(mktemp)
-  fi
-
-  echo "$NEW_ROOT_PASSWORD" >"$passfile"
-  chmod 600 "$passfile"
-
-  echo "$passfile"
-}
-
-# Securely cleans up password file.
-# Uses shred if available, otherwise overwrites with zeros before deletion.
-# Parameters:
-#   $1 - Path to password file
-secure_cleanup_passfile() {
-  local passfile="$1"
-  if [[ -f $passfile ]]; then
-    # Try to securely erase using shred
-    if command -v shred &>/dev/null; then
-      shred -u -z "$passfile" 2>/dev/null || rm -f "$passfile"
-    else
-      # Fallback: overwrite with zeros if dd is available
-      if command -v dd &>/dev/null; then
-        local file_size
-        file_size=$(stat -c%s "$passfile" 2>/dev/null || echo 1024)
-        dd if=/dev/zero of="$passfile" bs=1 count="$file_size" 2>/dev/null || true
-      fi
-      rm -f "$passfile"
-    fi
-  fi
-}
-
 # Waits for SSH service to be fully ready on localhost:SSH_PORT.
 # Performs port check followed by SSH connection test.
 # Parameters:
 #   $1 - Timeout in seconds (default: 120)
 # Returns: 0 if SSH ready, 1 on timeout or failure
-# Side effects: Uses NEW_ROOT_PASSWORD for authentication
 wait_for_ssh_ready() {
   local timeout="${1:-120}"
 
@@ -82,7 +101,7 @@ wait_for_ssh_ready() {
 
   # Quick port check first (faster than SSH attempts)
   local port_check=0
-  for i in {1..10}; do
+  for _ in {1..10}; do
     if (echo >/dev/tcp/localhost/$SSH_PORT) 2>/dev/null; then
       port_check=1
       break
@@ -96,9 +115,8 @@ wait_for_ssh_ready() {
     return 1
   fi
 
-  # Use secure temporary file for password
   local passfile
-  passfile=$(create_passfile)
+  passfile=$(_ssh_get_passfile)
 
   # Wait for SSH to be ready with background process
   (
@@ -116,23 +134,20 @@ wait_for_ssh_ready() {
   local wait_pid=$!
 
   show_progress $wait_pid "Waiting for SSH to be ready" "SSH connection established"
-  local exit_code=$?
-
-  secure_cleanup_passfile "$passfile"
-  return $exit_code
 }
+
+# =============================================================================
+# Remote execution functions
+# =============================================================================
 
 # Executes command on remote VM via SSH with retry logic.
 # Parameters:
 #   $* - Command to execute remotely
 # Returns: Exit code from remote command
-# Side effects: Uses SSH_PORT and NEW_ROOT_PASSWORD
 remote_exec() {
-  # Use secure temporary file for password
   local passfile
-  passfile=$(create_passfile)
+  passfile=$(_ssh_get_passfile)
 
-  # Retry logic for SSH connections
   local max_attempts=3
   local attempt=0
   local exit_code=1
@@ -142,8 +157,7 @@ remote_exec() {
 
     # shellcheck disable=SC2086
     if sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost "$@"; then
-      exit_code=0
-      break
+      return 0
     fi
 
     if [[ $attempt -lt $max_attempts ]]; then
@@ -152,54 +166,29 @@ remote_exec() {
     fi
   done
 
-  secure_cleanup_passfile "$passfile"
-
-  if [[ $exit_code -ne 0 ]]; then
-    log "ERROR: SSH command failed after $max_attempts attempts: $*"
-  fi
-
-  return $exit_code
+  log "ERROR: SSH command failed after $max_attempts attempts: $*"
+  return 1
 }
 
-# Executes bash script on remote VM via SSH (reads from stdin).
-# Returns: Exit code from remote script
-# Side effects: Uses SSH_PORT and NEW_ROOT_PASSWORD
-remote_exec_script() {
-  # Use secure temporary file for password
-  local passfile
-  passfile=$(create_passfile)
-
-  # shellcheck disable=SC2086
-  sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'bash -s'
-  local exit_code=$?
-
-  secure_cleanup_passfile "$passfile"
-  return $exit_code
-}
-
-# Executes remote script with progress indicator.
-# Logs output to file, shows spinner to user.
+# Internal: Executes remote script with progress indicator.
 # Parameters:
 #   $1 - Progress message
 #   $2 - Script content to execute
 #   $3 - Done message (optional, defaults to $1)
 # Returns: Exit code from remote script
-# Side effects: Logs output to LOG_FILE
-remote_exec_with_progress() {
+_remote_exec_with_progress() {
   local message="$1"
   local script="$2"
   local done_message="${3:-$message}"
 
-  log "remote_exec_with_progress: $message"
+  log "_remote_exec_with_progress: $message"
   log "--- Script start ---"
   echo "$script" >>"$LOG_FILE"
   log "--- Script end ---"
 
-  # Use secure temporary file for password
   local passfile
-  passfile=$(create_passfile)
+  passfile=$(_ssh_get_passfile)
 
-  # Create temporary file for output to check for errors
   local output_file
   output_file=$(mktemp)
 
@@ -215,22 +204,20 @@ remote_exec_with_progress() {
     grep -iE "(error|failed|cannot|unable|fatal)" "$output_file" >>"$LOG_FILE" 2>/dev/null || true
   fi
 
-  # Append output to log file
   cat "$output_file" >>"$LOG_FILE"
   rm -f "$output_file"
 
-  secure_cleanup_passfile "$passfile"
-
   if [[ $exit_code -ne 0 ]]; then
-    log "remote_exec_with_progress: FAILED with exit code $exit_code"
+    log "_remote_exec_with_progress: FAILED with exit code $exit_code"
   else
-    log "remote_exec_with_progress: completed successfully"
+    log "_remote_exec_with_progress: completed successfully"
   fi
 
   return $exit_code
 }
 
 # Executes remote script with progress, exits on failure.
+# This is the primary function for running installation scripts.
 # Parameters:
 #   $1 - Progress message
 #   $2 - Script content to execute
@@ -241,7 +228,7 @@ run_remote() {
   local script="$2"
   local done_message="${3:-$message}"
 
-  if ! remote_exec_with_progress "$message" "$script" "$done_message"; then
+  if ! _remote_exec_with_progress "$message" "$script" "$done_message"; then
     log "ERROR: $message failed"
     exit 1
   fi
@@ -252,21 +239,15 @@ run_remote() {
 #   $1 - Source file path (local)
 #   $2 - Destination path (remote)
 # Returns: Exit code from scp
-# Side effects: Uses SSH_PORT and NEW_ROOT_PASSWORD
 remote_copy() {
   local src="$1"
   local dst="$2"
 
-  # Use secure temporary file for password
   local passfile
-  passfile=$(create_passfile)
+  passfile=$(_ssh_get_passfile)
 
   # shellcheck disable=SC2086
   sshpass -f "$passfile" scp -P "$SSH_PORT" $SSH_OPTS "$src" "root@localhost:$dst"
-  local exit_code=$?
-
-  secure_cleanup_passfile "$passfile"
-  return $exit_code
 }
 
 # =============================================================================
@@ -281,22 +262,17 @@ remote_copy() {
 parse_ssh_key() {
   local key="$1"
 
-  # Reset variables
   SSH_KEY_TYPE=""
   SSH_KEY_DATA=""
   SSH_KEY_COMMENT=""
   SSH_KEY_SHORT=""
 
-  if [[ -z $key ]]; then
-    return 1
-  fi
+  [[ -z $key ]] && return 1
 
-  # Parse: type base64data [comment]
   SSH_KEY_TYPE=$(echo "$key" | awk '{print $1}')
   SSH_KEY_DATA=$(echo "$key" | awk '{print $2}')
   SSH_KEY_COMMENT=$(echo "$key" | awk '{$1=""; $2=""; print}' | sed 's/^ *//')
 
-  # Create shortened version of key data (first 20 + last 10 chars)
   if [[ ${#SSH_KEY_DATA} -gt 35 ]]; then
     SSH_KEY_SHORT="${SSH_KEY_DATA:0:20}...${SSH_KEY_DATA: -10}"
   else
