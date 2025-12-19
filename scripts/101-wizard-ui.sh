@@ -4,6 +4,122 @@
 # =============================================================================
 
 # =============================================================================
+# Screen definitions
+# =============================================================================
+
+# Screen names for navigation
+WIZ_SCREENS=("Basic" "Proxmox" "Network" "Storage" "Services" "SSH")
+WIZ_CURRENT_SCREEN=0
+
+# =============================================================================
+# Screen navigation header
+# =============================================================================
+
+# Navigation column width
+_NAV_COL_WIDTH=10
+
+# Helper: repeat character N times
+_nav_repeat() {
+  local char="$1" count="$2" i
+  for ((i = 0; i < count; i++)); do
+    printf '%s' "$char"
+  done
+}
+
+# Helper: get color for screen state
+# Returns: color code based on screen index vs current
+_nav_color() {
+  local idx="$1" current="$2"
+  if [[ $idx -eq $current ]]; then
+    echo "$CLR_ORANGE"
+  elif [[ $idx -lt $current ]]; then
+    echo "$CLR_CYAN"
+  else
+    echo "$CLR_GRAY"
+  fi
+}
+
+# Helper: get dot symbol for screen state
+_nav_dot() {
+  local idx="$1" current="$2"
+  if [[ $idx -eq $current ]]; then
+    echo "◉"
+  elif [[ $idx -lt $current ]]; then
+    echo "●"
+  else
+    echo "○"
+  fi
+}
+
+# Helper: get line style (thick for completed, thin otherwise)
+_nav_line() {
+  local idx="$1" current="$2" len="$3"
+  if [[ $idx -lt $current ]]; then
+    _nav_repeat "━" "$len"
+  else
+    _nav_repeat "─" "$len"
+  fi
+}
+
+# Render the screen navigation header with wizard-style dots
+# Uses project colors: CLR_CYAN (blue) for completed, CLR_ORANGE for active
+_wiz_render_nav() {
+  local current=$WIZ_CURRENT_SCREEN
+  local total=${#WIZ_SCREENS[@]}
+  local col=$_NAV_COL_WIDTH
+
+  # Screen names row
+  local labels=""
+  for i in "${!WIZ_SCREENS[@]}"; do
+    local name="${WIZ_SCREENS[$i]}"
+    local name_len=${#name}
+    local pad_left=$(((col - name_len) / 2))
+    local pad_right=$((col - name_len - pad_left))
+    local centered
+    centered=$(printf '%*s%s%*s' $pad_left '' "$name" $pad_right '')
+    labels+="$(_nav_color "$i" "$current")${centered}${CLR_RESET}"
+  done
+
+  # Dots with connecting lines row
+  local dots=""
+  local center_pad=$(((col - 1) / 2))
+  local right_pad=$((col - center_pad - 1))
+
+  for i in "${!WIZ_SCREENS[@]}"; do
+    local color line_color dot
+    color=$(_nav_color "$i" "$current")
+    dot=$(_nav_dot "$i" "$current")
+
+    if [[ $i -eq 0 ]]; then
+      # First: pad + dot + line_right
+      dots+=$(printf '%*s' $center_pad '')
+      dots+="${color}${dot}${CLR_RESET}"
+      # Line after first dot uses current dot's completion state
+      local line_clr
+      line_clr=$([[ $i -lt $current ]] && echo "$CLR_CYAN" || echo "$CLR_GRAY")
+      dots+="${line_clr}$(_nav_line "$i" "$current" "$right_pad")${CLR_RESET}"
+    elif [[ $i -eq $((total - 1)) ]]; then
+      # Last: line_left + dot
+      local prev_line_clr
+      prev_line_clr=$([[ $((i - 1)) -lt $current ]] && echo "$CLR_CYAN" || echo "$CLR_GRAY")
+      dots+="${prev_line_clr}$(_nav_line "$((i - 1))" "$current" "$center_pad")${CLR_RESET}"
+      dots+="${color}${dot}${CLR_RESET}"
+    else
+      # Middle: line_left + dot + line_right
+      local prev_line_clr
+      prev_line_clr=$([[ $((i - 1)) -lt $current ]] && echo "$CLR_CYAN" || echo "$CLR_GRAY")
+      dots+="${prev_line_clr}$(_nav_line "$((i - 1))" "$current" "$center_pad")${CLR_RESET}"
+      dots+="${color}${dot}${CLR_RESET}"
+      local next_line_clr
+      next_line_clr=$([[ $i -lt $current ]] && echo "$CLR_CYAN" || echo "$CLR_GRAY")
+      dots+="${next_line_clr}$(_nav_line "$i" "$current" "$right_pad")${CLR_RESET}"
+    fi
+  done
+
+  printf '%s\n%s\n' "$labels" "$dots"
+}
+
+# =============================================================================
 # Key reading helper
 # =============================================================================
 
@@ -134,205 +250,284 @@ _wiz_fmt() {
 _WIZ_FIELD_COUNT=0
 _WIZ_FIELD_MAP=()
 
+# =============================================================================
+# Display value formatters
+# =============================================================================
+
+# Build all display values for current state
+# Sets global _DSP_* variables for use in render functions
+_wiz_build_display_values() {
+  # Password
+  _DSP_PASS=""
+  [[ -n $NEW_ROOT_PASSWORD ]] && _DSP_PASS="********"
+
+  # Hostname
+  _DSP_HOSTNAME=""
+  [[ -n $PVE_HOSTNAME && -n $DOMAIN_SUFFIX ]] && _DSP_HOSTNAME="${PVE_HOSTNAME}.${DOMAIN_SUFFIX}"
+
+  # IPv6
+  _DSP_IPV6=""
+  if [[ -n $IPV6_MODE ]]; then
+    case "$IPV6_MODE" in
+      auto)
+        _DSP_IPV6="Auto"
+        [[ -n $MAIN_IPV6 ]] && _DSP_IPV6+=" (${MAIN_IPV6})"
+        ;;
+      manual)
+        _DSP_IPV6="Manual"
+        [[ -n $MAIN_IPV6 ]] && _DSP_IPV6+=" (${MAIN_IPV6}, gw: ${IPV6_GATEWAY})"
+        ;;
+      disabled) _DSP_IPV6="Disabled" ;;
+      *) _DSP_IPV6="$IPV6_MODE" ;;
+    esac
+  fi
+
+  # Tailscale
+  _DSP_TAILSCALE=""
+  if [[ -n $INSTALL_TAILSCALE ]]; then
+    [[ $INSTALL_TAILSCALE == "yes" ]] && _DSP_TAILSCALE="Enabled + Stealth" || _DSP_TAILSCALE="Disabled"
+  fi
+
+  # SSL
+  _DSP_SSL=""
+  if [[ -n $SSL_TYPE ]]; then
+    case "$SSL_TYPE" in
+      self-signed) _DSP_SSL="Self-signed" ;;
+      letsencrypt) _DSP_SSL="Let's Encrypt" ;;
+      *) _DSP_SSL="$SSL_TYPE" ;;
+    esac
+  fi
+
+  # Repository
+  _DSP_REPO=""
+  if [[ -n $PVE_REPO_TYPE ]]; then
+    case "$PVE_REPO_TYPE" in
+      no-subscription) _DSP_REPO="No-subscription (free)" ;;
+      enterprise) _DSP_REPO="Enterprise" ;;
+      test) _DSP_REPO="Test/Development" ;;
+      *) _DSP_REPO="$PVE_REPO_TYPE" ;;
+    esac
+  fi
+
+  # Bridge mode
+  _DSP_BRIDGE=""
+  if [[ -n $BRIDGE_MODE ]]; then
+    case "$BRIDGE_MODE" in
+      external) _DSP_BRIDGE="External bridge" ;;
+      internal) _DSP_BRIDGE="Internal NAT" ;;
+      both) _DSP_BRIDGE="Both" ;;
+      *) _DSP_BRIDGE="$BRIDGE_MODE" ;;
+    esac
+  fi
+
+  # ZFS mode
+  _DSP_ZFS=""
+  if [[ -n $ZFS_RAID ]]; then
+    case "$ZFS_RAID" in
+      single) _DSP_ZFS="Single disk" ;;
+      raid0) _DSP_ZFS="RAID-0 (striped)" ;;
+      raid1) _DSP_ZFS="RAID-1 (mirror)" ;;
+      raidz1) _DSP_ZFS="RAID-Z1 (parity)" ;;
+      raidz2) _DSP_ZFS="RAID-Z2 (double parity)" ;;
+      raid10) _DSP_ZFS="RAID-10 (striped mirrors)" ;;
+      *) _DSP_ZFS="$ZFS_RAID" ;;
+    esac
+  fi
+
+  # ZFS ARC
+  _DSP_ARC=""
+  if [[ -n $ZFS_ARC_MODE ]]; then
+    case "$ZFS_ARC_MODE" in
+      vm-focused) _DSP_ARC="VM-focused (4GB)" ;;
+      balanced) _DSP_ARC="Balanced (25-40%)" ;;
+      storage-focused) _DSP_ARC="Storage-focused (50%)" ;;
+      *) _DSP_ARC="$ZFS_ARC_MODE" ;;
+    esac
+  fi
+
+  # Shell
+  _DSP_SHELL=""
+  if [[ -n $SHELL_TYPE ]]; then
+    case "$SHELL_TYPE" in
+      zsh) _DSP_SHELL="ZSH" ;;
+      bash) _DSP_SHELL="Bash" ;;
+      *) _DSP_SHELL="$SHELL_TYPE" ;;
+    esac
+  fi
+
+  # Power profile
+  _DSP_POWER=""
+  if [[ -n $CPU_GOVERNOR ]]; then
+    case "$CPU_GOVERNOR" in
+      performance) _DSP_POWER="Performance" ;;
+      ondemand) _DSP_POWER="Balanced" ;;
+      powersave) _DSP_POWER="Power saving" ;;
+      schedutil) _DSP_POWER="Adaptive" ;;
+      conservative) _DSP_POWER="Conservative" ;;
+      *) _DSP_POWER="$CPU_GOVERNOR" ;;
+    esac
+  fi
+
+  # Security features
+  _DSP_SECURITY="none"
+  local sec_items=()
+  [[ $INSTALL_APPARMOR == "yes" ]] && sec_items+=("apparmor")
+  [[ $INSTALL_AUDITD == "yes" ]] && sec_items+=("auditd")
+  [[ $INSTALL_AIDE == "yes" ]] && sec_items+=("aide")
+  [[ $INSTALL_CHKROOTKIT == "yes" ]] && sec_items+=("chkrootkit")
+  [[ $INSTALL_LYNIS == "yes" ]] && sec_items+=("lynis")
+  [[ $INSTALL_NEEDRESTART == "yes" ]] && sec_items+=("needrestart")
+  [[ ${#sec_items[@]} -gt 0 ]] && _DSP_SECURITY="${sec_items[*]}"
+
+  # Monitoring features
+  _DSP_MONITORING="none"
+  local mon_items=()
+  [[ $INSTALL_VNSTAT == "yes" ]] && mon_items+=("vnstat")
+  [[ $INSTALL_NETDATA == "yes" ]] && mon_items+=("netdata")
+  [[ $INSTALL_PROMETHEUS == "yes" ]] && mon_items+=("prometheus")
+  [[ ${#mon_items[@]} -gt 0 ]] && _DSP_MONITORING="${mon_items[*]}"
+
+  # Tools
+  _DSP_TOOLS="none"
+  local tool_items=()
+  [[ $INSTALL_YAZI == "yes" ]] && tool_items+=("yazi")
+  [[ $INSTALL_NVIM == "yes" ]] && tool_items+=("nvim")
+  [[ $INSTALL_RINGBUFFER == "yes" ]] && tool_items+=("ringbuffer")
+  [[ ${#tool_items[@]} -gt 0 ]] && _DSP_TOOLS="${tool_items[*]}"
+
+  # API Token
+  _DSP_API=""
+  if [[ -n $INSTALL_API_TOKEN ]]; then
+    case "$INSTALL_API_TOKEN" in
+      yes) _DSP_API="Yes (${API_TOKEN_NAME})" ;;
+      no) _DSP_API="No" ;;
+    esac
+  fi
+
+  # SSH Key
+  _DSP_SSH=""
+  [[ -n $SSH_PUBLIC_KEY ]] && _DSP_SSH="${SSH_PUBLIC_KEY:0:20}..."
+
+  # Firewall
+  _DSP_FIREWALL=""
+  if [[ -n $INSTALL_FIREWALL ]]; then
+    if [[ $INSTALL_FIREWALL == "yes" ]]; then
+      case "$FIREWALL_MODE" in
+        stealth) _DSP_FIREWALL="Stealth (Tailscale only)" ;;
+        strict) _DSP_FIREWALL="Strict (SSH only)" ;;
+        standard) _DSP_FIREWALL="Standard (SSH + Web UI)" ;;
+        *) _DSP_FIREWALL="$FIREWALL_MODE" ;;
+      esac
+    else
+      _DSP_FIREWALL="Disabled"
+    fi
+  fi
+
+  # ISO Version
+  _DSP_ISO=""
+  [[ -n $PROXMOX_ISO_VERSION ]] && _DSP_ISO=$(get_iso_version "$PROXMOX_ISO_VERSION")
+
+  # MTU
+  _DSP_MTU="${BRIDGE_MTU:-9000}"
+  [[ $_DSP_MTU == "9000" ]] && _DSP_MTU="9000 (jumbo)"
+
+  # Boot disk
+  _DSP_BOOT="All in pool"
+  if [[ -n $BOOT_DISK ]]; then
+    for i in "${!DRIVES[@]}"; do
+      if [[ ${DRIVES[$i]} == "$BOOT_DISK" ]]; then
+        _DSP_BOOT="${DRIVE_MODELS[$i]}"
+        break
+      fi
+    done
+  fi
+
+  # Pool disks
+  _DSP_POOL="${#ZFS_POOL_DISKS[@]} disks"
+}
+
+# =============================================================================
+# Screen content renderers
+# =============================================================================
+
+# Render fields for a specific screen
+# Parameters:
+#   $1 - screen index (0-5)
+#   $2 - current selection within screen
+# Uses: _add_field helper, field_idx counter
+_wiz_render_screen_content() {
+  local screen="$1"
+  local selection="$2"
+
+  case $screen in
+    0) # Basic
+      _add_field "Hostname         " "$(_wiz_fmt "$_DSP_HOSTNAME")" "hostname"
+      _add_field "Email            " "$(_wiz_fmt "$EMAIL")" "email"
+      _add_field "Password         " "$(_wiz_fmt "$_DSP_PASS")" "password"
+      _add_field "Timezone         " "$(_wiz_fmt "$TIMEZONE")" "timezone"
+      _add_field "Keyboard         " "$(_wiz_fmt "$KEYBOARD")" "keyboard"
+      _add_field "Country          " "$(_wiz_fmt "$COUNTRY")" "country"
+      ;;
+    1) # Proxmox
+      _add_field "Version          " "$(_wiz_fmt "$_DSP_ISO")" "iso_version"
+      _add_field "Repository       " "$(_wiz_fmt "$_DSP_REPO")" "repository"
+      ;;
+    2) # Network
+      if [[ ${INTERFACE_COUNT:-1} -gt 1 ]]; then
+        _add_field "Interface        " "$(_wiz_fmt "$INTERFACE_NAME")" "interface"
+      fi
+      _add_field "Bridge mode      " "$(_wiz_fmt "$_DSP_BRIDGE")" "bridge_mode"
+      if [[ $BRIDGE_MODE == "internal" || $BRIDGE_MODE == "both" ]]; then
+        _add_field "Private subnet   " "$(_wiz_fmt "$PRIVATE_SUBNET")" "private_subnet"
+        _add_field "Bridge MTU       " "$(_wiz_fmt "$_DSP_MTU")" "bridge_mtu"
+      fi
+      _add_field "IPv6             " "$(_wiz_fmt "$_DSP_IPV6")" "ipv6"
+      _add_field "Firewall         " "$(_wiz_fmt "$_DSP_FIREWALL")" "firewall"
+      ;;
+    3) # Storage
+      if [[ $DRIVE_COUNT -gt 1 ]]; then
+        _add_field "Boot disk        " "$(_wiz_fmt "$_DSP_BOOT")" "boot_disk"
+        _add_field "Pool disks       " "$(_wiz_fmt "$_DSP_POOL")" "pool_disks"
+      fi
+      _add_field "ZFS mode         " "$(_wiz_fmt "$_DSP_ZFS")" "zfs_mode"
+      _add_field "ZFS ARC          " "$(_wiz_fmt "$_DSP_ARC")" "zfs_arc"
+      ;;
+    4) # Services
+      _add_field "Tailscale        " "$(_wiz_fmt "$_DSP_TAILSCALE")" "tailscale"
+      if [[ $INSTALL_TAILSCALE != "yes" ]]; then
+        _add_field "SSL Certificate  " "$(_wiz_fmt "$_DSP_SSL")" "ssl"
+      fi
+      _add_field "Shell            " "$(_wiz_fmt "$_DSP_SHELL")" "shell"
+      _add_field "Power profile    " "$(_wiz_fmt "$_DSP_POWER")" "power_profile"
+      _add_field "Security         " "$(_wiz_fmt "$_DSP_SECURITY")" "security"
+      _add_field "Monitoring       " "$(_wiz_fmt "$_DSP_MONITORING")" "monitoring"
+      _add_field "Tools            " "$(_wiz_fmt "$_DSP_TOOLS")" "tools"
+      _add_field "API Token        " "$(_wiz_fmt "$_DSP_API")" "api_token"
+      ;;
+    5) # SSH
+      _add_field "SSH Key          " "$(_wiz_fmt "$_DSP_SSH")" "ssh_key"
+      ;;
+  esac
+}
+
 # Render the main menu with current selection highlighted
 # Parameters:
 #   $1 - Current selection index (0-based, only counts selectable fields)
 _wiz_render_menu() {
   local selection="$1"
   local output=""
-  local banner_output
-
-  # Capture banner output
-  banner_output=$(show_banner)
-
-  # Start building full screen output with blank line before banner
-  output="\n${banner_output}\n\n"
 
   # Build display values
-  local pass_display=""
-  if [[ -n $NEW_ROOT_PASSWORD ]]; then
-    pass_display="********"
-  fi
+  _wiz_build_display_values
 
-  local ipv6_display=""
-  if [[ -n $IPV6_MODE ]]; then
-    case "$IPV6_MODE" in
-      auto)
-        ipv6_display="Auto"
-        if [[ -n $MAIN_IPV6 ]]; then
-          ipv6_display+=" (${MAIN_IPV6})"
-        fi
-        ;;
-      manual)
-        ipv6_display="Manual"
-        if [[ -n $MAIN_IPV6 ]]; then
-          ipv6_display+=" (${MAIN_IPV6}, gw: ${IPV6_GATEWAY})"
-        fi
-        ;;
-      disabled) ipv6_display="Disabled" ;;
-      *) ipv6_display="$IPV6_MODE" ;;
-    esac
-  fi
-
-  local tailscale_display=""
-  if [[ -n $INSTALL_TAILSCALE ]]; then
-    if [[ $INSTALL_TAILSCALE == "yes" ]]; then
-      tailscale_display="Enabled + Stealth"
-    else
-      tailscale_display="Disabled"
-    fi
-  fi
-
-  local ssl_display=""
-  if [[ -n $SSL_TYPE ]]; then
-    case "$SSL_TYPE" in
-      self-signed) ssl_display="Self-signed" ;;
-      letsencrypt) ssl_display="Let's Encrypt" ;;
-      *) ssl_display="$SSL_TYPE" ;;
-    esac
-  fi
-
-  local repo_display=""
-  if [[ -n $PVE_REPO_TYPE ]]; then
-    case "$PVE_REPO_TYPE" in
-      no-subscription) repo_display="No-subscription (free)" ;;
-      enterprise) repo_display="Enterprise" ;;
-      test) repo_display="Test/Development" ;;
-      *) repo_display="$PVE_REPO_TYPE" ;;
-    esac
-  fi
-
-  local bridge_display=""
-  if [[ -n $BRIDGE_MODE ]]; then
-    case "$BRIDGE_MODE" in
-      external) bridge_display="External bridge" ;;
-      internal) bridge_display="Internal NAT" ;;
-      both) bridge_display="Both" ;;
-      *) bridge_display="$BRIDGE_MODE" ;;
-    esac
-  fi
-
-  local zfs_display=""
-  if [[ -n $ZFS_RAID ]]; then
-    case "$ZFS_RAID" in
-      single) zfs_display="Single disk" ;;
-      raid0) zfs_display="RAID-0 (striped)" ;;
-      raid1) zfs_display="RAID-1 (mirror)" ;;
-      raidz1) zfs_display="RAID-Z1 (parity)" ;;
-      raidz2) zfs_display="RAID-Z2 (double parity)" ;;
-      raid5) zfs_display="RAID-5 (parity)" ;; # legacy
-      raid10) zfs_display="RAID-10 (striped mirrors)" ;;
-      *) zfs_display="$ZFS_RAID" ;;
-    esac
-  fi
-
-  local zfs_arc_display=""
-  if [[ -n $ZFS_ARC_MODE ]]; then
-    case "$ZFS_ARC_MODE" in
-      vm-focused) zfs_arc_display="VM-focused (4GB)" ;;
-      balanced) zfs_arc_display="Balanced (25-40%)" ;;
-      storage-focused) zfs_arc_display="Storage-focused (50%)" ;;
-      *) zfs_arc_display="$ZFS_ARC_MODE" ;;
-    esac
-  fi
-
-  local shell_display=""
-  if [[ -n $SHELL_TYPE ]]; then
-    case "$SHELL_TYPE" in
-      zsh) shell_display="ZSH" ;;
-      bash) shell_display="Bash" ;;
-      *) shell_display="$SHELL_TYPE" ;;
-    esac
-  fi
-
-  local power_display=""
-  if [[ -n $CPU_GOVERNOR ]]; then
-    case "$CPU_GOVERNOR" in
-      performance) power_display="Performance" ;;
-      ondemand) power_display="Balanced" ;;
-      powersave) power_display="Power saving" ;;
-      schedutil) power_display="Adaptive" ;;
-      conservative) power_display="Conservative" ;;
-      *) power_display="$CPU_GOVERNOR" ;;
-    esac
-  fi
-
-  # Security features display
-  local security_display="none"
-  local security_items=()
-  [[ $INSTALL_APPARMOR == "yes" ]] && security_items+=("apparmor")
-  [[ $INSTALL_AUDITD == "yes" ]] && security_items+=("auditd")
-  [[ $INSTALL_AIDE == "yes" ]] && security_items+=("aide")
-  [[ $INSTALL_CHKROOTKIT == "yes" ]] && security_items+=("chkrootkit")
-  [[ $INSTALL_LYNIS == "yes" ]] && security_items+=("lynis")
-  [[ $INSTALL_NEEDRESTART == "yes" ]] && security_items+=("needrestart")
-  [[ ${#security_items[@]} -gt 0 ]] && security_display="${security_items[*]// /, }"
-
-  # Monitoring features display
-  local monitoring_display="none"
-  local monitoring_items=()
-  [[ $INSTALL_VNSTAT == "yes" ]] && monitoring_items+=("vnstat")
-  [[ $INSTALL_NETDATA == "yes" ]] && monitoring_items+=("netdata")
-  [[ $INSTALL_PROMETHEUS == "yes" ]] && monitoring_items+=("prometheus")
-  [[ ${#monitoring_items[@]} -gt 0 ]] && monitoring_display="${monitoring_items[*]// /, }"
-
-  # Tools display
-  local tools_display="none"
-  local tools_items=()
-  [[ $INSTALL_YAZI == "yes" ]] && tools_items+=("yazi")
-  [[ $INSTALL_NVIM == "yes" ]] && tools_items+=("nvim")
-  [[ $INSTALL_RINGBUFFER == "yes" ]] && tools_items+=("ringbuffer")
-  [[ ${#tools_items[@]} -gt 0 ]] && tools_display="${tools_items[*]// /, }"
-
-  local api_token_display=""
-  if [[ -n $INSTALL_API_TOKEN ]]; then
-    case "$INSTALL_API_TOKEN" in
-      yes) api_token_display="Yes (${API_TOKEN_NAME})" ;;
-      no) api_token_display="No" ;;
-      *) api_token_display="" ;;
-    esac
-  fi
-
-  local ssh_display=""
-  if [[ -n $SSH_PUBLIC_KEY ]]; then
-    # Show first 20 chars of key type and fingerprint hint
-    ssh_display="${SSH_PUBLIC_KEY:0:20}..."
-  fi
-
-  local firewall_display=""
-  if [[ -n $INSTALL_FIREWALL ]]; then
-    if [[ $INSTALL_FIREWALL == "yes" ]]; then
-      case "$FIREWALL_MODE" in
-        stealth) firewall_display="Stealth (Tailscale only)" ;;
-        strict) firewall_display="Strict (SSH only)" ;;
-        standard) firewall_display="Standard (SSH + Web UI)" ;;
-        *) firewall_display="$FIREWALL_MODE" ;;
-      esac
-    else
-      firewall_display="Disabled"
-    fi
-  fi
-
-  local iso_version_display=""
-  if [[ -n $PROXMOX_ISO_VERSION ]]; then
-    iso_version_display=$(get_iso_version "$PROXMOX_ISO_VERSION")
-  fi
-
-  local hostname_display=""
-  if [[ -n $PVE_HOSTNAME && -n $DOMAIN_SUFFIX ]]; then
-    hostname_display="${PVE_HOSTNAME}.${DOMAIN_SUFFIX}"
-  fi
+  # Start output with navigation header
+  output+="\n$(_wiz_render_nav)\n\n"
 
   # Reset field map
   _WIZ_FIELD_MAP=()
   local field_idx=0
 
-  # Helper to add section header
-  _add_section() {
-    output+="${CLR_CYAN}--- $1 ---${CLR_RESET}\n"
-  }
-
-  # Helper to add field
+  # Helper to add field (used by _wiz_render_screen_content)
   _add_field() {
     local label="$1"
     local value="$2"
@@ -346,91 +541,26 @@ _wiz_render_menu() {
     ((field_idx++))
   }
 
-  # --- Basic Settings ---
-  _add_section "Basic Settings"
-  _add_field "Hostname         " "$(_wiz_fmt "$hostname_display")" "hostname"
-  _add_field "Email            " "$(_wiz_fmt "$EMAIL")" "email"
-  _add_field "Password         " "$(_wiz_fmt "$pass_display")" "password"
-  _add_field "Timezone         " "$(_wiz_fmt "$TIMEZONE")" "timezone"
-  _add_field "Keyboard         " "$(_wiz_fmt "$KEYBOARD")" "keyboard"
-  _add_field "Country          " "$(_wiz_fmt "$COUNTRY")" "country"
+  # Render current screen content
+  _wiz_render_screen_content "$WIZ_CURRENT_SCREEN" "$selection"
 
-  # --- Proxmox ---
-  _add_section "Proxmox"
-  _add_field "Version          " "$(_wiz_fmt "$iso_version_display")" "iso_version"
-  _add_field "Repository       " "$(_wiz_fmt "$repo_display")" "repository"
-
-  # --- Network ---
-  _add_section "Network"
-  # Show interface selector only if multiple interfaces available
-  if [[ ${INTERFACE_COUNT:-1} -gt 1 ]]; then
-    _add_field "Interface        " "$(_wiz_fmt "$INTERFACE_NAME")" "interface"
-  fi
-  _add_field "Bridge mode      " "$(_wiz_fmt "$bridge_display")" "bridge_mode"
-  # Show private network options only for internal/both modes
-  if [[ $BRIDGE_MODE == "internal" ]] || [[ $BRIDGE_MODE == "both" ]]; then
-    _add_field "Private subnet   " "$(_wiz_fmt "$PRIVATE_SUBNET")" "private_subnet"
-    local mtu_display="${BRIDGE_MTU:-9000}"
-    [[ $mtu_display == "9000" ]] && mtu_display="9000 (jumbo)"
-    _add_field "Bridge MTU       " "$(_wiz_fmt "$mtu_display")" "bridge_mtu"
-  fi
-  _add_field "IPv6             " "$(_wiz_fmt "$ipv6_display")" "ipv6"
-  _add_field "Firewall         " "$(_wiz_fmt "$firewall_display")" "firewall"
-
-  # --- Storage ---
-  _add_section "Storage"
-
-  # Show boot/pool selectors if multiple disks
-  if [[ $DRIVE_COUNT -gt 1 ]]; then
-    local boot_display="All in pool"
-    if [[ -n $BOOT_DISK ]]; then
-      # Find disk model by matching BOOT_DISK in DRIVES array
-      for i in "${!DRIVES[@]}"; do
-        if [[ ${DRIVES[$i]} == "$BOOT_DISK" ]]; then
-          boot_display="${DRIVE_MODELS[$i]}"
-          break
-        fi
-      done
-    fi
-    _add_field "Boot disk        " "$(_wiz_fmt "$boot_display")" "boot_disk"
-
-    local pool_display="${#ZFS_POOL_DISKS[@]} disks"
-    _add_field "Pool disks       " "$(_wiz_fmt "$pool_display")" "pool_disks"
-  fi
-
-  _add_field "ZFS mode         " "$(_wiz_fmt "$zfs_display")" "zfs_mode"
-  _add_field "ZFS ARC          " "$(_wiz_fmt "$zfs_arc_display")" "zfs_arc"
-
-  # --- VPN ---
-  _add_section "VPN"
-  _add_field "Tailscale        " "$(_wiz_fmt "$tailscale_display")" "tailscale"
-
-  # --- SSL --- (hidden when Tailscale enabled - uses Tailscale certs)
-  if [[ $INSTALL_TAILSCALE != "yes" ]]; then
-    _add_section "SSL"
-    _add_field "Certificate      " "$(_wiz_fmt "$ssl_display")" "ssl"
-  fi
-
-  # --- Optional ---
-  _add_section "Optional"
-  _add_field "Shell            " "$(_wiz_fmt "$shell_display")" "shell"
-  _add_field "Power profile    " "$(_wiz_fmt "$power_display")" "power_profile"
-  _add_field "Security         " "$(_wiz_fmt "$security_display")" "security"
-  _add_field "Monitoring       " "$(_wiz_fmt "$monitoring_display")" "monitoring"
-  _add_field "Tools            " "$(_wiz_fmt "$tools_display")" "tools"
-  _add_field "API Token        " "$(_wiz_fmt "$api_token_display")" "api_token"
-
-  # --- SSH ---
-  _add_section "SSH"
-  _add_field "SSH Key          " "$(_wiz_fmt "$ssh_display")" "ssh_key"
-
-  # Store total field count
+  # Store total field count for this screen
   _WIZ_FIELD_COUNT=$field_idx
 
   output+="\n"
 
-  # Footer
-  output+="${CLR_GRAY}[${CLR_ORANGE}↑↓${CLR_GRAY}] navigate  [${CLR_ORANGE}Enter${CLR_GRAY}] edit  [${CLR_ORANGE}S${CLR_GRAY}] start  [${CLR_ORANGE}Q${CLR_GRAY}] quit${CLR_RESET}"
+  # Footer with navigation hints
+  local nav_hint=""
+  if [[ $WIZ_CURRENT_SCREEN -gt 0 ]]; then
+    nav_hint+="[${CLR_ORANGE}←${CLR_GRAY}] prev  "
+  fi
+  nav_hint+="[${CLR_ORANGE}↑↓${CLR_GRAY}] navigate  [${CLR_ORANGE}Enter${CLR_GRAY}] edit"
+  if [[ $WIZ_CURRENT_SCREEN -lt $((${#WIZ_SCREENS[@]} - 1)) ]]; then
+    nav_hint+="  [${CLR_ORANGE}→${CLR_GRAY}] next"
+  fi
+  nav_hint+="  [${CLR_ORANGE}S${CLR_GRAY}] start  [${CLR_ORANGE}Q${CLR_GRAY}] quit"
+
+  output+="${CLR_GRAY}${nav_hint}${CLR_RESET}"
 
   # Clear screen and output everything atomically
   _wiz_clear

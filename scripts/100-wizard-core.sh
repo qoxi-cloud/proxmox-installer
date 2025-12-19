@@ -25,6 +25,20 @@ _wizard_main() {
           ((selection++))
         fi
         ;;
+      left)
+        # Previous screen
+        if [[ $WIZ_CURRENT_SCREEN -gt 0 ]]; then
+          ((WIZ_CURRENT_SCREEN--))
+          selection=0
+        fi
+        ;;
+      right)
+        # Next screen
+        if [[ $WIZ_CURRENT_SCREEN -lt $((${#WIZ_SCREENS[@]} - 1)) ]]; then
+          ((WIZ_CURRENT_SCREEN++))
+          selection=0
+        fi
+        ;;
       enter)
         # Show cursor for edit screens
         _wiz_show_cursor
