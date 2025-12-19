@@ -32,14 +32,18 @@ _ssh_session_init() {
   echo "$NEW_ROOT_PASSWORD" >"$_SSH_SESSION_PASSFILE"
   chmod 600 "$_SSH_SESSION_PASSFILE"
 
-  # Register cleanup on exit - APPEND to existing trap, don't replace
-  local existing_trap
-  existing_trap=$(trap -p EXIT 2>/dev/null | sed "s/trap -- '\\(.*\\)' EXIT/\\1/" || true)
-  if [[ -n $existing_trap ]]; then
-    # shellcheck disable=SC2064
-    trap "${existing_trap}; _ssh_session_cleanup" EXIT
-  else
-    trap '_ssh_session_cleanup' EXIT
+  # Register cleanup on exit - but ONLY in main shell, not in subshells
+  # Command substitution like $(func) runs in subshell, and EXIT trap would
+  # delete the passfile immediately when subshell exits
+  if [[ $BASHPID == "$$" ]]; then
+    local existing_trap
+    existing_trap=$(trap -p EXIT 2>/dev/null | sed "s/trap -- '\\(.*\\)' EXIT/\\1/" || true)
+    if [[ -n $existing_trap ]]; then
+      # shellcheck disable=SC2064
+      trap "${existing_trap}; _ssh_session_cleanup" EXIT
+    else
+      trap '_ssh_session_cleanup' EXIT
+    fi
   fi
 
   log "SSH session initialized"
@@ -125,26 +129,17 @@ wait_for_ssh_ready() {
   local passfile
   passfile=$(_ssh_get_passfile)
 
-  # Debug: log passfile info
-  log "DEBUG: passfile=$passfile"
-  log "DEBUG: passfile exists=$(test -f "$passfile" && echo yes || echo no)"
-  log "DEBUG: passfile size=$(wc -c <"$passfile" 2>/dev/null || echo 0)"
-
   # Wait for SSH to be ready with background process
   (
     local elapsed=0
     while ((elapsed < timeout)); do
       # shellcheck disable=SC2086
-      # Use timeout to prevent hanging if SSH connects but command doesn't return
-      if timeout 15 sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' >/dev/null 2>&1; then
+      if sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' >/dev/null 2>&1; then
         exit 0
       fi
       sleep 2
       ((elapsed += 2))
     done
-    # Debug: log failure reason
-    # shellcheck disable=SC2086
-    timeout 15 sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' 2>&1 | head -5 >>/tmp/ssh-debug.log
     exit 1
   ) &
   local wait_pid=$!
