@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.290-pr.21"
+VERSION="2.0.291-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -764,13 +764,13 @@ log "DEBUG: passfile exists=$(test -f "$passfile"&&echo yes||echo no)"
 log "DEBUG: passfile size=$(wc -c <"$passfile" 2>/dev/null||echo 0)"
 (local elapsed=0
 while ((elapsed<timeout));do
-if sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' >/dev/null 2>&1;then
+if timeout 15 sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' >/dev/null 2>&1;then
 exit 0
 fi
 sleep 2
 ((elapsed+=2))
 done
-sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' 2>&1|head -5 >>/tmp/ssh-debug.log
+timeout 15 sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' 2>&1|head -5 >>/tmp/ssh-debug.log
 exit 1) \
 &
 local wait_pid=$!
