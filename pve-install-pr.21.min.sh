@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.283-pr.21"
+VERSION="2.0.284-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1917,20 +1917,20 @@ live_log_section "Autoinstall Preparation"
 live_log_proxmox_installation(){
 live_log_section "Proxmox Installation"
 }
-live_log_system_configuration(){
-live_log_section "System Configuration"
+live_log_base_configuration(){
+live_log_section "Base Configuration"
+}
+live_log_storage_configuration(){
+live_log_section "Storage Configuration"
 }
 live_log_security_configuration(){
-if [[ ${INSTALL_TAILSCALE:-} == "yes" ]]||[[ ${INSTALL_APPARMOR:-} == "yes" ]]||[[ ${FAIL2BAN_INSTALLED:-} == "yes" ]]||[[ ${INSTALL_AUDITD:-} == "yes" ]];then
-add_log ""
-add_log "$CLR_CYAN▼ Security Configuration$CLR_RESET"
-fi
+live_log_section "Security Configuration"
+}
+live_log_monitoring_configuration(){
+live_log_section "Monitoring & Tools"
 }
 live_log_ssl_configuration(){
-if [[ ${SSL_TYPE:-} == "letsencrypt" ]];then
-add_log ""
-add_log "$CLR_CYAN▼ SSL Configuration$CLR_RESET"
-fi
+live_log_section "SSL & API Configuration"
 }
 live_log_validation_finalization(){
 live_log_section "Validation & Finalization"
@@ -5435,11 +5435,14 @@ configure_proxmox_via_ssh(){
 log "Starting Proxmox configuration via SSH"
 make_templates
 configure_base_system
+configure_shell
+configure_system_services
+if type live_log_storage_configuration &>/dev/null 2>&1;then
+live_log_storage_configuration
+fi
 configure_zfs_arc
 configure_zfs_pool
 configure_zfs_scrub
-configure_shell
-configure_system_services
 if type live_log_security_configuration &>/dev/null 2>&1;then
 live_log_security_configuration
 fi
@@ -5452,6 +5455,9 @@ configure_aide
 configure_chkrootkit
 configure_lynis
 configure_needrestart
+if type live_log_monitoring_configuration &>/dev/null 2>&1;then
+live_log_monitoring_configuration
+fi
 configure_netdata
 configure_prometheus
 configure_vnstat
@@ -5578,7 +5584,7 @@ log "ERROR: Failed to boot Proxmox with port forwarding"
 exit 1
 }
 log_metric "qemu_boot"
-live_log_system_configuration
+live_log_base_configuration
 log "Step: configure_proxmox_via_ssh"
 configure_proxmox_via_ssh
 log_metric "system_config"
