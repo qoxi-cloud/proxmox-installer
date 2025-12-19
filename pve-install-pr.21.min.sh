@@ -17,7 +17,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.327-pr.21"
+readonly VERSION="2.0.328-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1640,6 +1640,9 @@ render_logs
 }
 render_logs(){
 restore_cursor_position
+echo ""
+echo "$CLR_CYAN Live Logs$CLR_RESET"
+echo ""
 local start_line=0
 if ((LOG_COUNT>LOG_AREA_HEIGHT));then
 start_line=$((LOG_COUNT-LOG_AREA_HEIGHT))
@@ -1680,10 +1683,10 @@ calculate_log_area
 tput smcup
 _wiz_clear
 show_banner
+save_cursor_position
 echo ""
 echo "$CLR_CYAN Live Logs$CLR_RESET"
 echo ""
-save_cursor_position
 tput civis
 trap 'tput cnorm; tput rmcup' EXIT RETURN
 }
