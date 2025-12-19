@@ -141,6 +141,8 @@ make_templates() {
     "./templates/yazi-theme.toml:yazi-theme.toml"
     # Network tuning
     "./templates/network-ringbuffer.service:network-ringbuffer.service"
+    # Validation
+    "./templates/validation.sh:validation.sh"
   )
 
   # Download all templates in parallel

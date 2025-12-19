@@ -1,0 +1,276 @@
+#!/bin/bash
+# shellcheck disable=SC2050
+# =============================================================================
+# Installation Validation Script
+# Generated based on enabled features
+# Note: SC2050 disabled because {{VAR}} placeholders look like constants
+# =============================================================================
+set -euo pipefail
+
+ERRORS=0
+
+# Validation helpers
+_check_pkg() {
+  dpkg -l "$1" 2>/dev/null | grep -q "^ii" || {
+    echo "FAIL: Package '$1' not installed"
+    ((ERRORS++))
+    return 1
+  }
+}
+
+_check_svc_enabled() {
+  systemctl is-enabled --quiet "$1" 2>/dev/null || {
+    echo "FAIL: Service '$1' not enabled"
+    ((ERRORS++))
+    return 1
+  }
+}
+
+_check_svc_active() {
+  systemctl is-active --quiet "$1" 2>/dev/null || {
+    echo "FAIL: Service '$1' not active"
+    ((ERRORS++))
+    return 1
+  }
+}
+
+_check_file() {
+  [[ -s "$1" ]] || {
+    echo "FAIL: File '$1' missing or empty"
+    ((ERRORS++))
+    return 1
+  }
+}
+
+_check_cmd() {
+  command -v "$1" &>/dev/null || {
+    echo "FAIL: Command '$1' not found"
+    ((ERRORS++))
+    return 1
+  }
+}
+
+_check_timer() {
+  systemctl is-enabled --quiet "$1" 2>/dev/null || {
+    echo "FAIL: Timer '$1' not enabled"
+    ((ERRORS++))
+    return 1
+  }
+}
+
+# =============================================================================
+# Base System (always checked)
+# =============================================================================
+echo "=== Base System ==="
+_check_pkg proxmox-ve
+_check_svc_active pveproxy
+_check_svc_active pvedaemon
+_check_file /etc/network/interfaces
+_check_file /etc/sysctl.d/99-proxmox.conf
+_check_file /etc/hosts
+_check_svc_enabled chrony
+_check_svc_enabled unattended-upgrades
+_check_file /etc/udev/rules.d/60-io-scheduler.rules
+_check_file /etc/ssh/sshd_config
+
+# ZFS or ext4 root
+if ! zpool list 2>/dev/null | grep -qE "^(rpool|tank) "; then
+  mount | grep -q "on / type ext4" || {
+    echo "FAIL: No ZFS pool or ext4 root"
+    ((ERRORS++))
+  }
+fi
+
+# =============================================================================
+# Tailscale
+# =============================================================================
+if [[ "{{INSTALL_TAILSCALE}}" == "yes" ]]; then
+  echo "=== Tailscale ==="
+  _check_pkg tailscale
+  _check_svc_enabled tailscaled
+fi
+
+# =============================================================================
+# Firewall (nftables)
+# =============================================================================
+if [[ "{{INSTALL_FIREWALL}}" == "yes" ]]; then
+  echo "=== Firewall ==="
+  _check_pkg nftables
+  _check_svc_enabled nftables
+  _check_file /etc/nftables.conf
+fi
+
+# =============================================================================
+# Fail2Ban (only with firewall, not stealth mode)
+# =============================================================================
+if [[ "{{INSTALL_FIREWALL}}" == "yes" && "{{FIREWALL_MODE}}" != "stealth" ]]; then
+  echo "=== Fail2Ban ==="
+  _check_pkg fail2ban
+  _check_svc_enabled fail2ban
+  _check_file /etc/fail2ban/jail.local
+  _check_file /etc/fail2ban/filter.d/proxmox.conf
+fi
+
+# =============================================================================
+# AppArmor
+# =============================================================================
+if [[ "{{INSTALL_APPARMOR}}" == "yes" ]]; then
+  echo "=== AppArmor ==="
+  _check_svc_enabled apparmor
+  _check_file /etc/default/grub.d/apparmor.cfg
+fi
+
+# =============================================================================
+# Auditd
+# =============================================================================
+if [[ "{{INSTALL_AUDITD}}" == "yes" ]]; then
+  echo "=== Auditd ==="
+  _check_pkg auditd
+  _check_svc_enabled auditd
+  _check_file /etc/audit/rules.d/proxmox.rules
+fi
+
+# =============================================================================
+# AIDE
+# =============================================================================
+if [[ "{{INSTALL_AIDE}}" == "yes" ]]; then
+  echo "=== AIDE ==="
+  _check_pkg aide
+  _check_timer aide-check.timer
+  _check_file /etc/systemd/system/aide-check.service
+  _check_file /etc/systemd/system/aide-check.timer
+fi
+
+# =============================================================================
+# Chkrootkit
+# =============================================================================
+if [[ "{{INSTALL_CHKROOTKIT}}" == "yes" ]]; then
+  echo "=== Chkrootkit ==="
+  _check_pkg chkrootkit
+  _check_timer chkrootkit-scan.timer
+  _check_file /etc/systemd/system/chkrootkit-scan.service
+  _check_file /etc/systemd/system/chkrootkit-scan.timer
+fi
+
+# =============================================================================
+# Lynis
+# =============================================================================
+if [[ "{{INSTALL_LYNIS}}" == "yes" ]]; then
+  echo "=== Lynis ==="
+  _check_pkg lynis
+  _check_timer lynis-audit.timer
+  _check_file /etc/systemd/system/lynis-audit.service
+  _check_file /etc/systemd/system/lynis-audit.timer
+fi
+
+# =============================================================================
+# Needrestart
+# =============================================================================
+if [[ "{{INSTALL_NEEDRESTART}}" == "yes" ]]; then
+  echo "=== Needrestart ==="
+  _check_pkg needrestart
+  _check_file /etc/needrestart/needrestart.conf
+fi
+
+# =============================================================================
+# VnStat
+# =============================================================================
+if [[ "{{INSTALL_VNSTAT}}" == "yes" ]]; then
+  echo "=== VnStat ==="
+  _check_pkg vnstat
+  _check_svc_enabled vnstat
+  _check_file /etc/vnstat.conf
+fi
+
+# =============================================================================
+# Prometheus
+# =============================================================================
+if [[ "{{INSTALL_PROMETHEUS}}" == "yes" ]]; then
+  echo "=== Prometheus ==="
+  _check_pkg prometheus-node-exporter
+  _check_svc_enabled prometheus-node-exporter
+fi
+
+# =============================================================================
+# Netdata
+# =============================================================================
+if [[ "{{INSTALL_NETDATA}}" == "yes" ]]; then
+  echo "=== Netdata ==="
+  _check_cmd netdata
+  _check_svc_enabled netdata
+fi
+
+# =============================================================================
+# Yazi
+# =============================================================================
+if [[ "{{INSTALL_YAZI}}" == "yes" ]]; then
+  echo "=== Yazi ==="
+  _check_cmd yazi
+  _check_file /root/.config/yazi/theme.toml
+fi
+
+# =============================================================================
+# Neovim
+# =============================================================================
+if [[ "{{INSTALL_NVIM}}" == "yes" ]]; then
+  echo "=== Neovim ==="
+  _check_cmd nvim
+fi
+
+# =============================================================================
+# Ring Buffer
+# =============================================================================
+if [[ "{{INSTALL_RINGBUFFER}}" == "yes" ]]; then
+  echo "=== Ring Buffer ==="
+  _check_svc_enabled network-ringbuffer
+  _check_file /etc/systemd/system/network-ringbuffer.service
+fi
+
+# =============================================================================
+# ZSH Shell
+# =============================================================================
+if [[ "{{SHELL_TYPE}}" == "zsh" ]]; then
+  echo "=== ZSH ==="
+  _check_pkg zsh
+  _check_file /root/.zshrc
+  _check_file /root/.p10k.zsh
+fi
+
+# =============================================================================
+# Let's Encrypt SSL
+# =============================================================================
+if [[ "{{SSL_TYPE}}" == "letsencrypt" ]]; then
+  echo "=== Let's Encrypt ==="
+  _check_pkg certbot
+  _check_svc_enabled letsencrypt-firstboot
+fi
+
+# =============================================================================
+# SSL Certificate (both types)
+# =============================================================================
+echo "=== SSL Certificate ==="
+_check_file /etc/pve/local/pve-ssl.pem
+_check_file /etc/pve/local/pve-ssl.key
+
+# =============================================================================
+# ZFS Scrub Timers
+# =============================================================================
+echo "=== ZFS Scrub ==="
+if zpool list rpool &>/dev/null; then
+  _check_timer zfs-scrub@rpool.timer
+fi
+if zpool list tank &>/dev/null; then
+  _check_timer zfs-scrub@tank.timer
+fi
+
+# =============================================================================
+# Summary
+# =============================================================================
+echo ""
+if [[ $ERRORS -eq 0 ]]; then
+  echo "=== ALL CHECKS PASSED ==="
+  exit 0
+else
+  echo "=== $ERRORS CHECK(S) FAILED ==="
+  exit 1
+fi
