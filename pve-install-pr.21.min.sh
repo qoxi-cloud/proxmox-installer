@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.278-pr.21"
+VERSION="2.0.279-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -2304,6 +2304,30 @@ fi
 }
 _WIZ_FIELD_COUNT=0
 _WIZ_FIELD_MAP=()
+_wiz_config_complete(){
+[[ -z $PVE_HOSTNAME ]]&&return 1
+[[ -z $DOMAIN_SUFFIX ]]&&return 1
+[[ -z $EMAIL ]]&&return 1
+[[ -z $NEW_ROOT_PASSWORD ]]&&return 1
+[[ -z $TIMEZONE ]]&&return 1
+[[ -z $KEYBOARD ]]&&return 1
+[[ -z $COUNTRY ]]&&return 1
+[[ -z $PROXMOX_ISO_VERSION ]]&&return 1
+[[ -z $PVE_REPO_TYPE ]]&&return 1
+[[ -z $INTERFACE_NAME ]]&&return 1
+[[ -z $BRIDGE_MODE ]]&&return 1
+[[ -z $PRIVATE_SUBNET ]]&&return 1
+[[ -z $IPV6_MODE ]]&&return 1
+[[ -z $ZFS_RAID ]]&&return 1
+[[ -z $ZFS_ARC_MODE ]]&&return 1
+[[ -z $SHELL_TYPE ]]&&return 1
+[[ -z $CPU_GOVERNOR ]]&&return 1
+[[ -z $SSH_PUBLIC_KEY ]]&&return 1
+[[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]]&&return 1
+[[ $INSTALL_TAILSCALE != "yes" && -z $SSL_TYPE ]]&&return 1
+[[ $FIREWALL_MODE == "stealth" && $INSTALL_TAILSCALE != "yes" ]]&&return 1
+return 0
+}
 _wiz_build_display_values(){
 _DSP_PASS=""
 [[ -n $NEW_ROOT_PASSWORD ]]&&_DSP_PASS="********"
@@ -2524,14 +2548,15 @@ fi
 _wiz_render_screen_content "$WIZ_CURRENT_SCREEN" "$selection"
 _WIZ_FIELD_COUNT=$field_idx
 output+="\n"
-local left_clr right_clr
+local left_clr right_clr start_clr
 left_clr=$([[ $WIZ_CURRENT_SCREEN -gt 0 ]]&&echo "$CLR_ORANGE"||echo "$CLR_GRAY")
 right_clr=$([[ $WIZ_CURRENT_SCREEN -lt $((${#WIZ_SCREENS[@]}-1)) ]]&&echo "$CLR_ORANGE"||echo "$CLR_GRAY")
+start_clr=$(_wiz_config_complete&&echo "$CLR_ORANGE"||echo "$CLR_GRAY")
 local nav_hint=""
 nav_hint+="[$left_clr←$CLR_GRAY] prev  "
 nav_hint+="[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] edit  "
 nav_hint+="[$right_clr→$CLR_GRAY] next  "
-nav_hint+="[${CLR_ORANGE}S$CLR_GRAY] start  [${CLR_ORANGE}Q$CLR_GRAY] quit"
+nav_hint+="[${start_clr}S$CLR_GRAY] start  [${CLR_ORANGE}Q$CLR_GRAY] quit"
 output+="$CLR_GRAY$nav_hint$CLR_RESET"
 _wiz_clear
 printf '%b' "$output"
