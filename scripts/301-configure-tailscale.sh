@@ -59,9 +59,10 @@ configure_tailscale() {
       show_progress $! "Configuring Tailscale Serve" "Proxmox Web UI available via Tailscale Serve"
     fi
 
-    # Deploy OpenSSH disable service if requested (already downloaded in make_templates)
-    if [[ $TAILSCALE_SSH == "yes" && $TAILSCALE_DISABLE_SSH == "yes" ]]; then
-      log "Deploying disable-openssh.service (TAILSCALE_SSH=$TAILSCALE_SSH, TAILSCALE_DISABLE_SSH=$TAILSCALE_DISABLE_SSH)"
+    # Deploy OpenSSH disable service when firewall is in stealth mode
+    # In stealth mode, all public ports are blocked - SSH access is only via Tailscale
+    if [[ ${FIREWALL_MODE:-standard} == "stealth" ]]; then
+      log "Deploying disable-openssh.service (FIREWALL_MODE=$FIREWALL_MODE)"
       (
         log "Using pre-downloaded disable-openssh.service, size: $(wc -c <./templates/disable-openssh.service 2>/dev/null || echo 'failed')"
         remote_copy "templates/disable-openssh.service" "/etc/systemd/system/disable-openssh.service" || exit 1
@@ -71,7 +72,7 @@ configure_tailscale() {
       ) &
       show_progress $! "Configuring OpenSSH disable on boot" "OpenSSH disable configured"
     else
-      log "Skipping disable-openssh.service (TAILSCALE_SSH=$TAILSCALE_SSH, TAILSCALE_DISABLE_SSH=$TAILSCALE_DISABLE_SSH)"
+      log "Skipping disable-openssh.service (FIREWALL_MODE=${FIREWALL_MODE:-standard})"
     fi
 
     # Note: Firewall is now configured separately via 52-configure-firewall.sh

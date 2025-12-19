@@ -347,3 +347,23 @@ validate_disk_space() {
   log "INFO: Disk space OK: ${available_mb}MB available (${min_required_mb}MB required)"
   return 0
 }
+
+# Validates Tailscale authentication key format.
+# Format: tskey-auth-<id>-<secret> or tskey-client-<id>-<secret>
+# Example: tskey-auth-kpaPEJ2wwN11CNTRL-UsWiT9N81EjmVTyBKVj5Ej23Pwkp2KUN
+# Parameters:
+#   $1 - Tailscale auth key to validate
+# Returns: 0 if valid, 1 otherwise
+validate_tailscale_key() {
+  local key="$1"
+
+  [[ -z $key ]] && return 1
+
+  # Must start with tskey-auth- or tskey-client-
+  # Followed by alphanumeric ID, dash, and alphanumeric secret
+  if [[ $key =~ ^tskey-(auth|client)-[a-zA-Z0-9]+-[a-zA-Z0-9]+$ ]]; then
+    return 0
+  fi
+
+  return 1
+}

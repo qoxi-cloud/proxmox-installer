@@ -27,23 +27,36 @@ _edit_tailscale() {
 
   case "$selected" in
     Enabled)
-      # Request auth key (required for Tailscale)
-      _wiz_input_screen "Enter Tailscale authentication key"
+      # Request auth key with validation loop
+      local auth_key=""
 
-      local auth_key
-      auth_key=$(
-        _wiz_input \
-          --placeholder "tskey-auth-..." \
-          --prompt "Auth Key: "
-      )
+      while true; do
+        _wiz_start_edit
+        _show_input_footer
 
-      # If auth key provided, enable Tailscale
+        auth_key=$(
+          _wiz_input \
+            --placeholder "tskey-auth-..." \
+            --prompt "Auth Key: "
+        )
+
+        # Empty = cancel
+        [[ -z $auth_key ]] && break
+
+        # Validate key format
+        if validate_tailscale_key "$auth_key"; then
+          break
+        fi
+
+        show_validation_error "Invalid key format. Expected: tskey-auth-xxx-xxx"
+      done
+
+      # If valid auth key provided, enable Tailscale
       if [[ -n $auth_key ]]; then
         INSTALL_TAILSCALE="yes"
         TAILSCALE_AUTH_KEY="$auth_key"
         TAILSCALE_SSH="yes"
         TAILSCALE_WEBUI="yes"
-        TAILSCALE_DISABLE_SSH="yes"
         SSL_TYPE="self-signed" # Tailscale uses its own certs
         # Suggest stealth firewall mode when Tailscale is enabled
         if [[ -z $INSTALL_FIREWALL ]]; then
@@ -56,7 +69,6 @@ _edit_tailscale() {
         TAILSCALE_AUTH_KEY=""
         TAILSCALE_SSH=""
         TAILSCALE_WEBUI=""
-        TAILSCALE_DISABLE_SSH=""
         SSL_TYPE="" # Let user choose
       fi
       ;;
@@ -65,7 +77,6 @@ _edit_tailscale() {
       TAILSCALE_AUTH_KEY=""
       TAILSCALE_SSH=""
       TAILSCALE_WEBUI=""
-      TAILSCALE_DISABLE_SSH=""
       SSL_TYPE="" # Let user choose
       # Suggest standard firewall when Tailscale is disabled
       if [[ -z $INSTALL_FIREWALL ]]; then

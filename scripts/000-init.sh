@@ -11,6 +11,7 @@ export LC_ALL=en_US.UTF-8
 # =============================================================================
 # Colors and configuration
 # =============================================================================
+readonly CLR_BOLD=$'\033[1m'
 readonly CLR_RED=$'\033[1;31m'
 readonly CLR_CYAN=$'\033[38;2;0;177;255m'
 readonly CLR_YELLOW=$'\033[1;33m'
@@ -399,7 +400,6 @@ INSTALL_TAILSCALE=""
 TAILSCALE_AUTH_KEY=""
 TAILSCALE_SSH=""
 TAILSCALE_WEBUI=""
-TAILSCALE_DISABLE_SSH=""
 
 # Bridge MTU for private network (default: 9000 jumbo frames)
 BRIDGE_MTU=""

@@ -3,6 +3,25 @@
 # Finish and reboot
 # =============================================================================
 
+# Prints a credential field with label and value.
+# Parameters:
+#   $1 - Label (e.g., "Hostname", "Username")
+#   $2 - Value
+#   $3 - Optional note (shown in gray)
+_print_field() {
+  local label="$1" value="$2" note="${3:-}"
+  printf "${CLR_CYAN}  %-9s${CLR_RESET} %s" "$label:" "$value"
+  [[ -n $note ]] && printf " ${CLR_GRAY}%s${CLR_RESET}" "$note"
+  printf "\n"
+}
+
+# Prints a section header.
+# Parameters:
+#   $1 - Header text
+_print_header() {
+  echo "${CLR_CYAN}${CLR_BOLD}$1${CLR_RESET}"
+}
+
 # Displays installation completion message and prompts for system reboot.
 # Shows success message and interactive reboot dialog.
 _show_credentials_info() {
@@ -11,11 +30,40 @@ _show_credentials_info() {
   echo ""
 
   # Root credentials (always shown)
-  echo "${CLR_CYAN}${CLR_BOLD}Root Access:${CLR_RESET}"
-  echo "${CLR_CYAN}  Hostname:${CLR_RESET}  ${PVE_HOSTNAME}.${DOMAIN_SUFFIX}"
-  echo "${CLR_CYAN}  Username:${CLR_RESET}  root"
-  echo "${CLR_CYAN}  Password:${CLR_RESET}  ${NEW_ROOT_PASSWORD}"
-  echo "${CLR_CYAN}  Web UI:${CLR_RESET}    https://${MAIN_IPV4}:8006"
+  _print_header "Root Access:"
+  _print_field "Hostname" "${PVE_HOSTNAME}.${DOMAIN_SUFFIX}"
+  _print_field "Username" "root"
+  _print_field "Password" "${NEW_ROOT_PASSWORD}"
+
+  # Determine Web UI access based on firewall mode
+  local has_tailscale=""
+  [[ -n $TAILSCALE_IP && $TAILSCALE_IP != "pending" && $TAILSCALE_IP != "not authenticated" ]] && has_tailscale="yes"
+
+  case "${FIREWALL_MODE:-standard}" in
+    stealth)
+      # All public ports blocked - only Tailscale access
+      if [[ $has_tailscale == "yes" ]]; then
+        _print_field "Web UI" "https://${TAILSCALE_IP}:8006" "(Tailscale only)"
+      else
+        _print_field "Web UI" "${CLR_YELLOW}blocked${CLR_RESET}" "(stealth mode, no Tailscale)"
+      fi
+      ;;
+    strict)
+      # SSH only on public IP, Web UI only via Tailscale
+      if [[ $has_tailscale == "yes" ]]; then
+        _print_field "Web UI" "https://${TAILSCALE_IP}:8006" "(Tailscale only)"
+      else
+        _print_field "Web UI" "${CLR_YELLOW}blocked${CLR_RESET}" "(strict mode blocks :8006)"
+      fi
+      ;;
+    *)
+      # Standard mode - public IP access, optionally also Tailscale
+      _print_field "Web UI" "https://${MAIN_IPV4}:8006"
+      if [[ $has_tailscale == "yes" ]]; then
+        _print_field "" "https://${TAILSCALE_IP}:8006" "(Tailscale)"
+      fi
+      ;;
+  esac
 
   # API Token (shown only if created)
   if [[ -f /tmp/pve-install-api-token.env ]]; then
@@ -24,9 +72,9 @@ _show_credentials_info() {
 
     if [[ -n $API_TOKEN_VALUE ]]; then
       echo ""
-      echo "${CLR_CYAN}${CLR_BOLD}API Token:${CLR_RESET}"
-      echo "${CLR_CYAN}  Token ID:${CLR_RESET}  ${API_TOKEN_ID}"
-      echo "${CLR_CYAN}  Secret:${CLR_RESET}    ${API_TOKEN_VALUE}"
+      _print_header "API Token:"
+      _print_field "Token ID" "${API_TOKEN_ID}"
+      _print_field "Secret" "${API_TOKEN_VALUE}"
     fi
   fi
   echo ""

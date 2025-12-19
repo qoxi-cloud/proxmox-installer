@@ -91,6 +91,7 @@ make_templates() {
     "./templates/default-locale:default-locale"
     "./templates/environment:environment"
     "./templates/cpufrequtils:cpufrequtils"
+    "./templates/60-io-scheduler.rules:60-io-scheduler.rules"
     "./templates/remove-subscription-nag.sh:remove-subscription-nag.sh"
     # Let's Encrypt
     "./templates/letsencrypt-deploy-hook.sh:letsencrypt-deploy-hook.sh"

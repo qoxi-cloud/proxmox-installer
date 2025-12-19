@@ -422,4 +422,54 @@ When call validate_ipv6_gateway "192.168.1.1"
 The status should be failure
 End
 End
+
+# ===========================================================================
+# validate_tailscale_key()
+# ===========================================================================
+Describe "validate_tailscale_key()"
+It "accepts valid auth key"
+When call validate_tailscale_key "tskey-auth-kpaPEJ2wwN11CNTRL-UsWiT9N81EjmVTyBKVj5Ej23Pwkp2KUN"
+The status should be success
+End
+
+It "accepts valid client key"
+When call validate_tailscale_key "tskey-client-abc123DEF-xyz789GHI"
+The status should be success
+End
+
+It "accepts short key parts"
+When call validate_tailscale_key "tskey-auth-a1-b2"
+The status should be success
+End
+
+It "rejects missing prefix"
+When call validate_tailscale_key "abc123-def456"
+The status should be failure
+End
+
+It "rejects invalid prefix"
+When call validate_tailscale_key "tskey-invalid-abc123-def456"
+The status should be failure
+End
+
+It "rejects missing second part"
+When call validate_tailscale_key "tskey-auth-abc123"
+The status should be failure
+End
+
+It "rejects empty string"
+When call validate_tailscale_key ""
+The status should be failure
+End
+
+It "rejects key with special characters"
+When call validate_tailscale_key "tskey-auth-abc@123-def!456"
+The status should be failure
+End
+
+It "rejects key with spaces"
+When call validate_tailscale_key "tskey-auth-abc 123-def456"
+The status should be failure
+End
+End
 End
