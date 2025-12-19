@@ -28,10 +28,10 @@ _install_yazi() {
 # Configuration function for yazi
 _config_yazi() {
   # Create config directory
-  remote_exec 'mkdir -p /root/.config/yazi' || exit 1
+  remote_exec 'mkdir -p /root/.config/yazi' || return 1
 
   # Copy theme
-  remote_copy "templates/yazi-theme.toml" "/root/.config/yazi/theme.toml" || exit 1
+  remote_copy "templates/yazi-theme.toml" "/root/.config/yazi/theme.toml" || return 1
 }
 
 # Installs and configures yazi file manager with Catppuccin theme.
