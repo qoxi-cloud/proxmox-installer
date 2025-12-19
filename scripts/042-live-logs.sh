@@ -13,10 +13,13 @@ get_terminal_dimensions() {
 # Fallback to 9 if not defined (6 ASCII art + 1 empty + 1 tagline + 1 spacing)
 LOGO_HEIGHT=${BANNER_HEIGHT:-9}
 
+# Fixed header height (Live Logs title + empty line)
+HEADER_HEIGHT=2
+
 # Calculate available space for logs
 calculate_log_area() {
   get_terminal_dimensions
-  LOG_AREA_HEIGHT=$((TERM_HEIGHT - LOGO_HEIGHT - 2))
+  LOG_AREA_HEIGHT=$((TERM_HEIGHT - LOGO_HEIGHT - HEADER_HEIGHT - 1))
 }
 
 # Array to store log lines
@@ -105,11 +108,12 @@ start_live_installation() {
   tput smcup # Enter alternate screen buffer
   _wiz_clear
   show_banner
+
+  # Print fixed header (stays in place during scroll)
+  printf '%s Live Logs%s\n\n' "${CLR_CYAN}" "${CLR_RESET}"
+
   save_cursor_position
   tput civis # Hide cursor
-
-  # Add empty line after banner for spacing
-  add_log ""
 
   # Set trap to restore cursor and exit alternate buffer on exit
   trap 'tput cnorm; tput rmcup' EXIT RETURN
@@ -132,61 +136,21 @@ finish_live_installation() {
 }
 
 # =============================================================================
-# Installation process sections
+# Installation process sections (no-ops, kept for backward compatibility)
 # =============================================================================
 
-# Generic section header function
-# Parameters:
-#   $1 - Section name
-#   $2 - Optional: "first" to skip empty line before section
-live_log_section() {
-  local section_name="$1"
-  local first="${2:-}"
-
-  add_log "${CLR_CYAN}▼ $section_name${CLR_RESET}"
-}
-
-# Convenience wrappers for sections (for backward compatibility)
-live_log_system_preparation() {
-  live_log_section "Rescue System Preparation"
-}
-
-live_log_iso_download() {
-  live_log_section "Proxmox ISO Download"
-}
-
-live_log_autoinstall_preparation() {
-  live_log_section "Autoinstall Preparation"
-}
-
-live_log_proxmox_installation() {
-  live_log_section "Proxmox Installation"
-}
-
-live_log_base_configuration() {
-  live_log_section "Base Configuration"
-}
-
-live_log_storage_configuration() {
-  live_log_section "Storage Configuration"
-}
-
-live_log_security_configuration() {
-  live_log_section "Security Configuration"
-}
-
-live_log_monitoring_configuration() {
-  live_log_section "Monitoring & Tools"
-}
-
-live_log_ssl_configuration() {
-  live_log_section "SSL & API Configuration"
-}
-
-# Validation & Finalization section
-live_log_validation_finalization() {
-  live_log_section "Validation & Finalization"
-}
+# Section functions are no-ops - all logs appear in single scrolling area
+live_log_section() { :; }
+live_log_system_preparation() { :; }
+live_log_iso_download() { :; }
+live_log_autoinstall_preparation() { :; }
+live_log_proxmox_installation() { :; }
+live_log_base_configuration() { :; }
+live_log_storage_configuration() { :; }
+live_log_security_configuration() { :; }
+live_log_monitoring_configuration() { :; }
+live_log_ssl_configuration() { :; }
+live_log_validation_finalization() { :; }
 
 # Flag to track if live logs are active
 LIVE_LOGS_ACTIVE=false
