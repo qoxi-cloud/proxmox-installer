@@ -32,8 +32,15 @@ _ssh_session_init() {
   echo "$NEW_ROOT_PASSWORD" >"$_SSH_SESSION_PASSFILE"
   chmod 600 "$_SSH_SESSION_PASSFILE"
 
-  # Register cleanup on exit (append to existing trap)
-  trap '_ssh_session_cleanup' EXIT
+  # Register cleanup on exit - APPEND to existing trap, don't replace
+  local existing_trap
+  existing_trap=$(trap -p EXIT 2>/dev/null | sed "s/trap -- '\\(.*\\)' EXIT/\\1/" || true)
+  if [[ -n $existing_trap ]]; then
+    # shellcheck disable=SC2064
+    trap "${existing_trap}; _ssh_session_cleanup" EXIT
+  else
+    trap '_ssh_session_cleanup' EXIT
+  fi
 
   log "SSH session initialized"
 }
@@ -134,6 +141,7 @@ wait_for_ssh_ready() {
   local wait_pid=$!
 
   show_progress $wait_pid "Waiting for SSH to be ready" "SSH connection established"
+  return $?
 }
 
 # =============================================================================
