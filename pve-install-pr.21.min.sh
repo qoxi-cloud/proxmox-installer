@@ -19,7 +19,7 @@ HEX_GREEN="#00ff00"
 HEX_WHITE="#ffffff"
 HEX_NONE="7"
 MENU_BOX_WIDTH=60
-VERSION="2.0.282-pr.21"
+VERSION="2.0.283-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -5477,9 +5477,7 @@ finalize_vm
 }
 _show_credentials_info(){
 echo ""
-print_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "$CLR_YELLOW${CLR_BOLD}Access Credentials$CLR_RESET $CLR_RED(SAVE THIS!)$CLR_RESET"
-print_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "$CLR_CYAN${CLR_BOLD}Root Access:$CLR_RESET"
 echo "$CLR_CYAN  Hostname:$CLR_RESET  $PVE_HOSTNAME.$DOMAIN_SUFFIX"
@@ -5495,14 +5493,12 @@ echo "$CLR_CYAN  Token ID:$CLR_RESET  $API_TOKEN_ID"
 echo "$CLR_CYAN  Secret:$CLR_RESET    $API_TOKEN_VALUE"
 fi
 fi
-print_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 }
 reboot_to_main_os(){
 finish_live_installation
 _wiz_start_edit
 print_info "Installation completed successfully!"
-echo ""
 _show_credentials_info
 if gum confirm "Reboot the system now?" \
 --affirmative "Yes" \
