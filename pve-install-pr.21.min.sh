@@ -17,7 +17,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.325-pr.21"
+readonly VERSION="2.0.326-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1695,17 +1695,6 @@ fi
 tput cnorm
 tput rmcup
 }
-live_log_section(){ :;}
-live_log_system_preparation(){ :;}
-live_log_iso_download(){ :;}
-live_log_autoinstall_preparation(){ :;}
-live_log_proxmox_installation(){ :;}
-live_log_base_configuration(){ :;}
-live_log_storage_configuration(){ :;}
-live_log_security_configuration(){ :;}
-live_log_monitoring_configuration(){ :;}
-live_log_ssl_configuration(){ :;}
-live_log_validation_finalization(){ :;}
 LIVE_LOGS_ACTIVE=false
 live_show_progress(){
 local pid=$1
@@ -4961,15 +4950,9 @@ make_templates
 configure_base_system
 configure_shell
 configure_system_services
-if type live_log_storage_configuration &>/dev/null 2>&1;then
-live_log_storage_configuration
-fi
 configure_zfs_arc
 configure_zfs_pool
 configure_zfs_scrub
-if type live_log_security_configuration &>/dev/null 2>&1;then
-live_log_security_configuration
-fi
 configure_tailscale
 configure_firewall
 batch_install_packages
@@ -4981,9 +4964,6 @@ _parallel_config_aide \
 _parallel_config_chkrootkit \
 _parallel_config_lynis \
 _parallel_config_needrestart
-if type live_log_monitoring_configuration &>/dev/null 2>&1;then
-live_log_monitoring_configuration
-fi
 (local pids=()
 if [[ $INSTALL_NETDATA == "yes" ]];then
 configure_netdata&
@@ -5002,16 +4982,10 @@ _parallel_config_vnstat \
 _parallel_config_ringbuffer \
 _parallel_config_nvim
 wait $special_pid 2>/dev/null||true
-if type live_log_ssl_configuration &>/dev/null 2>&1;then
-live_log_ssl_configuration
-fi
 configure_ssl_certificate
 if [[ $INSTALL_API_TOKEN == "yes" ]];then
 (create_api_token||exit 1) >/dev/null 2>&1&
 show_progress $! "Creating API token" "API token created"
-fi
-if type live_log_validation_finalization &>/dev/null 2>&1;then
-live_log_validation_finalization
 fi
 configure_ssh_hardening
 validate_installation
@@ -5128,21 +5102,17 @@ log "WARNING: Failed to start live installation display, falling back to regular
 clear
 show_banner
 }
-live_log_system_preparation
 log "Step: prepare_packages"
 prepare_packages
 log_metric "packages"
-live_log_iso_download
 log "Step: download_proxmox_iso"
 download_proxmox_iso
 log_metric "iso_download"
-live_log_autoinstall_preparation
 log "Step: make_answer_toml"
 make_answer_toml
 log "Step: make_autoinstall_iso"
 make_autoinstall_iso
 log_metric "autoinstall_prep"
-live_log_proxmox_installation
 log "Step: install_proxmox"
 install_proxmox
 log_metric "proxmox_install"
@@ -5152,7 +5122,6 @@ log "ERROR: Failed to boot Proxmox with port forwarding"
 exit 1
 }
 log_metric "qemu_boot"
-live_log_base_configuration
 log "Step: configure_proxmox_via_ssh"
 configure_proxmox_via_ssh
 log_metric "system_config"
