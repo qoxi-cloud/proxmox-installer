@@ -17,7 +17,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.324-pr.21"
+readonly VERSION="2.0.325-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1618,9 +1618,10 @@ TERM_HEIGHT=$(tput lines)
 TERM_WIDTH=$(tput cols)
 }
 LOGO_HEIGHT=${BANNER_HEIGHT:-9}
+HEADER_HEIGHT=2
 calculate_log_area(){
 get_terminal_dimensions
-LOG_AREA_HEIGHT=$((TERM_HEIGHT-LOGO_HEIGHT-2))
+LOG_AREA_HEIGHT=$((TERM_HEIGHT-LOGO_HEIGHT-HEADER_HEIGHT-1))
 }
 declare -a LOG_LINES=()
 LOG_COUNT=0
@@ -1679,9 +1680,9 @@ calculate_log_area
 tput smcup
 _wiz_clear
 show_banner
+printf '%s Live Logs%s\n\n' "$CLR_CYAN" "$CLR_RESET"
 save_cursor_position
 tput civis
-add_log ""
 trap 'tput cnorm; tput rmcup' EXIT RETURN
 }
 finish_live_installation(){
@@ -1694,41 +1695,17 @@ fi
 tput cnorm
 tput rmcup
 }
-live_log_section(){
-local section_name="$1"
-local first="${2:-}"
-add_log "$CLR_CYAN▼ $section_name$CLR_RESET"
-}
-live_log_system_preparation(){
-live_log_section "Rescue System Preparation"
-}
-live_log_iso_download(){
-live_log_section "Proxmox ISO Download"
-}
-live_log_autoinstall_preparation(){
-live_log_section "Autoinstall Preparation"
-}
-live_log_proxmox_installation(){
-live_log_section "Proxmox Installation"
-}
-live_log_base_configuration(){
-live_log_section "Base Configuration"
-}
-live_log_storage_configuration(){
-live_log_section "Storage Configuration"
-}
-live_log_security_configuration(){
-live_log_section "Security Configuration"
-}
-live_log_monitoring_configuration(){
-live_log_section "Monitoring & Tools"
-}
-live_log_ssl_configuration(){
-live_log_section "SSL & API Configuration"
-}
-live_log_validation_finalization(){
-live_log_section "Validation & Finalization"
-}
+live_log_section(){ :;}
+live_log_system_preparation(){ :;}
+live_log_iso_download(){ :;}
+live_log_autoinstall_preparation(){ :;}
+live_log_proxmox_installation(){ :;}
+live_log_base_configuration(){ :;}
+live_log_storage_configuration(){ :;}
+live_log_security_configuration(){ :;}
+live_log_monitoring_configuration(){ :;}
+live_log_ssl_configuration(){ :;}
+live_log_validation_finalization(){ :;}
 LIVE_LOGS_ACTIVE=false
 live_show_progress(){
 local pid=$1
