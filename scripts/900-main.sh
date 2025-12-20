@@ -36,14 +36,18 @@ _show_credentials_info() {
     stealth)
       # All public ports blocked - only Tailscale access
       if [[ $has_tailscale == "yes" ]]; then
+        _print_field "SSH" "ssh root@${TAILSCALE_IP}" "(Tailscale only)"
         _print_field "Web UI" "https://${TAILSCALE_IP}:8006" "(Tailscale only)"
       else
+        _print_field "SSH" "${CLR_YELLOW}blocked${CLR_RESET}" "(stealth mode, no Tailscale)"
         _print_field "Web UI" "${CLR_YELLOW}blocked${CLR_RESET}" "(stealth mode, no Tailscale)"
       fi
       ;;
     strict)
       # SSH only on public IP, Web UI only via Tailscale
+      _print_field "SSH" "ssh root@${MAIN_IPV4}"
       if [[ $has_tailscale == "yes" ]]; then
+        _print_field "" "ssh root@${TAILSCALE_IP}" "(Tailscale)"
         _print_field "Web UI" "https://${TAILSCALE_IP}:8006" "(Tailscale only)"
       else
         _print_field "Web UI" "${CLR_YELLOW}blocked${CLR_RESET}" "(strict mode blocks :8006)"
@@ -51,6 +55,10 @@ _show_credentials_info() {
       ;;
     *)
       # Standard mode - public IP access, optionally also Tailscale
+      _print_field "SSH" "ssh root@${MAIN_IPV4}"
+      if [[ $has_tailscale == "yes" ]]; then
+        _print_field "" "ssh root@${TAILSCALE_IP}" "(Tailscale)"
+      fi
       _print_field "Web UI" "https://${MAIN_IPV4}:8006"
       if [[ $has_tailscale == "yes" ]]; then
         _print_field "" "https://${TAILSCALE_IP}:8006" "(Tailscale)"
