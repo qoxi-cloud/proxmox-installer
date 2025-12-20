@@ -80,10 +80,16 @@ complete_task() {
   render_logs
 }
 
-# Add sub-task log entry (indented with tree structure)
+# Add sub-task log entry (indented, wizard style)
 add_subtask_log() {
   local message="$1"
-  add_log "${CLR_ORANGE}│${CLR_RESET}   ${CLR_GRAY}${message}${CLR_RESET}"
+  add_log "      ${CLR_GRAY}${message}${CLR_RESET}"
+}
+
+# Render header in wizard style (centered like completion screen)
+_render_install_header() {
+  echo "                     ${CLR_ORANGE}●${CLR_RESET} ${CLR_CYAN}Installing Proxmox${CLR_RESET} ${CLR_ORANGE}●${CLR_RESET}"
+  echo ""
 }
 
 # Start live installation display
@@ -100,9 +106,8 @@ start_live_installation() {
   _wiz_clear
   show_banner
 
-  # Print static header (like banner)
-  print_section " Installation Progress"
-  _wiz_blank_line
+  # Wizard-style header
+  _render_install_header
 
   # Save cursor position after header (logs start here)
   save_cursor_position
@@ -126,18 +131,18 @@ live_show_progress() {
   [[ ${3:-} == "--silent" || ${4:-} == "--silent" ]] && silent=true
   [[ ${3:-} == "--silent" ]] && done_message="$message"
 
-  # Add task to live display with spinner
-  start_task "${CLR_ORANGE}├─${CLR_RESET} ${message}"
+  # Add task to live display with spinner (wizard style: › marker)
+  start_task "  ${CLR_ORANGE}›${CLR_RESET} ${CLR_GRAY}${message}${CLR_RESET}"
   local task_idx=$TASK_INDEX
 
   # Wait for process with periodic updates
   while kill -0 "$pid" 2>/dev/null; do
     sleep 0.3
-    # Update the task line with animated dots (orange)
+    # Update the task line with animated dots
     local dots_count=$((($(date +%s) % 3) + 1))
     local dots
     dots=$(printf '.%.0s' $(seq 1 $dots_count))
-    LOG_LINES[task_idx]="${CLR_ORANGE}├─${CLR_RESET} ${message}${CLR_ORANGE}${dots}${CLR_RESET}"
+    LOG_LINES[task_idx]="  ${CLR_ORANGE}›${CLR_RESET} ${CLR_GRAY}${message}${CLR_ORANGE}${dots}${CLR_RESET}"
     render_logs
   done
 
@@ -148,7 +153,7 @@ live_show_progress() {
   # Update with final status
   if [[ $exit_code -eq 0 ]]; then
     if [[ $silent != true ]]; then
-      complete_task "$task_idx" "${CLR_ORANGE}├─${CLR_RESET} ${done_message}"
+      complete_task "$task_idx" "  ${CLR_GRAY}${done_message}${CLR_RESET}"
     else
       # Remove the line for silent mode
       unset 'LOG_LINES[task_idx]'
@@ -157,7 +162,7 @@ live_show_progress() {
       render_logs
     fi
   else
-    LOG_LINES[task_idx]="${CLR_ORANGE}├─${CLR_RESET} ${message} ${CLR_RED}✗${CLR_RESET}"
+    LOG_LINES[task_idx]="  ${CLR_GRAY}${message}${CLR_RESET} ${CLR_RED}✗${CLR_RESET}"
     render_logs
   fi
 
