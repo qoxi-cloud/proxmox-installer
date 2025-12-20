@@ -194,17 +194,19 @@ _download_iso_aria2c() {
 #   $1 - URL to download
 #   $2 - Output filename
 #   $3 - Optional SHA256 checksum
-# Returns: 0 on success (sets DOWNLOAD_METHOD), 1 on all failures
+#   $4 - Optional file to write download method (for background job communication)
+# Returns: 0 on success, 1 on all failures
 _download_iso_with_fallback() {
   local url="$1"
   local output="$2"
   local checksum="$3"
+  local method_file="${4:-}"
 
   # Try aria2c first (fastest - uses parallel connections)
   if command -v aria2c &>/dev/null; then
     log "Trying aria2c (parallel download)..."
     if _download_iso_aria2c "$url" "$output" "$checksum" && [[ -s "$output" ]]; then
-      DOWNLOAD_METHOD="aria2c"
+      [[ -n $method_file ]] && echo "aria2c" >"$method_file"
       return 0
     fi
     log "aria2c failed, trying fallback..."
@@ -214,7 +216,7 @@ _download_iso_with_fallback() {
   # Fallback to curl
   log "Trying curl..."
   if _download_iso_curl "$url" "$output" && [[ -s "$output" ]]; then
-    DOWNLOAD_METHOD="curl"
+    [[ -n $method_file ]] && echo "curl" >"$method_file"
     return 0
   fi
   log "curl failed, trying fallback..."
@@ -224,7 +226,7 @@ _download_iso_with_fallback() {
   if command -v wget &>/dev/null; then
     log "Trying wget..."
     if _download_iso_wget "$url" "$output" && [[ -s "$output" ]]; then
-      DOWNLOAD_METHOD="wget"
+      [[ -n $method_file ]] && echo "wget" >"$method_file"
       return 0
     fi
     rm -f "$output" 2>/dev/null
@@ -267,14 +269,10 @@ download_proxmox_iso() {
 
   # Download with fallback chain: aria2c → curl → wget
   log "Downloading ISO: $ISO_FILENAME"
-  DOWNLOAD_METHOD=""
   local method_file
   method_file=$(mktemp)
 
-  (
-    _download_iso_with_fallback "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum"
-    echo "$DOWNLOAD_METHOD" >"$method_file"
-  ) &
+  _download_iso_with_fallback "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum" "$method_file" &
   show_progress $! "Downloading $ISO_FILENAME" "$ISO_FILENAME downloaded"
   wait $!
   local exit_code=$?
