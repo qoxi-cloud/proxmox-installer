@@ -11,10 +11,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  # Build for pull requests
+  pr:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    # For wait-for-checks.yml compatibility, job outputs different name based on event
-    # PR context uses 'build-pr' name via outputs
     outputs:
       version: ${{ steps.version.outputs.version }}
 
@@ -26,7 +26,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Calculate version
         id: version
@@ -45,12 +45,7 @@ jobs:
             PATCH=$(git rev-list HEAD --count)
           fi
 
-          VERSION="${MAJOR}.${MINOR}.${PATCH}"
-
-          # Add PR suffix for pull requests
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            VERSION="${VERSION}-pr.${{ github.event.pull_request.number }}"
-          fi
+          VERSION="${MAJOR}.${MINOR}.${PATCH}-pr.${{ github.event.pull_request.number }}"
 
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "Generated version: ${VERSION}"
@@ -81,7 +76,6 @@ jobs:
           chmod +x pve-install.sh
 
       - name: Configure PR branch/repo
-        if: github.event_name == 'pull_request'
         run: |
           PR_BRANCH="${{ github.event.pull_request.head.ref }}"
           PR_REPO="${{ github.event.pull_request.head.repo.full_name }}"
@@ -123,7 +117,6 @@ jobs:
             pve-install.min.sh
 
       - name: Save PR metadata
-        if: github.event_name == 'pull_request'
         run: |
           mkdir -p pr-metadata
           echo "${{ github.event.pull_request.number }}" > pr-metadata/pr_number
@@ -131,8 +124,98 @@ jobs:
           echo "${{ github.event.pull_request.head.repo.full_name }}" > pr-metadata/pr_repo
 
       - name: Upload PR metadata
-        if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: pr-metadata
           path: pr-metadata/
+
+  # Build for main branch
+  main:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Calculate version
+        id: version
+        run: |
+          # Get MAJOR version from source file
+          MAJOR=$(grep -oP 'VERSION="\K[0-9]+' scripts/000-init.sh)
+
+          # Count tags matching vMAJOR.* for MINOR
+          MINOR=$(git tag -l "v${MAJOR}.*" 2>/dev/null | wc -l | tr -d ' ')
+
+          # Count commits since last tag for PATCH
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [[ -n "$LATEST_TAG" ]]; then
+            PATCH=$(git rev-list "${LATEST_TAG}..HEAD" --count)
+          else
+            PATCH=$(git rev-list HEAD --count)
+          fi
+
+          VERSION="${MAJOR}.${MINOR}.${PATCH}"
+
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Generated version: ${VERSION}"
+
+      - name: Build script
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Header
+          cat > pve-install.sh << 'HEADER'
+          #!/usr/bin/env bash
+          # =============================================================================
+          # Proxmox VE Auto-Installer for Hetzner Dedicated Servers
+          # =============================================================================
+          HEADER
+
+          # Concatenate all source files in order
+          for f in scripts/*.sh; do
+            echo "" >> pve-install.sh
+            echo "# --- $(basename "$f") ---" >> pve-install.sh
+            # Remove shebang from all files
+            sed '1{/^#!/d}' "$f" >> pve-install.sh
+          done
+
+          # Replace version placeholder with calculated version
+          sed -i "s/^readonly VERSION=\"[0-9]*\"$/readonly VERSION=\"${VERSION}\"/" pve-install.sh
+
+          chmod +x pve-install.sh
+
+      - name: Install shfmt
+        run: |
+          curl -sS https://webi.sh/shfmt | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Minify script with shfmt
+        run: |
+          # Minify: -mn removes comments and minimizes whitespace
+          shfmt -mn pve-install.sh > pve-install.min.sh
+
+          # Show size reduction
+          ORIGINAL_SIZE=$(wc -c < pve-install.sh)
+          MINIFIED_SIZE=$(wc -c < pve-install.min.sh)
+          REDUCTION=$((100 - (MINIFIED_SIZE * 100 / ORIGINAL_SIZE)))
+          echo "Original: ${ORIGINAL_SIZE} bytes"
+          echo "Minified: ${MINIFIED_SIZE} bytes"
+          echo "Reduction: ${REDUCTION}%"
+
+          chmod +x pve-install.min.sh
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pve-install
+          path: |
+            pve-install.sh
+            pve-install.min.sh
