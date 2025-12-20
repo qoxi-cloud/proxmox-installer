@@ -201,7 +201,7 @@ _wiz_choose() {
     --header.foreground "$HEX_CYAN" \
     --cursor "${CLR_ORANGE}›${CLR_RESET} " \
     --cursor.foreground "$HEX_NONE" \
-    --selected.foreground "$HEX_WHITE" \
+    --selected.foreground "$HEX_GOLD" \
     --no-show-help \
     "$@"
 }

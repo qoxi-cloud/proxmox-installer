@@ -364,7 +364,7 @@ _edit_features_security() {
     --cursor "${CLR_ORANGE}›${CLR_RESET} "
     --cursor.foreground "$HEX_NONE"
     --cursor-prefix "◦ "
-    --selected.foreground "$HEX_WHITE"
+    --selected.foreground "$HEX_GOLD"
     --selected-prefix "${CLR_CYAN}✓${CLR_RESET} "
     --unselected-prefix "◦ "
     --no-show-help
@@ -421,7 +421,7 @@ _edit_features_monitoring() {
     --cursor "${CLR_ORANGE}›${CLR_RESET} "
     --cursor.foreground "$HEX_NONE"
     --cursor-prefix "◦ "
-    --selected.foreground "$HEX_WHITE"
+    --selected.foreground "$HEX_GOLD"
     --selected-prefix "${CLR_CYAN}✓${CLR_RESET} "
     --unselected-prefix "◦ "
     --no-show-help
@@ -472,7 +472,7 @@ _edit_features_tools() {
     --cursor "${CLR_ORANGE}›${CLR_RESET} "
     --cursor.foreground "$HEX_NONE"
     --cursor-prefix "◦ "
-    --selected.foreground "$HEX_WHITE"
+    --selected.foreground "$HEX_GOLD"
     --selected-prefix "${CLR_CYAN}✓${CLR_RESET} "
     --unselected-prefix "◦ "
     --no-show-help

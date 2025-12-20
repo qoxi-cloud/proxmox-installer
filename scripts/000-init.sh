@@ -25,7 +25,7 @@ readonly HEX_CYAN="#00b1ff"
 readonly HEX_YELLOW="#ffff00"
 readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
-readonly HEX_WHITE="#ffffff"
+readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
 
 # Version (MAJOR only - MINOR.PATCH added by CI from git tags/commits)
