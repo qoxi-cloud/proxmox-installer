@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.396-pr.21"
+readonly VERSION="2.0.397-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -974,9 +974,7 @@ run_remote "Installing system packages" "
     pveupgrade 2>/dev/null || true
     pveam update 2>/dev/null || true
   " "System packages installed"
-for pkg in $packages;do
-add_subtask_log "$pkg"
-done
+log_subtasks $packages
 }
 batch_install_packages(){
 local packages=()
@@ -1030,9 +1028,7 @@ if [[ $exit_code -ne 0 ]];then
 log "WARNING: Batch package installation failed"
 return 1
 fi
-for pkg in "${packages[@]}";do
-add_subtask_log "$pkg"
-done
+log_subtasks "${packages[@]}"
 return 0
 }
 run_parallel_group(){
@@ -1824,6 +1820,11 @@ return $exit_code
 live_log_subtask(){
 local message="$1"
 add_subtask_log "$message"
+}
+log_subtasks(){
+for item in "$@";do
+add_subtask_log "$item"
+done
 }
 _wizard_main(){
 local selection=0
