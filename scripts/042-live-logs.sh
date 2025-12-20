@@ -88,8 +88,7 @@ add_subtask_log() {
 
 # Render header in wizard style (centered like completion screen)
 _render_install_header() {
-  echo "                     ${CLR_ORANGE}●${CLR_RESET} ${CLR_CYAN}Installing Proxmox${CLR_RESET} ${CLR_ORANGE}●${CLR_RESET}"
-  echo ""
+  printf '%s\n\n' "                     ${CLR_ORANGE}●${CLR_RESET} ${CLR_CYAN}Installing Proxmox${CLR_RESET} ${CLR_ORANGE}●${CLR_RESET}"
 }
 
 # Start live installation display
