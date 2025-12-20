@@ -48,13 +48,6 @@ add_log() {
 render_logs() {
   restore_cursor_position
 
-  # Print fixed header each time (with clear to EOL)
-  printf '\033[K'
-  print_section " Installation Progress"
-  printf '\033[K'
-  _wiz_blank_line
-  printf '\033[K'
-
   local start_line=0
   local lines_printed=0
   if ((LOG_COUNT > LOG_AREA_HEIGHT)); then
@@ -107,7 +100,11 @@ start_live_installation() {
   _wiz_clear
   show_banner
 
-  # Save cursor position right after banner (before header)
+  # Print static header (like banner)
+  print_section " Installation Progress"
+  _wiz_blank_line
+
+  # Save cursor position after header (logs start here)
   save_cursor_position
 
   # Set trap to restore cursor and exit alternate buffer on exit
