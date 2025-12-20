@@ -241,31 +241,81 @@ _edit_shell() {
 _edit_power_profile() {
   _wiz_start_edit
 
+  # Detect available governors from sysfs
+  local avail_governors=""
+  if [[ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors ]]; then
+    avail_governors=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors)
+  fi
+
+  # Build dynamic options based on available governors
+  local options=()
+  local descriptions=()
+
+  # Always show Performance if available
+  if [[ -z $avail_governors ]] || echo "$avail_governors" | grep -qw "performance"; then
+    options+=("Performance")
+    descriptions+=("  {{cyan:Performance}}:  Max frequency (highest power)")
+  fi
+
+  # Show governor-specific options
+  if echo "$avail_governors" | grep -qw "ondemand"; then
+    options+=("Balanced")
+    descriptions+=("  {{cyan:Balanced}}:     Scale based on load")
+  elif echo "$avail_governors" | grep -qw "powersave"; then
+    # intel_pstate powersave is actually dynamic scaling
+    options+=("Balanced")
+    descriptions+=("  {{cyan:Balanced}}:     Dynamic scaling (power efficient)")
+  fi
+
+  if echo "$avail_governors" | grep -qw "schedutil"; then
+    options+=("Adaptive")
+    descriptions+=("  {{cyan:Adaptive}}:     Kernel-managed scaling")
+  fi
+
+  if echo "$avail_governors" | grep -qw "conservative"; then
+    options+=("Conservative")
+    descriptions+=("  {{cyan:Conservative}}: Gradual frequency changes")
+  fi
+
+  # Fallback if no governors detected
+  if [[ ${#options[@]} -eq 0 ]]; then
+    options=("Performance" "Balanced")
+    descriptions=(
+      "  {{cyan:Performance}}:  Max frequency (highest power)"
+      "  {{cyan:Balanced}}:     Dynamic scaling (power efficient)"
+    )
+  fi
+
   _wiz_description \
     "CPU frequency scaling governor:" \
     "" \
-    "  {{cyan:Performance}}:  Max frequency always (highest power)" \
-    "  {{cyan:Balanced}}:     Scale based on load (ondemand)" \
-    "  {{cyan:Adaptive}}:     Kernel-managed scaling (schedutil)" \
-    "  {{cyan:Power saving}}: Prefer low frequency (powersave)" \
-    "  {{cyan:Conservative}}: Gradual frequency changes" \
+    "${descriptions[@]}" \
     ""
 
-  # 1 header + 5 items for gum choose
-  _show_input_footer "filter" 6
+  # 1 header + N items for gum choose
+  _show_input_footer "filter" $((${#options[@]} + 1))
+
+  local options_str
+  options_str=$(printf '%s\n' "${options[@]}")
 
   local selected
   selected=$(
-    echo "$WIZ_CPU_GOVERNORS" | _wiz_choose \
+    echo "$options_str" | _wiz_choose \
       --header="Power profile:"
   )
 
   if [[ -n $selected ]]; then
-    # Map display names to internal values
+    # Map display names to governor values
     case "$selected" in
       "Performance") CPU_GOVERNOR="performance" ;;
-      "Balanced") CPU_GOVERNOR="ondemand" ;;
-      "Power saving") CPU_GOVERNOR="powersave" ;;
+      "Balanced")
+        # Use ondemand if available, otherwise powersave
+        if echo "$avail_governors" | grep -qw "ondemand"; then
+          CPU_GOVERNOR="ondemand"
+        else
+          CPU_GOVERNOR="powersave"
+        fi
+        ;;
       "Adaptive") CPU_GOVERNOR="schedutil" ;;
       "Conservative") CPU_GOVERNOR="conservative" ;;
     esac

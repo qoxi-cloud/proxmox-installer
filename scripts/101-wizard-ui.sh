@@ -396,8 +396,7 @@ _wiz_build_display_values() {
   if [[ -n $CPU_GOVERNOR ]]; then
     case "$CPU_GOVERNOR" in
       performance) _DSP_POWER="Performance" ;;
-      ondemand) _DSP_POWER="Balanced" ;;
-      powersave) _DSP_POWER="Power saving" ;;
+      ondemand | powersave) _DSP_POWER="Balanced" ;;
       schedutil) _DSP_POWER="Adaptive" ;;
       conservative) _DSP_POWER="Conservative" ;;
       *) _DSP_POWER="$CPU_GOVERNOR" ;;

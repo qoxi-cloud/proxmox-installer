@@ -44,6 +44,7 @@ configure_ssl_certificate() {
 
   # Configure first-boot certificate script
   run_remote "Configuring Let's Encrypt templates" '
+        set -e
         mkdir -p /etc/letsencrypt/renewal-hooks/deploy
 
         # Install deploy hook for renewals

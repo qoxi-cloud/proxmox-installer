@@ -5,12 +5,12 @@
 
 # Installs all base system packages in one batch.
 # Called at the start of configure_base_system().
-# Includes: SYSTEM_UTILITIES, locales, chrony, unattended-upgrades, cpufrequtils
+# Includes: SYSTEM_UTILITIES, locales, chrony, unattended-upgrades, linux-cpupower
 # And conditionally: zsh/git/curl (if SHELL_TYPE=zsh)
 # Side effects: Runs apt-get update and installs packages on remote system
 install_base_packages() {
   # shellcheck disable=SC2086
-  local packages="${SYSTEM_UTILITIES} ${OPTIONAL_PACKAGES} locales chrony unattended-upgrades apt-listchanges cpufrequtils"
+  local packages="${SYSTEM_UTILITIES} ${OPTIONAL_PACKAGES} locales chrony unattended-upgrades apt-listchanges linux-cpupower"
 
   # Add ZSH packages if needed
   if [[ ${SHELL_TYPE:-bash} == "zsh" ]]; then
@@ -20,12 +20,14 @@ install_base_packages() {
   log "Installing base packages: $packages"
 
   run_remote "Installing system packages" "
+    set -e
     export DEBIAN_FRONTEND=noninteractive
     apt-get update -qq
     apt-get dist-upgrade -yqq
     apt-get install -yqq $packages
     apt-get autoremove -yqq
     apt-get clean
+    set +e
     pveupgrade 2>/dev/null || true
     pveam update 2>/dev/null || true
   " "System packages installed"
@@ -93,6 +95,7 @@ batch_install_packages() {
   (
     # shellcheck disable=SC2086,SC2016
     remote_exec '
+      set -e
       export DEBIAN_FRONTEND=noninteractive
       '"$repo_setup"'
       apt-get update -qq

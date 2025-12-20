@@ -96,7 +96,7 @@ make_templates() {
     "./templates/chrony:chrony"
     "./templates/50unattended-upgrades:50unattended-upgrades"
     "./templates/20auto-upgrades:20auto-upgrades"
-    "./templates/cpufrequtils:cpufrequtils"
+    "./templates/cpupower.service:cpupower.service"
     "./templates/60-io-scheduler.rules:60-io-scheduler.rules"
     "./templates/remove-subscription-nag.sh:remove-subscription-nag.sh"
     # ZFS
@@ -160,7 +160,7 @@ make_templates() {
     apply_common_template_vars "./templates/interfaces"
     postprocess_interfaces_ipv6 "./templates/interfaces"
     apply_common_template_vars "./templates/resolv.conf"
-    apply_template_vars "./templates/cpufrequtils" "CPU_GOVERNOR=${CPU_GOVERNOR:-performance}"
+    apply_template_vars "./templates/cpupower.service" "CPU_GOVERNOR=${CPU_GOVERNOR:-performance}"
     # Locale templates - substitute {{LOCALE}} with actual locale value
     apply_common_template_vars "./templates/locale.sh"
     apply_common_template_vars "./templates/default-locale"

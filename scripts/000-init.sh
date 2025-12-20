@@ -164,14 +164,6 @@ Let's Encrypt"
 readonly WIZ_SHELL_OPTIONS="ZSH
 Bash"
 
-# CPU governor / power profile options
-# shellcheck disable=SC2034
-readonly WIZ_CPU_GOVERNORS="Performance
-Balanced
-Power saving
-Adaptive
-Conservative"
-
 # Firewall modes (nftables)
 # shellcheck disable=SC2034
 readonly WIZ_FIREWALL_MODES="Stealth (Tailscale only)

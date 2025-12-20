@@ -168,7 +168,7 @@ configure_shell() {
 
 # Configures system services: NTP, unattended upgrades, conntrack, CPU governor.
 # Removes subscription notice for non-enterprise installations.
-# Note: chrony, unattended-upgrades, cpufrequtils already installed via install_base_packages()
+# Note: chrony, unattended-upgrades, linux-cpupower already installed via install_base_packages()
 configure_system_services() {
   # Configure NTP time synchronization with chrony (package already installed)
   (
@@ -194,18 +194,15 @@ configure_system_services() {
         fi
     ' "nf_conntrack configured"
 
-  # Configure CPU governor using template (package already installed)
+  # Configure CPU governor using linux-cpupower
+  # Governor already validated by wizard (only shows available options)
   local governor="${CPU_GOVERNOR:-performance}"
   (
-    remote_copy "templates/cpufrequtils" "/tmp/cpufrequtils" || exit 1
+    remote_copy "templates/cpupower.service" "/etc/systemd/system/cpupower.service" || exit 1
     remote_exec "
-            mv /tmp/cpufrequtils /etc/default/cpufrequtils
-            systemctl enable cpufrequtils 2>/dev/null || true
-            if [ -d /sys/devices/system/cpu/cpu0/cpufreq ]; then
-                for cpu in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
-                    [ -f \"\$cpu\" ] && echo '$governor' > \"\$cpu\" 2>/dev/null || true
-                done
-            fi
+            systemctl daemon-reload
+            systemctl enable cpupower.service
+            cpupower frequency-set -g '$governor' 2>/dev/null || true
         " || exit 1
   ) >/dev/null 2>&1 &
   show_progress $! "Configuring CPU governor (${governor})" "CPU governor configured"

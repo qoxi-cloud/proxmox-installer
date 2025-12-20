@@ -9,6 +9,7 @@
 # shellcheck disable=SC2016
 _install_yazi() {
   run_remote "Installing yazi" '
+    set -e
     # Get latest yazi version and download
     YAZI_VERSION=$(curl -s https://api.github.com/repos/sxyazi/yazi/releases/latest | grep "tag_name" | cut -d "\"" -f 4 | sed "s/^v//")
     curl -sL "https://github.com/sxyazi/yazi/releases/download/v${YAZI_VERSION}/yazi-x86_64-unknown-linux-gnu.zip" -o /tmp/yazi.zip

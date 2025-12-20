@@ -64,8 +64,8 @@ alias pvesh='pvesh'
 alias zpl='zpool list'
 alias zst='zpool status'
 
-# Use bat instead of cat if available
-command -v bat &>/dev/null && alias cat='bat --paging=never'
+# Use bat instead of cat if available (Debian uses batcat)
+command -v batcat &>/dev/null && alias cat='batcat --paging=never'
 
 # Use btop instead of top if available
 command -v btop &>/dev/null && alias top='btop'
