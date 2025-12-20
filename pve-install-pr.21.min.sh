@@ -2,7 +2,6 @@
 cd /root||exit 1
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
-readonly CLR_BOLD=$'\033[1m'
 readonly CLR_RED=$'\033[1;31m'
 readonly CLR_CYAN=$'\033[38;2;0;177;255m'
 readonly CLR_YELLOW=$'\033[1;33m'
@@ -17,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.378-pr.21"
+readonly VERSION="2.0.379-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -452,7 +451,7 @@ print_info(){
 echo "$CLR_CYANℹ$CLR_RESET $1"
 }
 print_section(){
-echo "$CLR_CYAN$CLR_BOLD$1$CLR_RESET"
+echo "$CLR_CYAN$1$CLR_RESET"
 }
 show_progress(){
 local pid=$1
@@ -5168,7 +5167,7 @@ printf "\n"
 }
 _show_credentials_info(){
 echo ""
-echo "$CLR_YELLOW${CLR_BOLD}Access Credentials$CLR_RESET $CLR_RED(SAVE THIS!)$CLR_RESET"
+echo "${CLR_YELLOW}Access Credentials$CLR_RESET $CLR_RED(SAVE THIS!)$CLR_RESET"
 echo ""
 print_section "Root Access:"
 _print_field "Hostname" "$PVE_HOSTNAME.$DOMAIN_SUFFIX"
