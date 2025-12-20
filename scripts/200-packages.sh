@@ -268,11 +268,18 @@ download_proxmox_iso() {
   # Download with fallback chain: aria2c → curl → wget
   log "Downloading ISO: $ISO_FILENAME"
   DOWNLOAD_METHOD=""
+  local method_file="/tmp/download_method.txt"
+  rm -f "$method_file"
 
-  _download_iso_with_fallback "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum" &
+  (
+    _download_iso_with_fallback "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum"
+    echo "$DOWNLOAD_METHOD" >"$method_file"
+  ) &
   show_progress $! "Downloading $ISO_FILENAME" "$ISO_FILENAME downloaded"
   wait $!
   local exit_code=$?
+  DOWNLOAD_METHOD=$(cat "$method_file" 2>/dev/null)
+  rm -f "$method_file"
 
   if [[ $exit_code -ne 0 ]] || [[ ! -s "pve.iso" ]]; then
     log "ERROR: All download methods failed for Proxmox ISO"
