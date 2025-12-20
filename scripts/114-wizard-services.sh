@@ -21,7 +21,7 @@ _edit_tailscale() {
 
   local selected
   selected=$(
-    echo -e "Disabled\nEnabled" | _wiz_choose \
+    echo -e "Enabled\nDisabled" | _wiz_choose \
       --header="Tailscale:"
   )
 
@@ -494,12 +494,21 @@ _edit_features_tools() {
 _edit_api_token() {
   _wiz_start_edit
 
+  _wiz_description \
+    "Proxmox API token for automation:" \
+    "" \
+    "  {{cyan:Enabled}}:  Create privileged token (Terraform, Ansible)" \
+    "  {{cyan:Disabled}}: No API token" \
+    "" \
+    "  Token has full root@pam permissions, no expiration." \
+    ""
+
   # 1 header + 2 items for gum choose
   _show_input_footer "filter" 3
 
   local selected
   selected=$(
-    echo -e "Disabled\nEnabled" | _wiz_choose \
+    echo -e "Enabled\nDisabled" | _wiz_choose \
       --header="API Token (privileged, no expiration):"
   )
 

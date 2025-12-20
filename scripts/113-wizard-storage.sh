@@ -7,6 +7,16 @@
 _edit_zfs_mode() {
   _wiz_start_edit
 
+  _wiz_description \
+    "ZFS RAID level for data pool:" \
+    "" \
+    "  {{cyan:RAID-0}}:  Max capacity, no redundancy (all disks)" \
+    "  {{cyan:RAID-1}}:  Mirror, 50% capacity (2+ disks)" \
+    "  {{cyan:RAID-Z1}}: Single parity, N-1 capacity (3+ disks)" \
+    "  {{cyan:RAID-Z2}}: Double parity, N-2 capacity (4+ disks)" \
+    "  {{cyan:RAID-10}}: Striped mirrors (4+ disks, even count)" \
+    ""
+
   # Use pool disk count, not total DRIVE_COUNT
   local pool_count=${#ZFS_POOL_DISKS[@]}
 

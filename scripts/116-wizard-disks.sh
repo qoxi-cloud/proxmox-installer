@@ -118,13 +118,17 @@ _edit_pool_disks() {
     local gum_exit_code=0
     selected=$(echo -e "$options" | _wiz_choose "${gum_args[@]}") || gum_exit_code=$?
 
-    # ESC pressed (exit code 130) - keep existing selection
-    if [[ $gum_exit_code -eq 130 ]]; then
+    # ESC/cancel (any non-zero exit) - keep existing selection
+    if [[ $gum_exit_code -ne 0 ]]; then
       return 0
     fi
 
-    # User confirmed empty selection - show auto-dismissing error and retry
+    # User pressed Enter with nothing selected - show error only if no existing selection
     if [[ -z $selected ]]; then
+      if [[ ${#ZFS_POOL_DISKS[@]} -gt 0 ]]; then
+        # Has existing selection, treat as cancel
+        return 0
+      fi
       show_validation_error "✗ At least one disk must be selected for ZFS pool"
       continue
     fi

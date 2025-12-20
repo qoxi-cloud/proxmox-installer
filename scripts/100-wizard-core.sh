@@ -153,7 +153,7 @@ _validate_config() {
   [[ -z $PVE_REPO_TYPE ]] && missing_fields+=("Repository")
   [[ -z $INTERFACE_NAME ]] && missing_fields+=("Network Interface")
   [[ -z $BRIDGE_MODE ]] && missing_fields+=("Bridge mode")
-  [[ -z $PRIVATE_SUBNET ]] && missing_fields+=("Private subnet")
+  [[ $BRIDGE_MODE != "external" && -z $PRIVATE_SUBNET ]] && missing_fields+=("Private subnet")
   [[ -z $IPV6_MODE ]] && missing_fields+=("IPv6")
   [[ -z $ZFS_RAID ]] && missing_fields+=("ZFS mode")
   [[ -z $ZFS_ARC_MODE ]] && missing_fields+=("ZFS ARC")

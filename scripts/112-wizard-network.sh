@@ -30,9 +30,9 @@ _edit_bridge_mode() {
   _wiz_description \
     "Network bridge configuration for VMs:" \
     "" \
-    "  {{cyan:External}}: VMs get public IPs directly (routed mode)" \
     "  {{cyan:Internal}}: Private network with NAT (10.x.x.x)" \
-    "  {{cyan:Both}}:     External + Internal bridges" \
+    "  {{cyan:External}}: VMs get public IPs directly (routed mode)" \
+    "  {{cyan:Both}}:     Internal + External bridges" \
     ""
 
   # 1 header + 3 items for gum choose
@@ -56,6 +56,14 @@ _edit_bridge_mode() {
 
 _edit_private_subnet() {
   _wiz_start_edit
+
+  _wiz_description \
+    "Private network for VMs (NAT to internet):" \
+    "" \
+    "  {{cyan:10.0.0.0/24}}:    Class A private (default)" \
+    "  {{cyan:192.168.1.0/24}}: Class C private (home-style)" \
+    "  {{cyan:172.16.0.0/24}}:  Class B private" \
+    ""
 
   # 1 header + 4 items for gum choose
   _show_input_footer "filter" 5
@@ -132,6 +140,14 @@ _edit_bridge_mtu() {
 
 _edit_ipv6() {
   _wiz_start_edit
+
+  _wiz_description \
+    "IPv6 network configuration:" \
+    "" \
+    "  {{cyan:Auto}}:     Use detected IPv6 from Hetzner" \
+    "  {{cyan:Manual}}:   Specify custom IPv6 address/gateway" \
+    "  {{cyan:Disabled}}: IPv4 only" \
+    ""
 
   # 1 header + 3 items for gum choose
   _show_input_footer "filter" 4

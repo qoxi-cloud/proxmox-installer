@@ -121,8 +121,8 @@ Test/Development"
 
 # Network bridge modes
 # shellcheck disable=SC2034
-readonly WIZ_BRIDGE_MODES="External bridge
-Internal NAT
+readonly WIZ_BRIDGE_MODES="Internal NAT
+External bridge
 Both"
 
 # Bridge MTU options
