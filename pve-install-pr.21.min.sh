@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.407-pr.21"
+readonly VERSION="2.0.408-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1715,7 +1715,7 @@ TERM_HEIGHT=$(tput lines)
 TERM_WIDTH=$(tput cols)
 }
 LOGO_HEIGHT=${BANNER_HEIGHT:-9}
-HEADER_HEIGHT=2
+HEADER_HEIGHT=3
 calculate_log_area(){
 get_terminal_dimensions
 LOG_AREA_HEIGHT=$((TERM_HEIGHT-LOGO_HEIGHT-HEADER_HEIGHT-1))
@@ -1766,7 +1766,9 @@ local message="$1"
 add_log "$CLR_ORANGE│$CLR_RESET   $CLR_GRAY$message$CLR_RESET"
 }
 _render_install_header(){
-printf '%s\n\n' "                     $CLR_ORANGE●$CLR_RESET ${CLR_CYAN}Installing Proxmox$CLR_RESET $CLR_ORANGE●$CLR_RESET"
+printf '\n'
+printf '%s\n' "                     $CLR_ORANGE●$CLR_RESET ${CLR_CYAN}Installing Proxmox$CLR_RESET $CLR_ORANGE●$CLR_RESET"
+printf '\n'
 }
 start_live_installation(){
 show_progress(){
