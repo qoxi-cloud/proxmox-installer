@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.364-pr.21"
+readonly VERSION="2.0.370-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -34,10 +34,18 @@ readonly MIN_QEMU_RAM=4096
 readonly DOWNLOAD_RETRY_COUNT=3
 readonly DOWNLOAD_RETRY_DELAY=2
 readonly SSH_CONNECT_TIMEOUT=10
+readonly SSH_PORT_QEMU=5555
+readonly PORT_SSH=22
+readonly PORT_PROXMOX_UI=8006
+readonly PORT_NETDATA=19999
+readonly PORT_PROMETHEUS_NODE=9100
 readonly DEFAULT_PASSWORD_LENGTH=16
 readonly QEMU_MIN_RAM_RESERVE=2048
 readonly DNS_LOOKUP_TIMEOUT=5
 readonly DNS_RETRY_DELAY=10
+readonly QEMU_BOOT_TIMEOUT=300
+readonly QEMU_PORT_CHECK_INTERVAL=3
+readonly QEMU_SSH_READY_TIMEOUT=120
 readonly WIZ_KEYBOARD_LAYOUTS="de
 de-ch
 dk
@@ -98,14 +106,26 @@ OPTIONAL_PACKAGES="libguestfs-tools"
 LOG_FILE="/root/pve-install-$(date +%Y%m%d-%H%M%S).log"
 INSTALL_COMPLETED=false
 cleanup_temp_files(){
-rm -f /tmp/tailscale_*.txt /tmp/iso_checksum.txt /tmp/*.tmp /tmp/pve-install-api-token.env 2>/dev/null||true
+if type secure_delete_file &>/dev/null;then
+secure_delete_file /tmp/pve-install-api-token.env
+secure_delete_file /root/answer.toml
+while IFS= read -r -d '' pfile;do
+secure_delete_file "$pfile"
+done < <(find /dev/shm /tmp -name "pve-passfile.*" -type f -print0 2>/dev/null||true)
+while IFS= read -r -d '' pfile;do
+secure_delete_file "$pfile"
+done < <(find /dev/shm /tmp -name "*passfile*" -type f -print0 2>/dev/null||true)
+else
+rm -f /tmp/pve-install-api-token.env 2>/dev/null||true
 rm -f /root/answer.toml 2>/dev/null||true
+find /dev/shm /tmp -name "pve-passfile.*" -type f -delete 2>/dev/null||true
+find /dev/shm /tmp -name "*passfile*" -type f -delete 2>/dev/null||true
+fi
+rm -f /tmp/tailscale_*.txt /tmp/iso_checksum.txt /tmp/*.tmp 2>/dev/null||true
 if [[ $INSTALL_COMPLETED != "true" ]];then
 rm -f /root/pve.iso /root/pve-autoinstall.iso /root/SHA256SUMS 2>/dev/null||true
 rm -f /root/qemu_*.log 2>/dev/null||true
 fi
-find /dev/shm /tmp -name "pve-passfile.*" -type f -delete 2>/dev/null||true
-find /dev/shm /tmp -name "*passfile*" -type f -delete 2>/dev/null||true
 }
 cleanup_and_error_handler(){
 local exit_code=$?
@@ -147,18 +167,18 @@ KEYBOARD="en-us"
 COUNTRY="us"
 LOCALE="en_US.UTF-8"
 TIMEZONE="UTC"
+CPU_GOVERNOR=""
+ZFS_ARC_MODE=""
 INSTALL_AUDITD=""
 INSTALL_AIDE=""
 INSTALL_APPARMOR=""
-CPU_GOVERNOR=""
-ZFS_ARC_MODE=""
 INSTALL_CHKROOTKIT=""
 INSTALL_LYNIS=""
 INSTALL_NEEDRESTART=""
 INSTALL_NETDATA=""
-INSTALL_RINGBUFFER=""
 INSTALL_VNSTAT=""
 INSTALL_PROMETHEUS=""
+INSTALL_RINGBUFFER=""
 INSTALL_YAZI=""
 INSTALL_NVIM=""
 INSTALL_UNATTENDED_UPGRADES=""
@@ -485,6 +505,20 @@ done
 log "ERROR: Failed to download $url after $max_retries attempts"
 return 1
 }
+secure_delete_file(){
+local file="$1"
+[[ -z $file ]]&&return 0
+[[ ! -f $file ]]&&return 0
+if command -v shred &>/dev/null;then
+shred -u -z "$file" 2>/dev/null||rm -f "$file"
+else
+local file_size
+file_size=$(stat -c%s "$file" 2>/dev/null||echo 1024)
+dd if=/dev/zero of="$file" bs=1 count="$file_size" conv=notrunc 2>/dev/null||true
+rm -f "$file"
+fi
+return 0
+}
 apply_template_vars(){
 local file="$1"
 shift
@@ -493,19 +527,37 @@ log "ERROR: Template file not found: $file"
 return 1
 fi
 local sed_args=()
+local has_empty_critical=false
 if [[ $# -gt 0 ]];then
 for pair in "$@";do
 local var="${pair%%=*}"
 local value="${pair#*=}"
+if [[ -z $value ]];then
+log "WARNING: Template variable $var is empty for $file"
+if grep -qF "{{$var}}" "$file" 2>/dev/null;then
+log "WARNING: Placeholder {{$var}} will remain in $file"
+has_empty_critical=true
+fi
+fi
 value="${value//\\/\\\\}"
 value="${value//&/\\&}"
 value="${value//|/\\|}"
+value="${value//$'\n'/\\$'\n'}"
 sed_args+=(-e "s|{{$var}}|$value|g")
 done
 fi
 if [[ ${#sed_args[@]} -gt 0 ]];then
 sed -i "${sed_args[@]}" "$file"
 fi
+if grep -qE '\{\{[A-Z_]+\}\}' "$file" 2>/dev/null;then
+local remaining
+remaining=$(grep -oE '\{\{[A-Z_]+\}\}' "$file" 2>/dev/null|sort -u|tr '\n' ' ')
+log "WARNING: Unsubstituted placeholders remain in $file: $remaining"
+fi
+if [[ $has_empty_critical == true ]];then
+return 1
+fi
+return 0
 }
 apply_common_template_vars(){
 local file="$1"
@@ -598,7 +650,7 @@ log "Template $remote_file downloaded and validated successfully"
 return 0
 }
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=${SSH_CONNECT_TIMEOUT:-10}"
-SSH_PORT="5555"
+SSH_PORT="${SSH_PORT_QEMU:-5555}"
 _SSH_SESSION_PASSFILE=""
 _SSH_SESSION_LOGGED=false
 _ssh_session_init(){
@@ -627,14 +679,14 @@ fi
 _ssh_session_cleanup(){
 [[ -z $_SSH_SESSION_PASSFILE ]]&&return 0
 [[ ! -f $_SSH_SESSION_PASSFILE ]]&&return 0
-if command -v shred &>/dev/null;then
+if type secure_delete_file &>/dev/null;then
+secure_delete_file "$_SSH_SESSION_PASSFILE"
+elif command -v shred &>/dev/null;then
 shred -u -z "$_SSH_SESSION_PASSFILE" 2>/dev/null||rm -f "$_SSH_SESSION_PASSFILE"
 else
-if command -v dd &>/dev/null;then
 local file_size
 file_size=$(stat -c%s "$_SSH_SESSION_PASSFILE" 2>/dev/null||echo 1024)
-dd if=/dev/zero of="$_SSH_SESSION_PASSFILE" bs=1 count="$file_size" 2>/dev/null||true
-fi
+dd if=/dev/zero of="$_SSH_SESSION_PASSFILE" bs=1 count="$file_size" conv=notrunc 2>/dev/null||true
 rm -f "$_SSH_SESSION_PASSFILE"
 fi
 _SSH_SESSION_PASSFILE=""
@@ -662,7 +714,7 @@ local timeout="${1:-120}"
 ssh-keygen -f "/root/.ssh/known_hosts" -R "[localhost]:$SSH_PORT" 2>/dev/null||true
 local port_check=0
 for _ in {1..10};do
-if (echo >/dev/tcp/localhost/$SSH_PORT) 2>/dev/null;then
+if (echo >/dev/tcp/localhost/"$SSH_PORT") 2>/dev/null;then
 port_check=1
 break
 fi
@@ -751,7 +803,10 @@ local src="$1"
 local dst="$2"
 local passfile
 passfile=$(_ssh_get_passfile)
-sshpass -f "$passfile" scp -P "$SSH_PORT" $SSH_OPTS "$src" "root@localhost:$dst"
+if ! sshpass -f "$passfile" scp -P "$SSH_PORT" $SSH_OPTS "$src" "root@localhost:$dst";then
+log "ERROR: Failed to copy $src to $dst"
+return 1
+fi
 }
 parse_ssh_key(){
 local key="$1"
@@ -1023,6 +1078,71 @@ log "WARNING: $failures/$count functions failed in group '$group_name'"
 return 0
 fi
 return 0
+}
+run_with_progress(){
+local message="$1"
+local done_message="$2"
+shift 2
+("$@"||exit 1) > \
+/dev/null 2>&1&
+show_progress $! "$message" "$done_message"
+}
+deploy_systemd_timer(){
+local timer_name="$1"
+local template_dir="${2:+$2/}"
+remote_copy "templates/$template_dir$timer_name.service" \
+"/etc/systemd/system/$timer_name.service"||{
+log "ERROR: Failed to deploy $timer_name service"
+return 1
+}
+remote_copy "templates/$template_dir$timer_name.timer" \
+"/etc/systemd/system/$timer_name.timer"||{
+log "ERROR: Failed to deploy $timer_name timer"
+return 1
+}
+remote_exec "systemctl daemon-reload && systemctl enable $timer_name.timer"||{
+log "ERROR: Failed to enable $timer_name timer"
+return 1
+}
+}
+deploy_systemd_service(){
+local service_name="$1"
+shift
+local template="templates/$service_name.service"
+local dest="/etc/systemd/system/$service_name.service"
+if [[ $# -gt 0 ]];then
+apply_template_vars "$template" "$@"
+fi
+remote_copy "$template" "$dest"||{
+log "ERROR: Failed to deploy $service_name service"
+return 1
+}
+remote_exec "systemctl daemon-reload && systemctl enable $service_name.service"||{
+log "ERROR: Failed to enable $service_name service"
+return 1
+}
+}
+remote_enable_services(){
+local services=("$@")
+if [[ ${#services[@]} -eq 0 ]];then
+return 0
+fi
+remote_exec "systemctl enable ${services[*]}"||{
+log "ERROR: Failed to enable services: ${services[*]}"
+return 1
+}
+}
+deploy_template(){
+local template="$1"
+local dest="$2"
+shift 2
+if [[ $# -gt 0 ]];then
+apply_template_vars "$template" "$@"
+fi
+remote_copy "$template" "$dest"||{
+log "ERROR: Failed to deploy $template to $dest"
+return 1
+}
 }
 validate_hostname(){
 local hostname="$1"
@@ -3947,20 +4067,21 @@ exit 1
 fi
 nohup qemu-system-x86_64 $KVM_OPTS $UEFI_OPTS \
 $CPU_OPTS -device e1000,netdev=net0 \
--netdev user,id=net0,hostfwd=tcp::5555-:22 \
+-netdev user,id=net0,hostfwd=tcp::$SSH_PORT_QEMU-:22 \
 -smp "$QEMU_CORES" -m "$QEMU_RAM" \
 $DRIVE_ARGS -display none > \
 qemu_output.log 2>&1&
 QEMU_PID=$!
-(local timeout=300
-local elapsed=0
+local timeout="${QEMU_BOOT_TIMEOUT:-300}"
+local check_interval="${QEMU_PORT_CHECK_INTERVAL:-3}"
+(local elapsed=0
 while ((elapsed<timeout));do
-if exec 3<>/dev/tcp/localhost/5555 2>/dev/null;then
+if exec 3<>/dev/tcp/localhost/"$SSH_PORT_QEMU" 2>/dev/null;then
 exec 3<&-
 exit 0
 fi 2>/dev/null
-sleep 3
-((elapsed+=3))
+sleep "$check_interval"
+((elapsed+=check_interval))
 done
 exit 1) 2> \
 /dev/null&
@@ -3973,7 +4094,7 @@ log "QEMU output log:"
 cat qemu_output.log >>"$LOG_FILE" 2>&1
 return 1
 fi
-wait_for_ssh_ready 120||{
+wait_for_ssh_ready "${QEMU_SSH_READY_TIMEOUT:-120}"||{
 log "ERROR: SSH connection failed"
 log "QEMU output log:"
 cat qemu_output.log >>"$LOG_FILE" 2>&1
@@ -4305,21 +4426,21 @@ case "$mode" in
 stealth)rules="# Stealth mode: all public ports blocked
         # Access only via Tailscale VPN or VM bridges"
 ;;
-strict)rules="# SSH access (port 22)
-        tcp dport 22 ct state new accept"
+strict)rules="# SSH access (port $PORT_SSH)
+        tcp dport $PORT_SSH ct state new accept"
 ;;
-standard)rules="# SSH access (port 22)
-        tcp dport 22 ct state new accept
+standard)rules="# SSH access (port $PORT_SSH)
+        tcp dport $PORT_SSH ct state new accept
 
-        # Proxmox Web UI (port 8006)
-        tcp dport 8006 ct state new accept"
+        # Proxmox Web UI (port $PORT_PROXMOX_UI)
+        tcp dport $PORT_PROXMOX_UI ct state new accept"
 ;;
 *)log "WARNING: Unknown firewall mode: $mode, using standard"
-rules="# SSH access (port 22)
-        tcp dport 22 ct state new accept
+rules="# SSH access (port $PORT_SSH)
+        tcp dport $PORT_SSH ct state new accept
 
-        # Proxmox Web UI (port 8006)
-        tcp dport 8006 ct state new accept"
+        # Proxmox Web UI (port $PORT_PROXMOX_UI)
+        tcp dport $PORT_PROXMOX_UI ct state new accept"
 esac
 echo "$rules"
 }
@@ -4384,14 +4505,6 @@ local rules=""
 case "$mode" in
 internal|both)rules="# Masquerade traffic from private subnet to internet
         oifname != \"lo\" ip saddr $subnet masquerade"
-local subnet_base="${subnet%%.*}"
-case "$subnet_base" in
-10)
-;;
-172)
-;;
-192)
-esac
 ;;
 external)rules="# External mode: no NAT needed (VMs have public IPs)"
 esac
@@ -4429,12 +4542,18 @@ log "Generated nftables config:"
 log "  Bridge mode: $BRIDGE_MODE"
 log "  Firewall mode: $FIREWALL_MODE"
 log "  Private subnet: ${PRIVATE_SUBNET:-N/A}"
-remote_copy "templates/nftables.conf.generated" "/etc/nftables.conf"||return 1
+remote_copy "templates/nftables.conf.generated" "/etc/nftables.conf"||{
+log "ERROR: Failed to deploy nftables config"
+return 1
+}
 remote_exec "nft -c -f /etc/nftables.conf"||{
 log "ERROR: nftables config syntax validation failed"
 return 1
 }
-remote_exec "systemctl enable nftables"||return 1
+remote_exec "systemctl enable nftables"||{
+log "ERROR: Failed to enable nftables"
+return 1
+}
 rm -f "./templates/nftables.conf.generated"
 }
 configure_firewall(){
@@ -4460,12 +4579,13 @@ return 0
 fi
 }
 _config_fail2ban(){
-apply_template_vars "./templates/fail2ban-jail.local" \
-"EMAIL=$EMAIL" \
-"HOSTNAME=$PVE_HOSTNAME"
-remote_copy "templates/fail2ban-jail.local" "/etc/fail2ban/jail.local"||return 1
-remote_copy "templates/fail2ban-proxmox.conf" "/etc/fail2ban/filter.d/proxmox.conf"||return 1
-remote_exec "systemctl enable fail2ban"||return 1
+deploy_template "templates/fail2ban-jail.local" "/etc/fail2ban/jail.local" \
+"EMAIL=$EMAIL" "HOSTNAME=$PVE_HOSTNAME"||return 1
+remote_copy "templates/fail2ban-proxmox.conf" "/etc/fail2ban/filter.d/proxmox.conf"||{
+log "ERROR: Failed to deploy fail2ban filter"
+return 1
+}
+remote_enable_services "fail2ban"
 }
 _config_apparmor(){
 remote_exec '
@@ -4484,31 +4604,31 @@ remote_exec '
 
     # Enable AppArmor to start on boot (will activate after reboot)
     systemctl enable apparmor.service
-  '||return 1
+  '||{
+log "ERROR: Failed to configure AppArmor"
+return 1
+}
 }
 _config_auditd(){
-remote_copy "templates/auditd-rules" "/etc/audit/rules.d/proxmox.rules"||return 1
+remote_copy "templates/auditd-rules" "/etc/audit/rules.d/proxmox.rules"||{
+log "ERROR: Failed to deploy auditd rules"
+return 1
+}
 remote_exec '
-    # Ensure log directory exists
     mkdir -p /var/log/audit
-
-    # Configure auditd.conf for better log retention
     sed -i "s/^max_log_file = .*/max_log_file = 50/" /etc/audit/auditd.conf 2>/dev/null || true
     sed -i "s/^num_logs = .*/num_logs = 10/" /etc/audit/auditd.conf 2>/dev/null || true
     sed -i "s/^max_log_file_action = .*/max_log_file_action = ROTATE/" /etc/audit/auditd.conf 2>/dev/null || true
-
-    # Load new rules
     augenrules --load 2>/dev/null || true
-
-    # Enable auditd to start on boot (will activate after reboot)
-    systemctl enable auditd
-  '||return 1
+  '||{
+log "ERROR: Failed to configure auditd"
+return 1
+}
+remote_enable_services "auditd"
 }
 _config_aide(){
-remote_copy "templates/aide-check.service" "/etc/systemd/system/aide-check.service"||return 1
-remote_copy "templates/aide-check.timer" "/etc/systemd/system/aide-check.timer"||return 1
+deploy_systemd_timer "aide-check"||return 1
 remote_exec '
-    # Initialize AIDE database (this takes a while)
     echo "Initializing AIDE database (this may take several minutes)..."
     aideinit -y -f 2>/dev/null || true
 
@@ -4516,58 +4636,40 @@ remote_exec '
     if [[ -f /var/lib/aide/aide.db.new ]]; then
       mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
     fi
-
-    # Enable daily integrity check timer (will activate after reboot)
-    systemctl daemon-reload
-    systemctl enable aide-check.timer
-  '||return 1
+  '||{
+log "ERROR: Failed to initialize AIDE"
+return 1
+}
 }
 _config_chkrootkit(){
-remote_copy "templates/chkrootkit-scan.service" "/etc/systemd/system/chkrootkit-scan.service"||return 1
-remote_copy "templates/chkrootkit-scan.timer" "/etc/systemd/system/chkrootkit-scan.timer"||return 1
-remote_exec '
-    # Ensure log directory exists
-    mkdir -p /var/log/chkrootkit
-
-    # Enable weekly scan timer (will activate after reboot)
-    systemctl daemon-reload
-    systemctl enable chkrootkit-scan.timer
-  '||return 1
+deploy_systemd_timer "chkrootkit-scan"||return 1
+remote_exec 'mkdir -p /var/log/chkrootkit'||{
+log "ERROR: Failed to configure chkrootkit"
+return 1
+}
 }
 _config_lynis(){
-remote_copy "templates/lynis-audit.service" "/etc/systemd/system/lynis-audit.service"||return 1
-remote_copy "templates/lynis-audit.timer" "/etc/systemd/system/lynis-audit.timer"||return 1
-remote_exec '
-    # Ensure log directory exists
-    mkdir -p /var/log/lynis
-
-    # Enable weekly audit timer (will activate after reboot)
-    systemctl daemon-reload
-    systemctl enable lynis-audit.timer
-  '||return 1
+deploy_systemd_timer "lynis-audit"||return 1
+remote_exec 'mkdir -p /var/log/lynis'||{
+log "ERROR: Failed to configure Lynis"
+return 1
+}
 }
 _config_needrestart(){
-remote_copy "templates/needrestart.conf" "/etc/needrestart/conf.d/50-autorestart.conf"||return 1
+remote_copy "templates/needrestart.conf" "/etc/needrestart/conf.d/50-autorestart.conf"||{
+log "ERROR: Failed to deploy needrestart config"
+return 1
+}
 }
 _config_ringbuffer(){
 local ringbuffer_interface="${DEFAULT_INTERFACE:-eth0}"
-apply_template_vars "templates/network-ringbuffer.service" "RINGBUFFER_INTERFACE=$ringbuffer_interface"
-remote_copy "templates/network-ringbuffer.service" "/etc/systemd/system/network-ringbuffer.service"||return 1
-remote_exec '
-    # Enable service for boot (will activate after reboot)
-    systemctl daemon-reload
-    systemctl enable network-ringbuffer.service
-  '||return 1
+deploy_systemd_service "network-ringbuffer" "RINGBUFFER_INTERFACE=$ringbuffer_interface"
 }
 _config_vnstat(){
 local iface="${INTERFACE_NAME:-eth0}"
-apply_template_vars "templates/vnstat.conf" "INTERFACE_NAME=$iface"
-remote_copy "templates/vnstat.conf" "/etc/vnstat.conf"||return 1
+deploy_template "templates/vnstat.conf" "/etc/vnstat.conf" "INTERFACE_NAME=$iface"||return 1
 remote_exec "
-    # Ensure database directory exists
     mkdir -p /var/lib/vnstat
-
-    # Add main interface to monitor
     vnstat --add -i '$iface' 2>/dev/null || true
 
     # Also monitor bridge interfaces if they exist
@@ -4577,37 +4679,54 @@ remote_exec "
       fi
     done
 
-    # Enable vnstat to start on boot (don't start now - will activate after reboot)
     systemctl enable vnstat
-  "||return 1
+  "||{
+log "ERROR: Failed to configure vnstat"
+return 1
+}
 }
 _config_prometheus(){
 remote_exec '
     mkdir -p /var/lib/prometheus/node-exporter
     chown prometheus:prometheus /var/lib/prometheus/node-exporter
-  '||return 1
-remote_copy "templates/prometheus-node-exporter" "/etc/default/prometheus-node-exporter"||return 1
-remote_copy "templates/proxmox-metrics.sh" "/usr/local/bin/proxmox-metrics.sh"||return 1
-remote_exec "chmod +x /usr/local/bin/proxmox-metrics.sh"||return 1
-remote_copy "templates/proxmox-metrics.cron" "/etc/cron.d/proxmox-metrics"||return 1
+  '||{
+log "ERROR: Failed to create Prometheus collector directory"
+return 1
+}
+remote_copy "templates/prometheus-node-exporter" "/etc/default/prometheus-node-exporter"||{
+log "ERROR: Failed to deploy Prometheus config"
+return 1
+}
+remote_copy "templates/proxmox-metrics.sh" "/usr/local/bin/proxmox-metrics.sh"||{
+log "ERROR: Failed to deploy Proxmox metrics script"
+return 1
+}
+remote_exec "chmod +x /usr/local/bin/proxmox-metrics.sh"||{
+log "ERROR: Failed to set metrics script permissions"
+return 1
+}
+remote_copy "templates/proxmox-metrics.cron" "/etc/cron.d/proxmox-metrics"||{
+log "ERROR: Failed to deploy Prometheus cron job"
+return 1
+}
 remote_exec "/usr/local/bin/proxmox-metrics.sh" >/dev/null 2>&1||log "WARNING: Initial metrics collection failed (non-fatal)"
 remote_exec '
     systemctl daemon-reload
     systemctl enable prometheus-node-exporter
-  '||return 1
-log "Prometheus node exporter listening on :9100 with textfile collector"
+  '||{
+log "ERROR: Failed to enable Prometheus node exporter"
+return 1
+}
+log "Prometheus node exporter listening on :$PORT_PROMETHEUS_NODE with textfile collector"
 }
 _config_netdata(){
 local bind_to="127.0.0.1"
 if [[ $INSTALL_TAILSCALE == "yes" ]];then
 bind_to="127.0.0.1 100.*"
 fi
-apply_template_vars "templates/netdata.conf" "NETDATA_BIND_TO=$bind_to"
-remote_copy "templates/netdata.conf" "/etc/netdata/netdata.conf"||return 1
-remote_exec '
-    systemctl daemon-reload
-    systemctl enable netdata
-  '||return 1
+deploy_template "templates/netdata.conf" "/etc/netdata/netdata.conf" \
+"NETDATA_BIND_TO=$bind_to"||return 1
+remote_enable_services "netdata"
 }
 configure_netdata(){
 if [[ $INSTALL_NETDATA != "yes" ]];then
@@ -4615,14 +4734,10 @@ log "Skipping netdata (not requested)"
 return 0
 fi
 log "Configuring netdata"
-(_config_netdata||exit 1) > \
-/dev/null 2>&1&
-show_progress $! "Configuring netdata" "netdata configured"
-local exit_code=$?
-if [[ $exit_code -ne 0 ]];then
+if ! run_with_progress "Configuring netdata" "netdata configured" _config_netdata;then
 log "WARNING: netdata setup failed"
-return 0
 fi
+return 0
 }
 _install_yazi(){
 run_remote "Installing yazi" '
@@ -4639,8 +4754,14 @@ run_remote "Installing yazi" '
   ' "Yazi installed"
 }
 _config_yazi(){
-remote_exec 'mkdir -p /root/.config/yazi'||return 1
-remote_copy "templates/yazi-theme.toml" "/root/.config/yazi/theme.toml"||return 1
+remote_exec 'mkdir -p /root/.config/yazi'||{
+log "ERROR: Failed to create yazi config directory"
+return 1
+}
+remote_copy "templates/yazi-theme.toml" "/root/.config/yazi/theme.toml"||{
+log "ERROR: Failed to deploy yazi theme"
+return 1
+}
 }
 configure_yazi(){
 if [[ $INSTALL_YAZI != "yes" ]];then
@@ -4668,7 +4789,10 @@ remote_exec '
     update-alternatives --set vi /usr/bin/nvim
     update-alternatives --set vim /usr/bin/nvim
     update-alternatives --set editor /usr/bin/nvim
-  '||return 1
+  '||{
+log "ERROR: Failed to configure nvim alternatives"
+return 1
+}
 }
 configure_ssl_certificate(){
 log "configure_ssl_certificate: SSL_TYPE=$SSL_TYPE"
@@ -4682,19 +4806,19 @@ if ! apply_template_vars "./templates/letsencrypt-firstboot.sh" \
 "CERT_DOMAIN=$cert_domain" \
 "CERT_EMAIL=$EMAIL";then
 log "ERROR: Failed to apply template variables to letsencrypt-firstboot.sh"
-exit 1
+return 1
 fi
 if ! remote_copy "./templates/letsencrypt-deploy-hook.sh" "/tmp/letsencrypt-deploy-hook.sh";then
 log "ERROR: Failed to copy letsencrypt-deploy-hook.sh"
-exit 1
+return 1
 fi
 if ! remote_copy "./templates/letsencrypt-firstboot.sh" "/tmp/letsencrypt-firstboot.sh";then
 log "ERROR: Failed to copy letsencrypt-firstboot.sh"
-exit 1
+return 1
 fi
 if ! remote_copy "./templates/letsencrypt-firstboot.service" "/tmp/letsencrypt-firstboot.service";then
 log "ERROR: Failed to copy letsencrypt-firstboot.service"
-exit 1
+return 1
 fi
 run_remote "Configuring Let's Encrypt templates" '
         set -e
@@ -4790,8 +4914,14 @@ log "INFO: ZFS ARC memory limit configured: ${arc_max_mb}MB"
 }
 configure_zfs_scrub(){
 log "INFO: Configuring ZFS scrub schedule"
-remote_copy "templates/zfs-scrub.service" "/etc/systemd/system/zfs-scrub@.service"||return 1
-remote_copy "templates/zfs-scrub.timer" "/etc/systemd/system/zfs-scrub@.timer"||return 1
+remote_copy "templates/zfs-scrub.service" "/etc/systemd/system/zfs-scrub@.service"||{
+log "ERROR: Failed to deploy ZFS scrub service"
+return 1
+}
+remote_copy "templates/zfs-scrub.timer" "/etc/systemd/system/zfs-scrub@.timer"||{
+log "ERROR: Failed to deploy ZFS scrub timer"
+return 1
+}
 run_remote "Enabling ZFS scrub timers" "
     systemctl daemon-reload
 
@@ -4870,12 +5000,11 @@ log "INFO: Proxmox storage configured: tank (VMs), local (ISO/templates/backups)
 return 0
 }
 configure_ssh_hardening(){
-(remote_copy "templates/sshd_config" "/etc/ssh/sshd_config"||exit 1
-remote_exec "chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys"||exit 1) > \
-/dev/null 2>&1&
-show_progress $! "Deploying SSH hardening" "Security hardening configured"
-local exit_code=$?
-if [[ $exit_code -ne 0 ]];then
+_ssh_hardening_impl(){
+remote_copy "templates/sshd_config" "/etc/ssh/sshd_config"||return 1
+remote_exec "chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys"
+}
+if ! run_with_progress "Deploying SSH hardening" "Security hardening configured" _ssh_hardening_impl;then
 log "ERROR: SSH hardening failed - system may be insecure"
 exit 1
 fi
