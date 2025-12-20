@@ -8,10 +8,17 @@
 #   $1 - Label or full message
 #   $2 - Optional value (highlighted in cyan)
 print_success() {
+  local msg
   if [[ $# -eq 2 ]]; then
-    echo -e "${CLR_CYAN}✓${CLR_RESET} $1 ${CLR_CYAN}$2${CLR_RESET}"
+    msg="${CLR_CYAN}✓${CLR_RESET} $1 ${CLR_CYAN}$2${CLR_RESET}"
   else
-    echo -e "${CLR_CYAN}✓${CLR_RESET} $1"
+    msg="${CLR_CYAN}✓${CLR_RESET} $1"
+  fi
+
+  if [[ ${LIVE_LOGS_ACTIVE:-false} == true ]]; then
+    add_log "${CLR_GRAY}├─${CLR_RESET} $msg"
+  else
+    echo -e "$msg"
   fi
 }
 
@@ -19,7 +26,13 @@ print_success() {
 # Parameters:
 #   $1 - Error message to display
 print_error() {
-  echo -e "${CLR_RED}✗${CLR_RESET} $1"
+  local msg="${CLR_RED}✗${CLR_RESET} $1"
+
+  if [[ ${LIVE_LOGS_ACTIVE:-false} == true ]]; then
+    add_log "${CLR_GRAY}├─${CLR_RESET} $msg"
+  else
+    echo -e "$msg"
+  fi
 }
 
 # Prints warning message with yellow warning icon.
@@ -30,17 +43,24 @@ print_warning() {
   local message="$1"
   local second="${2:-false}"
   local indent=""
+  local msg
 
   # Check if second argument is a value (not "true" for nested)
   if [[ $# -eq 2 && $second != "true" ]]; then
     # Two-argument format: label and value
-    echo -e "${CLR_YELLOW}⚠️${CLR_RESET} $message ${CLR_CYAN}$second${CLR_RESET}"
+    msg="${CLR_YELLOW}⚠️${CLR_RESET} $message ${CLR_CYAN}$second${CLR_RESET}"
   else
     # Original format: message with optional nested indent
     if [[ $second == "true" ]]; then
       indent="  "
     fi
-    echo -e "${indent}${CLR_YELLOW}⚠️${CLR_RESET} $message"
+    msg="${indent}${CLR_YELLOW}⚠️${CLR_RESET} $message"
+  fi
+
+  if [[ ${LIVE_LOGS_ACTIVE:-false} == true ]]; then
+    add_log "${CLR_GRAY}├─${CLR_RESET} $msg"
+  else
+    echo -e "$msg"
   fi
 }
 
@@ -48,7 +68,13 @@ print_warning() {
 # Parameters:
 #   $1 - Informational message to display
 print_info() {
-  echo -e "${CLR_CYAN}ℹ${CLR_RESET} $1"
+  local msg="${CLR_CYAN}ℹ${CLR_RESET} $1"
+
+  if [[ ${LIVE_LOGS_ACTIVE:-false} == true ]]; then
+    add_log "${CLR_GRAY}├─${CLR_RESET} $msg"
+  else
+    echo -e "$msg"
+  fi
 }
 
 # Prints section header in cyan bold.
