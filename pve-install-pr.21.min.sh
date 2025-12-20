@@ -17,7 +17,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.362-pr.21"
+readonly VERSION="2.0.363-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -2065,9 +2065,7 @@ _DSP_HOSTNAME=""
 _DSP_IPV6=""
 if [[ -n $IPV6_MODE ]];then
 case "$IPV6_MODE" in
-auto)_DSP_IPV6="Auto"
-[[ -n $MAIN_IPV6 ]]&&_DSP_IPV6+=" ($MAIN_IPV6)"
-;;
+auto)_DSP_IPV6="Auto";;
 manual)_DSP_IPV6="Manual"
 [[ -n $MAIN_IPV6 ]]&&_DSP_IPV6+=" ($MAIN_IPV6, gw: $IPV6_GATEWAY)"
 ;;
