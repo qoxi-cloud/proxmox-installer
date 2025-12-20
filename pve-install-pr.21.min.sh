@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.409-pr.21"
+readonly VERSION="2.0.410-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -146,13 +146,13 @@ fi
 tput rmcup 2>/dev/null||true
 tput cnorm 2>/dev/null||true
 if [[ $INSTALL_COMPLETED != "true" && $exit_code -ne 0 ]];then
-echo -e "$CLR_RED*** INSTALLATION FAILED ***$CLR_RESET"
-echo ""
-echo -e "${CLR_YELLOW}An error occurred and the installation was aborted.$CLR_RESET"
-echo ""
-echo -e "${CLR_YELLOW}Please check the log file for details:$CLR_RESET"
-echo -e "$CLR_YELLOW  $LOG_FILE$CLR_RESET"
-echo ""
+printf '%s\n' "$CLR_RED*** INSTALLATION FAILED ***$CLR_RESET"
+printf '\n'
+printf '%s\n' "${CLR_YELLOW}An error occurred and the installation was aborted.$CLR_RESET"
+printf '\n'
+printf '%s\n' "${CLR_YELLOW}Please check the log file for details:$CLR_RESET"
+printf '%s\n' "$CLR_YELLOW  $LOG_FILE$CLR_RESET"
+printf '\n'
 fi
 }
 trap cleanup_and_error_handler EXIT
@@ -219,21 +219,21 @@ while [[ $# -gt 0 ]];do
 case $1 in
 -h|--help)show_help
 ;;
--v|--version)echo "Proxmox Installer v$VERSION"
+-v|--version)printf '%s\n' "Proxmox Installer v$VERSION"
 exit 0
 ;;
 --qemu-ram)if
 [[ -z $2 || $2 =~ ^- ]]
 then
-echo -e "${CLR_RED}Error: --qemu-ram requires a value in MB$CLR_RESET"
+printf '%s\n' "${CLR_RED}Error: --qemu-ram requires a value in MB$CLR_RESET"
 exit 1
 fi
 if ! [[ $2 =~ ^[0-9]+$ ]]||[[ $2 -lt 2048 ]];then
-echo -e "${CLR_RED}Error: --qemu-ram must be a number >= 2048 MB$CLR_RESET"
+printf '%s\n' "${CLR_RED}Error: --qemu-ram must be a number >= 2048 MB$CLR_RESET"
 exit 1
 fi
 if [[ $2 -gt 131072 ]];then
-echo -e "${CLR_RED}Error: --qemu-ram must be <= 131072 MB (128 GB)$CLR_RESET"
+printf '%s\n' "${CLR_RED}Error: --qemu-ram must be <= 131072 MB (128 GB)$CLR_RESET"
 exit 1
 fi
 QEMU_RAM_OVERRIDE="$2"
@@ -242,15 +242,15 @@ shift 2
 --qemu-cores)if
 [[ -z $2 || $2 =~ ^- ]]
 then
-echo -e "${CLR_RED}Error: --qemu-cores requires a value$CLR_RESET"
+printf '%s\n' "${CLR_RED}Error: --qemu-cores requires a value$CLR_RESET"
 exit 1
 fi
 if ! [[ $2 =~ ^[0-9]+$ ]]||[[ $2 -lt 1 ]];then
-echo -e "${CLR_RED}Error: --qemu-cores must be a positive number$CLR_RESET"
+printf '%s\n' "${CLR_RED}Error: --qemu-cores must be a positive number$CLR_RESET"
 exit 1
 fi
 if [[ $2 -gt 256 ]];then
-echo -e "${CLR_RED}Error: --qemu-cores must be <= 256$CLR_RESET"
+printf '%s\n' "${CLR_RED}Error: --qemu-cores must be <= 256$CLR_RESET"
 exit 1
 fi
 QEMU_CORES_OVERRIDE="$2"
@@ -259,23 +259,23 @@ shift 2
 --iso-version)if
 [[ -z $2 || $2 =~ ^- ]]
 then
-echo -e "${CLR_RED}Error: --iso-version requires a filename$CLR_RESET"
+printf '%s\n' "${CLR_RED}Error: --iso-version requires a filename$CLR_RESET"
 exit 1
 fi
 if ! [[ $2 =~ ^proxmox-ve_[0-9]+\.[0-9]+-[0-9]+\.iso$ ]];then
-echo -e "${CLR_RED}Error: --iso-version must be in format: proxmox-ve_X.Y-Z.iso$CLR_RESET"
+printf '%s\n' "${CLR_RED}Error: --iso-version must be in format: proxmox-ve_X.Y-Z.iso$CLR_RESET"
 exit 1
 fi
 PROXMOX_ISO_VERSION="$2"
 shift 2
 ;;
-*)echo "Unknown option: $1"
-echo "Use --help for usage information"
+*)printf '%s\n' "Unknown option: $1"
+printf '%s\n' "Use --help for usage information"
 exit 1
 esac
 done
 log(){
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >>"$LOG_FILE"
+printf '%s\n' "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >>"$LOG_FILE"
 }
 INSTALL_START_TIME=""
 metrics_start(){
@@ -427,32 +427,32 @@ _wiz_show_cursor
 }
 print_success(){
 if [[ $# -eq 2 ]];then
-echo "$CLR_CYAN✓$CLR_RESET $1 $CLR_CYAN$2$CLR_RESET"
+printf '%s\n' "$CLR_CYAN✓$CLR_RESET $1 $CLR_CYAN$2$CLR_RESET"
 else
-echo "$CLR_CYAN✓$CLR_RESET $1"
+printf '%s\n' "$CLR_CYAN✓$CLR_RESET $1"
 fi
 }
 print_error(){
-echo "$CLR_RED✗$CLR_RESET $1"
+printf '%s\n' "$CLR_RED✗$CLR_RESET $1"
 }
 print_warning(){
 local message="$1"
 local second="${2:-false}"
 local indent=""
 if [[ $# -eq 2 && $second != "true" ]];then
-echo "$CLR_YELLOW⚠️$CLR_RESET $message $CLR_CYAN$second$CLR_RESET"
+printf '%s\n' "$CLR_YELLOW⚠️$CLR_RESET $message $CLR_CYAN$second$CLR_RESET"
 else
 if [[ $second == "true" ]];then
 indent="  "
 fi
-echo "$indent$CLR_YELLOW⚠️$CLR_RESET $message"
+printf '%s\n' "$indent$CLR_YELLOW⚠️$CLR_RESET $message"
 fi
 }
 print_info(){
-echo "$CLR_CYANℹ$CLR_RESET $1"
+printf '%s\n' "$CLR_CYANℹ$CLR_RESET $1"
 }
 print_section(){
-echo "$CLR_CYAN$1$CLR_RESET"
+printf '%s\n' "$CLR_CYAN$1$CLR_RESET"
 }
 show_progress(){
 local pid=$1
@@ -487,7 +487,7 @@ while [ "$retry_count" -lt "$max_retries" ];do
 if wget -q -O "$output_file" "$url";then
 if [ -s "$output_file" ];then
 local file_type
-file_type=$(file "$output_file" 2>/dev/null||echo "")
+file_type=$(file "$output_file" 2>/dev/null||printf '\n')
 if echo "$file_type"|grep -q "empty";then
 print_error "Downloaded file is empty: $output_file"
 retry_count=$((retry_count+1))
@@ -658,7 +658,7 @@ _SSH_SESSION_PASSFILE=$(mktemp --tmpdir=/dev/shm pve-ssh-session.XXXXXX 2>/dev/n
 else
 _SSH_SESSION_PASSFILE=$(mktemp)
 fi
-echo "$NEW_ROOT_PASSWORD" >"$_SSH_SESSION_PASSFILE"
+printf '%s\n' "$NEW_ROOT_PASSWORD" >"$_SSH_SESSION_PASSFILE"
 chmod 600 "$_SSH_SESSION_PASSFILE"
 if [[ $BASHPID == "$$" ]];then
 local existing_trap
@@ -692,7 +692,7 @@ log "SSH session cleaned up"
 }
 _ssh_get_passfile(){
 _ssh_session_init
-echo "$_SSH_SESSION_PASSFILE"
+printf '%s\n' "$_SSH_SESSION_PASSFILE"
 }
 check_port_available(){
 local port="$1"
@@ -764,13 +764,13 @@ local script="$2"
 local done_message="${3:-$message}"
 log "_remote_exec_with_progress: $message"
 log "--- Script start ---"
-echo "$script" >>"$LOG_FILE"
+printf '%s\n' "$script" >>"$LOG_FILE"
 log "--- Script end ---"
 local passfile
 passfile=$(_ssh_get_passfile)
 local output_file
 output_file=$(mktemp)
-echo "$script"|sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'bash -s' >"$output_file" 2>&1&
+printf '%s\n' "$script"|sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'bash -s' >"$output_file" 2>&1&
 local pid=$!
 show_progress $pid "$message" "$done_message"
 local exit_code=$?
@@ -813,9 +813,9 @@ SSH_KEY_DATA=""
 SSH_KEY_COMMENT=""
 SSH_KEY_SHORT=""
 [[ -z $key ]]&&return 1
-SSH_KEY_TYPE=$(echo "$key"|awk '{print $1}')
-SSH_KEY_DATA=$(echo "$key"|awk '{print $2}')
-SSH_KEY_COMMENT=$(echo "$key"|awk '{$1=""; $2=""; print}'|sed 's/^ *//')
+SSH_KEY_TYPE=$(printf '%s\n' "$key"|awk '{print $1}')
+SSH_KEY_DATA=$(printf '%s\n' "$key"|awk '{print $2}')
+SSH_KEY_COMMENT=$(printf '%s\n' "$key"|awk '{$1=""; $2=""; print}'|sed 's/^ *//')
 if [[ ${#SSH_KEY_DATA} -gt 35 ]];then
 SSH_KEY_SHORT="${SSH_KEY_DATA:0:20}...${SSH_KEY_DATA: -10}"
 else
@@ -888,11 +888,11 @@ result+="\"$short_name\""
 [[ $i -lt $((${#vdevs[@]}-1)) ]]&&result+=", "
 done
 result+="]"
-echo "$result"
+printf '%s\n' "$result"
 ;;
-bash_array)echo "(${vdevs[*]})"
+bash_array)printf '%s\n' "(${vdevs[*]})"
 ;;
-space_separated)echo "${vdevs[*]}"
+space_separated)printf '%s\n' "${vdevs[*]}"
 ;;
 *)log "ERROR: Unknown format: $format"
 return 1
@@ -933,7 +933,7 @@ done
 *)log "ERROR: Unknown RAID type: $raid_type"
 return 1
 esac
-echo "$cmd"
+printf '%s\n' "$cmd"
 }
 map_raid_to_toml(){
 local raid="$1"
@@ -947,7 +947,7 @@ raidz3)echo "raidz-3";;
 raid5)echo "raidz-1";;
 raid10)echo "raid10";;
 *)log "WARNING: Unknown RAID type '$raid', defaulting to raid0"
-echo "raid0"
+printf '%s\n' "raid0"
 esac
 }
 show_validation_error(){
@@ -1162,11 +1162,11 @@ LC_ALL=C bash -c '[[ "$1" =~ ^[[:print:]]+$ ]]' _ "$1"
 get_password_error(){
 local password="$1"
 if [[ -z $password ]];then
-echo "Password cannot be empty!"
+printf '%s\n' "Password cannot be empty!"
 elif [[ ${#password} -lt 8 ]];then
-echo "Password must be at least 8 characters long."
+printf '%s\n' "Password must be at least 8 characters long."
 elif ! is_ascii_printable "$password";then
-echo "Password contains invalid characters (Cyrillic or non-ASCII). Only Latin letters, digits, and special characters are allowed."
+printf '%s\n' "Password contains invalid characters (Cyrillic or non-ASCII). Only Latin letters, digits, and special characters are allowed."
 fi
 }
 validate_subnet(){
@@ -1365,7 +1365,7 @@ done
 if [[ $need_charm_repo == true ]];then
 mkdir -p /etc/apt/keyrings 2>/dev/null
 curl -fsSL https://repo.charm.sh/apt/gpg.key 2>/dev/null|gpg --dearmor -o /etc/apt/keyrings/charm.gpg >/dev/null 2>&1
-echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" >/etc/apt/sources.list.d/charm.list 2>/dev/null
+printf '%s\n' "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" >/etc/apt/sources.list.d/charm.list 2>/dev/null
 fi
 if [[ -n $packages_to_install ]];then
 apt-get update -qq >/dev/null 2>&1
@@ -1458,9 +1458,9 @@ PREDICTABLE_NAME=""
 if [[ -e "/sys/class/net/$CURRENT_INTERFACE" ]];then
 local udev_info
 udev_info=$(udevadm info "/sys/class/net/$CURRENT_INTERFACE" 2>/dev/null)
-PREDICTABLE_NAME=$(echo "$udev_info"|grep "ID_NET_NAME_PATH="|cut -d'=' -f2)
+PREDICTABLE_NAME=$(printf '%s\n' "$udev_info"|grep "ID_NET_NAME_PATH="|cut -d'=' -f2)
 if [[ -z $PREDICTABLE_NAME ]];then
-PREDICTABLE_NAME=$(echo "$udev_info"|grep "ID_NET_NAME_ONBOARD="|cut -d'=' -f2)
+PREDICTABLE_NAME=$(printf '%s\n' "$udev_info"|grep "ID_NET_NAME_ONBOARD="|cut -d'=' -f2)
 fi
 if [[ -z $PREDICTABLE_NAME ]];then
 PREDICTABLE_NAME=$(ip -d link show "$CURRENT_INTERFACE" 2>/dev/null|grep "altname"|awk '{print $2}'|head -1)
@@ -1479,7 +1479,7 @@ AVAILABLE_INTERFACES=$(ip link show|awk -F': ' '/^[0-9]+:/ && !/lo:/ {print $2}'
 else
 AVAILABLE_INTERFACES="$CURRENT_INTERFACE"
 fi
-INTERFACE_COUNT=$(echo "$AVAILABLE_INTERFACES"|wc -l)
+INTERFACE_COUNT=$(printf '%s\n' "$AVAILABLE_INTERFACES"|wc -l)
 if [[ -z $INTERFACE_NAME ]];then
 INTERFACE_NAME="$DEFAULT_INTERFACE"
 fi
@@ -1699,14 +1699,14 @@ table_data+="$ok_status,${DRIVE_NAMES[$i]},${DRIVE_SIZES[$i]}  ${DRIVE_MODELS[$i
 done
 fi
 table_data="${table_data%$'\n'}"
-echo "$table_data"|gum table \
+printf '%s\n' "$table_data"|gum table \
 --print \
 --border "none" \
 --cell.foreground "$HEX_GRAY" \
 --header.foreground "$HEX_ORANGE"
-echo ""
+printf '\n'
 print_error "System requirements not met. Please fix the issues above."
-echo ""
+printf '\n'
 log "ERROR: Pre-flight checks failed"
 exit 1
 }
@@ -1936,11 +1936,11 @@ _wiz_blank_line
 done
 _wiz_blank_line
 case "$type" in
-filter)echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] select  [${CLR_ORANGE}Esc$CLR_GRAY] cancel$CLR_RESET"
+filter)printf '%s\n' "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] select  [${CLR_ORANGE}Esc$CLR_GRAY] cancel$CLR_RESET"
 ;;
-checkbox)echo -e "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Space$CLR_GRAY] toggle  [${CLR_ORANGE}Enter$CLR_GRAY] confirm  [${CLR_ORANGE}Esc$CLR_GRAY] cancel$CLR_RESET"
+checkbox)printf '%s\n' "$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Space$CLR_GRAY] toggle  [${CLR_ORANGE}Enter$CLR_GRAY] confirm  [${CLR_ORANGE}Esc$CLR_GRAY] cancel$CLR_RESET"
 ;;
-*)echo -e "$CLR_GRAY[${CLR_ORANGE}Enter$CLR_GRAY] confirm  [${CLR_ORANGE}Esc$CLR_GRAY] cancel$CLR_RESET"
+*)printf '%s\n' "$CLR_GRAY[${CLR_ORANGE}Enter$CLR_GRAY] confirm  [${CLR_ORANGE}Esc$CLR_GRAY] cancel$CLR_RESET"
 esac
 tput cuu $((component_lines+2))
 }
@@ -1976,7 +1976,7 @@ _wiz_blank_line
 _wiz_warn "Please configure the following required fields:"
 _wiz_blank_line
 for field in "${missing_fields[@]}";do
-echo "  $CLR_CYAN•$CLR_RESET $field"
+printf '%s\n' "  $CLR_CYAN•$CLR_RESET $field"
 done
 _wiz_blank_line
 _wiz_show_cursor
@@ -2009,21 +2009,21 @@ done
 _nav_color(){
 local idx="$1" current="$2"
 if [[ $idx -eq $current ]];then
-echo "$CLR_ORANGE"
+printf '%s\n' "$CLR_ORANGE"
 elif [[ $idx -lt $current ]];then
-echo "$CLR_CYAN"
+printf '%s\n' "$CLR_CYAN"
 else
-echo "$CLR_GRAY"
+printf '%s\n' "$CLR_GRAY"
 fi
 }
 _nav_dot(){
 local idx="$1" current="$2"
 if [[ $idx -eq $current ]];then
-echo "◉"
+printf '%s\n' "◉"
 elif [[ $idx -lt $current ]];then
-echo "●"
+printf '%s\n' "●"
 else
-echo "○"
+printf '%s\n' "○"
 fi
 }
 _nav_line(){
@@ -2107,7 +2107,7 @@ fi
 }
 _wiz_hide_cursor(){ printf '\033[?25l';}
 _wiz_show_cursor(){ printf '\033[?25h';}
-_wiz_blank_line(){ echo "";}
+_wiz_blank_line(){ printf '\n';}
 _wiz_error(){ gum style --foreground "$HEX_RED" "$@";}
 _wiz_warn(){ gum style --foreground "$HEX_YELLOW" "$@";}
 _wiz_info(){ gum style --foreground "$HEX_CYAN" "$@";}
@@ -2156,16 +2156,16 @@ _wiz_start_edit
 for line in "$@";do
 _wiz_dim "$line"
 done
-[[ $# -gt 0 ]]&&echo ""
+[[ $# -gt 0 ]]&&printf '\n'
 _show_input_footer
 }
 _wiz_fmt(){
 local value="$1"
 local placeholder="${2:-→ set value}"
 if [[ -n $value ]];then
-echo "$value"
+printf '%s\n' "$value"
 else
-echo "$CLR_GRAY$placeholder$CLR_RESET"
+printf '%s\n' "$CLR_GRAY$placeholder$CLR_RESET"
 fi
 }
 _WIZ_FIELD_COUNT=0
@@ -2539,7 +2539,7 @@ while true;do
 _wiz_start_edit
 _show_input_footer "filter" 3
 local choice
-choice=$(echo -e "Manual entry\nGenerate password"|_wiz_choose \
+choice=$(printf '%s\n' "Manual entry\nGenerate password"|_wiz_choose \
 --header="Password:")
 if [[ -z $choice ]];then
 return
@@ -2551,9 +2551,9 @@ _wiz_start_edit
 _wiz_hide_cursor
 _wiz_warn "Please save this password - it will be required for login"
 _wiz_blank_line
-echo -e "${CLR_CYAN}Generated password:$CLR_RESET $CLR_ORANGE$NEW_ROOT_PASSWORD$CLR_RESET"
+printf '%s\n' "${CLR_CYAN}Generated password:$CLR_RESET $CLR_ORANGE$NEW_ROOT_PASSWORD$CLR_RESET"
 _wiz_blank_line
-echo -e "${CLR_GRAY}Press any key to continue...$CLR_RESET"
+printf '%s\n' "${CLR_GRAY}Press any key to continue...$CLR_RESET"
 read -n 1 -s -r
 break
 ;;
@@ -2653,7 +2653,7 @@ return
 fi
 _show_input_footer "filter" 6
 local selected
-selected=$(echo "$iso_list"|_wiz_choose \
+selected=$(printf '%s\n' "$iso_list"|_wiz_choose \
 --header="Proxmox Version:")
 [[ -n $selected ]]&&PROXMOX_ISO_VERSION="$selected"
 }
@@ -2668,7 +2668,7 @@ _wiz_description \
 ""
 _show_input_footer "filter" 4
 local selected
-selected=$(echo "$WIZ_REPO_TYPES"|_wiz_choose \
+selected=$(printf '%s\n' "$WIZ_REPO_TYPES"|_wiz_choose \
 --header="Repository:")
 if [[ -n $selected ]];then
 local repo_type=""
@@ -2698,7 +2698,7 @@ local available_interfaces=${AVAILABLE_INTERFACES:-$INTERFACE_NAME}
 local footer_size=$((interface_count+1))
 _show_input_footer "filter" "$footer_size"
 local selected
-selected=$(echo "$available_interfaces"|_wiz_choose \
+selected=$(printf '%s\n' "$available_interfaces"|_wiz_choose \
 --header="Network Interface:")
 [[ -n $selected ]]&&INTERFACE_NAME="$selected"
 }
@@ -2713,7 +2713,7 @@ _wiz_description \
 ""
 _show_input_footer "filter" 4
 local selected
-selected=$(echo "$WIZ_BRIDGE_MODES"|_wiz_choose \
+selected=$(printf '%s\n' "$WIZ_BRIDGE_MODES"|_wiz_choose \
 --header="Bridge mode:")
 if [[ -n $selected ]];then
 case "$selected" in
@@ -2734,7 +2734,7 @@ _wiz_description \
 ""
 _show_input_footer "filter" 5
 local selected
-selected=$(echo "$WIZ_PRIVATE_SUBNETS"|_wiz_choose \
+selected=$(printf '%s\n' "$WIZ_PRIVATE_SUBNETS"|_wiz_choose \
 --header="Private subnet:")
 if [[ -z $selected ]];then
 return
@@ -2773,7 +2773,7 @@ _wiz_description \
 ""
 _show_input_footer "filter" 3
 local selected
-selected=$(echo "$WIZ_BRIDGE_MTU"|_wiz_choose \
+selected=$(printf '%s\n' "$WIZ_BRIDGE_MTU"|_wiz_choose \
 --header="Bridge MTU:")
 case "$selected" in
 "9000 (jumbo frames)")BRIDGE_MTU="9000";;
@@ -2791,7 +2791,7 @@ _wiz_description \
 ""
 _show_input_footer "filter" 4
 local selected
-selected=$(echo "$WIZ_IPV6_MODES"|_wiz_choose \
+selected=$(printf '%s\n' "$WIZ_IPV6_MODES"|_wiz_choose \
 --header="IPv6:")
 if [[ -z $selected ]];then
 return
@@ -2868,7 +2868,7 @@ _wiz_description \
 ""
 _show_input_footer "filter" 5
 local selected
-selected=$(echo "$WIZ_FIREWALL_MODES"|_wiz_choose \
+selected=$(printf '%s\n' "$WIZ_FIREWALL_MODES"|_wiz_choose \
 --header="Firewall mode:")
 if [[ -n $selected ]];then
 case "$selected" in
@@ -2911,10 +2911,10 @@ elif [[ $pool_count -ge 5 ]];then
 options="RAID-0 (striped)\nRAID-1 (mirror)\nRAID-Z1 (parity)\nRAID-Z2 (double parity)\nRAID-Z3 (triple parity)\nRAID-10 (striped mirrors)"
 fi
 local item_count
-item_count=$(echo -e "$options"|wc -l)
+item_count=$(printf '%s\n' "$options"|wc -l)
 _show_input_footer "filter" "$((item_count+1))"
 local selected
-selected=$(echo -e "$options"|_wiz_choose \
+selected=$(printf '%s\n' "$options"|_wiz_choose \
 --header="ZFS mode ($pool_count disks in pool):")
 if [[ -n $selected ]];then
 case "$selected" in
@@ -2939,7 +2939,7 @@ _wiz_description \
 ""
 _show_input_footer "filter" 4
 local selected
-selected=$(echo "$WIZ_ZFS_ARC_MODES"|_wiz_choose \
+selected=$(printf '%s\n' "$WIZ_ZFS_ARC_MODES"|_wiz_choose \
 --header="ZFS ARC memory strategy:")
 if [[ -n $selected ]];then
 case "$selected" in
@@ -2961,7 +2961,7 @@ _wiz_description \
 ""
 _show_input_footer "filter" 3
 local selected
-selected=$(echo -e "Enabled\nDisabled"|_wiz_choose \
+selected=$(printf '%s\n' "Enabled\nDisabled"|_wiz_choose \
 --header="Tailscale:")
 case "$selected" in
 Enabled)local auth_key=""
@@ -3016,7 +3016,7 @@ _wiz_description \
 ""
 _show_input_footer "filter" 3
 local selected
-selected=$(echo "$WIZ_SSL_TYPES"|_wiz_choose \
+selected=$(printf '%s\n' "$WIZ_SSL_TYPES"|_wiz_choose \
 --header="SSL Certificate:")
 local ssl_type=""
 case "$selected" in
@@ -3056,7 +3056,7 @@ _wiz_blank_line
 local dns_result_file
 dns_result_file=$(mktemp)
 (validate_dns_resolution "$FQDN" "$MAIN_IPV4"
-echo $? >"$dns_result_file") > \
+printf '%s\n' "$?" >"$dns_result_file") > \
 /dev/null 2>&1&
 local dns_pid=$!
 printf "%s" "${CLR_CYAN}Validating DNS resolution$CLR_RESET"
@@ -3116,7 +3116,7 @@ _wiz_description \
 ""
 _show_input_footer "filter" 3
 local selected
-selected=$(echo "$WIZ_SHELL_OPTIONS"|_wiz_choose \
+selected=$(printf '%s\n' "$WIZ_SHELL_OPTIONS"|_wiz_choose \
 --header="Shell:")
 if [[ -n $selected ]];then
 case "$selected" in
@@ -3133,22 +3133,22 @@ avail_governors=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_gov
 fi
 local options=()
 local descriptions=()
-if [[ -z $avail_governors ]]||echo "$avail_governors"|grep -qw "performance";then
+if [[ -z $avail_governors ]]||printf '%s\n' "$avail_governors"|grep -qw "performance";then
 options+=("Performance")
 descriptions+=("  {{cyan:Performance}}:  Max frequency (highest power)")
 fi
-if echo "$avail_governors"|grep -qw "ondemand";then
+if printf '%s\n' "$avail_governors"|grep -qw "ondemand";then
 options+=("Balanced")
 descriptions+=("  {{cyan:Balanced}}:     Scale based on load")
-elif echo "$avail_governors"|grep -qw "powersave";then
+elif printf '%s\n' "$avail_governors"|grep -qw "powersave";then
 options+=("Balanced")
 descriptions+=("  {{cyan:Balanced}}:     Dynamic scaling (power efficient)")
 fi
-if echo "$avail_governors"|grep -qw "schedutil";then
+if printf '%s\n' "$avail_governors"|grep -qw "schedutil";then
 options+=("Adaptive")
 descriptions+=("  {{cyan:Adaptive}}:     Kernel-managed scaling")
 fi
-if echo "$avail_governors"|grep -qw "conservative";then
+if printf '%s\n' "$avail_governors"|grep -qw "conservative";then
 options+=("Conservative")
 descriptions+=("  {{cyan:Conservative}}: Gradual frequency changes")
 fi
@@ -3167,13 +3167,13 @@ _show_input_footer "filter" $((${#options[@]}+1))
 local options_str
 options_str=$(printf '%s\n' "${options[@]}")
 local selected
-selected=$(echo "$options_str"|_wiz_choose \
+selected=$(printf '%s\n' "$options_str"|_wiz_choose \
 --header="Power profile:")
 if [[ -n $selected ]];then
 case "$selected" in
 "Performance")CPU_GOVERNOR="performance";;
 "Balanced")if
-echo "$avail_governors"|grep -qw "ondemand"
+printf '%s\n' "$avail_governors"|grep -qw "ondemand"
 then
 CPU_GOVERNOR="ondemand"
 else
@@ -3320,7 +3320,7 @@ _wiz_description \
 ""
 _show_input_footer "filter" 3
 local selected
-selected=$(echo -e "Enabled\nDisabled"|_wiz_choose \
+selected=$(printf '%s\n' "Enabled\nDisabled"|_wiz_choose \
 --header="API Token (privileged, no expiration):")
 case "$selected" in
 Enabled)_wiz_input_screen "Enter API token name (default: automation)"
@@ -3352,13 +3352,13 @@ parse_ssh_key "$detected_key"
 _wiz_hide_cursor
 _wiz_warn "Detected SSH key from Rescue System:"
 _wiz_blank_line
-echo -e "${CLR_GRAY}Type:$CLR_RESET    $SSH_KEY_TYPE"
-echo -e "${CLR_GRAY}Key:$CLR_RESET     $SSH_KEY_SHORT"
-[[ -n $SSH_KEY_COMMENT ]]&&echo -e "${CLR_GRAY}Comment:$CLR_RESET $SSH_KEY_COMMENT"
+printf '%s\n' "${CLR_GRAY}Type:$CLR_RESET    $SSH_KEY_TYPE"
+printf '%s\n' "${CLR_GRAY}Key:$CLR_RESET     $SSH_KEY_SHORT"
+[[ -n $SSH_KEY_COMMENT ]]&&printf '%s\n' "${CLR_GRAY}Comment:$CLR_RESET $SSH_KEY_COMMENT"
 _wiz_blank_line
 _show_input_footer "filter" 3
 local choice
-choice=$(echo -e "Use detected key\nEnter different key"|_wiz_choose \
+choice=$(printf '%s\n' "Use detected key\nEnter different key"|_wiz_choose \
 --header="SSH Key:")
 if [[ -z $choice ]];then
 return
@@ -3412,7 +3412,7 @@ options+="\n$disk_name - $disk_size  $disk_model"
 done
 _show_input_footer "filter" "$((DRIVE_COUNT+2))"
 local selected
-selected=$(echo -e "$options"|_wiz_choose \
+selected=$(printf '%s\n' "$options"|_wiz_choose \
 --header="Boot disk:")
 if [[ -n $selected ]];then
 local old_boot_disk="$BOOT_DISK"
@@ -3487,7 +3487,7 @@ gum_args+=(--selected "$item")
 done
 local selected
 local gum_exit_code=0
-selected=$(echo -e "$options"|_wiz_choose "${gum_args[@]}")||gum_exit_code=$?
+selected=$(printf '%s\n' "$options"|_wiz_choose "${gum_args[@]}")||gum_exit_code=$?
 if [[ $gum_exit_code -ne 0 ]];then
 return 0
 fi
@@ -3527,7 +3527,7 @@ esac
 prepare_packages(){
 log "Starting package preparation"
 log "Adding Proxmox repository"
-echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" >/etc/apt/sources.list.d/pve.list
+printf '%s\n' "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" >/etc/apt/sources.list.d/pve.list
 log "Downloading Proxmox GPG key"
 curl -fsSL -o /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg >>"$LOG_FILE" 2>&1&
 show_progress $! "Adding Proxmox repository" "Proxmox repository added"
@@ -3579,15 +3579,15 @@ _CHECKSUM_CACHE=$(curl -s "$PROXMOX_CHECKSUM_URL" 2>/dev/null)||true
 }
 get_available_proxmox_isos(){
 local count="${1:-5}"
-echo "$_ISO_LIST_CACHE"|grep -E '^proxmox-ve_(9|[1-9][0-9]+)\.'|tail -n "$count"|tac
+printf '%s\n' "$_ISO_LIST_CACHE"|grep -E '^proxmox-ve_(9|[1-9][0-9]+)\.'|tail -n "$count"|tac
 }
 get_proxmox_iso_url(){
 local iso_filename="$1"
-echo "$PROXMOX_ISO_BASE_URL$iso_filename"
+printf '%s\n' "$PROXMOX_ISO_BASE_URL$iso_filename"
 }
 get_iso_version(){
 local iso_filename="$1"
-echo "$iso_filename"|sed -E 's/proxmox-ve_([0-9]+\.[0-9]+-[0-9]+)\.iso/\1/'
+printf '%s\n' "$iso_filename"|sed -E 's/proxmox-ve_([0-9]+\.[0-9]+-[0-9]+)\.iso/\1/'
 }
 _download_iso_curl(){
 local url="$1"
@@ -3650,7 +3650,7 @@ local method_file="${4:-}"
 if command -v aria2c &>/dev/null;then
 log "Trying aria2c (parallel download)..."
 if _download_iso_aria2c "$url" "$output" "$checksum"&&[[ -s $output ]];then
-[[ -n $method_file ]]&&echo "aria2c" >"$method_file"
+[[ -n $method_file ]]&&printf '%s\n' "aria2c" >"$method_file"
 return 0
 fi
 log "aria2c failed, trying fallback..."
@@ -3658,7 +3658,7 @@ rm -f "$output" 2>/dev/null
 fi
 log "Trying curl..."
 if _download_iso_curl "$url" "$output"&&[[ -s $output ]];then
-[[ -n $method_file ]]&&echo "curl" >"$method_file"
+[[ -n $method_file ]]&&printf '%s\n' "curl" >"$method_file"
 return 0
 fi
 log "curl failed, trying fallback..."
@@ -3666,7 +3666,7 @@ rm -f "$output" 2>/dev/null
 if command -v wget &>/dev/null;then
 log "Trying wget..."
 if _download_iso_wget "$url" "$output"&&[[ -s $output ]];then
-[[ -n $method_file ]]&&echo "wget" >"$method_file"
+[[ -n $method_file ]]&&printf '%s\n' "wget" >"$method_file"
 return 0
 fi
 rm -f "$output" 2>/dev/null
@@ -3691,7 +3691,7 @@ log "Found ISO URL: $PROXMOX_ISO_URL"
 ISO_FILENAME=$(basename "$PROXMOX_ISO_URL")
 local expected_checksum=""
 if [[ -n $_CHECKSUM_CACHE ]];then
-expected_checksum=$(echo "$_CHECKSUM_CACHE"|grep "$ISO_FILENAME"|awk '{print $1}')
+expected_checksum=$(printf '%s\n' "$_CHECKSUM_CACHE"|grep "$ISO_FILENAME"|awk '{print $1}')
 fi
 log "Expected checksum: ${expected_checksum:-not available}"
 log "Downloading ISO: $ISO_FILENAME"
@@ -3711,7 +3711,7 @@ fi
 log "Download successful via $DOWNLOAD_METHOD"
 local iso_size
 iso_size=$(stat -c%s pve.iso 2>/dev/null)||iso_size=0
-log "ISO file size: $(echo "$iso_size"|awk '{printf "%.1fG", $1/1024/1024/1024}')"
+log "ISO file size: $(printf '%s\n' "$iso_size"|awk '{printf "%.1fG", $1/1024/1024/1024}')"
 if [[ -n $expected_checksum ]];then
 if [[ $DOWNLOAD_METHOD == "aria2c" ]];then
 log "Checksum already verified by aria2c"
@@ -3721,7 +3721,7 @@ fi
 else
 log "Verifying ISO checksum"
 local actual_checksum
-(actual_checksum=$(sha256sum pve.iso|awk '{print $1}')&&echo "$actual_checksum" >/tmp/checksum_result)&
+(actual_checksum=$(sha256sum pve.iso|awk '{print $1}')&&printf '%s\n' "$actual_checksum" >/tmp/checksum_result)&
 local checksum_pid=$!
 if type show_progress &>/dev/null 2>&1;then
 show_progress $checksum_pid "Verifying checksum" "Checksum verified"
@@ -3829,7 +3829,7 @@ cat >./answer.toml <<EOF
     reboot-on-error = false
 EOF
 if [[ -n $ssh_keys_toml ]];then
-echo "    $ssh_keys_toml" >>./answer.toml
+printf '%s\n' "    $ssh_keys_toml" >>./answer.toml
 fi
 cat >>./answer.toml <<EOF
 
@@ -4145,8 +4145,8 @@ for entry in "${templates[@]}";do
 local local_path="${entry%%:*}"
 local remote_name="${entry#*:}"
 local url="$GITHUB_BASE_URL/templates/$remote_name.tmpl"
-echo "$url"
-echo "  out=$local_path"
+printf '%s\n' "$url"
+printf '%s\n' "  out=$local_path"
 done >"$input_file"
 log "Downloading ${#templates[@]} templates in parallel"
 if command -v aria2c &>/dev/null;then
@@ -4432,7 +4432,7 @@ echo "$hostname" >"$tmp_hostname"
 /dev/null 2>&1&
 show_progress $! "Authenticating Tailscale"
 TAILSCALE_IP=$(cat "$tmp_ip" 2>/dev/null||echo "pending")
-TAILSCALE_HOSTNAME=$(cat "$tmp_hostname" 2>/dev/null||echo "")
+TAILSCALE_HOSTNAME=$(cat "$tmp_hostname" 2>/dev/null||printf '\n')
 LOG_LINES[TASK_INDEX]="$CLR_ORANGE├─$CLR_RESET Tailscale authenticated. IP: $TAILSCALE_IP $CLR_CYAN✓$CLR_RESET"
 render_logs
 if [[ $TAILSCALE_WEBUI == "yes" ]];then
@@ -4481,7 +4481,7 @@ rules="# SSH access (port $PORT_SSH)
         # Proxmox Web UI (port $PORT_PROXMOX_UI)
         tcp dport $PORT_PROXMOX_UI ct state new accept"
 esac
-echo "$rules"
+printf '%s\n' "$rules"
 }
 _generate_bridge_input_rules(){
 local mode="${BRIDGE_MODE:-internal}"
@@ -4503,7 +4503,7 @@ both)rules='# Allow traffic from internal bridge (vmbr0 - private NAT network)
 rules='# Allow traffic from internal bridge (vmbr0 - private NAT network)
         iifname "vmbr0" accept'
 esac
-echo "$rules"
+printf '%s\n' "$rules"
 }
 _generate_bridge_forward_rules(){
 local mode="${BRIDGE_MODE:-internal}"
@@ -4527,14 +4527,14 @@ both)rules='# Allow forwarding for both bridges (VM traffic)
         iifname "vmbr0" accept
         oifname "vmbr0" accept'
 esac
-echo "$rules"
+printf '%s\n' "$rules"
 }
 _generate_tailscale_rules(){
 if [[ $INSTALL_TAILSCALE == "yes" ]];then
-echo '# Allow Tailscale VPN interface
+printf '%s\n' '# Allow Tailscale VPN interface
         iifname "tailscale0" accept'
 else
-echo "# Tailscale not installed"
+printf '%s\n' "# Tailscale not installed"
 fi
 }
 _generate_nat_rules(){
@@ -4547,7 +4547,7 @@ internal|both)rules="# Masquerade traffic from private subnet to internet
 ;;
 external)rules="# External mode: no NAT needed (VMs have public IPs)"
 esac
-echo "$rules"
+printf '%s\n' "$rules"
 }
 _config_nftables(){
 remote_exec '
@@ -4564,19 +4564,19 @@ nat_rules=$(_generate_nat_rules)
 tailscale_rules=$(_generate_tailscale_rules)
 local nftables_conf="$template_content"
 nftables_conf="${nftables_conf//\{\{BRIDGE_MODE\}\}/$BRIDGE_MODE}"
-nftables_conf=$(echo "$nftables_conf"|sed "/# === FIREWALL_RULES_START ===/,/# === FIREWALL_RULES_END ===/c\\
+nftables_conf=$(printf '%s\n' "$nftables_conf"|sed "/# === FIREWALL_RULES_START ===/,/# === FIREWALL_RULES_END ===/c\\
         # === FIREWALL_RULES_START ===\\
 $port_rules\\
         # === FIREWALL_RULES_END ===")
-nftables_conf=$(echo "$nftables_conf"|sed "/# === BRIDGE_INPUT_RULES ===/c\\
+nftables_conf=$(printf '%s\n' "$nftables_conf"|sed "/# === BRIDGE_INPUT_RULES ===/c\\
 $bridge_input_rules")
-nftables_conf=$(echo "$nftables_conf"|sed "/# === TAILSCALE_RULES ===/c\\
+nftables_conf=$(printf '%s\n' "$nftables_conf"|sed "/# === TAILSCALE_RULES ===/c\\
 $tailscale_rules")
-nftables_conf=$(echo "$nftables_conf"|sed "/# === BRIDGE_FORWARD_RULES ===/c\\
+nftables_conf=$(printf '%s\n' "$nftables_conf"|sed "/# === BRIDGE_FORWARD_RULES ===/c\\
 $bridge_forward_rules")
-nftables_conf=$(echo "$nftables_conf"|sed "/# === NAT_RULES ===/c\\
+nftables_conf=$(printf '%s\n' "$nftables_conf"|sed "/# === NAT_RULES ===/c\\
 $nat_rules")
-echo "$nftables_conf" >"./templates/nftables.conf.generated"
+printf '%s\n' "$nftables_conf" >"./templates/nftables.conf.generated"
 log "Generated nftables config:"
 log "  Bridge mode: $BRIDGE_MODE"
 log "  Firewall mode: $FIREWALL_MODE"
@@ -5065,11 +5065,11 @@ apply_template_vars "./templates/validation.sh" \
 local validation_script
 validation_script=$(cat "./templates/validation.sh")
 log "Validation script generated"
-echo "$validation_script" >>"$LOG_FILE"
+printf '%s\n' "$validation_script" >>"$LOG_FILE"
 add_log "$CLR_ORANGE├─$CLR_RESET Validating installation..."
 local validation_output
-validation_output=$(echo "$validation_script"|remote_exec 'bash -s' 2>&1)||true
-echo "$validation_output" >>"$LOG_FILE"
+validation_output=$(printf '%s\n' "$validation_script"|remote_exec 'bash -s' 2>&1)||true
+printf '%s\n' "$validation_output" >>"$LOG_FILE"
 local errors=0 warnings=0
 while IFS= read -r line;do
 case "$line" in
@@ -5268,13 +5268,13 @@ _render_completion_screen
 local key
 IFS= read -rsn1 key
 case "$key" in
-q|Q)echo ""
+q|Q)printf '\n'
 print_info "Exiting without reboot."
-echo ""
+printf '\n'
 print_info "You can reboot manually when ready with: ${CLR_CYAN}reboot$CLR_RESET"
 exit 0
 ;;
-"")echo ""
+"")printf '\n'
 print_info "Rebooting the system..."
 if ! reboot;then
 log "ERROR: Failed to reboot - system may require manual restart"
