@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.374-pr.21"
+readonly VERSION="2.0.375-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -4171,7 +4171,6 @@ local -a template_list=(
 "./templates/cpupower.service:cpupower.service"
 "./templates/60-io-scheduler.rules:60-io-scheduler.rules"
 "./templates/remove-subscription-nag.sh:remove-subscription-nag.sh"
-"./templates/configure-zfs-arc.sh:configure-zfs-arc.sh"
 "./templates/zfs-scrub.service:zfs-scrub.service"
 "./templates/zfs-scrub.timer:zfs-scrub.timer"
 "./templates/letsencrypt-deploy-hook.sh:letsencrypt-deploy-hook.sh"
@@ -4239,10 +4238,6 @@ remote_exec "echo '$PVE_HOSTNAME' > /etc/hostname"||exit 1
 remote_exec "systemctl disable --now rpcbind rpcbind.socket 2>/dev/null"||true) > \
 /dev/null 2>&1&
 show_progress $! "Applying basic system settings" "Basic system settings applied"
-(remote_copy "templates/configure-zfs-arc.sh" "/tmp/configure-zfs-arc.sh"||exit 1
-remote_exec "chmod +x /tmp/configure-zfs-arc.sh && /tmp/configure-zfs-arc.sh && rm -f /tmp/configure-zfs-arc.sh"||exit 1) > \
-/dev/null 2>&1&
-show_progress $! "Configuring ZFS ARC memory limits" "ZFS ARC memory limits configured"
 log "configure_base_system: PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
 if [[ ${PVE_REPO_TYPE:-no-subscription} == "enterprise" ]];then
 log "configure_base_system: configuring enterprise repository"
