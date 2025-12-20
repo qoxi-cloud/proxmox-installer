@@ -52,8 +52,6 @@ configure_yazi() {
   local exit_code=$?
   if [[ $exit_code -ne 0 ]]; then
     log "WARNING: Yazi setup failed"
-    print_warning "Yazi setup failed - continuing without it"
     return 0 # Non-fatal error
   fi
-
 }

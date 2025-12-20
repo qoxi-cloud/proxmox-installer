@@ -117,9 +117,8 @@ start_live_installation() {
   # Save cursor position right after banner (before header)
   save_cursor_position
 
-  # Print fixed header
-  print_section " Installation Progress"
-  _wiz_blank_line
+  # Print initial header immediately
+  render_logs
 
   tput civis # Hide cursor
 

@@ -82,9 +82,7 @@ configure_tailscale() {
   else
     TAILSCALE_IP="not authenticated"
     TAILSCALE_HOSTNAME=""
-    print_warning "Tailscale installed but not authenticated."
-    print_info "After reboot, run these commands to enable SSH and Web UI:"
-    print_info "  tailscale up --ssh"
-    print_info "  tailscale serve --bg --https=443 https://127.0.0.1:8006"
+    add_log "${CLR_GRAY}├─${CLR_RESET} ${CLR_YELLOW}⚠️${CLR_RESET} Tailscale installed but not authenticated"
+    add_log "${CLR_GRAY}│${CLR_RESET}   ${CLR_GRAY}After reboot: tailscale up --ssh${CLR_RESET}"
   fi
 }

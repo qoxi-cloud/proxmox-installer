@@ -24,7 +24,6 @@ create_api_token() {
 
   if [[ -z $output ]]; then
     log "ERROR: Failed to create API token - empty output"
-    print_warning "API token creation failed - continuing without it"
     return 1
   fi
 
@@ -40,7 +39,6 @@ create_api_token() {
   if [[ -z $token_value ]]; then
     log "ERROR: Failed to extract token value from pveum output"
     log "DEBUG: pveum output: $output"
-    print_warning "API token creation failed - continuing without it"
     return 1
   fi
 
