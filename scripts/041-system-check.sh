@@ -438,8 +438,8 @@ detect_disk_roles() {
 }
 
 # Displays system status summary in formatted table.
-# Shows preflight checks and detected storage drives.
-# Exits with error if critical checks failed or no drives detected.
+# Only shows table if there are errors, then exits.
+# If all checks pass, silently proceeds to wizard.
 show_system_status() {
   detect_drives
   detect_disk_roles
@@ -449,8 +449,19 @@ show_system_status() {
     no_drives=1
   fi
 
+  # Check for errors first
+  local has_errors=false
+  if [[ $PREFLIGHT_ERRORS -gt 0 || $no_drives -eq 1 ]]; then
+    has_errors=true
+  fi
+
+  # If no errors, go straight to wizard
+  if [[ $has_errors == false ]]; then
+    _wiz_start_edit
+    return 0
+  fi
+
   # Build table data with colored status markers
-  # Format: ,,\n then Header,Header,Header\n then data rows
   local table_data
   table_data=",,
 Status,Item,Value
@@ -477,7 +488,6 @@ Status,Item,Value
 "
   }
 
-  add_row "ok" "Installer" "v${VERSION}"
   add_row "$PREFLIGHT_ROOT_STATUS" "Root Access" "$PREFLIGHT_ROOT"
   add_row "$PREFLIGHT_NET_STATUS" "Internet" "$PREFLIGHT_NET"
   add_row "$PREFLIGHT_DISK_STATUS" "Temp Space" "$PREFLIGHT_DISK"
@@ -511,42 +521,8 @@ Status,Item,Value
     --header.foreground "$HEX_ORANGE"
 
   echo ""
-
-  # Determine if there are critical errors
-  local has_errors=false
-  if [[ $PREFLIGHT_ERRORS -gt 0 || $no_drives -eq 1 ]]; then
-    has_errors=true
-  fi
-
-  # Show confirmation dialog using gum confirm
-  if [[ $has_errors == true ]]; then
-    # Show error message and only allow Cancel
-    print_error "System requirements not met. Please fix the issues above."
-    echo ""
-    gum confirm "Exit installer?" \
-      --affirmative "Exit" \
-      --negative "" \
-      --default=true \
-      --prompt.foreground "#ff8700" \
-      --selected.background "#ff8700" \
-      --unselected.foreground "#585858" || true
-    log "ERROR: Pre-flight checks failed"
-    exit 1
-  else
-    # Allow user to continue or cancel
-    if ! gum confirm "Start configuration?" \
-      --affirmative "Start" \
-      --negative "Cancel" \
-      --default=true \
-      --prompt.foreground "#ff8700" \
-      --selected.background "#ff8700" \
-      --unselected.foreground "#585858"; then
-      log "INFO: User cancelled installation"
-      clear
-      exit 0
-    fi
-
-    # Clear screen and show logo after Start is pressed
-    _wiz_start_edit
-  fi
+  print_error "System requirements not met. Please fix the issues above."
+  echo ""
+  log "ERROR: Pre-flight checks failed"
+  exit 1
 }
