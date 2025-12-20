@@ -241,7 +241,8 @@ cleanup_and_error_handler() {
     fi
   fi
 
-  # Always restore cursor visibility
+  # Exit alternate screen buffer and restore cursor visibility
+  tput rmcup 2>/dev/null || true
   tput cnorm 2>/dev/null || true
 
   # Show error message if installation failed
