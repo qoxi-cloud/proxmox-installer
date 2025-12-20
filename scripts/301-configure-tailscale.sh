@@ -52,7 +52,7 @@ configure_tailscale() {
 
     # Get Tailscale IP and hostname for display
     TAILSCALE_IP=$(cat "$tmp_ip" 2>/dev/null || echo "pending")
-    TAILSCALE_HOSTNAME=$(cat "$tmp_hostname" 2>/dev/null || echo "")
+    TAILSCALE_HOSTNAME=$(cat "$tmp_hostname" 2>/dev/null || printf '\n')
 
     # Update log with IP info
     LOG_LINES[TASK_INDEX]="${CLR_ORANGE}├─${CLR_RESET} Tailscale authenticated. IP: ${TAILSCALE_IP} ${CLR_CYAN}✓${CLR_RESET}"

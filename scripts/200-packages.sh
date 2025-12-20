@@ -10,7 +10,7 @@ prepare_packages() {
   log "Starting package preparation"
 
   log "Adding Proxmox repository"
-  echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" >/etc/apt/sources.list.d/pve.list
+  printf '%s\n' "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" >/etc/apt/sources.list.d/pve.list
 
   # Download Proxmox GPG key
   log "Downloading Proxmox GPG key"
@@ -88,7 +88,7 @@ prefetch_proxmox_iso_info() {
 get_available_proxmox_isos() {
   local count="${1:-5}"
   # Filter to versions 9+ (matches 9, 10, 11, etc.)
-  echo "$_ISO_LIST_CACHE" | grep -E '^proxmox-ve_(9|[1-9][0-9]+)\.' | tail -n "$count" | tac
+  printf '%s\n' "$_ISO_LIST_CACHE" | grep -E '^proxmox-ve_(9|[1-9][0-9]+)\.' | tail -n "$count" | tac
 }
 
 # Constructs full ISO URL from filename.
@@ -97,7 +97,7 @@ get_available_proxmox_isos() {
 # Returns: Full URL via stdout
 get_proxmox_iso_url() {
   local iso_filename="$1"
-  echo "${PROXMOX_ISO_BASE_URL}${iso_filename}"
+  printf '%s\n' "${PROXMOX_ISO_BASE_URL}${iso_filename}"
 }
 
 # Extracts version from ISO filename.
@@ -106,7 +106,7 @@ get_proxmox_iso_url() {
 # Returns: Version string (e.g., "8.3-1") via stdout
 get_iso_version() {
   local iso_filename="$1"
-  echo "$iso_filename" | sed -E 's/proxmox-ve_([0-9]+\.[0-9]+-[0-9]+)\.iso/\1/'
+  printf '%s\n' "$iso_filename" | sed -E 's/proxmox-ve_([0-9]+\.[0-9]+-[0-9]+)\.iso/\1/'
 }
 
 # Internal: downloads ISO using curl with retry support.
@@ -206,7 +206,7 @@ _download_iso_with_fallback() {
   if command -v aria2c &>/dev/null; then
     log "Trying aria2c (parallel download)..."
     if _download_iso_aria2c "$url" "$output" "$checksum" && [[ -s "$output" ]]; then
-      [[ -n $method_file ]] && echo "aria2c" >"$method_file"
+      [[ -n $method_file ]] && printf '%s\n' "aria2c" >"$method_file"
       return 0
     fi
     log "aria2c failed, trying fallback..."
@@ -216,7 +216,7 @@ _download_iso_with_fallback() {
   # Fallback to curl
   log "Trying curl..."
   if _download_iso_curl "$url" "$output" && [[ -s "$output" ]]; then
-    [[ -n $method_file ]] && echo "curl" >"$method_file"
+    [[ -n $method_file ]] && printf '%s\n' "curl" >"$method_file"
     return 0
   fi
   log "curl failed, trying fallback..."
@@ -226,7 +226,7 @@ _download_iso_with_fallback() {
   if command -v wget &>/dev/null; then
     log "Trying wget..."
     if _download_iso_wget "$url" "$output" && [[ -s "$output" ]]; then
-      [[ -n $method_file ]] && echo "wget" >"$method_file"
+      [[ -n $method_file ]] && printf '%s\n' "wget" >"$method_file"
       return 0
     fi
     rm -f "$output" 2>/dev/null
@@ -263,7 +263,7 @@ download_proxmox_iso() {
   # Get checksum from cache (populated by prefetch_proxmox_iso_info)
   local expected_checksum=""
   if [[ -n $_CHECKSUM_CACHE ]]; then
-    expected_checksum=$(echo "$_CHECKSUM_CACHE" | grep "$ISO_FILENAME" | awk '{print $1}')
+    expected_checksum=$(printf '%s\n' "$_CHECKSUM_CACHE" | grep "$ISO_FILENAME" | awk '{print $1}')
   fi
   log "Expected checksum: ${expected_checksum:-not available}"
 
@@ -289,7 +289,7 @@ download_proxmox_iso() {
 
   local iso_size
   iso_size=$(stat -c%s pve.iso 2>/dev/null) || iso_size=0
-  log "ISO file size: $(echo "$iso_size" | awk '{printf "%.1fG", $1/1024/1024/1024}')"
+  log "ISO file size: $(printf '%s\n' "$iso_size" | awk '{printf "%.1fG", $1/1024/1024/1024}')"
 
   # Verify checksum (if not already verified by aria2c)
   if [[ -n $expected_checksum ]]; then
@@ -303,7 +303,7 @@ download_proxmox_iso() {
     else
       log "Verifying ISO checksum"
       local actual_checksum
-      (actual_checksum=$(sha256sum pve.iso | awk '{print $1}') && echo "$actual_checksum" >/tmp/checksum_result) &
+      (actual_checksum=$(sha256sum pve.iso | awk '{print $1}') && printf '%s\n' "$actual_checksum" >/tmp/checksum_result) &
       local checksum_pid=$!
       if type show_progress &>/dev/null 2>&1; then
         show_progress $checksum_pid "Verifying checksum" "Checksum verified"
@@ -463,7 +463,7 @@ EOF
 
   # Add SSH keys if available
   if [[ -n $ssh_keys_toml ]]; then
-    echo "    $ssh_keys_toml" >>./answer.toml
+    printf '%s\n' "    $ssh_keys_toml" >>./answer.toml
   fi
 
   # Generate [network] section

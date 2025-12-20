@@ -35,12 +35,12 @@ _edit_zfs_mode() {
   fi
 
   local item_count
-  item_count=$(echo -e "$options" | wc -l)
+  item_count=$(printf '%s\n' "$options" | wc -l)
   _show_input_footer "filter" "$((item_count + 1))"
 
   local selected
   selected=$(
-    echo -e "$options" | _wiz_choose \
+    printf '%s\n' "$options" | _wiz_choose \
       --header="ZFS mode (${pool_count} disks in pool):"
   )
 
@@ -73,7 +73,7 @@ _edit_zfs_arc() {
 
   local selected
   selected=$(
-    echo "$WIZ_ZFS_ARC_MODES" | _wiz_choose \
+    printf '%s\n' "$WIZ_ZFS_ARC_MODES" | _wiz_choose \
       --header="ZFS ARC memory strategy:"
   )
 

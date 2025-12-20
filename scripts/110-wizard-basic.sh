@@ -157,7 +157,7 @@ _edit_password() {
 
     local choice
     choice=$(
-      echo -e "Manual entry\nGenerate password" | _wiz_choose \
+      printf '%s\n' "Manual entry\nGenerate password" | _wiz_choose \
         --header="Password:"
     )
 
@@ -175,9 +175,9 @@ _edit_password() {
         _wiz_hide_cursor
         _wiz_warn "Please save this password - it will be required for login"
         _wiz_blank_line
-        echo -e "${CLR_CYAN}Generated password:${CLR_RESET} ${CLR_ORANGE}${NEW_ROOT_PASSWORD}${CLR_RESET}"
+        printf '%s\n' "${CLR_CYAN}Generated password:${CLR_RESET} ${CLR_ORANGE}${NEW_ROOT_PASSWORD}${CLR_RESET}"
         _wiz_blank_line
-        echo -e "${CLR_GRAY}Press any key to continue...${CLR_RESET}"
+        printf '%s\n' "${CLR_GRAY}Press any key to continue...${CLR_RESET}"
         read -n 1 -s -r
         break
         ;;

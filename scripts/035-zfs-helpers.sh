@@ -101,15 +101,15 @@ map_disks_to_virtio() {
         [[ $i -lt $((${#vdevs[@]} - 1)) ]] && result+=", "
       done
       result+="]"
-      echo "$result"
+      printf '%s\n' "$result"
       ;;
     bash_array)
       # Bash array format: (/dev/vda /dev/vdb) - for use in scripts
-      echo "(${vdevs[*]})"
+      printf '%s\n' "(${vdevs[*]})"
       ;;
     space_separated)
       # Space-separated list: /dev/vda /dev/vdb - for use in commands
-      echo "${vdevs[*]}"
+      printf '%s\n' "${vdevs[*]}"
       ;;
     *)
       log "ERROR: Unknown format: $format"
@@ -178,7 +178,7 @@ build_zpool_command() {
       ;;
   esac
 
-  echo "$cmd"
+  printf '%s\n' "$cmd"
 }
 
 # Maps ZFS_RAID to answer.toml format (kebab-case).
@@ -202,7 +202,7 @@ map_raid_to_toml() {
     raid10) echo "raid10" ;;
     *)
       log "WARNING: Unknown RAID type '$raid', defaulting to raid0"
-      echo "raid0"
+      printf '%s\n' "raid0"
       ;;
   esac
 }

@@ -56,13 +56,13 @@ validate_installation() {
   validation_script=$(cat "./templates/validation.sh")
 
   log "Validation script generated"
-  echo "$validation_script" >>"$LOG_FILE"
+  printf '%s\n' "$validation_script" >>"$LOG_FILE"
 
   # Execute validation and capture output
   add_log "${CLR_ORANGE}├─${CLR_RESET} Validating installation..."
   local validation_output
-  validation_output=$(echo "$validation_script" | remote_exec 'bash -s' 2>&1) || true
-  echo "$validation_output" >>"$LOG_FILE"
+  validation_output=$(printf '%s\n' "$validation_script" | remote_exec 'bash -s' 2>&1) || true
+  printf '%s\n' "$validation_output" >>"$LOG_FILE"
 
   # Parse and display results in live logs
   local errors=0 warnings=0

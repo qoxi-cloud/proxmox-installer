@@ -20,9 +20,9 @@ _edit_ssh_key() {
       _wiz_hide_cursor
       _wiz_warn "Detected SSH key from Rescue System:"
       _wiz_blank_line
-      echo -e "${CLR_GRAY}Type:${CLR_RESET}    ${SSH_KEY_TYPE}"
-      echo -e "${CLR_GRAY}Key:${CLR_RESET}     ${SSH_KEY_SHORT}"
-      [[ -n $SSH_KEY_COMMENT ]] && echo -e "${CLR_GRAY}Comment:${CLR_RESET} ${SSH_KEY_COMMENT}"
+      printf '%s\n' "${CLR_GRAY}Type:${CLR_RESET}    ${SSH_KEY_TYPE}"
+      printf '%s\n' "${CLR_GRAY}Key:${CLR_RESET}     ${SSH_KEY_SHORT}"
+      [[ -n $SSH_KEY_COMMENT ]] && printf '%s\n' "${CLR_GRAY}Comment:${CLR_RESET} ${SSH_KEY_COMMENT}"
       _wiz_blank_line
 
       # 1 header + 2 options
@@ -30,7 +30,7 @@ _edit_ssh_key() {
 
       local choice
       choice=$(
-        echo -e "Use detected key\nEnter different key" | _wiz_choose \
+        printf '%s\n' "Use detected key\nEnter different key" | _wiz_choose \
           --header="SSH Key:"
       )
 

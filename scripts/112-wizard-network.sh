@@ -17,7 +17,7 @@ _edit_interface() {
 
   local selected
   selected=$(
-    echo "$available_interfaces" | _wiz_choose \
+    printf '%s\n' "$available_interfaces" | _wiz_choose \
       --header="Network Interface:"
   )
 
@@ -40,7 +40,7 @@ _edit_bridge_mode() {
 
   local selected
   selected=$(
-    echo "$WIZ_BRIDGE_MODES" | _wiz_choose \
+    printf '%s\n' "$WIZ_BRIDGE_MODES" | _wiz_choose \
       --header="Bridge mode:"
   )
 
@@ -70,7 +70,7 @@ _edit_private_subnet() {
 
   local selected
   selected=$(
-    echo "$WIZ_PRIVATE_SUBNETS" | _wiz_choose \
+    printf '%s\n' "$WIZ_PRIVATE_SUBNETS" | _wiz_choose \
       --header="Private subnet:"
   )
 
@@ -128,7 +128,7 @@ _edit_bridge_mtu() {
 
   local selected
   selected=$(
-    echo "$WIZ_BRIDGE_MTU" | _wiz_choose \
+    printf '%s\n' "$WIZ_BRIDGE_MTU" | _wiz_choose \
       --header="Bridge MTU:"
   )
 
@@ -154,7 +154,7 @@ _edit_ipv6() {
 
   local selected
   selected=$(
-    echo "$WIZ_IPV6_MODES" | _wiz_choose \
+    printf '%s\n' "$WIZ_IPV6_MODES" | _wiz_choose \
       --header="IPv6:"
   )
 
@@ -264,7 +264,7 @@ _edit_firewall() {
 
   local selected
   selected=$(
-    echo "$WIZ_FIREWALL_MODES" | _wiz_choose \
+    printf '%s\n' "$WIZ_FIREWALL_MODES" | _wiz_choose \
       --header="Firewall mode:"
   )
 

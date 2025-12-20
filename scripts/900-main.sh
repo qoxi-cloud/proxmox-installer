@@ -102,15 +102,15 @@ _completion_screen_input() {
 
     case "$key" in
       q | Q)
-        echo ""
+        printf '\n'
         print_info "Exiting without reboot."
-        echo ""
+        printf '\n'
         print_info "You can reboot manually when ready with: ${CLR_CYAN}reboot${CLR_RESET}"
         exit 0
         ;;
       "")
         # Enter pressed - reboot
-        echo ""
+        printf '\n'
         print_info "Rebooting the system..."
         if ! reboot; then
           log "ERROR: Failed to reboot - system may require manual restart"

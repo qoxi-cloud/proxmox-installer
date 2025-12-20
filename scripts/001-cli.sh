@@ -33,20 +33,20 @@ while [[ $# -gt 0 ]]; do
       show_help
       ;;
     -v | --version)
-      echo "Proxmox Installer v${VERSION}"
+      printf '%s\n' "Proxmox Installer v${VERSION}"
       exit 0
       ;;
     --qemu-ram)
       if [[ -z $2 || $2 =~ ^- ]]; then
-        echo -e "${CLR_RED}Error: --qemu-ram requires a value in MB${CLR_RESET}"
+        printf '%s\n' "${CLR_RED}Error: --qemu-ram requires a value in MB${CLR_RESET}"
         exit 1
       fi
       if ! [[ $2 =~ ^[0-9]+$ ]] || [[ $2 -lt 2048 ]]; then
-        echo -e "${CLR_RED}Error: --qemu-ram must be a number >= 2048 MB${CLR_RESET}"
+        printf '%s\n' "${CLR_RED}Error: --qemu-ram must be a number >= 2048 MB${CLR_RESET}"
         exit 1
       fi
       if [[ $2 -gt 131072 ]]; then
-        echo -e "${CLR_RED}Error: --qemu-ram must be <= 131072 MB (128 GB)${CLR_RESET}"
+        printf '%s\n' "${CLR_RED}Error: --qemu-ram must be <= 131072 MB (128 GB)${CLR_RESET}"
         exit 1
       fi
       QEMU_RAM_OVERRIDE="$2"
@@ -54,15 +54,15 @@ while [[ $# -gt 0 ]]; do
       ;;
     --qemu-cores)
       if [[ -z $2 || $2 =~ ^- ]]; then
-        echo -e "${CLR_RED}Error: --qemu-cores requires a value${CLR_RESET}"
+        printf '%s\n' "${CLR_RED}Error: --qemu-cores requires a value${CLR_RESET}"
         exit 1
       fi
       if ! [[ $2 =~ ^[0-9]+$ ]] || [[ $2 -lt 1 ]]; then
-        echo -e "${CLR_RED}Error: --qemu-cores must be a positive number${CLR_RESET}"
+        printf '%s\n' "${CLR_RED}Error: --qemu-cores must be a positive number${CLR_RESET}"
         exit 1
       fi
       if [[ $2 -gt 256 ]]; then
-        echo -e "${CLR_RED}Error: --qemu-cores must be <= 256${CLR_RESET}"
+        printf '%s\n' "${CLR_RED}Error: --qemu-cores must be <= 256${CLR_RESET}"
         exit 1
       fi
       QEMU_CORES_OVERRIDE="$2"
@@ -70,19 +70,19 @@ while [[ $# -gt 0 ]]; do
       ;;
     --iso-version)
       if [[ -z $2 || $2 =~ ^- ]]; then
-        echo -e "${CLR_RED}Error: --iso-version requires a filename${CLR_RESET}"
+        printf '%s\n' "${CLR_RED}Error: --iso-version requires a filename${CLR_RESET}"
         exit 1
       fi
       if ! [[ $2 =~ ^proxmox-ve_[0-9]+\.[0-9]+-[0-9]+\.iso$ ]]; then
-        echo -e "${CLR_RED}Error: --iso-version must be in format: proxmox-ve_X.Y-Z.iso${CLR_RESET}"
+        printf '%s\n' "${CLR_RED}Error: --iso-version must be in format: proxmox-ve_X.Y-Z.iso${CLR_RESET}"
         exit 1
       fi
       PROXMOX_ISO_VERSION="$2"
       shift 2
       ;;
     *)
-      echo "Unknown option: $1"
-      echo "Use --help for usage information"
+      printf '%s\n' "Unknown option: $1"
+      printf '%s\n' "Use --help for usage information"
       exit 1
       ;;
   esac

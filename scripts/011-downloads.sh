@@ -20,7 +20,7 @@ download_file() {
       if [ -s "$output_file" ]; then
         # Check file integrity - verify it's not corrupted/empty
         local file_type
-        file_type=$(file "$output_file" 2>/dev/null || echo "")
+        file_type=$(file "$output_file" 2>/dev/null || printf '\n')
 
         # For files detected as "empty" or suspicious "data", verify size
         if echo "$file_type" | grep -q "empty"; then

@@ -18,8 +18,8 @@ _download_templates_parallel() {
     local local_path="${entry%%:*}"
     local remote_name="${entry#*:}"
     local url="${GITHUB_BASE_URL}/templates/${remote_name}.tmpl"
-    echo "$url"
-    echo "  out=$local_path"
+    printf '%s\n' "$url"
+    printf '%s\n' "  out=$local_path"
   done >"$input_file"
 
   log "Downloading ${#templates[@]} templates in parallel"

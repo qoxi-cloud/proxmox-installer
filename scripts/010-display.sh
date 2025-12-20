@@ -9,9 +9,9 @@
 #   $2 - Optional value (highlighted in cyan)
 print_success() {
   if [[ $# -eq 2 ]]; then
-    echo "${CLR_CYAN}✓${CLR_RESET} $1 ${CLR_CYAN}$2${CLR_RESET}"
+    printf '%s\n' "${CLR_CYAN}✓${CLR_RESET} $1 ${CLR_CYAN}$2${CLR_RESET}"
   else
-    echo "${CLR_CYAN}✓${CLR_RESET} $1"
+    printf '%s\n' "${CLR_CYAN}✓${CLR_RESET} $1"
   fi
 }
 
@@ -19,7 +19,7 @@ print_success() {
 # Parameters:
 #   $1 - Error message to display
 print_error() {
-  echo "${CLR_RED}✗${CLR_RESET} $1"
+  printf '%s\n' "${CLR_RED}✗${CLR_RESET} $1"
 }
 
 # Prints warning message with yellow warning icon.
@@ -33,12 +33,12 @@ print_warning() {
 
   # Check if second argument is a value (not "true" for nested)
   if [[ $# -eq 2 && $second != "true" ]]; then
-    echo "${CLR_YELLOW}⚠️${CLR_RESET} $message ${CLR_CYAN}$second${CLR_RESET}"
+    printf '%s\n' "${CLR_YELLOW}⚠️${CLR_RESET} $message ${CLR_CYAN}$second${CLR_RESET}"
   else
     if [[ $second == "true" ]]; then
       indent="  "
     fi
-    echo "${indent}${CLR_YELLOW}⚠️${CLR_RESET} $message"
+    printf '%s\n' "${indent}${CLR_YELLOW}⚠️${CLR_RESET} $message"
   fi
 }
 
@@ -46,14 +46,14 @@ print_warning() {
 # Parameters:
 #   $1 - Informational message to display
 print_info() {
-  echo "${CLR_CYAN}ℹ${CLR_RESET} $1"
+  printf '%s\n' "${CLR_CYAN}ℹ${CLR_RESET} $1"
 }
 
 # Prints section header in cyan.
 # Parameters:
 #   $1 - Section header text
 print_section() {
-  echo "${CLR_CYAN}$1${CLR_RESET}"
+  printf '%s\n' "${CLR_CYAN}$1${CLR_RESET}"
 }
 
 # =============================================================================

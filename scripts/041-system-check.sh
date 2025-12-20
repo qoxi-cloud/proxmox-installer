@@ -40,7 +40,7 @@ collect_system_info() {
   if [[ $need_charm_repo == true ]]; then
     mkdir -p /etc/apt/keyrings 2>/dev/null
     curl -fsSL https://repo.charm.sh/apt/gpg.key 2>/dev/null | gpg --dearmor -o /etc/apt/keyrings/charm.gpg >/dev/null 2>&1
-    echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" >/etc/apt/sources.list.d/charm.list 2>/dev/null
+    printf '%s\n' "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" >/etc/apt/sources.list.d/charm.list 2>/dev/null
   fi
 
   if [[ -n $packages_to_install ]]; then
@@ -168,11 +168,11 @@ collect_system_info() {
     udev_info=$(udevadm info "/sys/class/net/${CURRENT_INTERFACE}" 2>/dev/null)
 
     # Try ID_NET_NAME_PATH first (most reliable for PCIe devices)
-    PREDICTABLE_NAME=$(echo "$udev_info" | grep "ID_NET_NAME_PATH=" | cut -d'=' -f2)
+    PREDICTABLE_NAME=$(printf '%s\n' "$udev_info" | grep "ID_NET_NAME_PATH=" | cut -d'=' -f2)
 
     # Fallback to ID_NET_NAME_ONBOARD (for onboard NICs)
     if [[ -z $PREDICTABLE_NAME ]]; then
-      PREDICTABLE_NAME=$(echo "$udev_info" | grep "ID_NET_NAME_ONBOARD=" | cut -d'=' -f2)
+      PREDICTABLE_NAME=$(printf '%s\n' "$udev_info" | grep "ID_NET_NAME_ONBOARD=" | cut -d'=' -f2)
     fi
 
     # Fallback to altname from ip link
@@ -201,7 +201,7 @@ collect_system_info() {
   fi
 
   # Count available interfaces
-  INTERFACE_COUNT=$(echo "$AVAILABLE_INTERFACES" | wc -l)
+  INTERFACE_COUNT=$(printf '%s\n' "$AVAILABLE_INTERFACES" | wc -l)
 
   # Set INTERFACE_NAME to default if not already set
   if [[ -z $INTERFACE_NAME ]]; then
@@ -514,15 +514,15 @@ Status,Item,Value
   table_data="${table_data%$'\n'}"
 
   # Display table using gum table
-  echo "$table_data" | gum table \
+  printf '%s\n' "$table_data" | gum table \
     --print \
     --border "none" \
     --cell.foreground "$HEX_GRAY" \
     --header.foreground "$HEX_ORANGE"
 
-  echo ""
+  printf '\n'
   print_error "System requirements not met. Please fix the issues above."
-  echo ""
+  printf '\n'
   log "ERROR: Pre-flight checks failed"
   exit 1
 }

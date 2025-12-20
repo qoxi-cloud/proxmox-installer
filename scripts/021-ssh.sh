@@ -30,7 +30,7 @@ _ssh_session_init() {
     _SSH_SESSION_PASSFILE=$(mktemp)
   fi
 
-  echo "$NEW_ROOT_PASSWORD" >"$_SSH_SESSION_PASSFILE"
+  printf '%s\n' "$NEW_ROOT_PASSWORD" >"$_SSH_SESSION_PASSFILE"
   chmod 600 "$_SSH_SESSION_PASSFILE"
 
   # Register cleanup on exit - but ONLY in main shell, not in subshells
@@ -81,7 +81,7 @@ _ssh_session_cleanup() {
 # Returns: Path to passfile via stdout
 _ssh_get_passfile() {
   _ssh_session_init
-  echo "$_SSH_SESSION_PASSFILE"
+  printf '%s\n' "$_SSH_SESSION_PASSFILE"
 }
 
 # =============================================================================
@@ -231,7 +231,7 @@ _remote_exec_with_progress() {
 
   log "_remote_exec_with_progress: $message"
   log "--- Script start ---"
-  echo "$script" >>"$LOG_FILE"
+  printf '%s\n' "$script" >>"$LOG_FILE"
   log "--- Script end ---"
 
   local passfile
@@ -241,7 +241,7 @@ _remote_exec_with_progress() {
   output_file=$(mktemp)
 
   # shellcheck disable=SC2086
-  echo "$script" | sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'bash -s' >"$output_file" 2>&1 &
+  printf '%s\n' "$script" | sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'bash -s' >"$output_file" 2>&1 &
   local pid=$!
   show_progress $pid "$message" "$done_message"
   local exit_code=$?
@@ -329,9 +329,9 @@ parse_ssh_key() {
 
   [[ -z $key ]] && return 1
 
-  SSH_KEY_TYPE=$(echo "$key" | awk '{print $1}')
-  SSH_KEY_DATA=$(echo "$key" | awk '{print $2}')
-  SSH_KEY_COMMENT=$(echo "$key" | awk '{$1=""; $2=""; print}' | sed 's/^ *//')
+  SSH_KEY_TYPE=$(printf '%s\n' "$key" | awk '{print $1}')
+  SSH_KEY_DATA=$(printf '%s\n' "$key" | awk '{print $2}')
+  SSH_KEY_COMMENT=$(printf '%s\n' "$key" | awk '{$1=""; $2=""; print}' | sed 's/^ *//')
 
   if [[ ${#SSH_KEY_DATA} -gt 35 ]]; then
     SSH_KEY_SHORT="${SSH_KEY_DATA:0:20}...${SSH_KEY_DATA: -10}"

@@ -29,7 +29,7 @@ _edit_boot_disk() {
 
   local selected
   selected=$(
-    echo -e "$options" | _wiz_choose \
+    printf '%s\n' "$options" | _wiz_choose \
       --header="Boot disk:"
   )
 
@@ -123,7 +123,7 @@ _edit_pool_disks() {
 
     local selected
     local gum_exit_code=0
-    selected=$(echo -e "$options" | _wiz_choose "${gum_args[@]}") || gum_exit_code=$?
+    selected=$(printf '%s\n' "$options" | _wiz_choose "${gum_args[@]}") || gum_exit_code=$?
 
     # ESC/cancel (any non-zero exit) - keep existing selection
     if [[ $gum_exit_code -ne 0 ]]; then

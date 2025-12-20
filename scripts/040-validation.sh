@@ -48,11 +48,11 @@ is_ascii_printable() {
 get_password_error() {
   local password="$1"
   if [[ -z $password ]]; then
-    echo "Password cannot be empty!"
+    printf '%s\n' "Password cannot be empty!"
   elif [[ ${#password} -lt 8 ]]; then
-    echo "Password must be at least 8 characters long."
+    printf '%s\n' "Password must be at least 8 characters long."
   elif ! is_ascii_printable "$password"; then
-    echo "Password contains invalid characters (Cyrillic or non-ASCII). Only Latin letters, digits, and special characters are allowed."
+    printf '%s\n' "Password contains invalid characters (Cyrillic or non-ASCII). Only Latin letters, digits, and special characters are allowed."
   fi
 }
 

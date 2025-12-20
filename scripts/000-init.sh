@@ -272,13 +272,13 @@ cleanup_and_error_handler() {
 
   # Show error message if installation failed
   if [[ $INSTALL_COMPLETED != "true" && $exit_code -ne 0 ]]; then
-    echo -e "${CLR_RED}*** INSTALLATION FAILED ***${CLR_RESET}"
-    echo ""
-    echo -e "${CLR_YELLOW}An error occurred and the installation was aborted.${CLR_RESET}"
-    echo ""
-    echo -e "${CLR_YELLOW}Please check the log file for details:${CLR_RESET}"
-    echo -e "${CLR_YELLOW}  ${LOG_FILE}${CLR_RESET}"
-    echo ""
+    printf '%s\n' "${CLR_RED}*** INSTALLATION FAILED ***${CLR_RESET}"
+    printf '\n'
+    printf '%s\n' "${CLR_YELLOW}An error occurred and the installation was aborted.${CLR_RESET}"
+    printf '\n'
+    printf '%s\n' "${CLR_YELLOW}Please check the log file for details:${CLR_RESET}"
+    printf '%s\n' "${CLR_YELLOW}  ${LOG_FILE}${CLR_RESET}"
+    printf '\n'
   fi
 }
 

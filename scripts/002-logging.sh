@@ -8,7 +8,7 @@
 #   $* - Message to log
 # Side effects: Appends to LOG_FILE
 log() {
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >>"$LOG_FILE"
+  printf '%s\n' "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >>"$LOG_FILE"
 }
 
 # =============================================================================

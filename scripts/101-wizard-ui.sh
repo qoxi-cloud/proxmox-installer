@@ -31,11 +31,11 @@ _nav_repeat() {
 _nav_color() {
   local idx="$1" current="$2"
   if [[ $idx -eq $current ]]; then
-    echo "$CLR_ORANGE"
+    printf '%s\n' "$CLR_ORANGE"
   elif [[ $idx -lt $current ]]; then
-    echo "$CLR_CYAN"
+    printf '%s\n' "$CLR_CYAN"
   else
-    echo "$CLR_GRAY"
+    printf '%s\n' "$CLR_GRAY"
   fi
 }
 
@@ -43,11 +43,11 @@ _nav_color() {
 _nav_dot() {
   local idx="$1" current="$2"
   if [[ $idx -eq $current ]]; then
-    echo "◉"
+    printf '%s\n' "◉"
   elif [[ $idx -lt $current ]]; then
-    echo "●"
+    printf '%s\n' "●"
   else
-    echo "○"
+    printf '%s\n' "○"
   fi
 }
 
@@ -166,7 +166,7 @@ _wiz_hide_cursor() { printf '\033[?25l'; }
 _wiz_show_cursor() { printf '\033[?25h'; }
 
 # Blank line helper
-_wiz_blank_line() { echo ""; }
+_wiz_blank_line() { printf '\n'; }
 
 # Text styling helpers
 _wiz_error() { gum style --foreground "$HEX_RED" "$@"; }
@@ -235,7 +235,7 @@ _wiz_input_screen() {
   for line in "$@"; do
     _wiz_dim "$line"
   done
-  [[ $# -gt 0 ]] && echo ""
+  [[ $# -gt 0 ]] && printf '\n'
   _show_input_footer
 }
 
@@ -247,9 +247,9 @@ _wiz_fmt() {
   local value="$1"
   local placeholder="${2:-→ set value}"
   if [[ -n $value ]]; then
-    echo "$value"
+    printf '%s\n' "$value"
   else
-    echo "${CLR_GRAY}${placeholder}${CLR_RESET}"
+    printf '%s\n' "${CLR_GRAY}${placeholder}${CLR_RESET}"
   fi
 }
 

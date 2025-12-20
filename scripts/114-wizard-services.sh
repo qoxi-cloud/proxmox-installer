@@ -21,7 +21,7 @@ _edit_tailscale() {
 
   local selected
   selected=$(
-    echo -e "Enabled\nDisabled" | _wiz_choose \
+    printf '%s\n' "Enabled\nDisabled" | _wiz_choose \
       --header="Tailscale:"
   )
 
@@ -102,7 +102,7 @@ _edit_ssl() {
 
   local selected
   selected=$(
-    echo "$WIZ_SSL_TYPES" | _wiz_choose \
+    printf '%s\n' "$WIZ_SSL_TYPES" | _wiz_choose \
       --header="SSL Certificate:"
   )
 
@@ -155,7 +155,7 @@ _edit_ssl() {
 
     (
       validate_dns_resolution "$FQDN" "$MAIN_IPV4"
-      echo $? >"$dns_result_file"
+      printf '%s\n' "$?" >"$dns_result_file"
     ) >/dev/null 2>&1 &
 
     local dns_pid=$!
@@ -232,7 +232,7 @@ _edit_shell() {
 
   local selected
   selected=$(
-    echo "$WIZ_SHELL_OPTIONS" | _wiz_choose \
+    printf '%s\n' "$WIZ_SHELL_OPTIONS" | _wiz_choose \
       --header="Shell:"
   )
 
@@ -259,27 +259,27 @@ _edit_power_profile() {
   local descriptions=()
 
   # Always show Performance if available
-  if [[ -z $avail_governors ]] || echo "$avail_governors" | grep -qw "performance"; then
+  if [[ -z $avail_governors ]] || printf '%s\n' "$avail_governors" | grep -qw "performance"; then
     options+=("Performance")
     descriptions+=("  {{cyan:Performance}}:  Max frequency (highest power)")
   fi
 
   # Show governor-specific options
-  if echo "$avail_governors" | grep -qw "ondemand"; then
+  if printf '%s\n' "$avail_governors" | grep -qw "ondemand"; then
     options+=("Balanced")
     descriptions+=("  {{cyan:Balanced}}:     Scale based on load")
-  elif echo "$avail_governors" | grep -qw "powersave"; then
+  elif printf '%s\n' "$avail_governors" | grep -qw "powersave"; then
     # intel_pstate powersave is actually dynamic scaling
     options+=("Balanced")
     descriptions+=("  {{cyan:Balanced}}:     Dynamic scaling (power efficient)")
   fi
 
-  if echo "$avail_governors" | grep -qw "schedutil"; then
+  if printf '%s\n' "$avail_governors" | grep -qw "schedutil"; then
     options+=("Adaptive")
     descriptions+=("  {{cyan:Adaptive}}:     Kernel-managed scaling")
   fi
 
-  if echo "$avail_governors" | grep -qw "conservative"; then
+  if printf '%s\n' "$avail_governors" | grep -qw "conservative"; then
     options+=("Conservative")
     descriptions+=("  {{cyan:Conservative}}: Gradual frequency changes")
   fi
@@ -307,7 +307,7 @@ _edit_power_profile() {
 
   local selected
   selected=$(
-    echo "$options_str" | _wiz_choose \
+    printf '%s\n' "$options_str" | _wiz_choose \
       --header="Power profile:"
   )
 
@@ -317,7 +317,7 @@ _edit_power_profile() {
       "Performance") CPU_GOVERNOR="performance" ;;
       "Balanced")
         # Use ondemand if available, otherwise powersave
-        if echo "$avail_governors" | grep -qw "ondemand"; then
+        if printf '%s\n' "$avail_governors" | grep -qw "ondemand"; then
           CPU_GOVERNOR="ondemand"
         else
           CPU_GOVERNOR="powersave"
@@ -515,7 +515,7 @@ _edit_api_token() {
 
   local selected
   selected=$(
-    echo -e "Enabled\nDisabled" | _wiz_choose \
+    printf '%s\n' "Enabled\nDisabled" | _wiz_choose \
       --header="API Token (privileged, no expiration):"
   )
 

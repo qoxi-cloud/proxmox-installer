@@ -39,7 +39,7 @@ _generate_port_rules() {
       ;;
   esac
 
-  echo "$rules"
+  printf '%s\n' "$rules"
 }
 
 # Generate bridge input rules based on BRIDGE_MODE
@@ -73,7 +73,7 @@ _generate_bridge_input_rules() {
       ;;
   esac
 
-  echo "$rules"
+  printf '%s\n' "$rules"
 }
 
 # Generate bridge forward rules based on BRIDGE_MODE
@@ -106,16 +106,16 @@ _generate_bridge_forward_rules() {
       ;;
   esac
 
-  echo "$rules"
+  printf '%s\n' "$rules"
 }
 
 # Generate Tailscale rules if enabled
 _generate_tailscale_rules() {
   if [[ $INSTALL_TAILSCALE == "yes" ]]; then
-    echo '# Allow Tailscale VPN interface
+    printf '%s\n' '# Allow Tailscale VPN interface
         iifname "tailscale0" accept'
   else
-    echo "# Tailscale not installed"
+    printf '%s\n' "# Tailscale not installed"
   fi
 }
 
@@ -138,7 +138,7 @@ _generate_nat_rules() {
       ;;
   esac
 
-  echo "$rules"
+  printf '%s\n' "$rules"
 }
 
 # Configuration function for nftables
@@ -169,29 +169,29 @@ _config_nftables() {
   nftables_conf="${nftables_conf//\{\{BRIDGE_MODE\}\}/$BRIDGE_MODE}"
 
   # Replace port rules
-  nftables_conf=$(echo "$nftables_conf" | sed "/# === FIREWALL_RULES_START ===/,/# === FIREWALL_RULES_END ===/c\\
+  nftables_conf=$(printf '%s\n' "$nftables_conf" | sed "/# === FIREWALL_RULES_START ===/,/# === FIREWALL_RULES_END ===/c\\
         # === FIREWALL_RULES_START ===\\
 $port_rules\\
         # === FIREWALL_RULES_END ===")
 
   # Replace bridge input rules
-  nftables_conf=$(echo "$nftables_conf" | sed "/# === BRIDGE_INPUT_RULES ===/c\\
+  nftables_conf=$(printf '%s\n' "$nftables_conf" | sed "/# === BRIDGE_INPUT_RULES ===/c\\
 $bridge_input_rules")
 
   # Replace Tailscale rules
-  nftables_conf=$(echo "$nftables_conf" | sed "/# === TAILSCALE_RULES ===/c\\
+  nftables_conf=$(printf '%s\n' "$nftables_conf" | sed "/# === TAILSCALE_RULES ===/c\\
 $tailscale_rules")
 
   # Replace bridge forward rules
-  nftables_conf=$(echo "$nftables_conf" | sed "/# === BRIDGE_FORWARD_RULES ===/c\\
+  nftables_conf=$(printf '%s\n' "$nftables_conf" | sed "/# === BRIDGE_FORWARD_RULES ===/c\\
 $bridge_forward_rules")
 
   # Replace NAT rules
-  nftables_conf=$(echo "$nftables_conf" | sed "/# === NAT_RULES ===/c\\
+  nftables_conf=$(printf '%s\n' "$nftables_conf" | sed "/# === NAT_RULES ===/c\\
 $nat_rules")
 
   # Write to temp file
-  echo "$nftables_conf" >"./templates/nftables.conf.generated"
+  printf '%s\n' "$nftables_conf" >"./templates/nftables.conf.generated"
 
   # Log the generated config for debugging
   log "Generated nftables config:"

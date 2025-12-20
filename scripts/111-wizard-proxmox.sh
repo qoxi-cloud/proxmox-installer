@@ -29,7 +29,7 @@ _edit_iso_version() {
 
   local selected
   selected=$(
-    echo "$iso_list" | _wiz_choose \
+    printf '%s\n' "$iso_list" | _wiz_choose \
       --header="Proxmox Version:"
   )
 
@@ -52,7 +52,7 @@ _edit_repository() {
 
   local selected
   selected=$(
-    echo "$WIZ_REPO_TYPES" | _wiz_choose \
+    printf '%s\n' "$WIZ_REPO_TYPES" | _wiz_choose \
       --header="Repository:"
   )
 
