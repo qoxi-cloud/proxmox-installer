@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.397-pr.21"
+readonly VERSION="2.0.398-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -3673,10 +3673,16 @@ fi
 log "Expected checksum: ${expected_checksum:-not available}"
 log "Downloading ISO: $ISO_FILENAME"
 DOWNLOAD_METHOD=""
-_download_iso_with_fallback "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum"&
+local method_file="/tmp/download_method.txt"
+rm -f "$method_file"
+(_download_iso_with_fallback "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum"
+echo "$DOWNLOAD_METHOD" >"$method_file") \
+&
 show_progress $! "Downloading $ISO_FILENAME" "$ISO_FILENAME downloaded"
 wait $!
 local exit_code=$?
+DOWNLOAD_METHOD=$(cat "$method_file" 2>/dev/null)
+rm -f "$method_file"
 if [[ $exit_code -ne 0 ]]||[[ ! -s "pve.iso" ]];then
 log "ERROR: All download methods failed for Proxmox ISO"
 rm -f pve.iso
