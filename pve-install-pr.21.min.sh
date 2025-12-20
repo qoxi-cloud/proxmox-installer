@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.408-pr.21"
+readonly VERSION="2.0.409-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1826,9 +1826,27 @@ local message="$1"
 add_subtask_log "$message"
 }
 log_subtasks(){
+local max_width=55
+local current_line=""
+local first=true
 for item in "$@";do
-add_subtask_log "$item"
+local addition
+if [[ $first == true ]];then
+addition="$item"
+first=false
+else
+addition=", $item"
+fi
+if [[ $((${#current_line}+${#addition})) -gt $max_width && -n $current_line ]];then
+add_log "$CLR_ORANGE│$CLR_RESET   $CLR_GRAY$current_line,$CLR_RESET"
+current_line="$item"
+else
+current_line+="$addition"
+fi
 done
+if [[ -n $current_line ]];then
+add_log "$CLR_ORANGE│$CLR_RESET   $CLR_GRAY$current_line$CLR_RESET"
+fi
 }
 _wizard_main(){
 local selection=0
@@ -4256,6 +4274,8 @@ wait "$pid"||exit 1
 done) > \
 /dev/null 2>&1&
 show_progress $! "Copying configuration files" "Configuration files copied"
+remote_exec "sysctl --system" >/dev/null 2>&1&
+show_progress $! "Applying sysctl settings" "Sysctl settings applied"
 (remote_exec "[ -f /etc/apt/sources.list ] && mv /etc/apt/sources.list /etc/apt/sources.list.bak"||exit 1
 remote_exec "echo '$PVE_HOSTNAME' > /etc/hostname"||exit 1
 remote_exec "systemctl disable --now rpcbind rpcbind.socket 2>/dev/null"||true) > \
@@ -5046,14 +5066,27 @@ local validation_script
 validation_script=$(cat "./templates/validation.sh")
 log "Validation script generated"
 echo "$validation_script" >>"$LOG_FILE"
-(echo "$validation_script"|remote_exec 'bash -s' 2>&1|tee -a "$LOG_FILE"||exit 1) > \
-/dev/null 2>&1&
-show_progress $! "Validating installation" "Installation validated"
-local exit_code=$?
-if [[ $exit_code -ne 0 ]];then
-log "ERROR: Installation validation failed"
-print_error "Installation validation failed - check $LOG_FILE for details"
-exit 1
+add_log "$CLR_ORANGE├─$CLR_RESET Validating installation..."
+local validation_output
+validation_output=$(echo "$validation_script"|remote_exec 'bash -s' 2>&1)||true
+echo "$validation_output" >>"$LOG_FILE"
+local errors=0 warnings=0
+while IFS= read -r line;do
+case "$line" in
+FAIL:*)add_log "$CLR_ORANGE│$CLR_RESET   $CLR_RED$line$CLR_RESET"
+((errors++))
+;;
+WARN:*)add_log "$CLR_ORANGE│$CLR_RESET   $CLR_YELLOW$line$CLR_RESET"
+((warnings++))
+esac
+done <<<"$validation_output"
+if ((errors>0));then
+add_log "$CLR_ORANGE├─$CLR_RESET Validation: $CLR_RED$errors error(s)$CLR_RESET, $CLR_YELLOW$warnings warning(s)$CLR_RESET $CLR_RED✗$CLR_RESET"
+log "ERROR: Installation validation failed with $errors error(s)"
+elif ((warnings>0));then
+add_log "$CLR_ORANGE├─$CLR_RESET Validation passed with $CLR_YELLOW$warnings warning(s)$CLR_RESET $CLR_CYAN✓$CLR_RESET"
+else
+add_log "$CLR_ORANGE├─$CLR_RESET Validation passed $CLR_CYAN✓$CLR_RESET"
 fi
 }
 finalize_vm(){
