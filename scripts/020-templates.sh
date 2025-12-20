@@ -27,14 +27,10 @@ apply_template_vars() {
       local var="${pair%%=*}"
       local value="${pair#*=}"
 
-      # Warn about empty values that will leave placeholders
-      if [[ -z $value ]]; then
-        log "WARNING: Template variable $var is empty for $file"
-        # Check if this placeholder exists in the file
-        if grep -qF "{{${var}}}" "$file" 2>/dev/null; then
-          log "WARNING: Placeholder {{${var}}} will remain in $file"
-          has_empty_critical=true
-        fi
+      # Warn about empty values only if placeholder exists in the file
+      if [[ -z $value ]] && grep -qF "{{${var}}}" "$file" 2>/dev/null; then
+        log "WARNING: Template variable $var is empty, placeholder {{${var}}} will remain in $file"
+        has_empty_critical=true
       fi
 
       # Escape special characters in value for sed replacement
