@@ -34,7 +34,6 @@ save_cursor_position() {
 # Restore cursor to saved position
 restore_cursor_position() {
   printf '\033[u'
-  printf '\033[J'
 }
 
 # Add log entry
@@ -49,16 +48,26 @@ add_log() {
 render_logs() {
   restore_cursor_position
 
-  # Print fixed header each time
+  # Print fixed header each time (with clear to EOL)
   print_section " Installation Progress"
+  printf '\033[K'
   _wiz_blank_line
+  printf '\033[K'
 
   local start_line=0
+  local lines_printed=0
   if ((LOG_COUNT > LOG_AREA_HEIGHT)); then
     start_line=$((LOG_COUNT - LOG_AREA_HEIGHT))
   fi
   for ((i = start_line; i < LOG_COUNT; i++)); do
-    echo "${LOG_LINES[$i]}"
+    printf '%s\033[K\n' "${LOG_LINES[$i]}"
+    ((lines_printed++))
+  done
+
+  # Clear any remaining lines below (in case log count decreased)
+  local remaining=$((LOG_AREA_HEIGHT - lines_printed))
+  for ((i = 0; i < remaining; i++)); do
+    printf '\033[K\n'
   done
 }
 
