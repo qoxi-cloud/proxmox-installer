@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.385-pr.21"
+readonly VERSION="2.0.386-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -5165,7 +5165,7 @@ finalize_vm
 }
 _print_field(){
 local label="$1" value="$2" note="${3:-}"
-printf "$CLR_CYAN  %-9s$CLR_GOLD %s$CLR_RESET" "$label:" "$value"
+printf "$CLR_CYAN  %-9s$CLR_RESET %s" "$label:" "$value"
 [[ -n $note ]]&&printf " $CLR_GRAY%s$CLR_RESET" "$note"
 printf "\n"
 }
@@ -5223,7 +5223,7 @@ if gum confirm "Reboot the system now?" \
 --default=true \
 --prompt.foreground "$HEX_ORANGE" \
 --selected.background "$HEX_ORANGE" \
---unselected.foreground "$HEX_GOLD";then
+--unselected.foreground "$HEX_GRAY";then
 print_info "Rebooting the system..."
 if ! reboot;then
 log "ERROR: Failed to reboot - system may require manual restart"
