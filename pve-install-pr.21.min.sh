@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.391-pr.21"
+readonly VERSION="2.0.392-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -533,12 +533,9 @@ if [[ $# -gt 0 ]];then
 for pair in "$@";do
 local var="${pair%%=*}"
 local value="${pair#*=}"
-if [[ -z $value ]];then
-log "WARNING: Template variable $var is empty for $file"
-if grep -qF "{{$var}}" "$file" 2>/dev/null;then
-log "WARNING: Placeholder {{$var}} will remain in $file"
+if [[ -z $value ]]&&grep -qF "{{$var}}" "$file" 2>/dev/null;then
+log "WARNING: Template variable $var is empty, placeholder {{$var}} will remain in $file"
 has_empty_critical=true
-fi
 fi
 value="${value//\\/\\\\}"
 value="${value//&/\\&}"
