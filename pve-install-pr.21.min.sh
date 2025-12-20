@@ -17,7 +17,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.352-pr.21"
+readonly VERSION="2.0.353-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -176,7 +176,7 @@ INSTALL_FIREWALL=""
 FIREWALL_MODE=""
 show_help(){
 cat <<EOF
-Proxmox VE Automated Installer for Hetzner v$VERSION
+Qoxi Automated Installer v$VERSION
 
 Usage: $0 [OPTIONS]
 
@@ -282,6 +282,11 @@ BANNER_HEIGHT=9
 _BANNER_PAD="        "
 show_banner(){
 local p="$_BANNER_PAD"
+local tagline="${CLR_CYAN}Qoxi ${CLR_GRAY}Automated Installer v$VERSION$CLR_RESET"
+local text="Qoxi Automated Installer v$VERSION"
+local pad=$(((51-${#text})/2))
+local spaces
+printf -v spaces '%*s' "$pad" ''
 printf '%s\n' \
 "$p$CLR_GRAY _____                                             $CLR_RESET" \
 "$p$CLR_GRAY|  __ \\                                            $CLR_RESET" \
@@ -290,7 +295,7 @@ printf '%s\n' \
 "$p$CLR_GRAY| |     | |   | (_) |$CLR_ORANGE >  <$CLR_GRAY  | | | | | || (_) |$CLR_ORANGE >  <$CLR_RESET" \
 "$p$CLR_GRAY|_|     |_|    \\___/ $CLR_ORANGE/_/\\_\\$CLR_GRAY |_| |_| |_| \\___/ $CLR_ORANGE/_/\\_\\$CLR_RESET" \
 "" \
-"$p$CLR_HETZNER            Hetzner ${CLR_GRAY}Automated Installer$CLR_RESET"
+"$p$spaces$tagline"
 }
 _show_banner_frame(){
 local h="${1:--1}"
@@ -340,7 +345,11 @@ local line6="$p$M"
 [[ $h -eq 5 ]]&&line6+=" $A\\___/$M"||line6+=' \___/'
 [[ $h -eq 6 ]]&&line6+=" $A/_/\\_\\$M"||line6+=' /_/\_\'
 line6+="$R"
-local line_hetzner="$p$CLR_HETZNER            Hetzner ${M}Automated Installer$R"
+local text="Qoxi Automated Installer v$VERSION"
+local pad=$(((51-${#text})/2))
+local spaces
+printf -v spaces '%*s' "$pad" ''
+local line_tagline="$p$spaces${CLR_CYAN}Qoxi ${M}Automated Installer v$VERSION$R"
 local frame
 frame=$(printf '\033[H\033[J%s\n%s\n%s\n%s\n%s\n%s\n\n%s\n' \
 "$line1" \
@@ -349,7 +358,7 @@ frame=$(printf '\033[H\033[J%s\n%s\n%s\n%s\n%s\n%s\n\n%s\n' \
 "$line4" \
 "$line5" \
 "$line6" \
-"$line_hetzner")
+"$line_tagline")
 printf '%s' "$frame"
 }
 BANNER_ANIMATION_PID=""
@@ -5114,7 +5123,7 @@ exit 0
 fi
 }
 log "=========================================="
-log "Proxmox VE Automated Installer v$VERSION"
+log "Qoxi Automated Installer v$VERSION"
 log "=========================================="
 log "QEMU_RAM_OVERRIDE=$QEMU_RAM_OVERRIDE"
 log "QEMU_CORES_OVERRIDE=$QEMU_CORES_OVERRIDE"
