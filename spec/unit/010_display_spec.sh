@@ -12,6 +12,9 @@ CLR_CYAN=$'\033[38;2;0;177;255m'
 CLR_YELLOW=$'\033[1;33m'
 CLR_RESET=$'\033[m'
 
+# Stub for add_log (defined in 042-live-logs.sh)
+add_log() { echo "$1"; }
+
 Describe "010-display.sh"
 Include "$SCRIPTS_DIR/010-display.sh"
 
