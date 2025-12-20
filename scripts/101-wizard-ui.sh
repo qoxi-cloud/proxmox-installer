@@ -201,6 +201,7 @@ _wiz_choose() {
     --header.foreground "$HEX_CYAN" \
     --cursor "${CLR_ORANGE}›${CLR_RESET} " \
     --cursor.foreground "$HEX_NONE" \
+    --item.foreground "$HEX_GOLD" \
     --selected.foreground "$HEX_GOLD" \
     --no-show-help \
     "$@"
@@ -210,6 +211,7 @@ _wiz_input() {
   gum input \
     --prompt.foreground "$HEX_CYAN" \
     --cursor.foreground "$HEX_ORANGE" \
+    --text.foreground "$HEX_GOLD" \
     --no-show-help \
     "$@"
 }

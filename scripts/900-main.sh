@@ -91,9 +91,9 @@ reboot_to_main_os() {
     --affirmative "Yes" \
     --negative "No" \
     --default=true \
-    --prompt.foreground "#ff8700" \
-    --selected.background "#ff8700" \
-    --unselected.foreground "#585858"; then
+    --prompt.foreground "$HEX_ORANGE" \
+    --selected.background "$HEX_ORANGE" \
+    --unselected.foreground "$HEX_GOLD"; then
     print_info "Rebooting the system..."
     if ! reboot; then
       log "ERROR: Failed to reboot - system may require manual restart"
