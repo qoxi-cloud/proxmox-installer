@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.400-pr.21"
+readonly VERSION="2.0.401-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -4617,6 +4617,7 @@ return 1
 }
 }
 _config_auditd(){
+remote_exec 'mkdir -p /etc/audit/rules.d'
 remote_copy "templates/auditd-rules" "/etc/audit/rules.d/proxmox.rules"||{
 log "ERROR: Failed to deploy auditd rules"
 return 1
@@ -4663,6 +4664,7 @@ return 1
 }
 }
 _config_needrestart(){
+remote_exec 'mkdir -p /etc/needrestart/conf.d'
 remote_copy "templates/needrestart.conf" "/etc/needrestart/conf.d/50-autorestart.conf"||{
 log "ERROR: Failed to deploy needrestart config"
 return 1
