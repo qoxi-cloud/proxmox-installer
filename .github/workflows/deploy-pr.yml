@@ -2,13 +2,13 @@ name: deploy-pr
 
 on:
   workflow_run:
-    workflows: ["build-pr"]
+    workflows: ["build"]
     types:
       - completed
   workflow_dispatch:
     inputs:
       run_id:
-        description: 'build-pr workflow run ID to deploy'
+        description: 'build workflow run ID to deploy'
         required: true
         type: string
 
