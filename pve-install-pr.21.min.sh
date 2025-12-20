@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.405-pr.21"
+readonly VERSION="2.0.406-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1763,7 +1763,7 @@ render_logs
 }
 add_subtask_log(){
 local message="$1"
-add_log "      $CLR_GRAY$message$CLR_RESET"
+add_log "$CLR_ORANGE│$CLR_RESET   $CLR_GRAY$message$CLR_RESET"
 }
 _render_install_header(){
 echo "                     $CLR_ORANGE●$CLR_RESET ${CLR_CYAN}Installing Proxmox$CLR_RESET $CLR_ORANGE●$CLR_RESET"
@@ -1793,21 +1793,21 @@ local done_message="${3:-$message}"
 local silent=false
 [[ ${3:-} == "--silent" || ${4:-} == "--silent" ]]&&silent=true
 [[ ${3:-} == "--silent" ]]&&done_message="$message"
-start_task "  $CLR_ORANGE›$CLR_RESET $CLR_GRAY$message$CLR_RESET"
+start_task "$CLR_ORANGE├─$CLR_RESET $message"
 local task_idx=$TASK_INDEX
 while kill -0 "$pid" 2>/dev/null;do
 sleep 0.3
 local dots_count=$((($(date +%s)%3)+1))
 local dots
 dots=$(printf '.%.0s' $(seq 1 $dots_count))
-LOG_LINES[task_idx]="  $CLR_ORANGE›$CLR_RESET $CLR_GRAY$message$CLR_ORANGE$dots$CLR_RESET"
+LOG_LINES[task_idx]="$CLR_ORANGE├─$CLR_RESET $message$CLR_ORANGE$dots$CLR_RESET"
 render_logs
 done
 wait "$pid" 2>/dev/null
 local exit_code=$?
 if [[ $exit_code -eq 0 ]];then
 if [[ $silent != true ]];then
-complete_task "$task_idx" "  $CLR_GRAY$done_message$CLR_RESET"
+complete_task "$task_idx" "$CLR_ORANGE├─$CLR_RESET $done_message"
 else
 unset 'LOG_LINES[task_idx]'
 LOG_LINES=("${LOG_LINES[@]}")
@@ -1815,7 +1815,7 @@ LOG_LINES=("${LOG_LINES[@]}")
 render_logs
 fi
 else
-LOG_LINES[task_idx]="  $CLR_GRAY$message$CLR_RESET $CLR_RED✗$CLR_RESET"
+LOG_LINES[task_idx]="$CLR_ORANGE├─$CLR_RESET $message $CLR_RED✗$CLR_RESET"
 render_logs
 fi
 return $exit_code
