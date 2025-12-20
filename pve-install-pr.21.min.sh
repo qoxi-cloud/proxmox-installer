@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.398-pr.21"
+readonly VERSION="2.0.399-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -3673,8 +3673,8 @@ fi
 log "Expected checksum: ${expected_checksum:-not available}"
 log "Downloading ISO: $ISO_FILENAME"
 DOWNLOAD_METHOD=""
-local method_file="/tmp/download_method.txt"
-rm -f "$method_file"
+local method_file
+method_file=$(mktemp)
 (_download_iso_with_fallback "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum"
 echo "$DOWNLOAD_METHOD" >"$method_file") \
 &
