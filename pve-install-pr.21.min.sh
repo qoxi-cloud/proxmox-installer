@@ -17,7 +17,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.354-pr.21"
+readonly VERSION="2.0.355-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1807,6 +1807,9 @@ start)return 0
 quit|esc)_wiz_start_edit
 _wiz_show_cursor
 if _wiz_confirm "Quit installation?" --default=false;then
+tput rmcup 2>/dev/null||true
+clear
+tput cnorm 2>/dev/null||true
 exit 0
 fi
 _wiz_hide_cursor
