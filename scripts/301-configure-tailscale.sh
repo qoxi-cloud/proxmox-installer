@@ -55,7 +55,7 @@ configure_tailscale() {
     TAILSCALE_HOSTNAME=$(cat "$tmp_hostname" 2>/dev/null || echo "")
 
     # Update log with IP info
-    LOG_LINES[TASK_INDEX]="${CLR_GRAY}├─${CLR_RESET} Tailscale authenticated. IP: ${TAILSCALE_IP} ${CLR_CYAN}✓${CLR_RESET}"
+    LOG_LINES[TASK_INDEX]="${CLR_ORANGE}├─${CLR_RESET} Tailscale authenticated. IP: ${TAILSCALE_IP} ${CLR_CYAN}✓${CLR_RESET}"
     render_logs
 
     # Configure Tailscale Serve for Proxmox Web UI
@@ -84,7 +84,7 @@ configure_tailscale() {
   else
     TAILSCALE_IP="not authenticated"
     TAILSCALE_HOSTNAME=""
-    add_log "${CLR_GRAY}├─${CLR_RESET} ${CLR_YELLOW}⚠️${CLR_RESET} Tailscale installed but not authenticated"
-    add_log "${CLR_GRAY}│${CLR_RESET}   ${CLR_GRAY}After reboot: tailscale up --ssh${CLR_RESET}"
+    add_log "${CLR_ORANGE}├─${CLR_RESET} ${CLR_YELLOW}⚠️${CLR_RESET} Tailscale installed but not authenticated"
+    add_log "${CLR_ORANGE}│${CLR_RESET}   ${CLR_GRAY}After reboot: tailscale up --ssh${CLR_RESET}"
   fi
 }

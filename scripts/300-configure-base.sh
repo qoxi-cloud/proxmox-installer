@@ -148,7 +148,7 @@ configure_shell() {
     ) >/dev/null 2>&1 &
     show_progress $! "Configuring ZSH" "ZSH with Powerlevel10k configured"
   else
-    add_log "${CLR_GRAY}├─${CLR_RESET} Default shell: Bash ${CLR_CYAN}✓${CLR_RESET}"
+    add_log "${CLR_ORANGE}├─${CLR_RESET} Default shell: Bash ${CLR_CYAN}✓${CLR_RESET}"
   fi
 }
 
