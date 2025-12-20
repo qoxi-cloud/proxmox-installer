@@ -17,7 +17,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.358-pr.21"
+readonly VERSION="2.0.359-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -2968,6 +2968,12 @@ fi
 }
 _edit_shell(){
 _wiz_start_edit
+_wiz_description \
+"Default shell for root user:" \
+"" \
+"  {{cyan:ZSH}}:  Modern shell with Powerlevel10k prompt" \
+"  {{cyan:Bash}}: Standard shell (minimal changes)" \
+""
 _show_input_footer "filter" 3
 local selected
 selected=$(echo "$WIZ_SHELL_OPTIONS"|_wiz_choose \
