@@ -17,7 +17,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.346-pr.21"
+readonly VERSION="2.0.347-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -4261,7 +4261,12 @@ echo "$hostname" >"$tmp_hostname"
 show_progress $! "Authenticating Tailscale"
 TAILSCALE_IP=$(cat "$tmp_ip" 2>/dev/null||echo "pending")
 TAILSCALE_HOSTNAME=$(cat "$tmp_hostname" 2>/dev/null||echo "")
+if [[ $LIVE_LOGS_ACTIVE == true ]];then
+LOG_LINES[TASK_INDEX]="$CLR_GRAY├─$CLR_RESET Tailscale authenticated. IP: $TAILSCALE_IP $CLR_CYAN✓$CLR_RESET"
+render_logs
+else
 printf "\033[1A\r%s✓ Tailscale authenticated. IP: %s%s                              \n" "$CLR_CYAN" "$TAILSCALE_IP" "$CLR_RESET"
+fi
 if [[ $TAILSCALE_WEBUI == "yes" ]];then
 remote_exec "tailscale serve --bg --https=443 https://127.0.0.1:8006" >/dev/null 2>&1&
 show_progress $! "Configuring Tailscale Serve" "Proxmox Web UI available via Tailscale Serve"
