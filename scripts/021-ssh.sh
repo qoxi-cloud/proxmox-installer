@@ -246,10 +246,13 @@ _remote_exec_with_progress() {
   show_progress $pid "$message" "$done_message"
   local exit_code=$?
 
-  # Check output for critical errors
-  if grep -qiE "(error|failed|cannot|unable|fatal)" "$output_file" 2>/dev/null; then
+  # Check output for critical errors (exclude package names like liberror-perl)
+  # Use word boundaries and exclude common false positives from apt output
+  if grep -iE '\b(error|failed|cannot|unable|fatal)\b' "$output_file" 2>/dev/null \
+    | grep -qivE '(lib.*error|error-perl|\.deb|Unpacking|Setting up|Selecting)'; then
     log "WARNING: Potential errors in remote command output:"
-    grep -iE "(error|failed|cannot|unable|fatal)" "$output_file" >>"$LOG_FILE" 2>/dev/null || true
+    grep -iE '\b(error|failed|cannot|unable|fatal)\b' "$output_file" 2>/dev/null \
+      | grep -ivE '(lib.*error|error-perl|\.deb|Unpacking|Setting up|Selecting)' >>"$LOG_FILE" || true
   fi
 
   cat "$output_file" >>"$LOG_FILE"
