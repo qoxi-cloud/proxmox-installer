@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.388-pr.21"
+readonly VERSION="2.0.389-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1781,7 +1781,6 @@ tput civis
 _wiz_clear
 show_banner
 save_cursor_position
-render_logs
 trap 'tput cnorm; tput rmcup' EXIT RETURN
 }
 finish_live_installation(){
