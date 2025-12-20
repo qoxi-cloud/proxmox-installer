@@ -17,6 +17,7 @@ readonly CLR_CYAN=$'\033[38;2;0;177;255m'
 readonly CLR_YELLOW=$'\033[1;33m'
 readonly CLR_ORANGE=$'\033[38;5;208m'
 readonly CLR_GRAY=$'\033[38;5;240m'
+readonly CLR_GOLD=$'\033[38;5;179m'
 readonly CLR_RESET=$'\033[m'
 
 # Hex colors for gum (terminal UI toolkit)

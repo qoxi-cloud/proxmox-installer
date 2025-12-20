@@ -18,7 +18,7 @@ _BANNER_PAD="        "
 # Usage: show_banner
 show_banner() {
   local p="$_BANNER_PAD"
-  local tagline="${CLR_CYAN}Qoxi ${CLR_GRAY}Automated Installer v${VERSION}${CLR_RESET}"
+  local tagline="${CLR_CYAN}Qoxi ${CLR_GRAY}Automated Installer v${CLR_GOLD}${VERSION}${CLR_RESET}"
   # Banner width = 51, center the tagline
   local text="Qoxi Automated Installer v${VERSION}"
   local pad=$(((51 - ${#text}) / 2))
@@ -105,7 +105,7 @@ _show_banner_frame() {
   local pad=$(((51 - ${#text}) / 2))
   local spaces
   printf -v spaces '%*s' "$pad" ''
-  local line_tagline="${p}${spaces}${CLR_CYAN}Qoxi ${M}Automated Installer v${VERSION}${R}"
+  local line_tagline="${p}${spaces}${CLR_CYAN}Qoxi ${M}Automated Installer v${CLR_GOLD}${VERSION}${R}"
 
   # Output all lines atomically to prevent interference
   # Build the entire frame first, then output it all at once
