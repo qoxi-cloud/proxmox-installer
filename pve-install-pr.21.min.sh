@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.393-pr.21"
+readonly VERSION="2.0.394-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1734,11 +1734,6 @@ render_logs
 }
 render_logs(){
 restore_cursor_position
-printf '\033[K'
-print_section " Installation Progress"
-printf '\033[K'
-_wiz_blank_line
-printf '\033[K'
 local start_line=0
 local lines_printed=0
 if ((LOG_COUNT>LOG_AREA_HEIGHT));then
@@ -1777,6 +1772,8 @@ tput smcup
 tput civis
 _wiz_clear
 show_banner
+print_section " Installation Progress"
+_wiz_blank_line
 save_cursor_position
 trap 'tput cnorm; tput rmcup' EXIT RETURN
 }
