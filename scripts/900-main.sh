@@ -10,7 +10,7 @@
 #   $3 - Optional note (shown in gray)
 _print_field() {
   local label="$1" value="$2" note="${3:-}"
-  printf "${CLR_CYAN}  %-9s${CLR_GOLD} %s${CLR_RESET}" "$label:" "$value"
+  printf "${CLR_CYAN}  %-9s${CLR_RESET} %s" "$label:" "$value"
   [[ -n $note ]] && printf " ${CLR_GRAY}%s${CLR_RESET}" "$note"
   printf "\n"
 }
@@ -93,7 +93,7 @@ reboot_to_main_os() {
     --default=true \
     --prompt.foreground "$HEX_ORANGE" \
     --selected.background "$HEX_ORANGE" \
-    --unselected.foreground "$HEX_GOLD"; then
+    --unselected.foreground "$HEX_GRAY"; then
     print_info "Rebooting the system..."
     if ! reboot; then
       log "ERROR: Failed to reboot - system may require manual restart"
