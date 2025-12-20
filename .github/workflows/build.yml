@@ -54,18 +54,9 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
 
-          # Header
-          cat > pve-install.sh << 'HEADER'
-          #!/usr/bin/env bash
-          # =============================================================================
-          # Proxmox VE Auto-Installer for Hetzner Dedicated Servers
-          # =============================================================================
-          HEADER
-
           # Concatenate all source files in order
+          echo "#!/usr/bin/env bash" > pve-install.sh
           for f in scripts/*.sh; do
-            echo "" >> pve-install.sh
-            echo "# --- $(basename "$f") ---" >> pve-install.sh
             # Remove shebang from all files
             sed '1{/^#!/d}' "$f" >> pve-install.sh
           done
@@ -171,18 +162,9 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
 
-          # Header
-          cat > pve-install.sh << 'HEADER'
-          #!/usr/bin/env bash
-          # =============================================================================
-          # Proxmox VE Auto-Installer for Hetzner Dedicated Servers
-          # =============================================================================
-          HEADER
-
           # Concatenate all source files in order
+          echo "#!/usr/bin/env bash" > pve-install.sh
           for f in scripts/*.sh; do
-            echo "" >> pve-install.sh
-            echo "# --- $(basename "$f") ---" >> pve-install.sh
             # Remove shebang from all files
             sed '1{/^#!/d}' "$f" >> pve-install.sh
           done
