@@ -17,7 +17,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.348-pr.21"
+readonly VERSION="2.0.349-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -123,6 +123,7 @@ sleep 2
 pkill -9 qemu-system-x86 2>/dev/null||true
 fi
 fi
+tput rmcup 2>/dev/null||true
 tput cnorm 2>/dev/null||true
 if [[ $INSTALL_COMPLETED != "true" && $exit_code -ne 0 ]];then
 echo -e "$CLR_RED*** INSTALLATION FAILED ***$CLR_RESET"
