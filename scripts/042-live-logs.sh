@@ -49,6 +49,7 @@ render_logs() {
   restore_cursor_position
 
   # Print fixed header each time (with clear to EOL)
+  printf '\033[K'
   print_section " Installation Progress"
   printf '\033[K'
   _wiz_blank_line
