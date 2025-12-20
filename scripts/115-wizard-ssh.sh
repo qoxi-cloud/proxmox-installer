@@ -20,9 +20,9 @@ _edit_ssh_key() {
       _wiz_hide_cursor
       _wiz_warn "Detected SSH key from Rescue System:"
       _wiz_blank_line
-      echo -e "${CLR_GRAY}Type:${CLR_RESET}    ${SSH_KEY_TYPE}"
-      echo -e "${CLR_GRAY}Key:${CLR_RESET}     ${SSH_KEY_SHORT}"
-      [[ -n $SSH_KEY_COMMENT ]] && echo -e "${CLR_GRAY}Comment:${CLR_RESET} ${SSH_KEY_COMMENT}"
+      echo -e "${CLR_GRAY}Type:${CLR_GOLD}    ${SSH_KEY_TYPE}${CLR_RESET}"
+      echo -e "${CLR_GRAY}Key:${CLR_GOLD}     ${SSH_KEY_SHORT}${CLR_RESET}"
+      [[ -n $SSH_KEY_COMMENT ]] && echo -e "${CLR_GRAY}Comment:${CLR_GOLD} ${SSH_KEY_COMMENT}${CLR_RESET}"
       _wiz_blank_line
 
       # 1 header + 2 options

@@ -10,7 +10,7 @@
 #   $3 - Optional note (shown in gray)
 _print_field() {
   local label="$1" value="$2" note="${3:-}"
-  printf "${CLR_CYAN}  %-9s${CLR_RESET} %s" "$label:" "$value"
+  printf "${CLR_CYAN}  %-9s${CLR_GOLD} %s${CLR_RESET}" "$label:" "$value"
   [[ -n $note ]] && printf " ${CLR_GRAY}%s${CLR_RESET}" "$note"
   printf "\n"
 }
