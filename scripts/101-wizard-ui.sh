@@ -211,7 +211,6 @@ _wiz_input() {
   gum input \
     --prompt.foreground "$HEX_CYAN" \
     --cursor.foreground "$HEX_ORANGE" \
-    --text.foreground "$HEX_GOLD" \
     --no-show-help \
     "$@"
 }
