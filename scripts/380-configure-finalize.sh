@@ -36,8 +36,7 @@ validate_installation() {
   log "Generating validation script from template..."
 
   # Generate validation script with current settings
-  local validation_script
-  validation_script=$(apply_template_vars "./templates/validation.sh" \
+  apply_template_vars "./templates/validation.sh" \
     "INSTALL_TAILSCALE=${INSTALL_TAILSCALE:-no}" \
     "INSTALL_FIREWALL=${INSTALL_FIREWALL:-no}" \
     "FIREWALL_MODE=${FIREWALL_MODE:-standard}" \
@@ -54,7 +53,9 @@ validate_installation() {
     "INSTALL_NVIM=${INSTALL_NVIM:-no}" \
     "INSTALL_RINGBUFFER=${INSTALL_RINGBUFFER:-no}" \
     "SHELL_TYPE=${SHELL_TYPE:-bash}" \
-    "SSL_TYPE=${SSL_TYPE:-self-signed}")
+    "SSL_TYPE=${SSL_TYPE:-self-signed}"
+  local validation_script
+  validation_script=$(cat "./templates/validation.sh")
 
   log "Validation script generated"
   echo "$validation_script" >>"$LOG_FILE"
