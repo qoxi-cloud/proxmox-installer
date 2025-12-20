@@ -8,6 +8,7 @@ readonly CLR_CYAN=$'\033[38;2;0;177;255m'
 readonly CLR_YELLOW=$'\033[1;33m'
 readonly CLR_ORANGE=$'\033[38;5;208m'
 readonly CLR_GRAY=$'\033[38;5;240m'
+readonly CLR_GOLD=$'\033[38;5;179m'
 readonly CLR_RESET=$'\033[m'
 readonly HEX_RED="#ff0000"
 readonly HEX_CYAN="#00b1ff"
@@ -16,7 +17,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.377-pr.21"
+readonly VERSION="2.0.378-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -301,7 +302,7 @@ BANNER_HEIGHT=9
 _BANNER_PAD="        "
 show_banner(){
 local p="$_BANNER_PAD"
-local tagline="${CLR_CYAN}Qoxi ${CLR_GRAY}Automated Installer v$VERSION$CLR_RESET"
+local tagline="${CLR_CYAN}Qoxi ${CLR_GRAY}Automated Installer v$CLR_GOLD$VERSION$CLR_RESET"
 local text="Qoxi Automated Installer v$VERSION"
 local pad=$(((51-${#text})/2))
 local spaces
@@ -368,7 +369,7 @@ local text="Qoxi Automated Installer v$VERSION"
 local pad=$(((51-${#text})/2))
 local spaces
 printf -v spaces '%*s' "$pad" ''
-local line_tagline="$p$spaces${CLR_CYAN}Qoxi ${M}Automated Installer v$VERSION$R"
+local line_tagline="$p$spaces${CLR_CYAN}Qoxi ${M}Automated Installer v$CLR_GOLD$VERSION$R"
 local frame
 frame=$(printf '\033[H\033[J%s\n%s\n%s\n%s\n%s\n%s\n\n%s\n' \
 "$line1" \
