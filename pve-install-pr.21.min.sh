@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.402-pr.21"
+readonly VERSION="2.0.403-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -5185,20 +5185,26 @@ case "${FIREWALL_MODE:-standard}" in
 stealth)if
 [[ $has_tailscale == "yes" ]]
 then
+_print_field "SSH" "ssh root@$TAILSCALE_IP" "(Tailscale only)"
 _print_field "Web UI" "https://$TAILSCALE_IP:8006" "(Tailscale only)"
 else
+_print_field "SSH" "${CLR_YELLOW}blocked$CLR_RESET" "(stealth mode, no Tailscale)"
 _print_field "Web UI" "${CLR_YELLOW}blocked$CLR_RESET" "(stealth mode, no Tailscale)"
 fi
 ;;
-strict)if
-[[ $has_tailscale == "yes" ]]
-then
+strict)_print_field "SSH" "ssh root@$MAIN_IPV4"
+if [[ $has_tailscale == "yes" ]];then
+_print_field "" "ssh root@$TAILSCALE_IP" "(Tailscale)"
 _print_field "Web UI" "https://$TAILSCALE_IP:8006" "(Tailscale only)"
 else
 _print_field "Web UI" "${CLR_YELLOW}blocked$CLR_RESET" "(strict mode blocks :8006)"
 fi
 ;;
-*)_print_field "Web UI" "https://$MAIN_IPV4:8006"
+*)_print_field "SSH" "ssh root@$MAIN_IPV4"
+if [[ $has_tailscale == "yes" ]];then
+_print_field "" "ssh root@$TAILSCALE_IP" "(Tailscale)"
+fi
+_print_field "Web UI" "https://$MAIN_IPV4:8006"
 if [[ $has_tailscale == "yes" ]];then
 _print_field "" "https://$TAILSCALE_IP:8006" "(Tailscale)"
 fi
