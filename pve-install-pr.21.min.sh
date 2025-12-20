@@ -14,9 +14,10 @@ readonly HEX_CYAN="#00b1ff"
 readonly HEX_YELLOW="#ffff00"
 readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
+readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.386-pr.21"
+readonly VERSION="2.0.387-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -2107,8 +2108,8 @@ gum choose \
 --header.foreground "$HEX_CYAN" \
 --cursor "$CLR_ORANGE›$CLR_RESET " \
 --cursor.foreground "$HEX_NONE" \
---item.foreground "$HEX_GOLD" \
---selected.foreground "$HEX_GOLD" \
+--item.foreground "$HEX_WHITE" \
+--selected.foreground "$HEX_WHITE" \
 --no-show-help \
 "$@"
 }
@@ -2378,9 +2379,9 @@ local value="$2"
 local field_name="$3"
 _WIZ_FIELD_MAP+=("$field_name")
 if [[ $field_idx -eq $selection ]];then
-output+="$CLR_ORANGE›$CLR_RESET $CLR_GRAY$label$CLR_GOLD$value$CLR_RESET\n"
+output+="$CLR_ORANGE›$CLR_RESET $CLR_GRAY$label$CLR_RESET$value\n"
 else
-output+="  $CLR_GRAY$label$CLR_GOLD$value$CLR_RESET\n"
+output+="  $CLR_GRAY$label$CLR_RESET$value\n"
 fi
 ((field_idx++))
 }
@@ -2567,8 +2568,7 @@ selected=$(echo "$WIZ_TIMEZONES"|gum filter \
 --prompt "Timezone: " \
 --prompt.foreground "$HEX_CYAN" \
 --indicator.foreground "$HEX_ORANGE" \
---match.foreground "$HEX_GOLD" \
---text.foreground "$HEX_GOLD")
+--match.foreground "$HEX_ORANGE")
 if [[ -n $selected ]];then
 TIMEZONE="$selected"
 local country_code="${TZ_TO_COUNTRY[$selected]:-}"
@@ -2590,8 +2590,7 @@ selected=$(echo "$WIZ_KEYBOARD_LAYOUTS"|gum filter \
 --prompt "Keyboard: " \
 --prompt.foreground "$HEX_CYAN" \
 --indicator.foreground "$HEX_ORANGE" \
---match.foreground "$HEX_GOLD" \
---text.foreground "$HEX_GOLD")
+--match.foreground "$HEX_ORANGE")
 if [[ -n $selected ]];then
 KEYBOARD="$selected"
 fi
@@ -2608,8 +2607,7 @@ selected=$(echo "$WIZ_COUNTRIES"|gum filter \
 --prompt "Country: " \
 --prompt.foreground "$HEX_CYAN" \
 --indicator.foreground "$HEX_ORANGE" \
---match.foreground "$HEX_GOLD" \
---text.foreground "$HEX_GOLD")
+--match.foreground "$HEX_ORANGE")
 if [[ -n $selected ]];then
 COUNTRY="$selected"
 _update_locale_from_country
@@ -3191,7 +3189,7 @@ local gum_args=(
 --cursor "$CLR_ORANGE›$CLR_RESET "
 --cursor.foreground "$HEX_NONE"
 --cursor-prefix "◦ "
---selected.foreground "$HEX_GOLD"
+--selected.foreground "$HEX_WHITE"
 --selected-prefix "$CLR_CYAN✓$CLR_RESET "
 --unselected-prefix "◦ "
 --no-show-help)
@@ -3234,7 +3232,7 @@ local gum_args=(
 --cursor "$CLR_ORANGE›$CLR_RESET "
 --cursor.foreground "$HEX_NONE"
 --cursor-prefix "◦ "
---selected.foreground "$HEX_GOLD"
+--selected.foreground "$HEX_WHITE"
 --selected-prefix "$CLR_CYAN✓$CLR_RESET "
 --unselected-prefix "◦ "
 --no-show-help)
@@ -3271,7 +3269,7 @@ local gum_args=(
 --cursor "$CLR_ORANGE›$CLR_RESET "
 --cursor.foreground "$HEX_NONE"
 --cursor-prefix "◦ "
---selected.foreground "$HEX_GOLD"
+--selected.foreground "$HEX_WHITE"
 --selected-prefix "$CLR_CYAN✓$CLR_RESET "
 --unselected-prefix "◦ "
 --no-show-help)
@@ -3331,9 +3329,9 @@ parse_ssh_key "$detected_key"
 _wiz_hide_cursor
 _wiz_warn "Detected SSH key from Rescue System:"
 _wiz_blank_line
-echo -e "${CLR_GRAY}Type:$CLR_GOLD    $SSH_KEY_TYPE$CLR_RESET"
-echo -e "${CLR_GRAY}Key:$CLR_GOLD     $SSH_KEY_SHORT$CLR_RESET"
-[[ -n $SSH_KEY_COMMENT ]]&&echo -e "${CLR_GRAY}Comment:$CLR_GOLD $SSH_KEY_COMMENT$CLR_RESET"
+echo -e "${CLR_GRAY}Type:$CLR_RESET    $SSH_KEY_TYPE"
+echo -e "${CLR_GRAY}Key:$CLR_RESET     $SSH_KEY_SHORT"
+[[ -n $SSH_KEY_COMMENT ]]&&echo -e "${CLR_GRAY}Comment:$CLR_RESET $SSH_KEY_COMMENT"
 _wiz_blank_line
 _show_input_footer "filter" 3
 local choice
@@ -3457,7 +3455,7 @@ local gum_args=(
 --cursor "$CLR_ORANGE›$CLR_RESET "
 --cursor.foreground "$HEX_NONE"
 --cursor-prefix "◦ "
---selected.foreground "$HEX_GOLD"
+--selected.foreground "$HEX_WHITE"
 --selected-prefix "$CLR_CYAN✓$CLR_RESET "
 --unselected-prefix "◦ "
 --no-show-help)
