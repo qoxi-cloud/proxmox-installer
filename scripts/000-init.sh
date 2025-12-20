@@ -283,103 +283,109 @@ cleanup_and_error_handler() {
 
 trap cleanup_and_error_handler EXIT
 
-# Start time for total duration tracking
+# =============================================================================
+# Installation state variables
+# =============================================================================
+# These variables track the installation process and timing.
+# Set during early initialization, used throughout the installation.
+
+# Start time for total duration tracking (epoch seconds)
+# Set: here on script load, used: metrics_finish() in 002-logging.sh
 INSTALL_START_TIME=$(date +%s)
 
-# QEMU resource overrides (empty = auto-detect)
-QEMU_RAM_OVERRIDE=""
-QEMU_CORES_OVERRIDE=""
+# =============================================================================
+# Runtime configuration variables
+# =============================================================================
+# These variables are populated by:
+#   1. CLI arguments (001-cli.sh) - parsed at startup
+#   2. System detection (041-system-check.sh) - hardware detection
+#   3. Wizard UI (100-wizard.sh) - user input
+#   4. answer.toml (200-packages.sh) - passed to Proxmox installer
+#
+# Lifecycle:
+#   CLI args → System detection → Wizard UI → answer.toml → Configuration
+#
+# Empty string = not set, will use default or prompt user
 
-# Proxmox ISO version (empty = show menu in interactive mode)
-PROXMOX_ISO_VERSION=""
+# --- QEMU Settings ---
+# Set: CLI args (-r, -c) or auto-detected in 201-qemu.sh
+QEMU_RAM_OVERRIDE=""   # Override RAM allocation (MB)
+QEMU_CORES_OVERRIDE="" # Override CPU core count
 
-# Proxmox repository type (no-subscription, enterprise, test)
-PVE_REPO_TYPE=""
-PVE_SUBSCRIPTION_KEY=""
+# --- Proxmox Settings ---
+# Set: CLI args (-v) or wizard (111-wizard-proxmox.sh)
+PROXMOX_ISO_VERSION=""  # ISO version (empty = show menu)
+PVE_REPO_TYPE=""        # no-subscription, enterprise, test
+PVE_SUBSCRIPTION_KEY="" # Enterprise subscription key
 
-# SSL certificate (self-signed, letsencrypt)
-SSL_TYPE=""
+# --- System Settings ---
+# Set: Wizard (110-wizard-basic.sh, 114-wizard-services.sh)
+SSL_TYPE=""   # self-signed, letsencrypt
+SHELL_TYPE="" # zsh, bash
 
-# Shell type selection (zsh, bash)
-SHELL_TYPE=""
+# --- Locale Settings ---
+# Set: CLI args or wizard (110-wizard-basic.sh)
+# Used: answer.toml generation, system configuration
+KEYBOARD="en-us"     # Keyboard layout (see WIZ_KEYBOARD_LAYOUTS)
+COUNTRY="us"         # ISO 3166-1 alpha-2 country code
+LOCALE="en_US.UTF-8" # System locale (derived from country)
+TIMEZONE="UTC"       # System timezone
 
-# Keyboard layout (default: en-us)
-KEYBOARD="en-us"
+# --- Performance Settings ---
+# Set: Wizard (114-wizard-services.sh)
+CPU_GOVERNOR="" # CPU frequency governor (performance, powersave, etc.)
+ZFS_ARC_MODE="" # ZFS ARC strategy: vm-focused, balanced, storage-focused
 
-# Country code (ISO 3166-1 alpha-2, default: us)
-COUNTRY="us"
+# --- Security Features ---
+# Set: Wizard (114-wizard-services.sh), default: "no"
+# Used: batch_install_packages(), parallel config groups
+INSTALL_AUDITD=""      # Kernel audit logging
+INSTALL_AIDE=""        # File integrity monitoring (daily checks)
+INSTALL_APPARMOR=""    # Mandatory access control
+INSTALL_CHKROOTKIT=""  # Rootkit detection (weekly scans)
+INSTALL_LYNIS=""       # Security auditing tool
+INSTALL_NEEDRESTART="" # Auto-restart services after updates
 
-# Locale (derived from country, default: en_US.UTF-8)
-LOCALE="en_US.UTF-8"
+# --- Monitoring Features ---
+# Set: Wizard (114-wizard-services.sh), default: "no" except VNSTAT
+INSTALL_NETDATA=""    # Real-time web dashboard (port 19999)
+INSTALL_VNSTAT=""     # Bandwidth monitoring (default: yes)
+INSTALL_PROMETHEUS="" # Node exporter for Prometheus (port 9100)
+INSTALL_RINGBUFFER="" # Network ring buffer tuning for high throughput
 
-# Timezone (default: UTC)
-TIMEZONE="UTC"
+# --- Optional Tools ---
+# Set: Wizard (114-wizard-services.sh), default: "no"
+INSTALL_YAZI="" # Terminal file manager
+INSTALL_NVIM="" # Neovim editor with config
 
-# Auditd installation setting (yes/no, default: no)
-INSTALL_AUDITD=""
+# --- System Maintenance ---
+# Set: Wizard (114-wizard-services.sh), default: "yes"
+INSTALL_UNATTENDED_UPGRADES="" # Automatic security updates
 
-# AIDE file integrity monitoring (yes/no, default: no)
-INSTALL_AIDE=""
+# --- Tailscale VPN ---
+# Set: Wizard (114-wizard-services.sh)
+INSTALL_TAILSCALE=""  # Enable Tailscale VPN
+TAILSCALE_AUTH_KEY="" # Pre-auth key for automatic login
+TAILSCALE_SSH=""      # Enable Tailscale SSH (yes/no)
+TAILSCALE_WEBUI=""    # Expose Proxmox UI via Tailscale (yes/no)
 
-# AppArmor installation setting (yes/no, default: no)
-INSTALL_APPARMOR=""
+# --- Network Settings ---
+# Set: Wizard (112-wizard-network.sh)
+BRIDGE_MTU="" # Bridge MTU: 9000 (jumbo) or 1500 (standard)
 
-# CPU governor setting
-CPU_GOVERNOR=""
+# --- API Token ---
+# Set: Wizard (114-wizard-services.sh)
+# Used: create_api_token() in 361-configure-api-token.sh
+INSTALL_API_TOKEN=""        # Create automation API token
+API_TOKEN_NAME="automation" # Token name (default: automation)
+API_TOKEN_VALUE=""          # Generated token value (set post-install)
+API_TOKEN_ID=""             # Full token ID (user@pam!tokenname)
 
-# ZFS ARC memory allocation strategy (vm-focused, balanced, storage-focused)
-ZFS_ARC_MODE=""
-
-# chkrootkit scheduled scanning (yes/no, default: no)
-INSTALL_CHKROOTKIT=""
-
-# Lynis security auditing (yes/no, default: no)
-INSTALL_LYNIS=""
-
-# needrestart automatic service restarts (yes/no, default: no)
-INSTALL_NEEDRESTART=""
-
-# Netdata real-time monitoring (yes/no, default: no)
-INSTALL_NETDATA=""
-
-# Network ring buffer tuning (yes/no, default: no)
-INSTALL_RINGBUFFER=""
-
-# vnstat bandwidth monitoring setting (yes/no, default: yes)
-INSTALL_VNSTAT=""
-
-# Prometheus node exporter installation setting (yes/no, default: no)
-INSTALL_PROMETHEUS=""
-
-# Yazi file manager installation setting (yes/no, default: no)
-INSTALL_YAZI=""
-
-# Neovim installation setting (yes/no, default: no)
-INSTALL_NVIM=""
-
-# Unattended upgrades setting (yes/no, default: yes)
-INSTALL_UNATTENDED_UPGRADES=""
-
-# Tailscale VPN settings
-INSTALL_TAILSCALE=""
-TAILSCALE_AUTH_KEY=""
-TAILSCALE_SSH=""
-TAILSCALE_WEBUI=""
-
-# Bridge MTU for private network (default: 9000 jumbo frames)
-BRIDGE_MTU=""
-
-# API Token settings
-INSTALL_API_TOKEN=""
-API_TOKEN_NAME="automation"
-API_TOKEN_VALUE=""
-API_TOKEN_ID=""
-
-# Firewall settings (nftables)
-# INSTALL_FIREWALL: yes/no - whether to enable firewall
-# FIREWALL_MODE: stealth/strict/standard
-#   - stealth: blocks ALL incoming (only tailscale/bridges allowed)
-#   - strict: allows only SSH
-#   - standard: allows SSH + Proxmox Web UI (8006)
-INSTALL_FIREWALL=""
-FIREWALL_MODE=""
+# --- Firewall (nftables) ---
+# Set: Wizard (114-wizard-services.sh)
+# Modes:
+#   stealth  - Blocks ALL incoming except Tailscale/bridges
+#   strict   - SSH only (port 22)
+#   standard - SSH + Proxmox Web UI (ports 22, 8006)
+INSTALL_FIREWALL="" # Enable nftables firewall (yes/no)
+FIREWALL_MODE=""    # stealth, strict, standard

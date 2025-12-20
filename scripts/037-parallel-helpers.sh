@@ -115,12 +115,35 @@ batch_install_packages() {
 # Runs multiple config functions in parallel with a single progress indicator.
 # All functions run silently; only one progress line shown for the group.
 # Skips disabled features (functions return 0 immediately).
+#
 # Parameters:
 #   $1 - Group name for progress display
 #   $2 - Done message
 #   $@ - Function names to run in parallel
-# Returns: 0 if all succeed, 1 if any fail (non-fatal)
+#
+# Returns: 0 always (failures are non-fatal and logged)
+#
 # Side effects: Runs provided functions, shows single progress line
+#
+# Example:
+#   # Define wrapper functions that check if feature is enabled
+#   _parallel_config_apparmor() {
+#     [[ ${INSTALL_APPARMOR:-} != "yes" ]] && return 0
+#     _config_apparmor
+#   }
+#   _parallel_config_fail2ban() {
+#     [[ ${INSTALL_FIREWALL:-} != "yes" ]] && return 0
+#     _config_fail2ban
+#   }
+#
+#   # Run all configs in parallel with single progress indicator
+#   run_parallel_group "Configuring security" "Security configured" \
+#     _parallel_config_apparmor \
+#     _parallel_config_fail2ban \
+#     _parallel_config_auditd
+#
+# Note: Functions must be defined before calling run_parallel_group.
+# Each function should return 0 on success or skip, non-zero on failure.
 run_parallel_group() {
   local group_name="$1"
   local done_msg="$2"

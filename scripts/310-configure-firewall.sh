@@ -128,24 +128,9 @@ _generate_nat_rules() {
   # NAT is only needed for internal/both modes (private networks)
   case "$mode" in
     internal | both)
-      # Extract network base from CIDR (e.g., 10.0.0.0/24 -> 10.0.0.0/24)
-      # Also handle common private ranges for flexibility
+      # Masquerade traffic from private subnet to allow internet access
       rules="# Masquerade traffic from private subnet to internet
         oifname != \"lo\" ip saddr ${subnet} masquerade"
-
-      # If subnet is part of larger private block, also cover it
-      local subnet_base="${subnet%%.*}"
-      case "$subnet_base" in
-        10)
-          # 10.x.x.x range - masquerade the specific subnet
-          ;;
-        172)
-          # 172.16-31.x.x range
-          ;;
-        192)
-          # 192.168.x.x range
-          ;;
-      esac
       ;;
     external)
       # External mode - no NAT needed (VMs have public IPs)
