@@ -13,8 +13,8 @@ get_terminal_dimensions() {
 # Fallback to 9 if not defined (6 ASCII art + 1 empty + 1 tagline + 1 spacing)
 LOGO_HEIGHT=${BANNER_HEIGHT:-9}
 
-# Fixed header height (title + empty line)
-HEADER_HEIGHT=2
+# Fixed header height (empty + title + empty)
+HEADER_HEIGHT=3
 
 # Calculate available space for logs
 calculate_log_area() {
@@ -88,7 +88,9 @@ add_subtask_log() {
 
 # Render header in wizard style (centered like completion screen)
 _render_install_header() {
-  printf '%s\n\n' "                     ${CLR_ORANGE}●${CLR_RESET} ${CLR_CYAN}Installing Proxmox${CLR_RESET} ${CLR_ORANGE}●${CLR_RESET}"
+  printf '\n'
+  printf '%s\n' "                     ${CLR_ORANGE}●${CLR_RESET} ${CLR_CYAN}Installing Proxmox${CLR_RESET} ${CLR_ORANGE}●${CLR_RESET}"
+  printf '\n'
 }
 
 # Start live installation display
