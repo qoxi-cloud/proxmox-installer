@@ -17,7 +17,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.359-pr.21"
+readonly VERSION="2.0.360-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -2503,6 +2503,11 @@ fi
 }
 _edit_iso_version(){
 _wiz_start_edit
+_wiz_description \
+"Proxmox VE version to install:" \
+"" \
+"  Latest version recommended for new installations." \
+""
 local iso_list
 iso_list=$(get_available_proxmox_isos 5)
 if [[ -z $iso_list ]];then
@@ -3300,6 +3305,12 @@ fi
 _edit_pool_disks(){
 while true;do
 _wiz_start_edit
+_wiz_description \
+"Select disks for ZFS storage pool:" \
+"" \
+"  These disks will store VMs, containers, and data." \
+"  RAID level is auto-selected based on disk count." \
+""
 local options=""
 local preselected=()
 for i in "${!DRIVES[@]}";do
