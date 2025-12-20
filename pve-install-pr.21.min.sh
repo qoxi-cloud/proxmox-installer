@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.380-pr.21"
+readonly VERSION="2.0.381-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -2377,9 +2377,9 @@ local value="$2"
 local field_name="$3"
 _WIZ_FIELD_MAP+=("$field_name")
 if [[ $field_idx -eq $selection ]];then
-output+="$CLR_ORANGE›$CLR_RESET $CLR_GRAY$label$CLR_RESET$value\n"
+output+="$CLR_ORANGE›$CLR_RESET $CLR_GRAY$label$CLR_GOLD$value$CLR_RESET\n"
 else
-output+="  $CLR_GRAY$label$CLR_RESET$value\n"
+output+="  $CLR_GRAY$label$CLR_GOLD$value$CLR_RESET\n"
 fi
 ((field_idx++))
 }
@@ -3327,9 +3327,9 @@ parse_ssh_key "$detected_key"
 _wiz_hide_cursor
 _wiz_warn "Detected SSH key from Rescue System:"
 _wiz_blank_line
-echo -e "${CLR_GRAY}Type:$CLR_RESET    $SSH_KEY_TYPE"
-echo -e "${CLR_GRAY}Key:$CLR_RESET     $SSH_KEY_SHORT"
-[[ -n $SSH_KEY_COMMENT ]]&&echo -e "${CLR_GRAY}Comment:$CLR_RESET $SSH_KEY_COMMENT"
+echo -e "${CLR_GRAY}Type:$CLR_GOLD    $SSH_KEY_TYPE$CLR_RESET"
+echo -e "${CLR_GRAY}Key:$CLR_GOLD     $SSH_KEY_SHORT$CLR_RESET"
+[[ -n $SSH_KEY_COMMENT ]]&&echo -e "${CLR_GRAY}Comment:$CLR_GOLD $SSH_KEY_COMMENT$CLR_RESET"
 _wiz_blank_line
 _show_input_footer "filter" 3
 local choice
@@ -5161,7 +5161,7 @@ finalize_vm
 }
 _print_field(){
 local label="$1" value="$2" note="${3:-}"
-printf "$CLR_CYAN  %-9s$CLR_RESET %s" "$label:" "$value"
+printf "$CLR_CYAN  %-9s$CLR_GOLD %s$CLR_RESET" "$label:" "$value"
 [[ -n $note ]]&&printf " $CLR_GRAY%s$CLR_RESET" "$note"
 printf "\n"
 }
