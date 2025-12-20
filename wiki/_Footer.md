@@ -6,7 +6,7 @@
 
 ---
 
-Found this useful? Give us a ⭐ on [GitHub](https://github.com/qoxi-cloud/proxmox-hetzner)!
+Found this useful? Give us a ⭐ on [GitHub](https://github.com/qoxi-cloud/proxmox-installer)!
 
 Made with ❤️ by [qoxi.cloud](https://qoxi.cloud)
 

@@ -112,7 +112,7 @@ If you want the same security level as auto-configured installations, you can en
 
 ```bash
 # Download and install the stealth firewall service
-curl -sSL https://github.com/qoxi-cloud/proxmox-hetzner/raw/refs/heads/main/templates/stealth-firewall.service \
+curl -sSL https://github.com/qoxi-cloud/proxmox-installer/raw/refs/heads/main/templates/stealth-firewall.service \
   -o /etc/systemd/system/stealth-firewall.service
 
 # Enable and start

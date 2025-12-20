@@ -21,5 +21,5 @@
 ---
 
 **Links**
-- [📋 GitHub Repo](https://github.com/qoxi-cloud/proxmox-hetzner)
-- [🐛 Report Issue](https://github.com/qoxi-cloud/proxmox-hetzner/issues)
+- [📋 GitHub Repo](https://github.com/qoxi-cloud/proxmox-installer)
+- [🐛 Report Issue](https://github.com/qoxi-cloud/proxmox-installer/issues)

@@ -13,8 +13,8 @@ Thank you for your interest in contributing! This guide will help you get starte
 ### Clone and Setup
 
 ```bash
-git clone https://github.com/qoxi-cloud/proxmox-hetzner.git
-cd proxmox-hetzner
+git clone https://github.com/qoxi-cloud/proxmox-installer.git
+cd proxmox-installer
 
 # Enable commit message validation (recommended)
 git config core.hooksPath .githooks
@@ -25,7 +25,7 @@ The git hooks will automatically validate your commit messages before each commi
 ### Project Structure
 
 ```
-proxmox-hetzner/
+proxmox-installer/
 ├── scripts/           # Source scripts (numbered for concatenation order)
 │   ├── 00-init.sh     # Initialization, colors, version, constants
 │   ├── 01-cli.sh      # CLI argument parsing
@@ -126,7 +126,7 @@ After the build completes, a bot will comment on your PR with:
 
 ### Quick Install (for testing)
 
-bash <(curl -sSL https://qoxi-cloud.github.io/proxmox-hetzner/pve-install-pr.42.sh)
+bash <(curl -sSL https://qoxi-cloud.github.io/proxmox-installer/pve-install-pr.42.sh)
 ```
 
 You can test your changes on a Hetzner server using this command.
@@ -256,7 +256,7 @@ PR builds get a `-pr.{number}` suffix.
 
 ## Getting Help
 
-- Open an [issue](https://github.com/qoxi-cloud/proxmox-hetzner/issues)
+- Open an [issue](https://github.com/qoxi-cloud/proxmox-installer/issues)
 - Check [CLAUDE.md](CLAUDE.md) for detailed architecture docs
 
 ## License

@@ -123,7 +123,7 @@ You can pre-configure settings via environment variables. Pre-set variables will
 | `PROXMOX_ISO_VERSION` | Specific ISO filename | Latest (interactive menu) |
 | `QEMU_RAM_OVERRIDE` | QEMU VM RAM in MB | Auto (all available RAM minus 2GB reserve, min 4096MB) |
 | `QEMU_CORES_OVERRIDE` | QEMU VM CPU cores | Auto (all available cores, min 2) |
-| `GITHUB_REPO` | GitHub repository for templates | `qoxi-cloud/proxmox-hetzner` |
+| `GITHUB_REPO` | GitHub repository for templates | `qoxi-cloud/proxmox-installer` |
 | `GITHUB_BRANCH` | GitHub branch for templates | `main` |
 
 ### Timeout and Retry Settings

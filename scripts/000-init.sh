@@ -37,7 +37,7 @@ readonly VERSION="2"
 # =============================================================================
 
 # GitHub repository for template downloads (can be overridden via environment)
-GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-hetzner}"
+GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
 GITHUB_BASE_URL="https://github.com/${GITHUB_REPO}/raw/refs/heads/${GITHUB_BRANCH}"
 

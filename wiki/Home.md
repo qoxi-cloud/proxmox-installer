@@ -19,7 +19,7 @@ This project provides an automated solution for installing Proxmox VE on Hetzner
 ## Quick Start
 
 ```bash
-bash <(curl -sSL https://qoxi-cloud.github.io/proxmox-hetzner/pve-install.sh)
+bash <(curl -sSL https://qoxi-cloud.github.io/proxmox-installer/pve-install.sh)
 ```
 
 ## Compatible Servers
@@ -32,4 +32,4 @@ bash <(curl -sSL https://qoxi-cloud.github.io/proxmox-hetzner/pve-install.sh)
 
 ## Support
 
-If you encounter issues, please [open an issue](https://github.com/qoxi-cloud/proxmox-hetzner/issues) on GitHub.
+If you encounter issues, please [open an issue](https://github.com/qoxi-cloud/proxmox-installer/issues) on GitHub.
