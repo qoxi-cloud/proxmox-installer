@@ -85,29 +85,11 @@ add_subtask_log() {
 
 # Start live installation display
 start_live_installation() {
-  if ! command -v gum &>/dev/null; then
-    log "WARNING: gum is not installed, live logs disabled"
-    return 1
-  fi
-
-  # Set flag that live logs are active
-  LIVE_LOGS_ACTIVE=true
-
-  # Save original show_progress function if it exists
-  # Using source with process substitution instead of eval for safety
-  if type show_progress &>/dev/null; then
-    # shellcheck disable=SC1090
-    source <(declare -f show_progress | sed '1s/show_progress/show_progress_original/')
-  fi
-
-  # Override show_progress with our live version
+  # Override show_progress with live version
   # shellcheck disable=SC2317,SC2329
   show_progress() {
     live_show_progress "$@"
   }
-
-  # Export the function so it's available in subshells
-  export -f show_progress 2>/dev/null || true
 
   calculate_log_area
   tput smcup # Enter alternate screen buffer
@@ -127,25 +109,11 @@ start_live_installation() {
 
 # Finish live installation display
 finish_live_installation() {
-  LIVE_LOGS_ACTIVE=false
-
-  # Restore original show_progress if it was saved
-  if type show_progress_original &>/dev/null 2>&1; then
-    # shellcheck disable=SC2317,SC2329
-    show_progress() {
-      show_progress_original "$@"
-    }
-  fi
-
   tput cnorm # Show cursor
   tput rmcup # Exit alternate screen buffer
 }
 
-# Flag to track if live logs are active
-LIVE_LOGS_ACTIVE=false
-
-# Override show_progress when live logs are active
-# This version updates the live log display instead of using gum spin
+# Live version of show_progress - updates the live log display
 live_show_progress() {
   local pid=$1
   local message="${2:-Processing}"

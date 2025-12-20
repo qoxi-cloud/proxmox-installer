@@ -169,12 +169,7 @@ show_gum_config_editor
 log_metric "config_wizard"
 
 # Start live installation display
-start_live_installation || {
-  log "WARNING: Failed to start live installation display, falling back to regular mode"
-  # Fallback to regular mode
-  clear
-  show_banner
-}
+start_live_installation
 
 log "Step: prepare_packages"
 prepare_packages

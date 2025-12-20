@@ -14,12 +14,7 @@ print_success() {
   else
     msg="${CLR_CYAN}✓${CLR_RESET} $1"
   fi
-
-  if [[ ${LIVE_LOGS_ACTIVE:-false} == true ]]; then
-    add_log "${CLR_GRAY}├─${CLR_RESET} $msg"
-  else
-    echo -e "$msg"
-  fi
+  add_log "${CLR_GRAY}├─${CLR_RESET} $msg"
 }
 
 # Prints error message with red cross icon.
@@ -27,12 +22,7 @@ print_success() {
 #   $1 - Error message to display
 print_error() {
   local msg="${CLR_RED}✗${CLR_RESET} $1"
-
-  if [[ ${LIVE_LOGS_ACTIVE:-false} == true ]]; then
-    add_log "${CLR_GRAY}├─${CLR_RESET} $msg"
-  else
-    echo -e "$msg"
-  fi
+  add_log "${CLR_GRAY}├─${CLR_RESET} $msg"
 }
 
 # Prints warning message with yellow warning icon.
@@ -56,12 +46,7 @@ print_warning() {
     fi
     msg="${indent}${CLR_YELLOW}⚠️${CLR_RESET} $message"
   fi
-
-  if [[ ${LIVE_LOGS_ACTIVE:-false} == true ]]; then
-    add_log "${CLR_GRAY}├─${CLR_RESET} $msg"
-  else
-    echo -e "$msg"
-  fi
+  add_log "${CLR_GRAY}├─${CLR_RESET} $msg"
 }
 
 # Prints informational message with cyan info symbol.
@@ -69,12 +54,7 @@ print_warning() {
 #   $1 - Informational message to display
 print_info() {
   local msg="${CLR_CYAN}ℹ${CLR_RESET} $1"
-
-  if [[ ${LIVE_LOGS_ACTIVE:-false} == true ]]; then
-    add_log "${CLR_GRAY}├─${CLR_RESET} $msg"
-  else
-    echo -e "$msg"
-  fi
+  add_log "${CLR_GRAY}├─${CLR_RESET} $msg"
 }
 
 # Prints section header in cyan bold.
