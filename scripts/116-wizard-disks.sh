@@ -110,7 +110,7 @@ _edit_pool_disks() {
       --cursor "${CLR_ORANGE}›${CLR_RESET} "
       --cursor.foreground "$HEX_NONE"
       --cursor-prefix "◦ "
-      --selected.foreground "$HEX_GOLD"
+      --selected.foreground "$HEX_WHITE"
       --selected-prefix "${CLR_CYAN}✓${CLR_RESET} "
       --unselected-prefix "◦ "
       --no-show-help

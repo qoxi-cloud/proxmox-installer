@@ -201,8 +201,8 @@ _wiz_choose() {
     --header.foreground "$HEX_CYAN" \
     --cursor "${CLR_ORANGE}›${CLR_RESET} " \
     --cursor.foreground "$HEX_NONE" \
-    --item.foreground "$HEX_GOLD" \
-    --selected.foreground "$HEX_GOLD" \
+    --item.foreground "$HEX_WHITE" \
+    --selected.foreground "$HEX_WHITE" \
     --no-show-help \
     "$@"
 }
@@ -571,9 +571,9 @@ _wiz_render_menu() {
     local field_name="$3"
     _WIZ_FIELD_MAP+=("$field_name")
     if [[ $field_idx -eq $selection ]]; then
-      output+="${CLR_ORANGE}›${CLR_RESET} ${CLR_GRAY}${label}${CLR_GOLD}${value}${CLR_RESET}\n"
+      output+="${CLR_ORANGE}›${CLR_RESET} ${CLR_GRAY}${label}${CLR_RESET}${value}\n"
     else
-      output+="  ${CLR_GRAY}${label}${CLR_GOLD}${value}${CLR_RESET}\n"
+      output+="  ${CLR_GRAY}${label}${CLR_RESET}${value}\n"
     fi
     ((field_idx++))
   }
