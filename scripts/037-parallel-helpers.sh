@@ -31,6 +31,12 @@ install_base_packages() {
     pveupgrade 2>/dev/null || true
     pveam update 2>/dev/null || true
   " "System packages installed"
+
+  # Show installed packages as subtasks
+  # shellcheck disable=SC2086
+  for pkg in $packages; do
+    add_subtask_log "$pkg"
+  done
 }
 
 # Collects packages needed by enabled features and installs them in one batch.
@@ -109,6 +115,12 @@ batch_install_packages() {
     log "WARNING: Batch package installation failed"
     return 1
   fi
+
+  # Show installed packages as subtasks
+  for pkg in "${packages[@]}"; do
+    add_subtask_log "$pkg"
+  done
+
   return 0
 }
 
