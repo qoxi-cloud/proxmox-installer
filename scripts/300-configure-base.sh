@@ -28,6 +28,10 @@ configure_base_system() {
   ) >/dev/null 2>&1 &
   show_progress $! "Copying configuration files" "Configuration files copied"
 
+  # Apply sysctl settings to running kernel
+  remote_exec "sysctl --system" >/dev/null 2>&1 &
+  show_progress $! "Applying sysctl settings" "Sysctl settings applied"
+
   # Basic system configuration
   (
     remote_exec "[ -f /etc/apt/sources.list ] && mv /etc/apt/sources.list /etc/apt/sources.list.bak" || exit 1

@@ -29,6 +29,7 @@ configure_ssh_hardening() {
 
 # Validates installation by checking packages, services, and configs.
 # Uses validation.sh.tmpl with variable substitution for enabled features.
+# Shows FAIL/WARN results in live logs for visibility.
 validate_installation() {
   log "Generating validation script from template..."
 
@@ -57,17 +58,35 @@ validate_installation() {
   log "Validation script generated"
   echo "$validation_script" >>"$LOG_FILE"
 
-  # Execute validation on remote
-  (
-    echo "$validation_script" | remote_exec 'bash -s' 2>&1 | tee -a "$LOG_FILE" || exit 1
-  ) >/dev/null 2>&1 &
-  show_progress $! "Validating installation" "Installation validated"
+  # Execute validation and capture output
+  add_log "${CLR_ORANGE}├─${CLR_RESET} Validating installation..."
+  local validation_output
+  validation_output=$(echo "$validation_script" | remote_exec 'bash -s' 2>&1) || true
+  echo "$validation_output" >>"$LOG_FILE"
 
-  local exit_code=$?
-  if [[ $exit_code -ne 0 ]]; then
-    log "ERROR: Installation validation failed"
-    print_error "Installation validation failed - check $LOG_FILE for details"
-    exit 1
+  # Parse and display results in live logs
+  local errors=0 warnings=0
+  while IFS= read -r line; do
+    case "$line" in
+      FAIL:*)
+        add_log "${CLR_ORANGE}│${CLR_RESET}   ${CLR_RED}${line}${CLR_RESET}"
+        ((errors++))
+        ;;
+      WARN:*)
+        add_log "${CLR_ORANGE}│${CLR_RESET}   ${CLR_YELLOW}${line}${CLR_RESET}"
+        ((warnings++))
+        ;;
+    esac
+  done <<<"$validation_output"
+
+  # Show summary
+  if ((errors > 0)); then
+    add_log "${CLR_ORANGE}├─${CLR_RESET} Validation: ${CLR_RED}${errors} error(s)${CLR_RESET}, ${CLR_YELLOW}${warnings} warning(s)${CLR_RESET} ${CLR_RED}✗${CLR_RESET}"
+    log "ERROR: Installation validation failed with $errors error(s)"
+  elif ((warnings > 0)); then
+    add_log "${CLR_ORANGE}├─${CLR_RESET} Validation passed with ${CLR_YELLOW}${warnings} warning(s)${CLR_RESET} ${CLR_CYAN}✓${CLR_RESET}"
+  else
+    add_log "${CLR_ORANGE}├─${CLR_RESET} Validation passed ${CLR_CYAN}✓${CLR_RESET}"
   fi
 }
 

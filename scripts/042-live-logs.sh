@@ -176,10 +176,34 @@ live_log_subtask() {
   add_subtask_log "$message"
 }
 
-# Log multiple items as subtasks
+# Log multiple items as comma-separated list wrapped across lines
 # Usage: log_subtasks "${array[@]}" or log_subtasks $string
+# Output: │   item1, item2, item3,
+#         │   item4, item5
 log_subtasks() {
+  local max_width=55
+  local current_line=""
+  local first=true
+
   for item in "$@"; do
-    add_subtask_log "$item"
+    local addition
+    if [[ $first == true ]]; then
+      addition="$item"
+      first=false
+    else
+      addition=", $item"
+    fi
+
+    if [[ $((${#current_line} + ${#addition})) -gt $max_width && -n $current_line ]]; then
+      add_log "${CLR_ORANGE}│${CLR_RESET}   ${CLR_GRAY}${current_line},${CLR_RESET}"
+      current_line="$item"
+    else
+      current_line+="$addition"
+    fi
   done
+
+  # Print remaining items
+  if [[ -n $current_line ]]; then
+    add_log "${CLR_ORANGE}│${CLR_RESET}   ${CLR_GRAY}${current_line}${CLR_RESET}"
+  fi
 }

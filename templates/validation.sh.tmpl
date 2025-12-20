@@ -195,8 +195,10 @@ if [[ -f /etc/ssh/sshd_config ]]; then
 
 	# Max auth tries should be limited
 	if grep -qE "^MaxAuthTries[[:space:]]+[0-9]+" /etc/ssh/sshd_config; then
-		tries=$(grep -E "^MaxAuthTries" /etc/ssh/sshd_config | awk '{print $2}')
-		[[ $tries -le 5 ]] && _ok "MaxAuthTries limited ($tries)" || _warn "MaxAuthTries high ($tries)"
+		tries=$(grep -E "^MaxAuthTries" /etc/ssh/sshd_config | awk '{print $2}' | tr -cd '0-9')
+		if [[ -n "$tries" && $tries =~ ^[0-9]+$ ]]; then
+			[[ $tries -le 5 ]] && _ok "MaxAuthTries limited ($tries)" || _warn "MaxAuthTries high ($tries)"
+		fi
 	fi
 
 	# Verify SSH key exists
