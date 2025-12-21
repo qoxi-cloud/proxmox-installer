@@ -5,8 +5,8 @@
 
 # Get terminal dimensions
 get_terminal_dimensions() {
-  TERM_HEIGHT=$(tput lines)
-  TERM_WIDTH=$(tput cols)
+  _LOG_TERM_HEIGHT=$(tput lines)
+  _LOG_TERM_WIDTH=$(tput cols)
 }
 
 # Logo height uses BANNER_HEIGHT constant from 003-banner.sh
@@ -19,7 +19,7 @@ HEADER_HEIGHT=3
 # Calculate available space for logs
 calculate_log_area() {
   get_terminal_dimensions
-  LOG_AREA_HEIGHT=$((TERM_HEIGHT - LOGO_HEIGHT - HEADER_HEIGHT - 1))
+  LOG_AREA_HEIGHT=$((_LOG_TERM_HEIGHT - LOGO_HEIGHT - HEADER_HEIGHT - 1))
 }
 
 # Array to store log lines
