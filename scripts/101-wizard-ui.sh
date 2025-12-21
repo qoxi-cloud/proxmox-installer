@@ -191,12 +191,14 @@ _wiz_description() {
 # Gum component wrappers with consistent styling
 _wiz_confirm() {
   gum confirm "$@" \
+    --padding "0 0 0 1" \
     --prompt.foreground "$HEX_ORANGE" \
     --selected.background "$HEX_ORANGE"
 }
 
 _wiz_choose() {
   gum choose \
+    --padding "0 0 0 1" \
     --header.foreground "$HEX_CYAN" \
     --cursor "${CLR_ORANGE}›${CLR_RESET} " \
     --cursor.foreground "$HEX_NONE" \
@@ -208,6 +210,7 @@ _wiz_choose() {
 
 _wiz_input() {
   gum input \
+    --padding "0 0 0 1" \
     --prompt.foreground "$HEX_CYAN" \
     --cursor.foreground "$HEX_ORANGE" \
     --no-show-help \

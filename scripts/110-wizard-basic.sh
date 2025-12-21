@@ -223,6 +223,7 @@ _edit_timezone() {
 
   local selected
   selected=$(echo "$WIZ_TIMEZONES" | gum filter \
+    --padding "0 0 0 1" \
     --placeholder "Type to search..." \
     --indicator "›" \
     --height 5 \
@@ -251,6 +252,7 @@ _edit_keyboard() {
 
   local selected
   selected=$(echo "$WIZ_KEYBOARD_LAYOUTS" | gum filter \
+    --padding "0 0 0 1" \
     --placeholder "Type to search..." \
     --indicator "›" \
     --height 5 \
@@ -273,6 +275,7 @@ _edit_country() {
 
   local selected
   selected=$(echo "$WIZ_COUNTRIES" | gum filter \
+    --padding "0 0 0 1" \
     --placeholder "Type to search..." \
     --indicator "›" \
     --height 5 \
