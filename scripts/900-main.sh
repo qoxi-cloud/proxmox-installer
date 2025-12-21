@@ -32,10 +32,17 @@ _render_completion_screen() {
     output+="\n"
   }
 
-  # Root credentials
+  # System info
   _cred_field "Hostname         " "${CLR_CYAN}${PVE_HOSTNAME}.${DOMAIN_SUFFIX}${CLR_RESET}"
-  _cred_field "Username         " "root"
-  _cred_field "Password         " "${CLR_ORANGE}${NEW_ROOT_PASSWORD}${CLR_RESET}"
+  output+="\n"
+
+  # Admin credentials (SSH + Proxmox UI)
+  _cred_field "Admin User       " "${CLR_CYAN}${ADMIN_USERNAME}${CLR_RESET}"
+  _cred_field "Admin Password   " "${CLR_ORANGE}${ADMIN_PASSWORD}${CLR_RESET}" "(SSH + Proxmox UI)"
+  output+="\n"
+
+  # Root credentials (console/KVM only - SSH blocked)
+  _cred_field "Root Password    " "${CLR_ORANGE}${NEW_ROOT_PASSWORD}${CLR_RESET}" "(console/KVM only)"
   output+="\n"
 
   # Determine access based on firewall mode
@@ -45,7 +52,7 @@ _render_completion_screen() {
   case "${FIREWALL_MODE:-standard}" in
     stealth)
       if [[ $has_tailscale == "yes" ]]; then
-        _cred_field "SSH              " "${CLR_CYAN}ssh root@${TAILSCALE_IP}${CLR_RESET}" "(Tailscale)"
+        _cred_field "SSH              " "${CLR_CYAN}ssh ${ADMIN_USERNAME}@${TAILSCALE_IP}${CLR_RESET}" "(Tailscale)"
         _cred_field "Web UI           " "${CLR_CYAN}https://${TAILSCALE_IP}:8006${CLR_RESET}" "(Tailscale)"
       else
         _cred_field "SSH              " "${CLR_YELLOW}blocked${CLR_RESET}" "(stealth mode)"
@@ -53,17 +60,17 @@ _render_completion_screen() {
       fi
       ;;
     strict)
-      _cred_field "SSH              " "${CLR_CYAN}ssh root@${MAIN_IPV4}${CLR_RESET}"
+      _cred_field "SSH              " "${CLR_CYAN}ssh ${ADMIN_USERNAME}@${MAIN_IPV4}${CLR_RESET}"
       if [[ $has_tailscale == "yes" ]]; then
-        _cred_field "" "${CLR_CYAN}ssh root@${TAILSCALE_IP}${CLR_RESET}" "(Tailscale)"
+        _cred_field "" "${CLR_CYAN}ssh ${ADMIN_USERNAME}@${TAILSCALE_IP}${CLR_RESET}" "(Tailscale)"
         _cred_field "Web UI           " "${CLR_CYAN}https://${TAILSCALE_IP}:8006${CLR_RESET}" "(Tailscale)"
       else
         _cred_field "Web UI           " "${CLR_YELLOW}blocked${CLR_RESET}" "(strict mode)"
       fi
       ;;
     *)
-      _cred_field "SSH              " "${CLR_CYAN}ssh root@${MAIN_IPV4}${CLR_RESET}"
-      [[ $has_tailscale == "yes" ]] && _cred_field "" "${CLR_CYAN}ssh root@${TAILSCALE_IP}${CLR_RESET}" "(Tailscale)"
+      _cred_field "SSH              " "${CLR_CYAN}ssh ${ADMIN_USERNAME}@${MAIN_IPV4}${CLR_RESET}"
+      [[ $has_tailscale == "yes" ]] && _cred_field "" "${CLR_CYAN}ssh ${ADMIN_USERNAME}@${TAILSCALE_IP}${CLR_RESET}" "(Tailscale)"
       _cred_field "Web UI           " "${CLR_CYAN}https://${MAIN_IPV4}:8006${CLR_RESET}"
       [[ $has_tailscale == "yes" ]] && _cred_field "" "${CLR_CYAN}https://${TAILSCALE_IP}:8006${CLR_RESET}" "(Tailscale)"
       ;;
