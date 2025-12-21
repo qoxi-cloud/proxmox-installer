@@ -222,16 +222,7 @@ _edit_timezone() {
   _show_input_footer "filter" 6
 
   local selected
-  selected=$(echo "$WIZ_TIMEZONES" | gum filter \
-    --padding "0 0 0 1" \
-    --placeholder "Type to search..." \
-    --indicator "›" \
-    --height 5 \
-    --no-show-help \
-    --prompt "Timezone: " \
-    --prompt.foreground "$HEX_CYAN" \
-    --indicator.foreground "$HEX_ORANGE" \
-    --match.foreground "$HEX_ORANGE")
+  selected=$(echo "$WIZ_TIMEZONES" | _wiz_filter --prompt "Timezone: ")
 
   if [[ -n $selected ]]; then
     TIMEZONE="$selected"
@@ -251,16 +242,7 @@ _edit_keyboard() {
   _show_input_footer "filter" 6
 
   local selected
-  selected=$(echo "$WIZ_KEYBOARD_LAYOUTS" | gum filter \
-    --padding "0 0 0 1" \
-    --placeholder "Type to search..." \
-    --indicator "›" \
-    --height 5 \
-    --no-show-help \
-    --prompt "Keyboard: " \
-    --prompt.foreground "$HEX_CYAN" \
-    --indicator.foreground "$HEX_ORANGE" \
-    --match.foreground "$HEX_ORANGE")
+  selected=$(echo "$WIZ_KEYBOARD_LAYOUTS" | _wiz_filter --prompt "Keyboard: ")
 
   if [[ -n $selected ]]; then
     KEYBOARD="$selected"
@@ -274,16 +256,7 @@ _edit_country() {
   _show_input_footer "filter" 6
 
   local selected
-  selected=$(echo "$WIZ_COUNTRIES" | gum filter \
-    --padding "0 0 0 1" \
-    --placeholder "Type to search..." \
-    --indicator "›" \
-    --height 5 \
-    --no-show-help \
-    --prompt "Country: " \
-    --prompt.foreground "$HEX_CYAN" \
-    --indicator.foreground "$HEX_ORANGE" \
-    --match.foreground "$HEX_ORANGE")
+  selected=$(echo "$WIZ_COUNTRIES" | _wiz_filter --prompt "Country: ")
 
   if [[ -n $selected ]]; then
     COUNTRY="$selected"

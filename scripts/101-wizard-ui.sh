@@ -217,6 +217,19 @@ _wiz_input() {
     "$@"
 }
 
+_wiz_filter() {
+  gum filter \
+    --padding "0 0 0 1" \
+    --placeholder "Type to search..." \
+    --indicator "›" \
+    --height 5 \
+    --no-show-help \
+    --prompt.foreground "$HEX_CYAN" \
+    --indicator.foreground "$HEX_ORANGE" \
+    --match.foreground "$HEX_ORANGE" \
+    "$@"
+}
+
 # Clear screen in alternate buffer (faster than clear)
 _wiz_clear() {
   printf '\033[H\033[J'
