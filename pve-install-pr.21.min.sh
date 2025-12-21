@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.472-pr.21"
+readonly VERSION="2.0.473-pr.21"
 readonly TERM_WIDTH=69
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
@@ -1019,8 +1019,8 @@ run_remote "Installing system packages" "
     apt-get autoremove -yqq
     apt-get clean
     set +e
-    pveupgrade 2>/dev/null || true
-    pveam update 2>/dev/null || true
+    pveupgrade 2>/dev/null || echo 'pveupgrade check skipped' >&2
+    pveam update 2>/dev/null || echo 'pveam update skipped' >&2
   " "System packages installed"
 log_subtasks $packages
 }
@@ -4722,9 +4722,9 @@ printf '%s\n' "$rules"
 }
 _config_nftables(){
 remote_exec '
-    update-alternatives --set iptables /usr/sbin/iptables-nft 2>/dev/null || true
-    update-alternatives --set ip6tables /usr/sbin/ip6tables-nft 2>/dev/null || true
-  '||true
+    update-alternatives --set iptables /usr/sbin/iptables-nft
+    update-alternatives --set ip6tables /usr/sbin/ip6tables-nft
+  '||log "WARNING: Could not set iptables-nft alternatives (nftables still works directly)"
 local template_content
 template_content=$(cat "./templates/nftables.conf")
 local port_rules bridge_input_rules bridge_forward_rules nat_rules tailscale_rules
