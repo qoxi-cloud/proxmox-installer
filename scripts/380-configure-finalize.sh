@@ -14,7 +14,8 @@ configure_ssh_hardening() {
   # shellcheck disable=SC2317,SC2329 # invoked indirectly by run_with_progress
   _ssh_hardening_impl() {
     remote_copy "templates/sshd_config" "/etc/ssh/sshd_config" || return 1
-    remote_exec "chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys"
+    # Ensure .ssh directory and authorized_keys have correct permissions
+    remote_exec "mkdir -p /root/.ssh && chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys" || return 1
   }
 
   if ! run_with_progress "Deploying SSH hardening" "Security hardening configured" _ssh_hardening_impl; then
