@@ -96,6 +96,13 @@ batch_install_packages() {
     '
   fi
 
+  if [[ $INSTALL_PROMTAIL == "yes" ]]; then
+    repo_setup+='
+      curl -fsSL https://apt.grafana.com/gpg.key | gpg --dearmor -o /usr/share/keyrings/grafana-archive-keyring.gpg
+      echo "deb [signed-by=/usr/share/keyrings/grafana-archive-keyring.gpg] https://apt.grafana.com stable main" > /etc/apt/sources.list.d/grafana.list
+    '
+  fi
+
   # Use remote_run for reliable execution (pipes script to bash -s, better for long scripts)
   # remote_run exits on failure, so no need for error handling here
   # shellcheck disable=SC2086
