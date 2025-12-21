@@ -9,6 +9,8 @@
 # Returns: 0 if valid, 1 otherwise
 validate_hostname() {
   local hostname="$1"
+  # Reject reserved hostname "localhost"
+  [[ ${hostname,,} == "localhost" ]] && return 1
   # Hostname: alphanumeric and hyphens, 1-63 chars, cannot start/end with hyphen
   [[ $hostname =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]]
 }
