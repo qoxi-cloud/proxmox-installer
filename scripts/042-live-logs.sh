@@ -38,7 +38,7 @@ add_log() {
 _render_install_header() {
   # Use ANSI escape instead of tput for speed
   printf '\033[%d;0H' "$((LOGO_HEIGHT + 1))"
-  printf '\n%s\n\n' "$(format_wizard_header "Installing Proxmox")"
+  printf '%s\n\n' "$(format_wizard_header "Installing Proxmox")"
 }
 
 # Render all logs (with auto-scroll, no flicker)
