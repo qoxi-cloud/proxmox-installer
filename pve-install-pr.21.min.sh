@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.419-pr.21"
+readonly VERSION="2.0.420-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -482,6 +482,10 @@ else
 printf "$CLR_RED✗$CLR_RESET %s\n" "$message"
 fi
 return $exit_code
+}
+format_wizard_header(){
+local title="$1"
+printf '%s' "                     $CLR_ORANGE●$CLR_RESET $CLR_CYAN$title$CLR_RESET $CLR_ORANGE●$CLR_RESET"
 }
 download_file(){
 local output_file="$1"
@@ -1748,7 +1752,7 @@ render_logs
 }
 _render_install_header(){
 printf '\033[%d;0H' "$((LOGO_HEIGHT+1))"
-printf '\n%s\n\n' "                     $CLR_ORANGE●$CLR_RESET ${CLR_CYAN}Installing Proxmox$CLR_RESET $CLR_ORANGE●$CLR_RESET"
+printf '\n%s\n\n' "$(format_wizard_header "Installing Proxmox")"
 }
 render_logs(){
 _render_install_header
@@ -5235,7 +5239,7 @@ local output=""
 local banner_output
 banner_output=$(show_banner)
 output+="$banner_output\n\n"
-output+="                    $CLR_GREEN●$CLR_RESET ${CLR_CYAN}Installation Complete$CLR_RESET $CLR_GREEN●$CLR_RESET\n\n"
+output+="$(format_wizard_header "Installation Complete")\n\n"
 output+="  $CLR_YELLOW⚠ SAVE THESE CREDENTIALS$CLR_RESET\n\n"
 _cred_field(){
 local label="$1" value="$2" note="${3:-}"
