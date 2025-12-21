@@ -485,7 +485,12 @@ return $exit_code
 }
 format_wizard_header(){
 local title="$1"
-printf '%s' "                     $CLR_ORANGE●$CLR_RESET $CLR_CYAN$title$CLR_RESET $CLR_ORANGE●$CLR_RESET"
+local width=60
+local content_len=$((${#title}+4))
+local padding=$(((width-content_len)/2))
+local spaces=""
+((padding>0))&&spaces=$(printf '%*s' "$padding" "")
+printf '%s' "$spaces$CLR_ORANGE●$CLR_RESET $CLR_CYAN$title$CLR_RESET $CLR_ORANGE●$CLR_RESET"
 }
 download_file(){
 local output_file="$1"
