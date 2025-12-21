@@ -241,7 +241,6 @@ _edit_api_token() {
       ;;
     Disabled)
       INSTALL_API_TOKEN="no"
-      API_TOKEN_NAME="automation"
       ;;
   esac
 }
