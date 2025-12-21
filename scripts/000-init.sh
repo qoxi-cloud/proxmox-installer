@@ -400,6 +400,13 @@ API_TOKEN_NAME="automation" # Token name (default: automation)
 API_TOKEN_VALUE=""          # Generated token value (set post-install)
 API_TOKEN_ID=""             # Full token ID (user@pam!tokenname)
 
+# --- Admin User ---
+# Set: Wizard (115-wizard-ssh.sh)
+# Used: 302-configure-admin.sh, sshd_config, API token
+# Note: Root SSH is disabled, all access via admin user
+ADMIN_USERNAME="" # Non-root admin username (required)
+ADMIN_PASSWORD="" # Admin password for sudo/Proxmox UI (required)
+
 # --- Firewall (nftables) ---
 # Set: Wizard (114-wizard-services.sh)
 # Modes:
