@@ -168,6 +168,7 @@ run_parallel_group() {
   # Track results via temp files (avoid subshell variable issues)
   local result_dir
   result_dir=$(mktemp -d)
+  export PARALLEL_RESULT_DIR="$result_dir"
   # shellcheck disable=SC2064
   trap "rm -rf '$result_dir'" RETURN
 
@@ -199,6 +200,17 @@ run_parallel_group() {
   ) &
   show_progress $! "$group_name" "$done_msg"
 
+  # Collect configured features for display
+  local configured=()
+  for f in "$result_dir"/ran_*; do
+    [[ -f $f ]] && configured+=("$(cat "$f")")
+  done
+
+  # Show configured features as subtasks
+  if [[ ${#configured[@]} -gt 0 ]]; then
+    log_subtasks "${configured[@]}"
+  fi
+
   # Check for failures
   local failures=0
   for j in $(seq 0 $((count - 1))); do
@@ -211,4 +223,12 @@ run_parallel_group() {
   fi
 
   return 0
+}
+
+# Marks a feature as configured in parallel group.
+# Call from _parallel_config_* functions when work is actually done.
+# Usage: parallel_mark_configured "apparmor"
+parallel_mark_configured() {
+  local feature="$1"
+  [[ -n ${PARALLEL_RESULT_DIR:-} ]] && printf '%s' "$feature" >>"$PARALLEL_RESULT_DIR/ran_$$"
 }
