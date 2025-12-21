@@ -12,17 +12,13 @@ _config_vnstat() {
 
   deploy_template "templates/vnstat.conf" "/etc/vnstat.conf" "INTERFACE_NAME=${iface}" || return 1
 
+  # Add main interface and bridge interfaces to vnstat monitoring
   remote_exec "
     mkdir -p /var/lib/vnstat
     vnstat --add -i '${iface}' 2>/dev/null || true
-
-    # Also monitor bridge interfaces if they exist
     for bridge in vmbr0 vmbr1; do
-      if ip link show \"\$bridge\" &>/dev/null; then
-        vnstat --add -i \"\$bridge\" 2>/dev/null || true
-      fi
+      ip link show \"\$bridge\" &>/dev/null && vnstat --add -i \"\$bridge\" 2>/dev/null || true
     done
-
     systemctl enable vnstat
   " || {
     log "ERROR: Failed to configure vnstat"

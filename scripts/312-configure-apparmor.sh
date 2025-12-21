@@ -12,13 +12,9 @@ _config_apparmor() {
   remote_exec 'mkdir -p /etc/default/grub.d'
   remote_copy "templates/apparmor-grub.cfg" "/etc/default/grub.d/apparmor.cfg"
 
-  # Configure AppArmor
-  # shellcheck disable=SC2016 # Single quotes intentional - executed on remote system
+  # Update GRUB and enable AppArmor service (activates after reboot)
   remote_exec '
-    # Update GRUB with AppArmor kernel parameters
     update-grub 2>/dev/null || true
-
-    # Enable AppArmor to start on boot (will activate after reboot)
     systemctl enable apparmor.service
   ' || {
     log "ERROR: Failed to configure AppArmor"

@@ -14,6 +14,7 @@ _config_auditd() {
     return 1
   }
 
+  # Configure auditd log settings (50MB files, 10 max, rotate)
   remote_exec '
     mkdir -p /var/log/audit
     sed -i "s/^max_log_file = .*/max_log_file = 50/" /etc/audit/auditd.conf 2>/dev/null || true

@@ -8,12 +8,11 @@
 # Configuration function for neovim
 # Creates vi/vim aliases via update-alternatives
 _config_nvim() {
+  # Install nvim as vi/vim/editor alternatives and set as default
   remote_exec '
     update-alternatives --install /usr/bin/vi vi /usr/bin/nvim 60
     update-alternatives --install /usr/bin/vim vim /usr/bin/nvim 60
     update-alternatives --install /usr/bin/editor editor /usr/bin/nvim 60
-
-    # Set nvim as default
     update-alternatives --set vi /usr/bin/nvim
     update-alternatives --set vim /usr/bin/nvim
     update-alternatives --set editor /usr/bin/nvim
