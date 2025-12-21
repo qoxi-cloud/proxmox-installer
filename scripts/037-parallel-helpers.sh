@@ -28,8 +28,8 @@ install_base_packages() {
     apt-get autoremove -yqq
     apt-get clean
     set +e
-    pveupgrade 2>/dev/null || true
-    pveam update 2>/dev/null || true
+    pveupgrade 2>/dev/null || echo 'pveupgrade check skipped' >&2
+    pveam update 2>/dev/null || echo 'pveam update skipped' >&2
   " "System packages installed"
 
   # Show installed packages as subtasks

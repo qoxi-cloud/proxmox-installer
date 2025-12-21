@@ -138,11 +138,11 @@ _generate_nat_rules() {
 
 # Configuration function for nftables
 _config_nftables() {
-  # Set up iptables-nft compatibility layer
+  # Set up iptables-nft compatibility layer for tools that call iptables directly
   remote_exec '
-    update-alternatives --set iptables /usr/sbin/iptables-nft 2>/dev/null || true
-    update-alternatives --set ip6tables /usr/sbin/ip6tables-nft 2>/dev/null || true
-  ' || true
+    update-alternatives --set iptables /usr/sbin/iptables-nft
+    update-alternatives --set ip6tables /usr/sbin/ip6tables-nft
+  ' || log "WARNING: Could not set iptables-nft alternatives (nftables still works directly)"
 
   # Read the template
   local template_content
