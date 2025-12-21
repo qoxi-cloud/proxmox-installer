@@ -34,11 +34,11 @@ table inet filter {
         ip6 nexthdr icmpv6 icmpv6 type { echo-request, echo-reply, destination-unreachable, packet-too-big, time-exceeded, parameter-problem, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert } limit rate 10/second accept
 
         # === FIREWALL_RULES_START ===
-        # SSH access (port 22)
-        tcp dport 22 ct state new accept
+        # SSH access (port {{PORT_SSH}})
+        tcp dport {{PORT_SSH}} ct state new accept
 
-        # Proxmox Web UI (port 8006)
-        tcp dport 8006 ct state new accept
+        # Proxmox Web UI (port {{PORT_PROXMOX_UI}})
+        tcp dport {{PORT_PROXMOX_UI}} ct state new accept
         # === FIREWALL_RULES_END ===
 
         # Everything else is dropped (default policy)

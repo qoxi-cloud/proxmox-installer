@@ -102,7 +102,9 @@ apply_common_template_vars() {
     "LOCALE=${LOCALE:-en_US.UTF-8}" \
     "KEYBOARD=${KEYBOARD:-us}" \
     "COUNTRY=${COUNTRY:-US}" \
-    "BAT_THEME=${BAT_THEME:-Catppuccin Mocha}"
+    "BAT_THEME=${BAT_THEME:-Catppuccin Mocha}" \
+    "PORT_SSH=${PORT_SSH:-22}" \
+    "PORT_PROXMOX_UI=${PORT_PROXMOX_UI:-8006}"
 }
 
 # Post-processes interfaces template when IPv6 is disabled.
