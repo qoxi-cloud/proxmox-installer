@@ -150,12 +150,12 @@ _deactivate_lvm() {
   fi
 
   log "Deactivating LVM volume groups..."
-  vgchange -an 2>/dev/null || true
+  vgchange -an &>/dev/null || true
 
   # Deactivate specific VGs by name if vgs is available
   if command -v vgs &>/dev/null; then
     while IFS= read -r vg; do
-      if [[ -n $vg ]]; then vgchange -an "$vg" 2>/dev/null || true; fi
+      if [[ -n $vg ]]; then vgchange -an "$vg" &>/dev/null || true; fi
     done < <(vgs --noheadings -o vg_name 2>/dev/null)
   fi
 }
@@ -350,6 +350,9 @@ EOF
 # Exposes SSH on SSH_PORT_QEMU for post-install configuration.
 # Side effects: Starts QEMU, sets QEMU_PID global
 boot_proxmox_with_port_forwarding() {
+  # Deactivate any LVM auto-activated by udev after install
+  _deactivate_lvm
+
   setup_qemu_config
 
   # Check if port is already in use
