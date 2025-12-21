@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.414-pr.21"
+readonly VERSION="2.0.415-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1829,8 +1829,7 @@ LOG_LINES=("${LOG_LINES[@]}")
 render_logs
 fi
 else
-LOG_LINES[task_idx]="$CLR_ORANGE├─$CLR_RESET $message $CLR_RED✗$CLR_RESET"
-render_logs
+complete_task "$task_idx" "$CLR_ORANGE├─$CLR_RESET $message" "error"
 fi
 return $exit_code
 }
@@ -4459,8 +4458,7 @@ echo "$hostname" >"$tmp_hostname"
 show_progress $! "Authenticating Tailscale"
 TAILSCALE_IP=$(cat "$tmp_ip" 2>/dev/null||echo "pending")
 TAILSCALE_HOSTNAME=$(cat "$tmp_hostname" 2>/dev/null||printf '\n')
-LOG_LINES[TASK_INDEX]="$CLR_ORANGE├─$CLR_RESET Tailscale authenticated. IP: $TAILSCALE_IP $CLR_CYAN✓$CLR_RESET"
-render_logs
+complete_task "$TASK_INDEX" "$CLR_ORANGE├─$CLR_RESET Tailscale authenticated. IP: $TAILSCALE_IP"
 if [[ $TAILSCALE_WEBUI == "yes" ]];then
 remote_exec "tailscale serve --bg --https=443 https://127.0.0.1:8006" >/dev/null 2>&1&
 show_progress $! "Configuring Tailscale Serve" "Proxmox Web UI available via Tailscale Serve"
