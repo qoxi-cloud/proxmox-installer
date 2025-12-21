@@ -2,7 +2,8 @@
 # =============================================================================
 # Configure non-root admin user
 # Creates admin user with sudo privileges, sets up SSH key access
-# Root SSH is disabled - all access via admin user
+# Grants Proxmox Administrator role and disables root@pam
+# Root access is blocked for both SSH and Proxmox UI
 # =============================================================================
 
 # Configuration function for admin user
@@ -34,6 +35,20 @@ _config_admin_user() {
   remote_exec 'echo '"'$ADMIN_USERNAME ALL=(ALL) NOPASSWD:ALL'"' > /etc/sudoers.d/'"'$ADMIN_USERNAME'"'' || return 1
   # shellcheck disable=SC2016
   remote_exec 'chmod 440 /etc/sudoers.d/'"'$ADMIN_USERNAME'"'' || return 1
+
+  # Grant Proxmox UI access to admin user
+  # Create PAM user in Proxmox (will auth against Linux PAM)
+  remote_exec "pveum user add ${ADMIN_USERNAME}@pam 2>/dev/null || true"
+
+  # Grant Administrator role to admin user
+  remote_exec "pveum acl modify / -user ${ADMIN_USERNAME}@pam -role Administrator" || {
+    log "WARNING: Failed to grant Proxmox Administrator role"
+  }
+
+  # Disable root login in Proxmox UI (admin user is now the only way in)
+  remote_exec "pveum user modify root@pam -enable 0" || {
+    log "WARNING: Failed to disable root user in Proxmox UI"
+  }
 }
 
 # Creates admin user with sudo privileges and SSH key access.

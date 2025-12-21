@@ -9,13 +9,7 @@ create_api_token() {
 
   log "INFO: Creating Proxmox API token for ${ADMIN_USERNAME}: ${API_TOKEN_NAME}"
 
-  # Create PAM user for admin in Proxmox if not exists
-  remote_exec "pveum user add ${ADMIN_USERNAME}@pam 2>/dev/null || true"
-
-  # Grant Administrator role to admin user
-  remote_exec "pveum acl modify / -user ${ADMIN_USERNAME}@pam -role Administrator" || {
-    log "WARNING: Failed to grant Administrator role"
-  }
+  # Note: PAM user and Administrator role are set up in 302-configure-admin.sh
 
   # Check if token already exists and remove
   local existing
