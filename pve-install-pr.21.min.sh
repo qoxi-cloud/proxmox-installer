@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.461-pr.21"
+readonly VERSION="2.0.462-pr.21"
 readonly TERM_WIDTH=69
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
@@ -3401,7 +3401,7 @@ _wiz_description \
 "  {{cyan:Enabled}}:  Create privileged token (Terraform, Ansible)" \
 "  {{cyan:Disabled}}: No API token" \
 "" \
-"  Token has full root@pam permissions, no expiration." \
+"  Token has full Administrator permissions, no expiration." \
 ""
 _show_input_footer "filter" 3
 local selected
