@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.463-pr.21"
+readonly VERSION="2.0.464-pr.21"
 readonly TERM_WIDTH=69
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
@@ -3546,7 +3546,6 @@ INSTALL_API_TOKEN="yes"
 fi
 ;;
 Disabled)INSTALL_API_TOKEN="no"
-API_TOKEN_NAME="automation"
 esac
 }
 _edit_boot_disk(){
