@@ -204,6 +204,7 @@ configure_proxmox_via_ssh() {
   # PHASE 1: Base Configuration (sequential - dependencies)
   # ==========================================================================
   make_templates
+  configure_admin_user # Must be first - other configs need admin user's home dir
   configure_base_system
   configure_shell
   configure_system_services
@@ -274,10 +275,9 @@ configure_proxmox_via_ssh() {
   fi
 
   # ==========================================================================
-  # PHASE 6: Admin User & SSH Hardening
+  # PHASE 6: SSH Hardening & Finalization
   # ==========================================================================
-  # Create admin user BEFORE SSH hardening (which blocks root login)
-  configure_admin_user
+  # Admin user created in Phase 1 (needed for user-specific configs)
   configure_ssh_hardening
   validate_installation
   finalize_vm
