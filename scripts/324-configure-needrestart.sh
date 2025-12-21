@@ -13,4 +13,16 @@ _config_needrestart() {
     log "ERROR: Failed to deploy needrestart config"
     return 1
   }
+
+  parallel_mark_configured "needrestart"
+}
+
+# =============================================================================
+# Public wrapper
+# =============================================================================
+
+# Public wrapper for needrestart configuration
+configure_needrestart() {
+  [[ ${INSTALL_NEEDRESTART:-} != "yes" ]] && return 0
+  _config_needrestart
 }

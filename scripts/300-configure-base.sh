@@ -110,13 +110,11 @@ _remove_subscription_notice() {
 }
 
 # =============================================================================
-# Main configuration functions
+# Private implementation functions
 # =============================================================================
 
-# Configures base system via SSH into QEMU VM.
-# Copies templates, configures repositories, installs packages.
-# Side effects: Modifies remote system configuration
-configure_base_system() {
+# Private implementation - configures base system
+_config_base_system() {
   # Copy template files to VM (parallel for better performance)
   run_with_progress "Copying configuration files" "Configuration files copied" _copy_config_files
 
@@ -193,10 +191,8 @@ configure_base_system() {
   run_with_progress "Configuring bat" "Bat configured" _configure_bat
 }
 
-# Configures default shell for admin user.
-# Optionally installs ZSH with Oh-My-Zsh and Powerlevel10k theme.
-# Note: zsh, git, curl packages already installed via install_base_packages()
-configure_shell() {
+# Private implementation - configures default shell
+_config_shell() {
   # Configure default shell for admin user (root login is disabled)
   if [[ $SHELL_TYPE == "zsh" ]]; then
     # Install Oh-My-Zsh for admin user
@@ -229,10 +225,8 @@ configure_shell() {
   fi
 }
 
-# Configures system services: NTP, unattended upgrades, conntrack, CPU governor.
-# Removes subscription notice for non-enterprise installations.
-# Note: chrony, unattended-upgrades, linux-cpupower already installed via install_base_packages()
-configure_system_services() {
+# Private implementation - configures system services
+_config_system_services() {
   # Configure NTP time synchronization with chrony (package already installed)
   run_with_progress "Configuring chrony" "Chrony configured" _configure_chrony
 
@@ -259,4 +253,29 @@ configure_system_services() {
     log "configure_system_services: removing subscription notice (non-enterprise)"
     run_with_progress "Removing Proxmox subscription notice" "Subscription notice removed" _remove_subscription_notice
   fi
+}
+
+# =============================================================================
+# Public wrappers
+# =============================================================================
+
+# Configures base system via SSH into QEMU VM.
+# Copies templates, configures repositories, installs packages.
+# Side effects: Modifies remote system configuration
+configure_base_system() {
+  _config_base_system
+}
+
+# Configures default shell for admin user.
+# Optionally installs ZSH with Oh-My-Zsh and Powerlevel10k theme.
+# Note: zsh, git, curl packages already installed via install_base_packages()
+configure_shell() {
+  _config_shell
+}
+
+# Configures system services: NTP, unattended upgrades, conntrack, CPU governor.
+# Removes subscription notice for non-enterprise installations.
+# Note: chrony, unattended-upgrades, linux-cpupower already installed via install_base_packages()
+configure_system_services() {
+  _config_system_services
 }

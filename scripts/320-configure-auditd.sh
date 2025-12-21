@@ -27,4 +27,15 @@ _config_auditd() {
   }
 
   remote_enable_services "auditd"
+  parallel_mark_configured "auditd"
+}
+
+# =============================================================================
+# Public wrapper
+# =============================================================================
+
+# Public wrapper for auditd configuration
+configure_auditd() {
+  [[ ${INSTALL_AUDITD:-} != "yes" ]] && return 0
+  _config_auditd
 }

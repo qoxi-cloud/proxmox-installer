@@ -3,11 +3,8 @@
 # Configure separate ZFS pool for VMs
 # =============================================================================
 
-# Creates separate ZFS "tank" pool from pool disks when BOOT_DISK is set.
-# Only runs when ext4 boot mode is used (BOOT_DISK not empty).
-# Configures Proxmox storage: tank for VMs, local for ISO/templates.
-# Side effects: Creates ZFS pool, modifies Proxmox storage config
-configure_zfs_pool() {
+# Private implementation - creates ZFS pool
+_config_zfs_pool() {
   # Only run when BOOT_DISK is set (ext4 install mode)
   # When BOOT_DISK is empty, all disks are in ZFS rpool (existing behavior)
   if [[ -z $BOOT_DISK ]]; then
@@ -66,4 +63,16 @@ configure_zfs_pool() {
   log "INFO: Proxmox storage configured: tank (VMs), local (ISO/templates/backups)"
 
   return 0
+}
+
+# =============================================================================
+# Public wrapper
+# =============================================================================
+
+# Creates separate ZFS "tank" pool from pool disks when BOOT_DISK is set.
+# Only runs when ext4 boot mode is used (BOOT_DISK not empty).
+# Configures Proxmox storage: tank for VMs, local for ISO/templates.
+# Side effects: Creates ZFS pool, modifies Proxmox storage config
+configure_zfs_pool() {
+  _config_zfs_pool
 }

@@ -16,4 +16,16 @@ _config_lynis() {
     log "ERROR: Failed to configure Lynis"
     return 1
   }
+
+  parallel_mark_configured "lynis"
+}
+
+# =============================================================================
+# Public wrapper
+# =============================================================================
+
+# Public wrapper for Lynis configuration
+configure_lynis() {
+  [[ ${INSTALL_LYNIS:-} != "yes" ]] && return 0
+  _config_lynis
 }

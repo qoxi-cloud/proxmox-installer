@@ -24,4 +24,17 @@ _config_vnstat() {
     log "ERROR: Failed to configure vnstat"
     return 1
   }
+
+  parallel_mark_configured "vnstat"
+}
+
+# =============================================================================
+# Public wrapper
+# =============================================================================
+
+# Public wrapper for vnstat configuration
+# Called via run_parallel_group() in parallel execution
+configure_vnstat() {
+  [[ ${INSTALL_VNSTAT:-} != "yes" ]] && return 0
+  _config_vnstat
 }

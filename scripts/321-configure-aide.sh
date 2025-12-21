@@ -19,4 +19,16 @@ _config_aide() {
     log "ERROR: Failed to initialize AIDE"
     return 1
   }
+
+  parallel_mark_configured "aide"
+}
+
+# =============================================================================
+# Public wrapper
+# =============================================================================
+
+# Public wrapper for AIDE configuration
+configure_aide() {
+  [[ ${INSTALL_AIDE:-} != "yes" ]] && return 0
+  _config_aide
 }

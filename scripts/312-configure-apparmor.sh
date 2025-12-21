@@ -20,4 +20,16 @@ _config_apparmor() {
     log "ERROR: Failed to configure AppArmor"
     return 1
   }
+
+  parallel_mark_configured "apparmor"
+}
+
+# =============================================================================
+# Public wrapper
+# =============================================================================
+
+# Public wrapper for AppArmor configuration
+configure_apparmor() {
+  [[ ${INSTALL_APPARMOR:-} != "yes" ]] && return 0
+  _config_apparmor
 }

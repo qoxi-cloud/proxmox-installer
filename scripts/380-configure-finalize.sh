@@ -3,6 +3,16 @@
 # SSH hardening and finalization
 # =============================================================================
 
+# Private implementation - deploys SSH hardening config
+# shellcheck disable=SC2317 # invoked indirectly by run_with_progress
+_config_ssh_hardening() {
+  # Apply ADMIN_USERNAME template variable to sshd_config
+  deploy_template "templates/sshd_config" "/etc/ssh/sshd_config" \
+    "ADMIN_USERNAME=${ADMIN_USERNAME}" || return 1
+  # Restart SSH to apply new config
+  remote_exec "systemctl restart sshd" || return 1
+}
+
 # Configures SSH hardening with key-based authentication only.
 # Deploys hardened sshd_config (SSH key is deployed to admin user in 302-configure-admin.sh).
 # Side effects: Disables password authentication, blocks root login
@@ -11,16 +21,7 @@ configure_ssh_hardening() {
   # CRITICAL: This must succeed - if it fails, system remains with password auth enabled
   # NOTE: SSH key was deployed to admin user in 302-configure-admin.sh (root has no SSH access)
 
-  # shellcheck disable=SC2317,SC2329 # invoked indirectly by run_with_progress
-  _ssh_hardening_impl() {
-    # Apply ADMIN_USERNAME template variable to sshd_config
-    deploy_template "templates/sshd_config" "/etc/ssh/sshd_config" \
-      "ADMIN_USERNAME=${ADMIN_USERNAME}" || return 1
-    # Restart SSH to apply new config
-    remote_exec "systemctl restart sshd" || return 1
-  }
-
-  if ! run_with_progress "Deploying SSH hardening" "Security hardening configured" _ssh_hardening_impl; then
+  if ! run_with_progress "Deploying SSH hardening" "Security hardening configured" _config_ssh_hardening; then
     log "ERROR: SSH hardening failed - system may be insecure"
     exit 1
   fi
@@ -132,71 +133,6 @@ finalize_vm() {
 }
 
 # =============================================================================
-# Parallel configuration helpers
-# =============================================================================
-
-# Wrapper functions that check INSTALL_* and call _config_* silently.
-# These are designed for parallel execution after batch package install.
-# Each function returns 0 (skip) if feature not enabled, or runs config.
-# Uses parallel_mark_configured to track what was actually configured.
-
-_parallel_config_apparmor() {
-  [[ ${INSTALL_APPARMOR:-} != "yes" ]] && return 0
-  _config_apparmor && parallel_mark_configured "apparmor"
-}
-
-_parallel_config_fail2ban() {
-  # Requires firewall and not stealth mode
-  [[ ${INSTALL_FIREWALL:-} != "yes" || ${FIREWALL_MODE:-standard} == "stealth" ]] && return 0
-  _config_fail2ban && parallel_mark_configured "fail2ban"
-}
-
-_parallel_config_auditd() {
-  [[ ${INSTALL_AUDITD:-} != "yes" ]] && return 0
-  _config_auditd && parallel_mark_configured "auditd"
-}
-
-_parallel_config_aide() {
-  [[ ${INSTALL_AIDE:-} != "yes" ]] && return 0
-  _config_aide && parallel_mark_configured "aide"
-}
-
-_parallel_config_chkrootkit() {
-  [[ ${INSTALL_CHKROOTKIT:-} != "yes" ]] && return 0
-  _config_chkrootkit && parallel_mark_configured "chkrootkit"
-}
-
-_parallel_config_lynis() {
-  [[ ${INSTALL_LYNIS:-} != "yes" ]] && return 0
-  _config_lynis && parallel_mark_configured "lynis"
-}
-
-_parallel_config_needrestart() {
-  [[ ${INSTALL_NEEDRESTART:-} != "yes" ]] && return 0
-  _config_needrestart && parallel_mark_configured "needrestart"
-}
-
-_parallel_config_promtail() {
-  [[ ${INSTALL_PROMTAIL:-} != "yes" ]] && return 0
-  _config_promtail && parallel_mark_configured "promtail"
-}
-
-_parallel_config_vnstat() {
-  [[ ${INSTALL_VNSTAT:-} != "yes" ]] && return 0
-  _config_vnstat && parallel_mark_configured "vnstat"
-}
-
-_parallel_config_ringbuffer() {
-  [[ ${INSTALL_RINGBUFFER:-} != "yes" ]] && return 0
-  _config_ringbuffer && parallel_mark_configured "ringbuffer"
-}
-
-_parallel_config_nvim() {
-  [[ ${INSTALL_NVIM:-} != "yes" ]] && return 0
-  _config_nvim && parallel_mark_configured "nvim"
-}
-
-# =============================================================================
 # Main configuration function
 # =============================================================================
 
@@ -237,13 +173,13 @@ configure_proxmox_via_ssh() {
 
   # Parallel security configuration
   run_parallel_group "Configuring security" "Security features configured" \
-    _parallel_config_apparmor \
-    _parallel_config_fail2ban \
-    _parallel_config_auditd \
-    _parallel_config_aide \
-    _parallel_config_chkrootkit \
-    _parallel_config_lynis \
-    _parallel_config_needrestart
+    configure_apparmor \
+    configure_fail2ban \
+    configure_auditd \
+    configure_aide \
+    configure_chkrootkit \
+    configure_lynis \
+    configure_needrestart
 
   # ==========================================================================
   # PHASE 4: Monitoring & Tools (parallel where possible)
@@ -265,10 +201,10 @@ configure_proxmox_via_ssh() {
 
   # Parallel config for apt-installed tools (packages already installed by batch)
   run_parallel_group "Configuring tools" "Tools configured" \
-    _parallel_config_promtail \
-    _parallel_config_vnstat \
-    _parallel_config_ringbuffer \
-    _parallel_config_nvim
+    configure_promtail \
+    configure_vnstat \
+    configure_ringbuffer \
+    configure_nvim
 
   # Wait for special installers
   wait $special_pid 2>/dev/null || true

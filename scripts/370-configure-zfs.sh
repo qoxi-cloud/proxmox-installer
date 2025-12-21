@@ -3,7 +3,8 @@
 # Configure ZFS ARC memory allocation
 # =============================================================================
 
-configure_zfs_arc() {
+# Private implementation - configures ZFS ARC memory
+_config_zfs_arc() {
   log "INFO: Configuring ZFS ARC memory allocation (mode: $ZFS_ARC_MODE)"
 
   # Calculate ARC size locally (we know RAM from rescue system)
@@ -58,7 +59,8 @@ configure_zfs_arc() {
 # Configure ZFS scrub scheduling
 # =============================================================================
 
-configure_zfs_scrub() {
+# Private implementation - configures ZFS scrub timers
+_config_zfs_scrub() {
   log "INFO: Configuring ZFS scrub schedule"
 
   # Deploy systemd service and timer templates
@@ -83,4 +85,18 @@ configure_zfs_scrub() {
   "
 
   log "INFO: ZFS scrub schedule configured (monthly, 1st Sunday at 2:00 AM)"
+}
+
+# =============================================================================
+# Public wrappers
+# =============================================================================
+
+# Public wrapper for ZFS ARC configuration
+configure_zfs_arc() {
+  _config_zfs_arc
+}
+
+# Public wrapper for ZFS scrub scheduling
+configure_zfs_scrub() {
+  _config_zfs_scrub
 }

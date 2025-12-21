@@ -17,4 +17,16 @@ _config_fail2ban() {
   }
 
   remote_enable_services "fail2ban"
+  parallel_mark_configured "fail2ban"
+}
+
+# =============================================================================
+# Public wrapper
+# =============================================================================
+
+# Public wrapper for Fail2Ban configuration
+configure_fail2ban() {
+  # Requires firewall and not stealth mode
+  [[ ${INSTALL_FIREWALL:-} != "yes" || ${FIREWALL_MODE:-standard} == "stealth" ]] && return 0
+  _config_fail2ban
 }

@@ -20,4 +20,16 @@ _config_nvim() {
     log "ERROR: Failed to configure nvim alternatives"
     return 1
   }
+
+  parallel_mark_configured "nvim"
+}
+
+# =============================================================================
+# Public wrapper
+# =============================================================================
+
+# Public wrapper for Neovim configuration
+configure_nvim() {
+  [[ ${INSTALL_NVIM:-} != "yes" ]] && return 0
+  _config_nvim
 }

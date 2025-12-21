@@ -16,4 +16,16 @@ _config_chkrootkit() {
     log "ERROR: Failed to configure chkrootkit"
     return 1
   }
+
+  parallel_mark_configured "chkrootkit"
+}
+
+# =============================================================================
+# Public wrapper
+# =============================================================================
+
+# Public wrapper for chkrootkit configuration
+configure_chkrootkit() {
+  [[ ${INSTALL_CHKROOTKIT:-} != "yes" ]] && return 0
+  _config_chkrootkit
 }

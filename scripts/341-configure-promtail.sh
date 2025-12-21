@@ -22,6 +22,7 @@ _config_promtail() {
 
   # Enable and start service
   remote_enable_services "promtail"
+  parallel_mark_configured "promtail"
 }
 
 # Configures Promtail log collector.

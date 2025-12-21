@@ -3,18 +3,10 @@
 # SSL certificate configuration via SSH
 # =============================================================================
 
-# Configures SSL certificates for Proxmox Web UI.
-# For Let's Encrypt, sets up first-boot certificate acquisition.
-# Certbot package installed via batch_install_packages() in 037-parallel-helpers.sh
-# Side effects: Configures systemd service for cert renewal
-configure_ssl_certificate() {
-  log "configure_ssl_certificate: SSL_TYPE=$SSL_TYPE"
-
-  # Skip if not using Let's Encrypt
-  if [[ $SSL_TYPE != "letsencrypt" ]]; then
-    log "configure_ssl_certificate: skipping (self-signed)"
-    return 0
-  fi
+# Private implementation - configures SSL certificates
+# Called by configure_ssl_certificate() public wrapper
+_config_ssl() {
+  log "_config_ssl: SSL_TYPE=$SSL_TYPE"
 
   # Build FQDN if not set
   local cert_domain="${FQDN:-$PVE_HOSTNAME.$DOMAIN_SUFFIX}"
@@ -58,4 +50,21 @@ configure_ssl_certificate() {
   # Store the domain for summary
   LETSENCRYPT_DOMAIN="$cert_domain"
   LETSENCRYPT_FIRSTBOOT=true
+}
+
+# =============================================================================
+# Public wrapper
+# =============================================================================
+
+# Configures SSL certificates for Proxmox Web UI.
+# For Let's Encrypt, sets up first-boot certificate acquisition.
+# Certbot package installed via batch_install_packages() in 037-parallel-helpers.sh
+# Side effects: Configures systemd service for cert renewal
+configure_ssl_certificate() {
+  # Skip if not using Let's Encrypt
+  if [[ $SSL_TYPE != "letsencrypt" ]]; then
+    log "configure_ssl_certificate: skipping (self-signed)"
+    return 0
+  fi
+  _config_ssl
 }

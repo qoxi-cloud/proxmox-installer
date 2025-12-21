@@ -134,21 +134,12 @@ batch_install_packages() {
 # Side effects: Runs provided functions, shows single progress line
 #
 # Example:
-#   # Define wrapper functions that check if feature is enabled
-#   _parallel_config_apparmor() {
-#     [[ ${INSTALL_APPARMOR:-} != "yes" ]] && return 0
-#     _config_apparmor
-#   }
-#   _parallel_config_fail2ban() {
-#     [[ ${INSTALL_FIREWALL:-} != "yes" ]] && return 0
-#     _config_fail2ban
-#   }
 #
 #   # Run all configs in parallel with single progress indicator
 #   run_parallel_group "Configuring security" "Security configured" \
-#     _parallel_config_apparmor \
-#     _parallel_config_fail2ban \
-#     _parallel_config_auditd
+#     configure_apparmor \
+#     configure_fail2ban \
+#     configure_auditd
 #
 # Note: Functions must be defined before calling run_parallel_group.
 # Each function should return 0 on success or skip, non-zero on failure.
@@ -226,7 +217,7 @@ run_parallel_group() {
 }
 
 # Marks a feature as configured in parallel group.
-# Call from _parallel_config_* functions when work is actually done.
+# Call from _config_* functions when work is actually done.
 # Usage: parallel_mark_configured "apparmor"
 parallel_mark_configured() {
   local feature="$1"

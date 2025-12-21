@@ -3,14 +3,9 @@
 # Tailscale VPN configuration
 # =============================================================================
 
-# Configures Tailscale VPN with SSH and Web UI access.
-# Optionally authenticates with auth key and enables stealth mode.
-# Package installed via batch_install_packages() in 037-parallel-helpers.sh
-# Side effects: Configures Tailscale on remote system
-configure_tailscale() {
-  if [[ $INSTALL_TAILSCALE != "yes" ]]; then
-    return 0
-  fi
+# Private implementation - configures Tailscale VPN
+# Called by configure_tailscale() public wrapper
+_config_tailscale() {
 
   # Start tailscaled and wait for socket (up to 3s)
   remote_run "Starting Tailscale" '
@@ -85,4 +80,17 @@ configure_tailscale() {
     add_log "${CLR_ORANGE}├─${CLR_RESET} ${CLR_YELLOW}⚠️${CLR_RESET} Tailscale installed but not authenticated"
     add_log "${CLR_ORANGE}│${CLR_RESET}   ${CLR_GRAY}After reboot: tailscale up --ssh${CLR_RESET}"
   fi
+}
+
+# =============================================================================
+# Public wrapper
+# =============================================================================
+
+# Configures Tailscale VPN with SSH and Web UI access.
+# Optionally authenticates with auth key and enables stealth mode.
+# Package installed via batch_install_packages() in 037-parallel-helpers.sh
+# Side effects: Configures Tailscale on remote system
+configure_tailscale() {
+  [[ $INSTALL_TAILSCALE != "yes" ]] && return 0
+  _config_tailscale
 }
