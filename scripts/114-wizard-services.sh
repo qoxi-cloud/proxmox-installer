@@ -508,7 +508,7 @@ _edit_api_token() {
     "  {{cyan:Enabled}}:  Create privileged token (Terraform, Ansible)" \
     "  {{cyan:Disabled}}: No API token" \
     "" \
-    "  Token has full root@pam permissions, no expiration." \
+    "  Token has full Administrator permissions, no expiration." \
     ""
 
   # 1 header + 2 items for gum choose
