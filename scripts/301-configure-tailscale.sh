@@ -55,8 +55,7 @@ configure_tailscale() {
     TAILSCALE_HOSTNAME=$(cat "$tmp_hostname" 2>/dev/null || printf '\n')
 
     # Update log with IP info
-    LOG_LINES[TASK_INDEX]="${CLR_ORANGE}├─${CLR_RESET} Tailscale authenticated. IP: ${TAILSCALE_IP} ${CLR_CYAN}✓${CLR_RESET}"
-    render_logs
+    complete_task "$TASK_INDEX" "${CLR_ORANGE}├─${CLR_RESET} Tailscale authenticated. IP: ${TAILSCALE_IP}"
 
     # Configure Tailscale Serve for Proxmox Web UI
     if [[ $TAILSCALE_WEBUI == "yes" ]]; then

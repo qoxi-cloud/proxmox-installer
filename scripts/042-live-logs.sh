@@ -174,8 +174,7 @@ live_show_progress() {
       render_logs
     fi
   else
-    LOG_LINES[task_idx]="${CLR_ORANGE}├─${CLR_RESET} ${message} ${CLR_RED}✗${CLR_RESET}"
-    render_logs
+    complete_task "$task_idx" "${CLR_ORANGE}├─${CLR_RESET} ${message}" "error"
   fi
 
   return $exit_code
