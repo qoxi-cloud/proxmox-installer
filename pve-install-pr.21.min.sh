@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.425-pr.21"
+readonly VERSION="2.0.426-pr.21"
 readonly TERM_WIDTH=69
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
@@ -1738,14 +1738,14 @@ log "ERROR: Pre-flight checks failed"
 exit 1
 }
 get_terminal_dimensions(){
-TERM_HEIGHT=$(tput lines)
-TERM_WIDTH=$(tput cols)
+_LOG_TERM_HEIGHT=$(tput lines)
+_LOG_TERM_WIDTH=$(tput cols)
 }
 LOGO_HEIGHT=${BANNER_HEIGHT:-9}
 HEADER_HEIGHT=3
 calculate_log_area(){
 get_terminal_dimensions
-LOG_AREA_HEIGHT=$((TERM_HEIGHT-LOGO_HEIGHT-HEADER_HEIGHT-1))
+LOG_AREA_HEIGHT=$((_LOG_TERM_HEIGHT-LOGO_HEIGHT-HEADER_HEIGHT-1))
 }
 declare -a LOG_LINES=()
 LOG_COUNT=0
