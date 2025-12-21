@@ -369,7 +369,7 @@ INSTALL_NEEDRESTART="" # Auto-restart services after updates
 # Set: Wizard (114-wizard-services.sh), default: "no" except VNSTAT
 INSTALL_NETDATA=""    # Real-time web dashboard (port 19999)
 INSTALL_VNSTAT=""     # Bandwidth monitoring (default: yes)
-INSTALL_PROMETHEUS="" # Node exporter for Prometheus (port 9100)
+INSTALL_PROMTAIL=""   # Log collector for Loki
 INSTALL_RINGBUFFER="" # Network ring buffer tuning for high throughput
 
 # --- Optional Tools ---
