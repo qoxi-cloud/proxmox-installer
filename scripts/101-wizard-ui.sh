@@ -8,7 +8,7 @@
 # =============================================================================
 
 # Screen names for navigation
-WIZ_SCREENS=("Basic" "Proxmox" "Network" "Storage" "Services" "SSH")
+WIZ_SCREENS=("Basic" "Proxmox" "Network" "Storage" "Services" "Access")
 WIZ_CURRENT_SCREEN=0
 
 # =============================================================================
@@ -560,12 +560,12 @@ _wiz_render_screen_content() {
       _add_field "Security         " "$(_wiz_fmt "$_DSP_SECURITY")" "security"
       _add_field "Monitoring       " "$(_wiz_fmt "$_DSP_MONITORING")" "monitoring"
       _add_field "Tools            " "$(_wiz_fmt "$_DSP_TOOLS")" "tools"
-      _add_field "API Token        " "$(_wiz_fmt "$_DSP_API")" "api_token"
       ;;
-    5) # SSH
+    5) # Access
       _add_field "Admin User       " "$(_wiz_fmt "$_DSP_ADMIN_USER")" "admin_username"
       _add_field "Admin Password   " "$(_wiz_fmt "$_DSP_ADMIN_PASS")" "admin_password"
       _add_field "SSH Key          " "$(_wiz_fmt "$_DSP_SSH")" "ssh_key"
+      _add_field "API Token        " "$(_wiz_fmt "$_DSP_API")" "api_token"
       ;;
   esac
 }

@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # =============================================================================
-# Configuration Wizard - SSH Key Editor
-# ssh_key
+# Configuration Wizard - Access Settings Editors
+# Admin user, SSH key, API token
 # =============================================================================
 
 _edit_ssh_key() {
@@ -190,4 +190,58 @@ _edit_admin_password() {
         ;;
     esac
   done
+}
+
+# =============================================================================
+# API Token Editor
+# =============================================================================
+
+_edit_api_token() {
+  _wiz_start_edit
+
+  _wiz_description \
+    "Proxmox API token for automation:" \
+    "" \
+    "  {{cyan:Enabled}}:  Create privileged token (Terraform, Ansible)" \
+    "  {{cyan:Disabled}}: No API token" \
+    "" \
+    "  Token has full Administrator permissions, no expiration." \
+    ""
+
+  # 1 header + 2 items for gum choose
+  _show_input_footer "filter" 3
+
+  local selected
+  selected=$(
+    printf '%s\n' "$WIZ_TOGGLE_OPTIONS" | _wiz_choose \
+      --header="API Token (privileged, no expiration):"
+  )
+
+  case "$selected" in
+    Enabled)
+      # Request token name
+      _wiz_input_screen "Enter API token name (default: automation)"
+
+      local token_name
+      token_name=$(_wiz_input \
+        --placeholder "automation" \
+        --prompt "Token name: " \
+        --no-show-help \
+        --value="${API_TOKEN_NAME:-automation}")
+
+      # Validate: alphanumeric, dash, underscore only
+      if [[ -n $token_name && $token_name =~ ^[a-zA-Z0-9_-]+$ ]]; then
+        API_TOKEN_NAME="$token_name"
+        INSTALL_API_TOKEN="yes"
+      else
+        # Invalid name - use default
+        API_TOKEN_NAME="automation"
+        INSTALL_API_TOKEN="yes"
+      fi
+      ;;
+    Disabled)
+      INSTALL_API_TOKEN="no"
+      API_TOKEN_NAME="automation"
+      ;;
+  esac
 }
