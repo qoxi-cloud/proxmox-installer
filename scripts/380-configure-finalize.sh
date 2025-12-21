@@ -14,8 +14,12 @@ configure_ssh_hardening() {
   # shellcheck disable=SC2317,SC2329 # invoked indirectly by run_with_progress
   _ssh_hardening_impl() {
     remote_copy "templates/sshd_config" "/etc/ssh/sshd_config" || return 1
-    # Ensure .ssh directory and authorized_keys have correct permissions
-    remote_exec "mkdir -p /root/.ssh && chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys" || return 1
+    # Ensure .ssh directory with correct permissions (SSH key from answer.toml)
+    remote_exec "mkdir -p /root/.ssh && chmod 700 /root/.ssh" || return 1
+    # Set authorized_keys permissions - file must exist from Proxmox install
+    # Verify permissions were applied correctly
+    # shellcheck disable=SC2016
+    remote_exec 'chmod 600 /root/.ssh/authorized_keys && [ "$(stat -c %a /root/.ssh/authorized_keys)" = "600" ]' || return 1
   }
 
   if ! run_with_progress "Deploying SSH hardening" "Security hardening configured" _ssh_hardening_impl; then
