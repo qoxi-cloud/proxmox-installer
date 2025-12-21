@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.415-pr.21"
+readonly VERSION="2.0.416-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1728,20 +1728,18 @@ LOG_AREA_HEIGHT=$((TERM_HEIGHT-LOGO_HEIGHT-HEADER_HEIGHT-1))
 }
 declare -a LOG_LINES=()
 LOG_COUNT=0
-save_cursor_position(){
-printf '\033[s'
-}
-restore_cursor_position(){
-printf '\033[u'
-}
 add_log(){
 local message="$1"
 LOG_LINES+=("$message")
 ((LOG_COUNT++))
 render_logs
 }
+_render_install_header(){
+tput cup "$LOGO_HEIGHT" 0
+printf '\n%s\n\n' "                     $CLR_ORANGE●$CLR_RESET ${CLR_CYAN}Installing Proxmox$CLR_RESET $CLR_ORANGE●$CLR_RESET"
+}
 render_logs(){
-restore_cursor_position
+_render_install_header
 local start_line=0
 local lines_printed=0
 if ((LOG_COUNT>LOG_AREA_HEIGHT));then
@@ -1778,11 +1776,6 @@ add_subtask_log(){
 local message="$1"
 add_log "$CLR_ORANGE│$CLR_RESET   $CLR_GRAY$message$CLR_RESET"
 }
-_render_install_header(){
-printf '\n'
-printf '%s\n' "                     $CLR_ORANGE●$CLR_RESET ${CLR_CYAN}Installing Proxmox$CLR_RESET $CLR_ORANGE●$CLR_RESET"
-printf '\n'
-}
 start_live_installation(){
 show_progress(){
 live_show_progress "$@"
@@ -1792,8 +1785,6 @@ tput smcup
 tput civis
 _wiz_clear
 show_banner
-_render_install_header
-save_cursor_position
 trap 'tput cnorm; tput rmcup' EXIT RETURN
 }
 finish_live_installation(){
