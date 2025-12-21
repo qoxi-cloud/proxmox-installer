@@ -270,8 +270,7 @@ configure_proxmox_via_ssh() {
   # ==========================================================================
   configure_ssl_certificate
   if [[ $INSTALL_API_TOKEN == "yes" ]]; then
-    (create_api_token || exit 1) >/dev/null 2>&1 &
-    show_progress $! "Creating API token" "API token created"
+    run_with_progress "Creating API token" "API token created" create_api_token
   fi
 
   # ==========================================================================
