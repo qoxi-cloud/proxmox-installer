@@ -13,7 +13,7 @@ _config_aide() {
 
   # Initialize AIDE database and move to active location
   remote_exec '
-    aideinit -y -f 2>/dev/null || true
+    aideinit -y -f
     [[ -f /var/lib/aide/aide.db.new ]] && mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
   ' || {
     log "ERROR: Failed to initialize AIDE"

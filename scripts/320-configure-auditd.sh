@@ -17,10 +17,10 @@ _config_auditd() {
   # Configure auditd log settings (50MB files, 10 max, rotate)
   remote_exec '
     mkdir -p /var/log/audit
-    sed -i "s/^max_log_file = .*/max_log_file = 50/" /etc/audit/auditd.conf 2>/dev/null || true
-    sed -i "s/^num_logs = .*/num_logs = 10/" /etc/audit/auditd.conf 2>/dev/null || true
-    sed -i "s/^max_log_file_action = .*/max_log_file_action = ROTATE/" /etc/audit/auditd.conf 2>/dev/null || true
-    augenrules --load 2>/dev/null || true
+    sed -i "s/^max_log_file = .*/max_log_file = 50/" /etc/audit/auditd.conf
+    sed -i "s/^num_logs = .*/num_logs = 10/" /etc/audit/auditd.conf
+    sed -i "s/^max_log_file_action = .*/max_log_file_action = ROTATE/" /etc/audit/auditd.conf
+    augenrules --load
   ' || {
     log "ERROR: Failed to configure auditd"
     return 1
