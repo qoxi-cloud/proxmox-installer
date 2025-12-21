@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.422-pr.21"
+readonly VERSION="2.0.423-pr.21"
 readonly TERM_WIDTH=69
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
@@ -2146,11 +2146,13 @@ printf '%b' "$output"
 }
 _wiz_confirm(){
 gum confirm "$@" \
+--padding "0 0 0 1" \
 --prompt.foreground "$HEX_ORANGE" \
 --selected.background "$HEX_ORANGE"
 }
 _wiz_choose(){
 gum choose \
+--padding "0 0 0 1" \
 --header.foreground "$HEX_CYAN" \
 --cursor "$CLR_ORANGE›$CLR_RESET " \
 --cursor.foreground "$HEX_NONE" \
@@ -2161,6 +2163,7 @@ gum choose \
 }
 _wiz_input(){
 gum input \
+--padding "0 0 0 1" \
 --prompt.foreground "$HEX_CYAN" \
 --cursor.foreground "$HEX_ORANGE" \
 --no-show-help \
@@ -2607,6 +2610,7 @@ _wiz_start_edit
 _show_input_footer "filter" 6
 local selected
 selected=$(echo "$WIZ_TIMEZONES"|gum filter \
+--padding "0 0 0 1" \
 --placeholder "Type to search..." \
 --indicator "›" \
 --height 5 \
@@ -2629,6 +2633,7 @@ _wiz_start_edit
 _show_input_footer "filter" 6
 local selected
 selected=$(echo "$WIZ_KEYBOARD_LAYOUTS"|gum filter \
+--padding "0 0 0 1" \
 --placeholder "Type to search..." \
 --indicator "›" \
 --height 5 \
@@ -2646,6 +2651,7 @@ _wiz_start_edit
 _show_input_footer "filter" 6
 local selected
 selected=$(echo "$WIZ_COUNTRIES"|gum filter \
+--padding "0 0 0 1" \
 --placeholder "Type to search..." \
 --indicator "›" \
 --height 5 \
