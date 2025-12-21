@@ -17,7 +17,8 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.421-pr.21"
+readonly VERSION="2.0.422-pr.21"
+readonly TERM_WIDTH=69
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -485,9 +486,8 @@ return $exit_code
 }
 format_wizard_header(){
 local title="$1"
-local width=60
 local content_len=$((${#title}+4))
-local padding=$(((width-content_len)/2))
+local padding=$(((TERM_WIDTH-content_len)/2))
 local spaces=""
 ((padding>0))&&spaces=$(printf '%*s' "$padding" "")
 printf '%s' "$spaces$CLR_ORANGE●$CLR_RESET $CLR_CYAN$title$CLR_RESET $CLR_ORANGE●$CLR_RESET"
@@ -2063,8 +2063,7 @@ local current=$WIZ_CURRENT_SCREEN
 local total=${#WIZ_SCREENS[@]}
 local col=$_NAV_COL_WIDTH
 local nav_width=$((col*total))
-local footer_width=69
-local pad_left=$(((footer_width-nav_width)/2))
+local pad_left=$(((TERM_WIDTH-nav_width)/2))
 local padding=""
 ((pad_left>0))&&padding=$(printf '%*s' $pad_left '')
 local labels="$padding"
