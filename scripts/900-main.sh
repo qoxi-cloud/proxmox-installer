@@ -15,7 +15,7 @@ _render_completion_screen() {
   output+="${banner_output}\n\n"
 
   # Success header (centered like nav header)
-  output+="                    ${CLR_GREEN}●${CLR_RESET} ${CLR_CYAN}Installation Complete${CLR_RESET} ${CLR_GREEN}●${CLR_RESET}\n\n"
+  output+="$(format_wizard_header "Installation Complete")\n\n"
 
   # Warning to save credentials
   output+="  ${CLR_YELLOW}⚠ SAVE THESE CREDENTIALS${CLR_RESET}\n\n"

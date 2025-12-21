@@ -96,3 +96,17 @@ show_progress() {
 
   return $exit_code
 }
+
+# Formats wizard-style centered header with dots.
+# Usage: format_wizard_header "Title"
+# Returns: centered "● Title ●" with orange dots and cyan text
+format_wizard_header() {
+  local title="$1"
+  local width=60
+  # "● Title ●" = 4 chars for dots/spaces + title length
+  local content_len=$((${#title} + 4))
+  local padding=$(((width - content_len) / 2))
+  local spaces=""
+  ((padding > 0)) && spaces=$(printf '%*s' "$padding" "")
+  printf '%s' "${spaces}${CLR_ORANGE}●${CLR_RESET} ${CLR_CYAN}${title}${CLR_RESET} ${CLR_ORANGE}●${CLR_RESET}"
+}
