@@ -43,7 +43,7 @@ configure_ssl_certificate() {
   fi
 
   # Install deploy hook, first-boot script, and systemd service
-  run_remote "Configuring Let's Encrypt templates" '
+  remote_run "Configuring Let's Encrypt templates" '
         set -e
         mkdir -p /etc/letsencrypt/renewal-hooks/deploy
         mv /tmp/letsencrypt-deploy-hook.sh /etc/letsencrypt/renewal-hooks/deploy/proxmox.sh

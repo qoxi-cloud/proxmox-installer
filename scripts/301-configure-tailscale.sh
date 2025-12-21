@@ -13,7 +13,7 @@ configure_tailscale() {
   fi
 
   # Start tailscaled and wait for socket (up to 3s)
-  run_remote "Starting Tailscale" '
+  remote_run "Starting Tailscale" '
         set -e
         systemctl enable tailscaled
         systemctl start tailscaled
@@ -57,7 +57,7 @@ configure_tailscale() {
 
     # Configure Tailscale Serve for Proxmox Web UI
     if [[ $TAILSCALE_WEBUI == "yes" ]]; then
-      run_remote "Configuring Tailscale Serve" \
+      remote_run "Configuring Tailscale Serve" \
         'tailscale serve --bg --https=443 https://127.0.0.1:8006' \
         "Proxmox Web UI available via Tailscale Serve"
     fi

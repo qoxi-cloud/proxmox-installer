@@ -17,8 +17,8 @@ Include "$SCRIPTS_DIR/350-configure-yazi.sh"
 # _install_yazi()
 # ===========================================================================
 Describe "_install_yazi()"
-It "calls run_remote successfully"
-MOCK_RUN_REMOTE_RESULT=0
+It "calls remote_run successfully"
+MOCK_REMOTE_RUN_RESULT=0
 When call _install_yazi
 The status should be success
 End
@@ -48,7 +48,7 @@ End
 
 It "installs when INSTALL_YAZI is yes"
 INSTALL_YAZI="yes"
-MOCK_RUN_REMOTE_RESULT=0
+MOCK_REMOTE_RUN_RESULT=0
 MOCK_REMOTE_EXEC_RESULT=0
 MOCK_REMOTE_COPY_RESULT=0
 When call configure_yazi

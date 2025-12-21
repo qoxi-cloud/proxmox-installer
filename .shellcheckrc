@@ -43,7 +43,7 @@ disable=SC2001
 #
 # SC2016: Expressions don't expand in single quotes
 #   - Use inline disable for remote execution strings
-#   - Example: run_remote commands that should expand on remote
+#   - Example: remote_run commands that should expand on remote
 #
 # SC1090: Can't follow non-constant source
 #   - Use inline disable for dynamic sourcing

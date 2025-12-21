@@ -167,7 +167,7 @@ wait_for_ssh_ready() {
 #                      - Quick status checks or simple configurations
 #                      - Returns exit code (doesn't exit on failure)
 #
-# run_remote()       - Primary function for configuration scripts. Use for:
+# remote_run()       - Primary function for configuration scripts. Use for:
 #                      - All major installation/configuration steps
 #                      - Commands that should show progress to user
 #                      - Operations where failure should abort installation
@@ -218,7 +218,7 @@ remote_exec() {
 }
 
 # Internal: Executes remote script with progress indicator.
-# Don't use directly - use run_remote() instead which handles errors.
+# Don't use directly - use remote_run() instead which handles errors.
 # Parameters:
 #   $1 - Progress message
 #   $2 - Script content to execute
@@ -276,8 +276,8 @@ _remote_exec_with_progress() {
 #   $3 - Done message (optional, defaults to $1)
 # Side effects: Exits with code 1 on failure (no need to check return)
 # Example:
-#   run_remote "Installing packages" 'apt-get install -y foo' "Packages installed"
-run_remote() {
+#   remote_run "Installing packages" 'apt-get install -y foo' "Packages installed"
+remote_run() {
   local message="$1"
   local script="$2"
   local done_message="${3:-$message}"

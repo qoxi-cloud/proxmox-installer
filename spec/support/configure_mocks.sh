@@ -31,8 +31,8 @@ print_success() { :; }
 # =============================================================================
 # Remote execution mocks
 # =============================================================================
-run_remote() {
-  return "$MOCK_RUN_REMOTE_RESULT"
+remote_run() {
+  return "$MOCK_REMOTE_RUN_RESULT"
 }
 
 remote_exec() {

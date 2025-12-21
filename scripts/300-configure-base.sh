@@ -130,7 +130,7 @@ configure_base_system() {
     log "configure_base_system: configuring enterprise repository"
     # Enterprise: disable default no-subscription repo (template already has enterprise)
     # shellcheck disable=SC2016 # Single quotes intentional - executed on remote system
-    run_remote "Configuring enterprise repository" '
+    remote_run "Configuring enterprise repository" '
             for repo_file in /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
                 [ -f "$repo_file" ] || continue
                 if grep -q "pve-no-subscription\|pvetest" "$repo_file" 2>/dev/null; then
@@ -142,7 +142,7 @@ configure_base_system() {
     # Register subscription key if provided
     if [[ -n $PVE_SUBSCRIPTION_KEY ]]; then
       log "configure_base_system: registering subscription key"
-      run_remote "Registering subscription key" \
+      remote_run "Registering subscription key" \
         "pvesubscription set '${PVE_SUBSCRIPTION_KEY}' 2>/dev/null || true" \
         "Subscription key registered"
     fi
@@ -150,7 +150,7 @@ configure_base_system() {
     # No-subscription or test: disable enterprise repo
     log "configure_base_system: configuring ${PVE_REPO_TYPE:-no-subscription} repository"
     # shellcheck disable=SC2016 # Single quotes intentional - executed on remote system
-    run_remote "Configuring ${PVE_REPO_TYPE:-no-subscription} repository" '
+    remote_run "Configuring ${PVE_REPO_TYPE:-no-subscription} repository" '
             for repo_file in /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
                 [ -f "$repo_file" ] || continue
                 if grep -q "enterprise.proxmox.com" "$repo_file" 2>/dev/null; then
@@ -172,7 +172,7 @@ configure_base_system() {
   # Note: locales package already installed via install_base_packages()
   local locale_name="${LOCALE%%.UTF-8}" # Remove .UTF-8 suffix for sed pattern
   # Enable user's selected locale + en_US as fallback (many tools expect it)
-  run_remote "Configuring UTF-8 locales" "
+  remote_run "Configuring UTF-8 locales" "
         set -e
         sed -i 's/# ${locale_name}.UTF-8/${locale_name}.UTF-8/' /etc/locale.gen
         sed -i 's/# en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
@@ -199,7 +199,7 @@ configure_shell() {
   if [[ $SHELL_TYPE == "zsh" ]]; then
     # Install Oh-My-Zsh for admin user
     # shellcheck disable=SC2016 # Single quotes intentional - executed on remote system
-    run_remote "Installing Oh-My-Zsh" '
+    remote_run "Installing Oh-My-Zsh" '
             set -e
             export RUNZSH=no
             export CHSH=no
@@ -209,7 +209,7 @@ configure_shell() {
 
     # Parallel git clones for theme and plugins (all independent after Oh-My-Zsh)
     # shellcheck disable=SC2016 # Single quotes intentional - executed on remote system
-    run_remote "Installing ZSH theme and plugins" '
+    remote_run "Installing ZSH theme and plugins" '
             set -e
             git clone --depth=1 https://github.com/romkatv/powerlevel10k.git /home/'"'$ADMIN_USERNAME'"'/.oh-my-zsh/custom/themes/powerlevel10k &
             pid1=$!
@@ -238,7 +238,7 @@ configure_system_services() {
   run_with_progress "Configuring Unattended Upgrades" "Unattended Upgrades configured" _configure_unattended_upgrades
 
   # Configure nf_conntrack module (sysctl params already in 99-proxmox.conf.tmpl)
-  run_remote "Configuring nf_conntrack" '
+  remote_run "Configuring nf_conntrack" '
         if ! grep -q "nf_conntrack" /etc/modules 2>/dev/null; then
             echo "nf_conntrack" >> /etc/modules
         fi

@@ -226,7 +226,7 @@ configure_proxmox_via_ssh() {
   # PHASE 3: Security Configuration (parallel after batch install)
   # ==========================================================================
   # Batch install security & optional packages first
-  # Uses run_remote internally - exits on failure
+  # Uses remote_run internally - exits on failure
   batch_install_packages
 
   # Tailscale (needs package installed, needed for firewall rules)

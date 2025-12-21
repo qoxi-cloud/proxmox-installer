@@ -19,7 +19,7 @@ install_base_packages() {
 
   log "Installing base packages: $packages"
 
-  run_remote "Installing system packages" "
+  remote_run "Installing system packages" "
     set -e
     export DEBIAN_FRONTEND=noninteractive
     apt-get update -qq
@@ -96,10 +96,10 @@ batch_install_packages() {
     '
   fi
 
-  # Use run_remote for reliable execution (pipes script to bash -s, better for long scripts)
-  # run_remote exits on failure, so no need for error handling here
+  # Use remote_run for reliable execution (pipes script to bash -s, better for long scripts)
+  # remote_run exits on failure, so no need for error handling here
   # shellcheck disable=SC2086
-  run_remote "Installing packages (${#packages[@]})" '
+  remote_run "Installing packages (${#packages[@]})" '
       set -e
       export DEBIAN_FRONTEND=noninteractive
       '"$repo_setup"'

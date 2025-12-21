@@ -45,7 +45,7 @@ configure_zfs_pool() {
   log "INFO: ZFS pool command: $pool_cmd"
 
   # Create pool with RAID config, set ZFS properties, create VM dataset, configure Proxmox storage
-  if ! run_remote "Creating ZFS pool 'tank'" "
+  if ! remote_run "Creating ZFS pool 'tank'" "
     set -e
     $pool_cmd
     zfs set compression=lz4 tank
