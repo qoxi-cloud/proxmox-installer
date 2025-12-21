@@ -236,11 +236,7 @@ configure_firewall() {
 
   log "Configuring nftables firewall (mode: $FIREWALL_MODE, bridge: $BRIDGE_MODE)"
 
-  # Configure using helper (package already installed via batch_install_packages)
-  (
-    _config_nftables || exit 1
-  ) >/dev/null 2>&1 &
-
+  # Build mode display string for progress message
   local mode_display=""
   case "$FIREWALL_MODE" in
     stealth) mode_display="stealth (Tailscale only)" ;;
@@ -249,11 +245,9 @@ configure_firewall() {
     *) mode_display="$FIREWALL_MODE" ;;
   esac
 
-  show_progress $! "Configuring nftables firewall" "Firewall configured ($mode_display)"
-
-  local exit_code=$?
-  if [[ $exit_code -ne 0 ]]; then
+  # Configure using helper (package already installed via batch_install_packages)
+  if ! run_with_progress "Configuring nftables firewall" "Firewall configured ($mode_display)" _config_nftables; then
     log "WARNING: Firewall setup failed"
-    return 0 # Non-fatal error
   fi
+  return 0 # Non-fatal error
 }
