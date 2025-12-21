@@ -1,6 +1,0 @@
-# Proxmox custom metrics for Prometheus
-# Collects ZFS and VM/container statistics every 5 minutes
-SHELL=/bin/bash
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-
-*/5 * * * * root /usr/local/bin/proxmox-metrics.sh >/dev/null 2>&1
