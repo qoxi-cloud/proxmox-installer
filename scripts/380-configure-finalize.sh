@@ -82,11 +82,10 @@ validate_installation() {
 
   # Update task with final status
   if ((errors > 0)); then
-    LOG_LINES[task_idx]="${CLR_ORANGE}├─${CLR_RESET} Validation: ${CLR_RED}${errors} error(s)${CLR_RESET}, ${CLR_YELLOW}${warnings} warning(s)${CLR_RESET} ${CLR_RED}✗${CLR_RESET}"
-    render_logs
+    complete_task "$task_idx" "${CLR_ORANGE}├─${CLR_RESET} Validation: ${CLR_RED}${errors} error(s)${CLR_RESET}, ${CLR_YELLOW}${warnings} warning(s)${CLR_RESET}" "error"
     log "ERROR: Installation validation failed with $errors error(s)"
   elif ((warnings > 0)); then
-    complete_task "$task_idx" "${CLR_ORANGE}├─${CLR_RESET} Validation passed with ${CLR_YELLOW}${warnings} warning(s)${CLR_RESET}"
+    complete_task "$task_idx" "${CLR_ORANGE}├─${CLR_RESET} Validation passed with ${CLR_YELLOW}${warnings} warning(s)${CLR_RESET}" "warning"
   else
     complete_task "$task_idx" "${CLR_ORANGE}├─${CLR_RESET} Validation passed"
   fi

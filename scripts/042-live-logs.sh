@@ -72,11 +72,22 @@ start_task() {
   TASK_INDEX=$((LOG_COUNT - 1))
 }
 
-# Complete task with checkmark
+# Complete task with status indicator
+# Parameters:
+#   $1 - task index
+#   $2 - message
+#   $3 - status: "success" (default, ✓), "error" (✗), "warning" (⚠)
 complete_task() {
   local task_index="$1"
   local message="$2"
-  LOG_LINES[task_index]="$message ${CLR_CYAN}✓${CLR_RESET}"
+  local status="${3:-success}"
+  local indicator
+  case "$status" in
+    error) indicator="${CLR_RED}✗${CLR_RESET}" ;;
+    warning) indicator="${CLR_YELLOW}⚠${CLR_RESET}" ;;
+    *) indicator="${CLR_CYAN}✓${CLR_RESET}" ;;
+  esac
+  LOG_LINES[task_index]="$message $indicator"
   render_logs
 }
 
