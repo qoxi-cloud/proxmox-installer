@@ -13,16 +13,19 @@ create_api_token() {
 
   # Check if token already exists and remove
   local existing
-  existing=$(remote_exec "pveum user token list ${ADMIN_USERNAME}@pam 2>/dev/null | grep -q '${API_TOKEN_NAME}' && echo 'exists' || echo ''" || true)
+  existing=$(remote_exec "pveum user token list ${ADMIN_USERNAME}@pam 2>/dev/null | grep -q '${API_TOKEN_NAME}' && echo 'exists' || echo ''")
 
   if [[ $existing == "exists" ]]; then
     log "WARNING: Token ${API_TOKEN_NAME} exists, removing first"
-    remote_exec "pveum user token remove ${ADMIN_USERNAME}@pam ${API_TOKEN_NAME}" || true
+    remote_exec "pveum user token remove ${ADMIN_USERNAME}@pam ${API_TOKEN_NAME}" || {
+      log "ERROR: Failed to remove existing token"
+      return 1
+    }
   fi
 
   # Create privileged token without expiration using JSON output
   local output
-  output=$(remote_exec "pveum user token add ${ADMIN_USERNAME}@pam ${API_TOKEN_NAME} --privsep 0 --expire 0 --output-format json 2>&1" || true)
+  output=$(remote_exec "pveum user token add ${ADMIN_USERNAME}@pam ${API_TOKEN_NAME} --privsep 0 --expire 0 --output-format json 2>&1")
 
   if [[ -z $output ]]; then
     log "ERROR: Failed to create API token - empty output"
