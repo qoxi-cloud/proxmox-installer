@@ -145,10 +145,9 @@ make_templates() {
     "./templates/vnstat.conf:vnstat.conf"
     # Monitoring - Netdata
     "./templates/netdata.conf:netdata.conf"
-    # Monitoring - Prometheus
-    "./templates/prometheus-node-exporter:prometheus-node-exporter"
-    "./templates/proxmox-metrics.sh:proxmox-metrics.sh"
-    "./templates/proxmox-metrics.cron:proxmox-metrics.cron"
+    # Monitoring - Promtail
+    "./templates/promtail.yml:promtail.yml"
+    "./templates/promtail.service:promtail.service"
     # Tools - Yazi
     "./templates/yazi-theme.toml:yazi-theme.toml"
     # Network tuning

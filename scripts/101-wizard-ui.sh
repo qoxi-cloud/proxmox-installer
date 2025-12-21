@@ -434,7 +434,7 @@ _wiz_build_display_values() {
   local mon_items=()
   [[ $INSTALL_VNSTAT == "yes" ]] && mon_items+=("vnstat")
   [[ $INSTALL_NETDATA == "yes" ]] && mon_items+=("netdata")
-  [[ $INSTALL_PROMETHEUS == "yes" ]] && mon_items+=("prometheus")
+  [[ $INSTALL_PROMTAIL == "yes" ]] && mon_items+=("promtail")
   [[ ${#mon_items[@]} -gt 0 ]] && _DSP_MONITORING="${mon_items[*]}"
 
   # Tools
