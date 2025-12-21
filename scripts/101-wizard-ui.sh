@@ -280,6 +280,8 @@ _wiz_config_complete() {
   [[ -z $DOMAIN_SUFFIX ]] && return 1
   [[ -z $EMAIL ]] && return 1
   [[ -z $NEW_ROOT_PASSWORD ]] && return 1
+  [[ -z $ADMIN_USERNAME ]] && return 1
+  [[ -z $ADMIN_PASSWORD ]] && return 1
   [[ -z $TIMEZONE ]] && return 1
   [[ -z $KEYBOARD ]] && return 1
   [[ -z $COUNTRY ]] && return 1
@@ -456,6 +458,14 @@ _wiz_build_display_values() {
   _DSP_SSH=""
   [[ -n $SSH_PUBLIC_KEY ]] && _DSP_SSH="${SSH_PUBLIC_KEY:0:20}..."
 
+  # Admin User
+  _DSP_ADMIN_USER=""
+  [[ -n $ADMIN_USERNAME ]] && _DSP_ADMIN_USER="$ADMIN_USERNAME"
+
+  # Admin Password
+  _DSP_ADMIN_PASS=""
+  [[ -n $ADMIN_PASSWORD ]] && _DSP_ADMIN_PASS="********"
+
   # Firewall
   _DSP_FIREWALL=""
   if [[ -n $INSTALL_FIREWALL ]]; then
@@ -553,6 +563,8 @@ _wiz_render_screen_content() {
       _add_field "API Token        " "$(_wiz_fmt "$_DSP_API")" "api_token"
       ;;
     5) # SSH
+      _add_field "Admin User       " "$(_wiz_fmt "$_DSP_ADMIN_USER")" "admin_username"
+      _add_field "Admin Password   " "$(_wiz_fmt "$_DSP_ADMIN_PASS")" "admin_password"
       _add_field "SSH Key          " "$(_wiz_fmt "$_DSP_SSH")" "ssh_key"
       ;;
   esac

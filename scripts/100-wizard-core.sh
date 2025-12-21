@@ -71,6 +71,8 @@ _wizard_main() {
           monitoring) _edit_features_monitoring ;;
           tools) _edit_features_tools ;;
           api_token) _edit_api_token ;;
+          admin_username) _edit_admin_username ;;
+          admin_password) _edit_admin_password ;;
           ssh_key) _edit_ssh_key ;;
         esac
         # Hide cursor again
