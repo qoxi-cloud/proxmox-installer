@@ -13,6 +13,35 @@ validate_hostname() {
   [[ $hostname =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]]
 }
 
+# Validates admin username format for Linux systems.
+# Must be lowercase, start with letter, 1-32 chars.
+# Blocks reserved system usernames.
+# Parameters:
+#   $1 - Username to validate
+# Returns: 0 if valid, 1 otherwise
+validate_admin_username() {
+  local username="$1"
+
+  # Must be lowercase alphanumeric, can contain underscore/hyphen, 1-32 chars
+  # Must start with a letter
+  [[ ! $username =~ ^[a-z][a-z0-9_-]{0,31}$ ]] && return 1
+
+  # Block reserved system usernames
+  case "$username" in
+    root | nobody | daemon | bin | sys | sync | games | man | lp | mail | \
+      news | uucp | proxy | www-data | backup | list | irc | gnats | \
+      sshd | systemd-network | systemd-resolve | messagebus | \
+      polkitd | postfix | syslog | _apt | tss | uuidd | avahi | colord | \
+      cups-pk-helper | dnsmasq | geoclue | hplip | kernoops | lightdm | \
+      nm-openconnect | nm-openvpn | pulse | rtkit | saned | speech-dispatcher | \
+      whoopsie | admin | administrator | operator | guest)
+      return 1
+      ;;
+  esac
+
+  return 0
+}
+
 # Validates fully qualified domain name format.
 # Parameters:
 #   $1 - FQDN to validate
