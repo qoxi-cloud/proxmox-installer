@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.420-pr.21"
+readonly VERSION="2.0.421-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -5071,7 +5071,8 @@ return 0
 configure_ssh_hardening(){
 _ssh_hardening_impl(){
 remote_copy "templates/sshd_config" "/etc/ssh/sshd_config"||return 1
-remote_exec "mkdir -p /root/.ssh && chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys"||return 1
+remote_exec "mkdir -p /root/.ssh && chmod 700 /root/.ssh"||return 1
+remote_exec 'chmod 600 /root/.ssh/authorized_keys && [ "$(stat -c %a /root/.ssh/authorized_keys)" = "600" ]'||return 1
 }
 if ! run_with_progress "Deploying SSH hardening" "Security hardening configured" _ssh_hardening_impl;then
 log "ERROR: SSH hardening failed - system may be insecure"
