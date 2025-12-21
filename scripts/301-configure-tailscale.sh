@@ -78,7 +78,7 @@ configure_tailscale() {
       log "Skipping disable-openssh.service (FIREWALL_MODE=${FIREWALL_MODE:-standard})"
     fi
 
-    # Note: Firewall is now configured separately via 52-configure-firewall.sh
+    # Note: Firewall is now configured separately via 310-configure-firewall.sh
   else
     TAILSCALE_IP="not authenticated"
     TAILSCALE_HOSTNAME=""
