@@ -152,6 +152,7 @@ _edit_ssl() {
     # Run DNS validation in background with animated dots
     local dns_result_file
     dns_result_file=$(mktemp)
+    register_temp_file "$dns_result_file"
 
     (
       validate_dns_resolution "$FQDN" "$MAIN_IPV4"
