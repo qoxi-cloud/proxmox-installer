@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.417-pr.21"
+readonly VERSION="2.0.418-pr.21"
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -1049,6 +1049,7 @@ fi
 log "Running parallel group '$group_name' with functions: ${funcs[*]}"
 local result_dir
 result_dir=$(mktemp -d)
+export PARALLEL_RESULT_DIR="$result_dir"
 trap "rm -rf '$result_dir'" RETURN
 local i=0
 for func in "${funcs[@]}";do
@@ -1075,6 +1076,13 @@ sleep 0.2
 done) \
 &
 show_progress $! "$group_name" "$done_msg"
+local configured=()
+for f in "$result_dir"/ran_*;do
+[[ -f $f ]]&&configured+=("$(cat "$f")")
+done
+if [[ ${#configured[@]} -gt 0 ]];then
+log_subtasks "${configured[@]}"
+fi
 local failures=0
 for j in $(seq 0 $((count-1)));do
 [[ -f "$result_dir/fail_$j" ]]&&((failures++))
@@ -1084,6 +1092,10 @@ log "WARNING: $failures/$count functions failed in group '$group_name'"
 return 0
 fi
 return 0
+}
+parallel_mark_configured(){
+local feature="$1"
+[[ -n ${PARALLEL_RESULT_DIR:-} ]]&&printf '%s' "$feature" >>"$PARALLEL_RESULT_DIR/ran_$$"
 }
 run_with_progress(){
 local message="$1"
@@ -5129,47 +5141,47 @@ fi
 }
 _parallel_config_apparmor(){
 [[ ${INSTALL_APPARMOR:-} != "yes" ]]&&return 0
-_config_apparmor
+_config_apparmor&&parallel_mark_configured "apparmor"
 }
 _parallel_config_fail2ban(){
 [[ ${INSTALL_FIREWALL:-} != "yes" || ${FIREWALL_MODE:-standard} == "stealth" ]]&&return 0
-_config_fail2ban
+_config_fail2ban&&parallel_mark_configured "fail2ban"
 }
 _parallel_config_auditd(){
 [[ ${INSTALL_AUDITD:-} != "yes" ]]&&return 0
-_config_auditd
+_config_auditd&&parallel_mark_configured "auditd"
 }
 _parallel_config_aide(){
 [[ ${INSTALL_AIDE:-} != "yes" ]]&&return 0
-_config_aide
+_config_aide&&parallel_mark_configured "aide"
 }
 _parallel_config_chkrootkit(){
 [[ ${INSTALL_CHKROOTKIT:-} != "yes" ]]&&return 0
-_config_chkrootkit
+_config_chkrootkit&&parallel_mark_configured "chkrootkit"
 }
 _parallel_config_lynis(){
 [[ ${INSTALL_LYNIS:-} != "yes" ]]&&return 0
-_config_lynis
+_config_lynis&&parallel_mark_configured "lynis"
 }
 _parallel_config_needrestart(){
 [[ ${INSTALL_NEEDRESTART:-} != "yes" ]]&&return 0
-_config_needrestart
+_config_needrestart&&parallel_mark_configured "needrestart"
 }
 _parallel_config_prometheus(){
 [[ ${INSTALL_PROMETHEUS:-} != "yes" ]]&&return 0
-_config_prometheus
+_config_prometheus&&parallel_mark_configured "prometheus"
 }
 _parallel_config_vnstat(){
 [[ ${INSTALL_VNSTAT:-} != "yes" ]]&&return 0
-_config_vnstat
+_config_vnstat&&parallel_mark_configured "vnstat"
 }
 _parallel_config_ringbuffer(){
 [[ ${INSTALL_RINGBUFFER:-} != "yes" ]]&&return 0
-_config_ringbuffer
+_config_ringbuffer&&parallel_mark_configured "ringbuffer"
 }
 _parallel_config_nvim(){
 [[ ${INSTALL_NVIM:-} != "yes" ]]&&return 0
-_config_nvim
+_config_nvim&&parallel_mark_configured "nvim"
 }
 configure_proxmox_via_ssh(){
 log "Starting Proxmox configuration via SSH"
