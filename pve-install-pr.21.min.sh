@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.471-pr.21"
+readonly VERSION="2.0.472-pr.21"
 readonly TERM_WIDTH=69
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
@@ -4620,7 +4620,7 @@ remote_exec 'chmod 600 /home/'"'$ADMIN_USERNAME'"'/.ssh/authorized_keys'||return
 remote_exec 'chown -R '"'$ADMIN_USERNAME:$ADMIN_USERNAME'"' /home/'"'$ADMIN_USERNAME'"'/.ssh'||return 1
 remote_exec 'echo '"'$ADMIN_USERNAME ALL=(ALL) NOPASSWD:ALL'"' > /etc/sudoers.d/'"'$ADMIN_USERNAME'"''||return 1
 remote_exec 'chmod 440 /etc/sudoers.d/'"'$ADMIN_USERNAME'"''||return 1
-remote_exec "pveum user add $ADMIN_USERNAME@pam 2>/dev/null || true"
+remote_exec "pveum user list 2>/dev/null | grep -q '$ADMIN_USERNAME@pam' || pveum user add $ADMIN_USERNAME@pam"
 remote_exec "pveum acl modify / -user $ADMIN_USERNAME@pam -role Administrator"||{
 log "WARNING: Failed to grant Proxmox Administrator role"
 }
@@ -5008,13 +5008,16 @@ create_api_token(){
 [[ $INSTALL_API_TOKEN != "yes" ]]&&return 0
 log "INFO: Creating Proxmox API token for $ADMIN_USERNAME: $API_TOKEN_NAME"
 local existing
-existing=$(remote_exec "pveum user token list $ADMIN_USERNAME@pam 2>/dev/null | grep -q '$API_TOKEN_NAME' && echo 'exists' || echo ''"||true)
+existing=$(remote_exec "pveum user token list $ADMIN_USERNAME@pam 2>/dev/null | grep -q '$API_TOKEN_NAME' && echo 'exists' || echo ''")
 if [[ $existing == "exists" ]];then
 log "WARNING: Token $API_TOKEN_NAME exists, removing first"
-remote_exec "pveum user token remove $ADMIN_USERNAME@pam $API_TOKEN_NAME"||true
+remote_exec "pveum user token remove $ADMIN_USERNAME@pam $API_TOKEN_NAME"||{
+log "ERROR: Failed to remove existing token"
+return 1
+}
 fi
 local output
-output=$(remote_exec "pveum user token add $ADMIN_USERNAME@pam $API_TOKEN_NAME --privsep 0 --expire 0 --output-format json 2>&1"||true)
+output=$(remote_exec "pveum user token add $ADMIN_USERNAME@pam $API_TOKEN_NAME --privsep 0 --expire 0 --output-format json 2>&1")
 if [[ -z $output ]];then
 log "ERROR: Failed to create API token - empty output"
 return 1
