@@ -17,8 +17,9 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.481-pr.21"
-readonly TERM_WIDTH=69
+readonly VERSION="2.0.482-pr.21"
+readonly TERM_WIDTH=80
+readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
 GITHUB_BASE_URL="https://github.com/$GITHUB_REPO/raw/refs/heads/$GITHUB_BRANCH"
@@ -314,12 +315,13 @@ fi
 }
 BANNER_LETTER_COUNT=7
 BANNER_HEIGHT=9
-_BANNER_PAD="        "
+_BANNER_PAD_SIZE=$(((TERM_WIDTH-BANNER_WIDTH)/2))
+printf -v _BANNER_PAD '%*s' "$_BANNER_PAD_SIZE" ''
 show_banner(){
 local p="$_BANNER_PAD"
 local tagline="${CLR_CYAN}Qoxi ${CLR_GRAY}Automated Installer $CLR_GOLD$VERSION$CLR_RESET"
 local text="Qoxi Automated Installer $VERSION"
-local pad=$(((51-${#text})/2))
+local pad=$(((BANNER_WIDTH-${#text})/2))
 local spaces
 printf -v spaces '%*s' "$pad" ''
 printf '%s\n' \
@@ -381,7 +383,7 @@ local line6="$p$M"
 [[ $h -eq 6 ]]&&line6+=" $A/_/\\_\\$M"||line6+=' /_/\_\'
 line6+="$R"
 local text="Qoxi Automated Installer $VERSION"
-local pad=$(((51-${#text})/2))
+local pad=$(((BANNER_WIDTH-${#text})/2))
 local spaces
 printf -v spaces '%*s' "$pad" ''
 local line_tagline="$p$spaces${CLR_CYAN}Qoxi ${M}Automated Installer $CLR_GOLD$VERSION$R"
@@ -494,11 +496,19 @@ return $exit_code
 }
 format_wizard_header(){
 local title="$1"
-local content_len=$((${#title}+4))
-local padding=$(((TERM_WIDTH-content_len)/2))
-local spaces=""
-((padding>0))&&spaces=$(printf '%*s' "$padding" "")
-printf '%s' "$spaces$CLR_ORANGE●$CLR_RESET $CLR_CYAN$title$CLR_RESET $CLR_ORANGE●$CLR_RESET"
+local banner_pad="$_BANNER_PAD"
+local line_width=$((BANNER_WIDTH-3))
+local half=$(((line_width-1)/2))
+local left_line right_line
+left_line=$(printf '%*s' "$half" ''|tr ' ' '━')
+right_line=$(printf '%*s' "$((line_width-1-half))" ''|tr ' ' '─')
+local title_len=${#title}
+local dot_pos=$half
+local title_start=$((dot_pos-title_len/2))
+local title_spaces=""
+((title_start>0))&&title_spaces=$(printf '%*s' "$title_start" '')
+printf '%s%s%s\n' "$banner_pad" "$title_spaces" "$CLR_GRAY$title$CLR_RESET"
+printf '%s%s%s%s%s' "$banner_pad" "$CLR_CYAN$left_line" "$CLR_CYAN●" "$CLR_GRAY$right_line$CLR_RESET" ""
 }
 download_file(){
 local output_file="$1"
@@ -1789,7 +1799,7 @@ _LOG_TERM_HEIGHT=$(tput lines)
 _LOG_TERM_WIDTH=$(tput cols)
 }
 LOGO_HEIGHT=${BANNER_HEIGHT:-9}
-HEADER_HEIGHT=3
+HEADER_HEIGHT=4
 calculate_log_area(){
 get_terminal_dimensions
 LOG_AREA_HEIGHT=$((_LOG_TERM_HEIGHT-LOGO_HEIGHT-HEADER_HEIGHT-1))
@@ -1804,7 +1814,9 @@ render_logs
 }
 _render_install_header(){
 printf '\033[%d;0H' "$((LOGO_HEIGHT+1))"
-printf '%s\n\n' "$(format_wizard_header "Installing Proxmox")"
+format_wizard_header "Installing Proxmox"
+_wiz_blank_line
+_wiz_blank_line
 }
 render_logs(){
 _render_install_header
