@@ -13,8 +13,8 @@ get_terminal_dimensions() {
 # Fallback to 9 if not defined (6 ASCII art + 1 empty + 1 tagline + 1 spacing)
 LOGO_HEIGHT=${BANNER_HEIGHT:-9}
 
-# Fixed header height (empty + title + empty)
-HEADER_HEIGHT=3
+# Fixed header height (title label + line with dot + 2 blank lines)
+HEADER_HEIGHT=4
 
 # Calculate available space for logs
 calculate_log_area() {
@@ -34,11 +34,13 @@ add_log() {
   render_logs
 }
 
-# Render header in wizard style (centered like completion screen)
+# Render header in wizard style (continuation of wizard nav)
 _render_install_header() {
   # Use ANSI escape instead of tput for speed
   printf '\033[%d;0H' "$((LOGO_HEIGHT + 1))"
-  printf '%s\n\n' "$(format_wizard_header "Installing Proxmox")"
+  format_wizard_header "Installing Proxmox"
+  _wiz_blank_line
+  _wiz_blank_line
 }
 
 # Render all logs (with auto-scroll, no flicker)

@@ -97,15 +97,33 @@ show_progress() {
   return $exit_code
 }
 
-# Formats wizard-style centered header with dots.
+# Formats wizard-style step header with line, centered dot, and label above.
+# Looks like a continuation of wizard navigation: line-dot-line with label above.
 # Usage: format_wizard_header "Title"
-# Returns: centered "● Title ●" with orange dots and cyan text
+# Returns: Multiline header aligned with banner
 format_wizard_header() {
   local title="$1"
-  # "● Title ●" = 4 chars for dots/spaces + title length
-  local content_len=$((${#title} + 4))
-  local padding=$(((TERM_WIDTH - content_len) / 2))
-  local spaces=""
-  ((padding > 0)) && spaces=$(printf '%*s' "$padding" "")
-  printf '%s' "${spaces}${CLR_ORANGE}●${CLR_RESET} ${CLR_CYAN}${title}${CLR_RESET} ${CLR_ORANGE}●${CLR_RESET}"
+
+  # Use global constants for centering (from 000-init.sh and 003-banner.sh)
+  local banner_pad="$_BANNER_PAD"
+  local line_width=$((BANNER_WIDTH - 3)) # minus 3 as requested
+
+  # Calculate line segments: left line + dot + right line = line_width
+  # Dot takes 1 char, so each side = (line_width - 1) / 2
+  local half=$(((line_width - 1) / 2))
+  local left_line right_line
+  # Use same line styles as wizard: ━ for completed (left), ─ for pending (right)
+  left_line=$(printf '%*s' "$half" '' | tr ' ' '━')
+  right_line=$(printf '%*s' "$((line_width - 1 - half))" '' | tr ' ' '─')
+
+  # Center title above the dot (dot is at position 'half' from line start)
+  local title_len=${#title}
+  local dot_pos=$half
+  local title_start=$((dot_pos - title_len / 2))
+  local title_spaces=""
+  ((title_start > 0)) && title_spaces=$(printf '%*s' "$title_start" '')
+
+  # Output: label line, then line with dot
+  printf '%s%s%s\n' "$banner_pad" "$title_spaces" "${CLR_GRAY}${title}${CLR_RESET}"
+  printf '%s%s%s%s%s' "$banner_pad" "${CLR_CYAN}${left_line}" "${CLR_CYAN}●" "${CLR_GRAY}${right_line}${CLR_RESET}" ""
 }

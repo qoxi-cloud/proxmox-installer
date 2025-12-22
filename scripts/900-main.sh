@@ -14,7 +14,7 @@ _render_completion_screen() {
   # Start output with banner
   output+="${banner_output}\n\n"
 
-  # Success header (centered like nav header)
+  # Success header (wizard step continuation style)
   output+="$(format_wizard_header "Installation Complete")\n\n"
 
   # Warning to save credentials

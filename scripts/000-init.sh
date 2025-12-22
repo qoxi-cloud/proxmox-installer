@@ -33,7 +33,10 @@ readonly HEX_NONE="7"
 readonly VERSION="2"
 
 # Terminal width for centering (wizard UI, headers, etc.)
-readonly TERM_WIDTH=69
+readonly TERM_WIDTH=80
+
+# Banner dimensions
+readonly BANNER_WIDTH=51
 
 # =============================================================================
 # Configuration constants

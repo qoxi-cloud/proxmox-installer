@@ -10,18 +10,18 @@ BANNER_LETTER_COUNT=7
 # Banner height in lines (6 ASCII art + 1 empty + 1 tagline = 8, +1 for spacing = 9)
 BANNER_HEIGHT=9
 
-# Padding to center banner relative to footer (69 chars)
-# Banner width ~51 chars, padding = 8 spaces
-_BANNER_PAD="        "
+# Calculate banner padding from TERM_WIDTH and BANNER_WIDTH constants
+_BANNER_PAD_SIZE=$(((TERM_WIDTH - BANNER_WIDTH) / 2))
+printf -v _BANNER_PAD '%*s' "$_BANNER_PAD_SIZE" ''
 
 # Display main ASCII banner
 # Usage: show_banner
 show_banner() {
   local p="$_BANNER_PAD"
   local tagline="${CLR_CYAN}Qoxi ${CLR_GRAY}Automated Installer ${CLR_GOLD}${VERSION}${CLR_RESET}"
-  # Banner width = 51, center the tagline
+  # Center the tagline within banner width
   local text="Qoxi Automated Installer ${VERSION}"
-  local pad=$(((51 - ${#text}) / 2))
+  local pad=$(((BANNER_WIDTH - ${#text}) / 2))
   local spaces
   printf -v spaces '%*s' "$pad" ''
   printf '%s\n' \
@@ -100,9 +100,9 @@ _show_banner_frame() {
   [[ $h -eq 6 ]] && line6+=" ${A}/_/\\_\\${M}" || line6+=' /_/\_\'
   line6+="${R}"
 
-  # Tagline (centered)
+  # Tagline (centered within banner width)
   local text="Qoxi Automated Installer ${VERSION}"
-  local pad=$(((51 - ${#text}) / 2))
+  local pad=$(((BANNER_WIDTH - ${#text}) / 2))
   local spaces
   printf -v spaces '%*s' "$pad" ''
   local line_tagline="${p}${spaces}${CLR_CYAN}Qoxi ${M}Automated Installer ${CLR_GOLD}${VERSION}${R}"
