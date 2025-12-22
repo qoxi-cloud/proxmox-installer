@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.499-pr.21"
+readonly VERSION="2.0.500-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -215,7 +215,6 @@ INSTALL_NVIM=""
 INSTALL_UNATTENDED_UPGRADES=""
 INSTALL_TAILSCALE=""
 TAILSCALE_AUTH_KEY=""
-TAILSCALE_SSH=""
 TAILSCALE_WEBUI=""
 BRIDGE_MTU=""
 INSTALL_API_TOKEN=""
@@ -527,7 +526,7 @@ local title_start=$((dot_pos-title_len/2))
 local title_spaces=""
 ((title_start>0))&&title_spaces=$(printf '%*s' "$title_start" '')
 printf '%s%s%s\n' "$banner_pad" "$title_spaces" "$CLR_GRAY$title$CLR_RESET"
-printf '%s%s%s%s%s' "$banner_pad" "$CLR_CYAN$left_line" "$CLR_CYAN●" "$CLR_GRAY$right_line$CLR_RESET" ""
+printf '%s%s%s%s%s' "$banner_pad" "$CLR_ORANGE$left_line" "$CLR_ORANGE●" "$CLR_GRAY$right_line$CLR_RESET" ""
 }
 download_file(){
 local output_file="$1"
@@ -2824,7 +2823,7 @@ _update_locale_from_country
 _edit_iso_version(){
 _wiz_start_edit
 _wiz_description \
-" Proxmox VE version to install:" \
+"  Proxmox VE version to install:" \
 "" \
 "  Latest version recommended for new installations." \
 ""
@@ -2846,7 +2845,7 @@ PROXMOX_ISO_VERSION="$selected"
 _edit_repository(){
 _wiz_start_edit
 _wiz_description \
-" Proxmox VE package repository:" \
+"  Proxmox VE package repository:" \
 "" \
 "  {{cyan:No-subscription}}: Free updates, community tested" \
 "  {{cyan:Enterprise}}:      Stable updates, requires license" \
@@ -2891,7 +2890,7 @@ INTERFACE_NAME="$selected"
 _edit_bridge_mode(){
 _wiz_start_edit
 _wiz_description \
-" Network bridge configuration for VMs:" \
+"  Network bridge configuration for VMs:" \
 "" \
 "  {{cyan:Internal}}: Private network with NAT (10.x.x.x)" \
 "  {{cyan:External}}: VMs get public IPs directly (routed mode)" \
@@ -2911,7 +2910,7 @@ esac
 _edit_private_subnet(){
 _wiz_start_edit
 _wiz_description \
-" Private network for VMs (NAT to internet):" \
+"  Private network for VMs (NAT to internet):" \
 "" \
 "  {{cyan:10.0.0.0/24}}:    Class A private (default)" \
 "  {{cyan:192.168.1.0/24}}: Class C private (home-style)" \
@@ -2949,7 +2948,7 @@ fi
 _edit_bridge_mtu(){
 _wiz_start_edit
 _wiz_description \
-" MTU for private bridge (VM-to-VM traffic):" \
+"  MTU for private bridge (VM-to-VM traffic):" \
 "" \
 "  {{cyan:9000}}:  Jumbo frames (better VM performance)" \
 "  {{cyan:1500}}:  Standard MTU (safe default)" \
@@ -2967,7 +2966,7 @@ esac
 _edit_ipv6(){
 _wiz_start_edit
 _wiz_description \
-" IPv6 network configuration:" \
+"  IPv6 network configuration:" \
 "" \
 "  {{cyan:Auto}}:     Use detected IPv6 from provider" \
 "  {{cyan:Manual}}:   Specify custom IPv6 address/gateway" \
@@ -3039,7 +3038,7 @@ fi
 _edit_firewall(){
 _wiz_start_edit
 _wiz_description \
-" Host firewall (nftables):" \
+"  Host firewall (nftables):" \
 "" \
 "  {{cyan:Stealth}}:  Blocks ALL incoming (Tailscale/bridges only)" \
 "  {{cyan:Strict}}:   Allows SSH only (port 22)" \
@@ -3070,7 +3069,7 @@ esac
 _edit_zfs_mode(){
 _wiz_start_edit
 _wiz_description \
-" ZFS RAID level for data pool:" \
+"  ZFS RAID level for data pool:" \
 "" \
 "  {{cyan:RAID-0}}:  Max capacity, no redundancy (all disks)" \
 "  {{cyan:RAID-1}}:  Mirror, 50% capacity (2+ disks)" \
@@ -3123,7 +3122,7 @@ esac
 _edit_zfs_arc(){
 _wiz_start_edit
 _wiz_description \
-" ZFS Adaptive Replacement Cache (ARC) memory allocation:" \
+"  ZFS Adaptive Replacement Cache (ARC) memory allocation:" \
 "" \
 "  {{cyan:VM-focused}}:      Fixed 4GB for ARC (more RAM for VMs)" \
 "  {{cyan:Balanced}}:        25-40% of RAM based on total size" \
@@ -3143,7 +3142,7 @@ esac
 _edit_tailscale(){
 _wiz_start_edit
 _wiz_description \
-" Tailscale VPN with stealth mode:" \
+"  Tailscale VPN with stealth mode:" \
 "" \
 "  {{cyan:Enabled}}:  Access via Tailscale only (blocks public SSH)" \
 "  {{cyan:Disabled}}: Standard access via public IP" \
@@ -3172,8 +3171,25 @@ done
 if [[ -n $auth_key ]];then
 INSTALL_TAILSCALE="yes"
 TAILSCALE_AUTH_KEY="$auth_key"
-TAILSCALE_SSH="yes"
-TAILSCALE_WEBUI="yes"
+_wiz_start_edit
+_wiz_description \
+"  Expose Proxmox Web UI via Tailscale Serve?" \
+"" \
+"  {{cyan:Enabled}}:  Access Web UI at https://<tailscale-hostname>" \
+"  {{cyan:Disabled}}: Web UI only via direct IP" \
+"" \
+"  Uses: tailscale serve --bg --https=443 https://127.0.0.1:8006" \
+""
+_show_input_footer "filter" 3
+local webui_selected
+if webui_selected=$(printf '%s\n' "$WIZ_TOGGLE_OPTIONS"|_wiz_choose --header="Tailscale Web UI:");then
+case "$webui_selected" in
+Enabled)TAILSCALE_WEBUI="yes";;
+Disabled)TAILSCALE_WEBUI="no"
+esac
+else
+TAILSCALE_WEBUI="no"
+fi
 SSL_TYPE="self-signed"
 if [[ -z $INSTALL_FIREWALL ]];then
 INSTALL_FIREWALL="yes"
@@ -3182,14 +3198,12 @@ fi
 else
 INSTALL_TAILSCALE="no"
 TAILSCALE_AUTH_KEY=""
-TAILSCALE_SSH=""
 TAILSCALE_WEBUI=""
 SSL_TYPE=""
 fi
 ;;
 Disabled)INSTALL_TAILSCALE="no"
 TAILSCALE_AUTH_KEY=""
-TAILSCALE_SSH=""
 TAILSCALE_WEBUI=""
 SSL_TYPE=""
 if [[ -z $INSTALL_FIREWALL ]];then
@@ -3201,7 +3215,7 @@ esac
 _edit_ssl(){
 _wiz_start_edit
 _wiz_description \
-" SSL certificate for Proxmox web interface:" \
+"  SSL certificate for Proxmox web interface:" \
 "" \
 "  {{cyan:Self-signed}}:   Works always, browser shows warning" \
 "  {{cyan:Let's Encrypt}}: Trusted cert, requires public DNS" \
@@ -3303,7 +3317,7 @@ fi
 _edit_shell(){
 _wiz_start_edit
 _wiz_description \
-" Default shell for root user:" \
+"  Default shell for root user:" \
 "" \
 "  {{cyan:ZSH}}:  Modern shell with Powerlevel10k prompt" \
 "  {{cyan:Bash}}: Standard shell (minimal changes)" \
@@ -3352,7 +3366,7 @@ descriptions=(
 "  {{cyan:Balanced}}:     Dynamic scaling (power efficient)")
 fi
 _wiz_description \
-" CPU frequency scaling governor:" \
+"  CPU frequency scaling governor:" \
 "" \
 "${descriptions[@]}" \
 ""
@@ -3380,7 +3394,7 @@ esac
 _edit_features_security(){
 _wiz_start_edit
 _wiz_description \
-" Security features (use Space to toggle):" \
+"  Security features (use Space to toggle):" \
 "" \
 "  {{cyan:apparmor}}:    Mandatory access control (MAC)" \
 "  {{cyan:auditd}}:      Security audit logging" \
@@ -3411,7 +3425,7 @@ INSTALL_NEEDRESTART=$([[ $selected == *needrestart* ]]&&echo "yes"||echo "no")
 _edit_features_monitoring(){
 _wiz_start_edit
 _wiz_description \
-" Monitoring features (use Space to toggle):" \
+"  Monitoring features (use Space to toggle):" \
 "" \
 "  {{cyan:vnstat}}:   Network traffic monitoring" \
 "  {{cyan:netdata}}:  Real-time monitoring (port 19999)" \
@@ -3433,7 +3447,7 @@ INSTALL_PROMTAIL=$([[ $selected == *promtail* ]]&&echo "yes"||echo "no")
 _edit_features_tools(){
 _wiz_start_edit
 _wiz_description \
-" Tools (use Space to toggle):" \
+"  Tools (use Space to toggle):" \
 "" \
 "  {{cyan:yazi}}:       Terminal file manager (Catppuccin theme)" \
 "  {{cyan:nvim}}:       Neovim as default editor" \
@@ -3508,7 +3522,7 @@ _edit_admin_username(){
 while true;do
 _wiz_start_edit
 _wiz_description \
-" Non-root admin username for SSH and Proxmox access:" \
+"  Non-root admin username for SSH and Proxmox access:" \
 "" \
 "  Root SSH login will be {{cyan:completely disabled}}." \
 "  All SSH access must use this admin account." \
@@ -3577,7 +3591,7 @@ done
 _edit_api_token(){
 _wiz_start_edit
 _wiz_description \
-" Proxmox API token for automation:" \
+"  Proxmox API token for automation:" \
 "" \
 "  {{cyan:Enabled}}:  Create privileged token (Terraform, Ansible)" \
 "  {{cyan:Disabled}}: No API token" \
@@ -3611,7 +3625,7 @@ esac
 _edit_boot_disk(){
 _wiz_start_edit
 _wiz_description \
-" Separate boot disk selection (auto-detected by disk size):" \
+"  Separate boot disk selection (auto-detected by disk size):" \
 "" \
 "  {{cyan:None}}: All disks in ZFS rpool (system + VMs)" \
 "  {{cyan:Disk}}: Boot disk uses ext4 (system + ISO/templates)" \
@@ -3656,7 +3670,7 @@ _edit_pool_disks(){
 while true;do
 _wiz_start_edit
 _wiz_description \
-" Select disks for ZFS storage pool:" \
+"  Select disks for ZFS storage pool:" \
 "" \
 "  These disks will store VMs, containers, and data." \
 "  RAID level is auto-selected based on disk count." \
@@ -4632,13 +4646,7 @@ local tmp_ip tmp_hostname
 tmp_ip=$(mktemp)
 tmp_hostname=$(mktemp)
 trap "rm -f '$tmp_ip' '$tmp_hostname'" RETURN
-(if
-[[ $TAILSCALE_SSH == "yes" ]]
-then
-remote_exec "tailscale up --authkey='$TAILSCALE_AUTH_KEY' --ssh"||exit 1
-else
-remote_exec "tailscale up --authkey='$TAILSCALE_AUTH_KEY'"||exit 1
-fi
+(remote_exec "tailscale up --authkey='$TAILSCALE_AUTH_KEY' --ssh"||exit 1
 remote_exec "tailscale status --json | jq -r '[(.Self.TailscaleIPs[0] // \"pending\"), (.Self.DNSName // \"\" | rtrimstr(\".\"))] | @tsv'" 2>/dev/null|{
 IFS=$'\t' read -r ip hostname
 echo "$ip" >"$tmp_ip"
