@@ -243,15 +243,15 @@ _wiz_confirm() {
   local prompt="$1"
   shift
 
-  # Center the dialog by padding prompt with leading spaces
+  # Center the dialog using gum's padding (top right bottom left)
   # Buttons are ~15 chars wide, use max of prompt or button width
-  local content_width left_pad padded_prompt
+  local content_width left_pad
   content_width=$((${#prompt} > 15 ? ${#prompt} : 15))
   left_pad=$(((TERM_WIDTH - content_width) / 2))
   ((left_pad < 0)) && left_pad=0
-  padded_prompt=$(printf '%*s%s' "$left_pad" '' "$prompt")
 
-  gum confirm "$padded_prompt" "$@" \
+  gum confirm "$prompt" "$@" \
+    --padding "0 0 0 $left_pad" \
     --prompt.foreground "$HEX_ORANGE" \
     --selected.background "$HEX_ORANGE"
 }
