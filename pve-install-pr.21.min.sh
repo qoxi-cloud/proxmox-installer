@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.488-pr.21"
+readonly VERSION="2.0.489-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -138,6 +138,9 @@ secure_delete_file /tmp/pve-install-api-token.env
 secure_delete_file /root/answer.toml
 while IFS= read -r -d '' pfile;do
 secure_delete_file "$pfile"
+done < <(find /dev/shm /tmp -name "pve-ssh-session.*" -type f -print0 2>/dev/null||true)
+while IFS= read -r -d '' pfile;do
+secure_delete_file "$pfile"
 done < <(find /dev/shm /tmp -name "pve-passfile.*" -type f -print0 2>/dev/null||true)
 while IFS= read -r -d '' pfile;do
 secure_delete_file "$pfile"
@@ -145,6 +148,7 @@ done < <(find /dev/shm /tmp -name "*passfile*" -type f -print0 2>/dev/null||true
 else
 rm -f /tmp/pve-install-api-token.env 2>/dev/null||true
 rm -f /root/answer.toml 2>/dev/null||true
+find /dev/shm /tmp -name "pve-ssh-session.*" -type f -delete 2>/dev/null||true
 find /dev/shm /tmp -name "pve-passfile.*" -type f -delete 2>/dev/null||true
 find /dev/shm /tmp -name "*passfile*" -type f -delete 2>/dev/null||true
 fi
@@ -720,15 +724,21 @@ SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLeve
 SSH_PORT="${SSH_PORT_QEMU:-5555}"
 _SSH_SESSION_PASSFILE=""
 _SSH_SESSION_LOGGED=false
+_ssh_passfile_path(){
+local passfile_dir="/dev/shm"
+[[ ! -d /dev/shm ]]||[[ ! -w /dev/shm ]]&&passfile_dir="/tmp"
+printf '%s\n' "$passfile_dir/pve-ssh-session.$$"
+}
 _ssh_session_init(){
-[[ -n $_SSH_SESSION_PASSFILE ]]&&[[ -f $_SSH_SESSION_PASSFILE ]]&&return 0
-if [[ -d /dev/shm ]]&&[[ -w /dev/shm ]];then
-_SSH_SESSION_PASSFILE=$(mktemp --tmpdir=/dev/shm pve-ssh-session.XXXXXX 2>/dev/null||mktemp)
-else
-_SSH_SESSION_PASSFILE=$(mktemp)
+local passfile_path
+passfile_path=$(_ssh_passfile_path)
+if [[ -f $passfile_path ]]&&[[ -s $passfile_path ]];then
+_SSH_SESSION_PASSFILE="$passfile_path"
+return 0
 fi
-printf '%s\n' "$NEW_ROOT_PASSWORD" >"$_SSH_SESSION_PASSFILE"
-chmod 600 "$_SSH_SESSION_PASSFILE"
+printf '%s\n' "$NEW_ROOT_PASSWORD" >"$passfile_path"
+chmod 600 "$passfile_path"
+_SSH_SESSION_PASSFILE="$passfile_path"
 if [[ $BASHPID == "$$" ]];then
 local existing_trap
 existing_trap=$(trap -p EXIT 2>/dev/null|sed "s/trap -- '\\(.*\\)' EXIT/\\1/"||true)
@@ -738,26 +748,27 @@ else
 trap '_ssh_session_cleanup' EXIT
 fi
 if [[ $_SSH_SESSION_LOGGED != true ]];then
-log "SSH session initialized"
+log "SSH session initialized: $passfile_path"
 _SSH_SESSION_LOGGED=true
 fi
 fi
 }
 _ssh_session_cleanup(){
-[[ -z $_SSH_SESSION_PASSFILE ]]&&return 0
-[[ ! -f $_SSH_SESSION_PASSFILE ]]&&return 0
+local passfile_path
+passfile_path=$(_ssh_passfile_path)
+[[ ! -f $passfile_path ]]&&return 0
 if type secure_delete_file &>/dev/null;then
-secure_delete_file "$_SSH_SESSION_PASSFILE"
+secure_delete_file "$passfile_path"
 elif command -v shred &>/dev/null;then
-shred -u -z "$_SSH_SESSION_PASSFILE" 2>/dev/null||rm -f "$_SSH_SESSION_PASSFILE"
+shred -u -z "$passfile_path" 2>/dev/null||rm -f "$passfile_path"
 else
 local file_size
-file_size=$(stat -c%s "$_SSH_SESSION_PASSFILE" 2>/dev/null||echo 1024)
-dd if=/dev/zero of="$_SSH_SESSION_PASSFILE" bs=1 count="$file_size" conv=notrunc 2>/dev/null||true
-rm -f "$_SSH_SESSION_PASSFILE"
+file_size=$(stat -c%s "$passfile_path" 2>/dev/null||echo 1024)
+dd if=/dev/zero of="$passfile_path" bs=1 count="$file_size" conv=notrunc 2>/dev/null||true
+rm -f "$passfile_path"
 fi
 _SSH_SESSION_PASSFILE=""
-log "SSH session cleaned up"
+log "SSH session cleaned up: $passfile_path"
 }
 _ssh_get_passfile(){
 _ssh_session_init
