@@ -212,17 +212,17 @@ _wiz_show_cursor() { printf '\033[?25h'; }
 # Outputs a blank line.
 _wiz_blank_line() { printf '\n'; }
 
-# Outputs red error-styled text.
-_wiz_error() { gum style --foreground "$HEX_RED" "$@"; }
+# Outputs red error-styled text with notification indent.
+_wiz_error() { gum style --foreground "$HEX_RED" "${WIZ_NOTIFY_INDENT}$*"; }
 
-# Outputs yellow warning-styled text.
-_wiz_warn() { gum style --foreground "$HEX_YELLOW" "$@"; }
+# Outputs yellow warning-styled text with notification indent.
+_wiz_warn() { gum style --foreground "$HEX_YELLOW" "${WIZ_NOTIFY_INDENT}$*"; }
 
-# Outputs cyan info-styled text.
-_wiz_info() { gum style --foreground "$HEX_CYAN" "$@"; }
+# Outputs cyan info-styled text with notification indent.
+_wiz_info() { gum style --foreground "$HEX_CYAN" "${WIZ_NOTIFY_INDENT}$*"; }
 
-# Outputs gray dimmed text.
-_wiz_dim() { gum style --foreground "$HEX_GRAY" "$@"; }
+# Outputs gray dimmed text with notification indent.
+_wiz_dim() { gum style --foreground "$HEX_GRAY" "${WIZ_NOTIFY_INDENT}$*"; }
 
 # Displays a description block for menu screens with inline color support.
 # Outputs all lines at once for flicker-free rendering.
