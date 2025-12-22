@@ -129,6 +129,7 @@ format_wizard_header() {
   ((title_start > 0)) && title_spaces=$(printf '%*s' "$title_start" '')
 
   # Output: label line, then line with dot
-  printf '%s%s%s\n' "$banner_pad" "$title_spaces" "${CLR_GRAY}${title}${CLR_RESET}"
-  printf '%s%s%s%s%s' "$banner_pad" "${CLR_ORANGE}${left_line}" "${CLR_ORANGE}●" "${CLR_GRAY}${right_line}${CLR_RESET}" ""
+  # Add 2 spaces to center the shorter line relative to banner
+  printf '%s  %s%s\n' "$banner_pad" "$title_spaces" "${CLR_GRAY}${title}${CLR_RESET}"
+  printf '%s  %s%s%s%s' "$banner_pad" "${CLR_ORANGE}${left_line}" "${CLR_CYAN}●" "${CLR_GRAY}${right_line}${CLR_RESET}" ""
 }

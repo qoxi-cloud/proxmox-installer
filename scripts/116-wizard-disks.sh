@@ -51,9 +51,9 @@ _edit_boot_disk() {
       _wiz_hide_cursor
       _wiz_error "✗ Cannot use this boot disk: No disks left for ZFS pool"
       _wiz_blank_line
-      _wiz_dim "At least one disk must remain for the ZFS pool."
+      _wiz_dim "${WIZ_NOTIFY_INDENT}At least one disk must remain for the ZFS pool."
       _wiz_blank_line
-      _wiz_dim "Press any key to continue..."
+      _wiz_dim "${WIZ_NOTIFY_INDENT}Press any key to continue..."
       read -r -n 1
       # Restore previous boot disk selection
       BOOT_DISK="$old_boot_disk"

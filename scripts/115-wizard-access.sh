@@ -23,9 +23,9 @@ _edit_ssh_key() {
       _wiz_hide_cursor
       _wiz_warn "Detected SSH key from Rescue System:"
       _wiz_blank_line
-      printf '%s\n' "${CLR_GRAY}Type:${CLR_RESET}    ${SSH_KEY_TYPE}"
-      printf '%s\n' "${CLR_GRAY}Key:${CLR_RESET}     ${SSH_KEY_SHORT}"
-      [[ -n $SSH_KEY_COMMENT ]] && printf '%s\n' "${CLR_GRAY}Comment:${CLR_RESET} ${SSH_KEY_COMMENT}"
+      printf '%s\n' "${WIZ_NOTIFY_INDENT}${CLR_GRAY}Type:${CLR_RESET}    ${SSH_KEY_TYPE}"
+      printf '%s\n' "${WIZ_NOTIFY_INDENT}${CLR_GRAY}Key:${CLR_RESET}     ${SSH_KEY_SHORT}"
+      [[ -n $SSH_KEY_COMMENT ]] && printf '%s\n' "${WIZ_NOTIFY_INDENT}${CLR_GRAY}Comment:${CLR_RESET} ${SSH_KEY_COMMENT}"
       _wiz_blank_line
 
       # 1 header + 2 options
@@ -162,9 +162,9 @@ _edit_admin_password() {
         _wiz_hide_cursor
         _wiz_warn "Please save this password - it will be required for sudo and Proxmox UI"
         _wiz_blank_line
-        printf '%s\n' "${CLR_CYAN}Generated admin password:${CLR_RESET} ${CLR_ORANGE}${ADMIN_PASSWORD}${CLR_RESET}"
+        printf '%s\n' "${WIZ_NOTIFY_INDENT}${CLR_CYAN}Generated admin password:${CLR_RESET} ${CLR_ORANGE}${ADMIN_PASSWORD}${CLR_RESET}"
         _wiz_blank_line
-        printf '%s\n' "${CLR_GRAY}Press any key to continue...${CLR_RESET}"
+        printf '%s\n' "${WIZ_NOTIFY_INDENT}${CLR_GRAY}Press any key to continue...${CLR_RESET}"
         read -n 1 -s -r
         break
         ;;

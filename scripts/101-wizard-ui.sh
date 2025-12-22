@@ -18,6 +18,9 @@ WIZ_CURRENT_SCREEN=0
 # Navigation column width
 _NAV_COL_WIDTH=10
 
+# Indent for notification content (SSH key info, generated passwords, etc.)
+WIZ_NOTIFY_INDENT="   "
+
 # Centers text by adding leading spaces based on terminal width.
 # Strips ANSI codes to calculate visible text length.
 # Parameters:
