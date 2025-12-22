@@ -22,7 +22,9 @@ _SSH_SESSION_LOGGED=false
 # Returns: Path via stdout
 _ssh_passfile_path() {
   local passfile_dir="/dev/shm"
-  [[ ! -d /dev/shm ]] || [[ ! -w /dev/shm ]] && passfile_dir="/tmp"
+  if [[ ! -d /dev/shm ]] || [[ ! -w /dev/shm ]]; then
+    passfile_dir="/tmp"
+  fi
   printf '%s\n' "${passfile_dir}/pve-ssh-session.$$"
 }
 

@@ -134,6 +134,9 @@ validate_ipv6() {
   [[ $ipv6 =~ ^:[^:] ]] && return 1
   [[ $ipv6 =~ [^:]:$ ]] && return 1
 
+  # Reject three or more consecutive colons (invalid)
+  [[ $ipv6 =~ ::: ]] && return 1
+
   # Cannot have more than one :: sequence
   local double_colon_count
   double_colon_count=$(grep -o '::' <<<"$ipv6" | wc -l)
