@@ -9,6 +9,7 @@ SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLeve
 SSH_PORT="${SSH_PORT_QEMU:-5555}"
 
 # Session passfile - created once, reused for all SSH operations
+# Uses predictable path with $$ (top-level PID) so subshells share same file
 _SSH_SESSION_PASSFILE=""
 _SSH_SESSION_LOGGED=false
 
@@ -16,22 +17,33 @@ _SSH_SESSION_LOGGED=false
 # Session management
 # =============================================================================
 
+# Gets the predictable passfile path based on top-level shell PID.
+# $$ is inherited by subshells, so all invocations see the same path.
+# Returns: Path via stdout
+_ssh_passfile_path() {
+  local passfile_dir="/dev/shm"
+  [[ ! -d /dev/shm ]] || [[ ! -w /dev/shm ]] && passfile_dir="/tmp"
+  printf '%s\n' "${passfile_dir}/pve-ssh-session.$$"
+}
+
 # Initializes SSH session with persistent passfile.
 # Creates passfile once for reuse across all remote operations.
+# Uses predictable path with $$ so subshells find existing file.
 # Side effects: Sets _SSH_SESSION_PASSFILE, registers cleanup trap
 _ssh_session_init() {
-  # Already initialized
-  [[ -n $_SSH_SESSION_PASSFILE ]] && [[ -f $_SSH_SESSION_PASSFILE ]] && return 0
+  local passfile_path
+  passfile_path=$(_ssh_passfile_path)
 
-  # Create passfile in RAM if possible
-  if [[ -d /dev/shm ]] && [[ -w /dev/shm ]]; then
-    _SSH_SESSION_PASSFILE=$(mktemp --tmpdir=/dev/shm pve-ssh-session.XXXXXX 2>/dev/null || mktemp)
-  else
-    _SSH_SESSION_PASSFILE=$(mktemp)
+  # Already exists with content? Just set variable and return
+  if [[ -f "$passfile_path" ]] && [[ -s "$passfile_path" ]]; then
+    _SSH_SESSION_PASSFILE="$passfile_path"
+    return 0
   fi
 
-  printf '%s\n' "$NEW_ROOT_PASSWORD" >"$_SSH_SESSION_PASSFILE"
-  chmod 600 "$_SSH_SESSION_PASSFILE"
+  # Create new passfile
+  printf '%s\n' "$NEW_ROOT_PASSWORD" >"$passfile_path"
+  chmod 600 "$passfile_path"
+  _SSH_SESSION_PASSFILE="$passfile_path"
 
   # Register cleanup on exit - but ONLY in main shell, not in subshells
   # Command substitution like $(func) runs in subshell, and EXIT trap would
@@ -48,7 +60,7 @@ _ssh_session_init() {
 
     # Only log once from main shell
     if [[ $_SSH_SESSION_LOGGED != true ]]; then
-      log "SSH session initialized"
+      log "SSH session initialized: $passfile_path"
       _SSH_SESSION_LOGGED=true
     fi
   fi
@@ -56,25 +68,28 @@ _ssh_session_init() {
 
 # Cleans up SSH session passfile securely.
 # Uses secure_delete_file if available, otherwise shred/dd fallback.
+# Uses predictable path so cleanup works even if variable is empty.
 _ssh_session_cleanup() {
-  [[ -z $_SSH_SESSION_PASSFILE ]] && return 0
-  [[ ! -f $_SSH_SESSION_PASSFILE ]] && return 0
+  local passfile_path
+  passfile_path=$(_ssh_passfile_path)
+
+  [[ ! -f "$passfile_path" ]] && return 0
 
   # Use secure_delete_file if available (defined in 012-utils.sh)
   if type secure_delete_file &>/dev/null; then
-    secure_delete_file "$_SSH_SESSION_PASSFILE"
+    secure_delete_file "$passfile_path"
   elif command -v shred &>/dev/null; then
-    shred -u -z "$_SSH_SESSION_PASSFILE" 2>/dev/null || rm -f "$_SSH_SESSION_PASSFILE"
+    shred -u -z "$passfile_path" 2>/dev/null || rm -f "$passfile_path"
   else
     # Fallback: overwrite with zeros
     local file_size
-    file_size=$(stat -c%s "$_SSH_SESSION_PASSFILE" 2>/dev/null || echo 1024)
-    dd if=/dev/zero of="$_SSH_SESSION_PASSFILE" bs=1 count="$file_size" conv=notrunc 2>/dev/null || true
-    rm -f "$_SSH_SESSION_PASSFILE"
+    file_size=$(stat -c%s "$passfile_path" 2>/dev/null || echo 1024)
+    dd if=/dev/zero of="$passfile_path" bs=1 count="$file_size" conv=notrunc 2>/dev/null || true
+    rm -f "$passfile_path"
   fi
 
   _SSH_SESSION_PASSFILE=""
-  log "SSH session cleaned up"
+  log "SSH session cleaned up: $passfile_path"
 }
 
 # Gets session passfile, initializing if needed.

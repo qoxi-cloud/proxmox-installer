@@ -274,6 +274,10 @@ cleanup_temp_files() {
     secure_delete_file /tmp/pve-install-api-token.env
     secure_delete_file /root/answer.toml
     # Secure delete password files from /dev/shm and /tmp
+    # Patterns: pve-ssh-session.* (current), pve-passfile.* (legacy), *passfile* (catch-all)
+    while IFS= read -r -d '' pfile; do
+      secure_delete_file "$pfile"
+    done < <(find /dev/shm /tmp -name "pve-ssh-session.*" -type f -print0 2>/dev/null || true)
     while IFS= read -r -d '' pfile; do
       secure_delete_file "$pfile"
     done < <(find /dev/shm /tmp -name "pve-passfile.*" -type f -print0 2>/dev/null || true)
@@ -284,6 +288,7 @@ cleanup_temp_files() {
     # Fallback if secure_delete_file not yet loaded (early exit)
     rm -f /tmp/pve-install-api-token.env 2>/dev/null || true
     rm -f /root/answer.toml 2>/dev/null || true
+    find /dev/shm /tmp -name "pve-ssh-session.*" -type f -delete 2>/dev/null || true
     find /dev/shm /tmp -name "pve-passfile.*" -type f -delete 2>/dev/null || true
     find /dev/shm /tmp -name "*passfile*" -type f -delete 2>/dev/null || true
   fi
