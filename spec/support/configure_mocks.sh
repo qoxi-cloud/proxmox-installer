@@ -70,6 +70,10 @@ deploy_systemd_timer() {
   return "$MOCK_REMOTE_COPY_RESULT"
 }
 
+deploy_user_config() {
+  return "$MOCK_REMOTE_COPY_RESULT"
+}
+
 # =============================================================================
 # Parallel execution mocks
 # =============================================================================
