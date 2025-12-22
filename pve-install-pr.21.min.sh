@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.495-pr.21"
+readonly VERSION="2.0.496-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -2281,12 +2281,12 @@ printf '%b' "$output"
 _wiz_confirm(){
 local prompt="$1"
 shift
-local content_width left_pad padded_prompt
+local content_width left_pad
 content_width=$((${#prompt}>15?${#prompt}:15))
 left_pad=$(((TERM_WIDTH-content_width)/2))
 ((left_pad<0))&&left_pad=0
-padded_prompt=$(printf '%*s%s' "$left_pad" '' "$prompt")
-gum confirm "$padded_prompt" "$@" \
+gum confirm "$prompt" "$@" \
+--padding "0 0 0 $left_pad" \
 --prompt.foreground "$HEX_ORANGE" \
 --selected.background "$HEX_ORANGE"
 }
