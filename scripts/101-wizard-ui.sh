@@ -251,14 +251,15 @@ _wiz_confirm() {
   ((left_pad < 0)) && left_pad=0
 
   # Custom centered footer (matching project style)
-  # Print blank line + footer, then move cursor up so gum draws above
+  # Print blank lines + footer, then move cursor up so gum draws above
   local footer_text
   footer_text="${CLR_GRAY}[${CLR_ORANGE}←→${CLR_GRAY}] toggle  [${CLR_ORANGE}Enter${CLR_GRAY}] submit  [${CLR_ORANGE}Y${CLR_GRAY}] yes  [${CLR_ORANGE}N${CLR_GRAY}] no${CLR_RESET}"
   _wiz_blank_line
+  _wiz_blank_line
   printf '%s\n' "$(_wiz_center "$footer_text")"
 
-  # gum confirm uses 2 lines (prompt + buttons), plus 1 blank + 1 footer = 4 lines up
-  tput cuu 4
+  # gum confirm uses 2 lines (prompt + buttons), plus 2 blank + 1 footer = 5 lines up
+  tput cuu 5
 
   gum confirm "$prompt" "$@" \
     --no-show-help \
