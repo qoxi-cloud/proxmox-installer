@@ -243,15 +243,15 @@ _wiz_confirm() {
   local prompt="$1"
   shift
 
-  # Calculate left padding to center the dialog
+  # Calculate left margin to center the dialog
   # Dialog width: prompt + "Yes" + "No" buttons (~20 chars for buttons/spacing)
-  local dialog_width left_pad
+  local dialog_width left_margin
   dialog_width=$((${#prompt} + 20))
-  left_pad=$(((TERM_WIDTH - dialog_width) / 2))
-  ((left_pad < 0)) && left_pad=0
+  left_margin=$(((TERM_WIDTH - dialog_width) / 2))
+  ((left_margin < 0)) && left_margin=0
 
   gum confirm "$prompt" "$@" \
-    --padding "0 0 0 $left_pad" \
+    --prompt.margin "0 0 0 $left_margin" \
     --prompt.foreground "$HEX_ORANGE" \
     --selected.background "$HEX_ORANGE"
 }
