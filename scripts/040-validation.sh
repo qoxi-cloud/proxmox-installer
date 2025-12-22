@@ -328,14 +328,26 @@ validate_ssh_key_secure() {
       log "INFO: SSH key validated (ED25519)"
       return 0
       ;;
-    ssh-rsa | ecdsa-*)
+    ecdsa-*)
+      # ECDSA keys report curve size (256, 384, 521), not RSA-equivalent bits
+      # ECDSA-256 is equivalent to ~3072-bit RSA, so all standard curves are secure
+      local bits
+      bits=$(echo "$key" | ssh-keygen -l -f - 2>/dev/null | awk '{print $1}')
+      if [[ $bits -ge 256 ]]; then
+        log "INFO: SSH key validated ($key_type, $bits bits)"
+        return 0
+      fi
+      log "ERROR: ECDSA key curve too small (current: $bits)"
+      return 1
+      ;;
+    ssh-rsa)
       local bits
       bits=$(echo "$key" | ssh-keygen -l -f - 2>/dev/null | awk '{print $1}')
       if [[ $bits -ge 2048 ]]; then
         log "INFO: SSH key validated ($key_type, $bits bits)"
         return 0
       fi
-      log "ERROR: RSA/ECDSA key must be >= 2048 bits (current: $bits)"
+      log "ERROR: RSA key must be >= 2048 bits (current: $bits)"
       return 1
       ;;
     *)

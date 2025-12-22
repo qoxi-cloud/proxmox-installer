@@ -15,9 +15,6 @@ log() {
 # Installation Metrics
 # =============================================================================
 
-# Installation start time (set by metrics_start)
-INSTALL_START_TIME=""
-
 # Starts installation metrics timer.
 # Side effects: Sets INSTALL_START_TIME global
 metrics_start() {
