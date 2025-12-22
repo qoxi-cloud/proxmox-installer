@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.498-pr.21"
+readonly VERSION="2.0.499-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -514,9 +514,13 @@ local title="$1"
 local banner_pad="$_BANNER_PAD"
 local line_width=$((BANNER_WIDTH-3))
 local half=$(((line_width-1)/2))
-local left_line right_line
-left_line=$(printf '%*s' "$half" ''|tr ' ' '━')
-right_line=$(printf '%*s' "$((line_width-1-half))" ''|tr ' ' '─')
+local left_line="" right_line="" i
+for ((i=0; i<half; i++));do
+left_line+="━"
+done
+for ((i=0; i<line_width-1-half; i++));do
+right_line+="─"
+done
 local title_len=${#title}
 local dot_pos=$half
 local title_start=$((dot_pos-title_len/2))
