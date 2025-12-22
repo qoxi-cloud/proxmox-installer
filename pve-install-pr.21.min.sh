@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.480-pr.21"
+readonly VERSION="2.0.481-pr.21"
 readonly TERM_WIDTH=69
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-feat/interactive-config-table}"
@@ -4434,15 +4434,15 @@ remote_exec "grep -q 'profile.d/fastfetch.sh' /etc/bash.bashrc || echo '[ -f /et
 }
 _configure_bat(){
 remote_exec "ln -sf /usr/bin/batcat /usr/local/bin/bat"||return 1
-remote_exec 'mkdir -p /home/'"'$ADMIN_USERNAME'"'/.config/bat'||return 1
+remote_exec 'mkdir -p /home/$ADMIN_USERNAME/.config/bat'||return 1
 remote_copy "templates/bat-config" "/home/$ADMIN_USERNAME/.config/bat/config"||return 1
-remote_exec 'chown -R '"'$ADMIN_USERNAME:$ADMIN_USERNAME'"' /home/'"'$ADMIN_USERNAME'"'/.config/bat'||return 1
+remote_exec 'chown -R $ADMIN_USERNAME:$ADMIN_USERNAME /home/$ADMIN_USERNAME/.config/bat'||return 1
 }
 _configure_zsh_files(){
 remote_copy "templates/zshrc" "/home/$ADMIN_USERNAME/.zshrc"||return 1
 remote_copy "templates/p10k.zsh" "/home/$ADMIN_USERNAME/.p10k.zsh"||return 1
-remote_exec 'chown '"'$ADMIN_USERNAME:$ADMIN_USERNAME'"' /home/'"'$ADMIN_USERNAME'"'/.zshrc /home/'"'$ADMIN_USERNAME'"'/.p10k.zsh'||return 1
-remote_exec 'chsh -s /bin/zsh '"'$ADMIN_USERNAME'"''||return 1
+remote_exec 'chown $ADMIN_USERNAME:$ADMIN_USERNAME /home/$ADMIN_USERNAME/.zshrc /home/$ADMIN_USERNAME/.p10k.zsh'||return 1
+remote_exec 'chsh -s /bin/zsh '"$ADMIN_USERNAME"''||return 1
 }
 _configure_chrony(){
 remote_exec "systemctl stop chrony"||true
@@ -4526,19 +4526,19 @@ remote_run "Installing Oh-My-Zsh" '
             set -e
             export RUNZSH=no
             export CHSH=no
-            export HOME=/home/'"'$ADMIN_USERNAME'"'
-            su - '"'$ADMIN_USERNAME'"' -c "sh -c \"\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\" \"\" --unattended"
+            export HOME=/home/'"$ADMIN_USERNAME"'
+            su - '"$ADMIN_USERNAME"' -c "sh -c \"\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\" \"\" --unattended"
         ' "Oh-My-Zsh installed"
 remote_run "Installing ZSH theme and plugins" '
             set -e
-            git clone --depth=1 https://github.com/romkatv/powerlevel10k.git /home/'"'$ADMIN_USERNAME'"'/.oh-my-zsh/custom/themes/powerlevel10k &
+            git clone --depth=1 https://github.com/romkatv/powerlevel10k.git /home/$ADMIN_USERNAME/.oh-my-zsh/custom/themes/powerlevel10k &
             pid1=$!
-            git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions /home/'"'$ADMIN_USERNAME'"'/.oh-my-zsh/custom/plugins/zsh-autosuggestions &
+            git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions /home/$ADMIN_USERNAME/.oh-my-zsh/custom/plugins/zsh-autosuggestions &
             pid2=$!
-            git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting /home/'"'$ADMIN_USERNAME'"'/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting &
+            git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting /home/$ADMIN_USERNAME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting &
             pid3=$!
             wait $pid1 $pid2 $pid3
-            chown -R '"'$ADMIN_USERNAME:$ADMIN_USERNAME'"' /home/'"'$ADMIN_USERNAME'"'/.oh-my-zsh
+            chown -R $ADMIN_USERNAME:$ADMIN_USERNAME /home/$ADMIN_USERNAME/.oh-my-zsh
         ' "ZSH theme and plugins installed"
 run_with_progress "Configuring ZSH" "ZSH with Powerlevel10k configured" _configure_zsh_files
 else
@@ -4629,15 +4629,15 @@ configure_tailscale(){
 _config_tailscale
 }
 _config_admin_user(){
-remote_exec 'useradd -m -s /bin/bash -G sudo '"'$ADMIN_USERNAME'"''||return 1
-remote_exec 'echo '"'$ADMIN_USERNAME:$ADMIN_PASSWORD'"' | chpasswd'||return 1
-remote_exec 'mkdir -p /home/'"'$ADMIN_USERNAME'"'/.ssh && chmod 700 /home/'"'$ADMIN_USERNAME'"'/.ssh'||return 1
+remote_exec 'useradd -m -s /bin/bash -G sudo '"$ADMIN_USERNAME"''||return 1
+remote_exec 'echo '"$ADMIN_USERNAME:$ADMIN_PASSWORD"' | chpasswd'||return 1
+remote_exec 'mkdir -p /home/$ADMIN_USERNAME/.ssh && chmod 700 /home/$ADMIN_USERNAME/.ssh'||return 1
 local escaped_key="${SSH_PUBLIC_KEY//\'/\'\\\'\'}"
-remote_exec "echo '$escaped_key' > /home/'$ADMIN_USERNAME'/.ssh/authorized_keys"||return 1
-remote_exec 'chmod 600 /home/'"'$ADMIN_USERNAME'"'/.ssh/authorized_keys'||return 1
-remote_exec 'chown -R '"'$ADMIN_USERNAME:$ADMIN_USERNAME'"' /home/'"'$ADMIN_USERNAME'"'/.ssh'||return 1
-remote_exec 'echo '"'$ADMIN_USERNAME ALL=(ALL) NOPASSWD:ALL'"' > /etc/sudoers.d/'"'$ADMIN_USERNAME'"''||return 1
-remote_exec 'chmod 440 /etc/sudoers.d/'"'$ADMIN_USERNAME'"''||return 1
+remote_exec "echo '$escaped_key' > /home/$ADMIN_USERNAME/.ssh/authorized_keys"||return 1
+remote_exec 'chmod 600 /home/$ADMIN_USERNAME/.ssh/authorized_keys'||return 1
+remote_exec 'chown -R $ADMIN_USERNAME:$ADMIN_USERNAME /home/$ADMIN_USERNAME/.ssh'||return 1
+remote_exec 'echo '"$ADMIN_USERNAME"' ALL=(ALL) NOPASSWD:ALL > /etc/sudoers.d/'"$ADMIN_USERNAME"''||return 1
+remote_exec 'chmod 440 /etc/sudoers.d/'"$ADMIN_USERNAME"''||return 1
 remote_exec "pveum user list 2>/dev/null | grep -q '$ADMIN_USERNAME@pam' || pveum user add $ADMIN_USERNAME@pam"
 remote_exec "pveum acl modify / -user $ADMIN_USERNAME@pam -role Administrator"||{
 log "WARNING: Failed to grant Proxmox Administrator role"
@@ -4987,7 +4987,7 @@ remote_run "Installing yazi" '
   ' "Yazi installed"
 }
 _config_yazi(){
-remote_exec 'mkdir -p /home/'"'$ADMIN_USERNAME'"'/.config/yazi'||{
+remote_exec 'mkdir -p /home/$ADMIN_USERNAME/.config/yazi'||{
 log "ERROR: Failed to create yazi config directory"
 return 1
 }
@@ -4995,7 +4995,7 @@ remote_copy "templates/yazi-theme.toml" "/home/$ADMIN_USERNAME/.config/yazi/them
 log "ERROR: Failed to deploy yazi theme"
 return 1
 }
-remote_exec 'chown -R '"'$ADMIN_USERNAME:$ADMIN_USERNAME'"' /home/'"'$ADMIN_USERNAME'"'/.config/yazi'||{
+remote_exec 'chown -R $ADMIN_USERNAME:$ADMIN_USERNAME /home/$ADMIN_USERNAME/.config/yazi'||{
 log "ERROR: Failed to set yazi config ownership"
 return 1
 }
