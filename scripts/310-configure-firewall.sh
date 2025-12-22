@@ -177,27 +177,33 @@ _config_nftables() {
   # Replace bridge mode comment
   nftables_conf="${nftables_conf//\{\{BRIDGE_MODE\}\}/$BRIDGE_MODE}"
 
-  # Replace port rules
-  nftables_conf=$(printf '%s\n' "$nftables_conf" | sed "/# === FIREWALL_RULES_START ===/,/# === FIREWALL_RULES_END ===/c\\
-        # === FIREWALL_RULES_START ===\\
-$port_rules\\
-        # === FIREWALL_RULES_END ===")
+  # Replace port rules (multiline block replacement - portable awk)
+  nftables_conf=$(printf '%s\n' "$nftables_conf" | awk -v rules="$port_rules" '
+    /# === FIREWALL_RULES_START ===/ { skip=1; print "        # === FIREWALL_RULES_START ==="; print rules; next }
+    /# === FIREWALL_RULES_END ===/ { skip=0; print "        # === FIREWALL_RULES_END ==="; next }
+    !skip { print }
+  ')
 
-  # Replace bridge input rules
-  nftables_conf=$(printf '%s\n' "$nftables_conf" | sed "/# === BRIDGE_INPUT_RULES ===/c\\
-$bridge_input_rules")
+  # Replace single-line placeholders (portable awk)
+  nftables_conf=$(printf '%s\n' "$nftables_conf" | awk -v rules="$bridge_input_rules" '
+    /# === BRIDGE_INPUT_RULES ===/ { print rules; next }
+    { print }
+  ')
 
-  # Replace Tailscale rules
-  nftables_conf=$(printf '%s\n' "$nftables_conf" | sed "/# === TAILSCALE_RULES ===/c\\
-$tailscale_rules")
+  nftables_conf=$(printf '%s\n' "$nftables_conf" | awk -v rules="$tailscale_rules" '
+    /# === TAILSCALE_RULES ===/ { print rules; next }
+    { print }
+  ')
 
-  # Replace bridge forward rules
-  nftables_conf=$(printf '%s\n' "$nftables_conf" | sed "/# === BRIDGE_FORWARD_RULES ===/c\\
-$bridge_forward_rules")
+  nftables_conf=$(printf '%s\n' "$nftables_conf" | awk -v rules="$bridge_forward_rules" '
+    /# === BRIDGE_FORWARD_RULES ===/ { print rules; next }
+    { print }
+  ')
 
-  # Replace NAT rules
-  nftables_conf=$(printf '%s\n' "$nftables_conf" | sed "/# === NAT_RULES ===/c\\
-$nat_rules")
+  nftables_conf=$(printf '%s\n' "$nftables_conf" | awk -v rules="$nat_rules" '
+    /# === NAT_RULES ===/ { print rules; next }
+    { print }
+  ')
 
   # Write to temp file
   printf '%s\n' "$nftables_conf" >"./templates/nftables.conf.generated"

@@ -3,29 +3,32 @@
 # SSH hardening and finalization
 # =============================================================================
 
-# Deploys hardened SSH configuration to remote system.
+# Deploys hardened SSH configuration to remote system WITHOUT restarting.
 # Uses sshd_config template with ADMIN_USERNAME substitution.
-# Side effects: Restarts sshd, disables password auth
+# Called before validation so we can verify the config file.
 # shellcheck disable=SC2317 # invoked indirectly by run_with_progress
-_config_ssh_hardening() {
-  # Apply ADMIN_USERNAME template variable to sshd_config
+_deploy_ssh_config() {
   deploy_template "templates/sshd_config" "/etc/ssh/sshd_config" \
     "ADMIN_USERNAME=${ADMIN_USERNAME}" || return 1
-  # Restart SSH to apply new config
-  remote_exec "systemctl restart sshd" || return 1
 }
 
-# Configures SSH hardening with key-based authentication only.
-# Deploys hardened sshd_config (SSH key is deployed to admin user in 302-configure-admin.sh).
-# Side effects: Disables password authentication, blocks root login
-configure_ssh_hardening() {
-  # Deploy SSH hardening LAST (after all other operations)
-  # CRITICAL: This must succeed - if it fails, system remains with password auth enabled
-  # NOTE: SSH key was deployed to admin user in 302-configure-admin.sh (root has no SSH access)
+# Deploys hardened sshd_config without restarting SSH service.
+# SSH key was deployed to admin user in 302-configure-admin.sh.
+deploy_ssh_hardening_config() {
+  if ! run_with_progress "Deploying SSH hardening config" "SSH config deployed" _deploy_ssh_config; then
+    log "ERROR: SSH config deploy failed"
+    return 1
+  fi
+}
 
-  if ! run_with_progress "Deploying SSH hardening" "Security hardening configured" _config_ssh_hardening; then
-    log "ERROR: SSH hardening failed - system may be insecure"
-    exit 1
+# Restarts SSH service to apply hardened configuration.
+# Called as the LAST SSH operation - after this, password auth is disabled.
+restart_ssh_service() {
+  log "Restarting SSH to apply hardening"
+  # Use run_with_progress for consistent UI
+  if ! run_with_progress "Applying SSH hardening" "SSH hardening active" \
+    remote_exec "systemctl restart sshd"; then
+    log "WARNING: SSH restart failed - config will apply on reboot"
   fi
 }
 
@@ -222,12 +225,16 @@ configure_proxmox_via_ssh() {
   # ==========================================================================
   # PHASE 6: Validation & Finalization
   # ==========================================================================
-  # Validate BEFORE SSH hardening (after hardening, password SSH is disabled)
+  # Deploy SSH hardening config BEFORE validation (so validation can verify it)
+  # But DON'T restart sshd yet - we still need password auth for remaining commands
+  deploy_ssh_hardening_config
+
+  # Validate installation (SSH config file now has hardened settings)
   validate_installation
 
-  # SSH hardening is the LAST SSH operation - after this, password auth is disabled
+  # Restart SSH as the LAST operation - after this, password auth is disabled
   # and root login is blocked. Only admin user with SSH key can connect.
-  configure_ssh_hardening
+  restart_ssh_service
 
   # Power off VM - SSH no longer available, use QEMU ACPI shutdown
   finalize_vm
