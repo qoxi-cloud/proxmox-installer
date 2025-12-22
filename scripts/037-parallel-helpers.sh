@@ -218,8 +218,9 @@ run_parallel_group() {
 
 # Marks a feature as configured in parallel group.
 # Call from _config_* functions when work is actually done.
+# Uses $BASHPID (subshell PID) not $$ (parent PID) to ensure unique files.
 # Usage: parallel_mark_configured "apparmor"
 parallel_mark_configured() {
   local feature="$1"
-  [[ -n ${PARALLEL_RESULT_DIR:-} ]] && printf '%s' "$feature" >>"$PARALLEL_RESULT_DIR/ran_$$"
+  [[ -n ${PARALLEL_RESULT_DIR:-} ]] && printf '%s' "$feature" >"$PARALLEL_RESULT_DIR/ran_$BASHPID"
 }
