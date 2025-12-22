@@ -207,7 +207,7 @@ _edit_ssl() {
     if [[ $dns_result -eq 1 ]]; then
       # No DNS resolution
       _wiz_hide_cursor
-      _wiz_error "✗ Domain does not resolve to any IP address"
+      _wiz_error "Domain does not resolve to any IP address"
       _wiz_blank_line
       _wiz_dim "Please configure DNS A record:"
       _wiz_dim "  ${CLR_ORANGE}${FQDN}${CLR_RESET} → ${CLR_ORANGE}${MAIN_IPV4}${CLR_RESET}"
@@ -219,7 +219,7 @@ _edit_ssl() {
     elif [[ $dns_result -eq 2 ]]; then
       # Wrong IP
       _wiz_hide_cursor
-      _wiz_error "✗ Domain resolves to wrong IP address"
+      _wiz_error "Domain resolves to wrong IP address"
       _wiz_blank_line
       _wiz_dim "Current DNS: ${CLR_ORANGE}${FQDN}${CLR_RESET} → ${CLR_RED}${DNS_RESOLVED_IP}${CLR_RESET}"
       _wiz_dim "Expected:    ${CLR_ORANGE}${FQDN}${CLR_RESET} → ${CLR_ORANGE}${MAIN_IPV4}${CLR_RESET}"
@@ -232,7 +232,7 @@ _edit_ssl() {
       return
     else
       # Success
-      _wiz_info "✓ DNS resolution successful"
+      _wiz_info "DNS resolution successful"
       _wiz_dim "  ${CLR_ORANGE}${FQDN}${CLR_RESET} → ${CLR_CYAN}${DNS_RESOLVED_IP}${CLR_RESET}"
       sleep 3
       SSL_TYPE="$ssl_type"
