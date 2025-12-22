@@ -237,11 +237,22 @@ _wiz_description() {
   printf '%b' "$output"
 }
 
-# Gum confirm wrapper with consistent project styling.
+# Gum confirm wrapper with consistent project styling, centered horizontally.
 # Parameters: Same as gum confirm
 _wiz_confirm() {
-  gum confirm "$@" \
-    --padding "0 0 0 1" \
+  local prompt="$1"
+  shift
+
+  # Calculate left padding to center the dialog
+  # Dialog width: prompt + "Yes" + "No" buttons (~20 chars for buttons/spacing)
+  local term_width dialog_width left_pad
+  term_width=$(tput cols 2>/dev/null || echo 80)
+  dialog_width=$((${#prompt} + 20))
+  left_pad=$(((term_width - dialog_width) / 2))
+  ((left_pad < 0)) && left_pad=0
+
+  gum confirm "$prompt" "$@" \
+    --padding "0 0 0 $left_pad" \
     --prompt.foreground "$HEX_ORANGE" \
     --selected.background "$HEX_ORANGE"
 }
