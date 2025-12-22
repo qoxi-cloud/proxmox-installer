@@ -279,11 +279,11 @@ if [[ "{{INSTALL_FIREWALL}}" == "yes" ]]; then
 	# Firewall mode specific checks
 	case "{{FIREWALL_MODE}}" in
 	stealth)
-		# Stealth mode should NOT have SSH port open in public rules
+		# Stealth mode: verify no SSH accept rule in nftables (policy drop = blocked)
 		if ! grep -qE "dport 22.*accept|dport ssh.*accept" /etc/nftables.conf 2>/dev/null; then
-			_ok "Stealth mode: SSH not exposed publicly"
+			_ok "Stealth mode: SSH blocked (no accept rule)"
 		else
-			_warn "Stealth mode but SSH appears open"
+			_fail "Stealth mode: found SSH accept rule in nftables"
 		fi
 		;;
 	strict | standard)
