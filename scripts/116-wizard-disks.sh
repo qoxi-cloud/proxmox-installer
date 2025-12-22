@@ -9,7 +9,7 @@ _edit_boot_disk() {
 
   # Show description about boot disk modes
   _wiz_description \
-    "Separate boot disk selection (auto-detected by disk size):" \
+    " Separate boot disk selection (auto-detected by disk size):" \
     "" \
     "  {{cyan:None}}: All disks in ZFS rpool (system + VMs)" \
     "  {{cyan:Disk}}: Boot disk uses ext4 (system + ISO/templates)" \
@@ -28,10 +28,9 @@ _edit_boot_disk() {
   _show_input_footer "filter" "$((DRIVE_COUNT + 2))"
 
   local selected
-  selected=$(
-    printf '%s' "$options" | _wiz_choose \
-      --header="Boot disk:"
-  )
+  if ! selected=$(printf '%s' "$options" | _wiz_choose --header="Boot disk:"); then
+    return
+  fi
 
   if [[ -n $selected ]]; then
     local old_boot_disk="$BOOT_DISK"
@@ -66,7 +65,7 @@ _edit_pool_disks() {
     _wiz_start_edit
 
     _wiz_description \
-      "Select disks for ZFS storage pool:" \
+      " Select disks for ZFS storage pool:" \
       "" \
       "  These disks will store VMs, containers, and data." \
       "  RAID level is auto-selected based on disk count." \
@@ -102,28 +101,14 @@ _edit_pool_disks() {
     fi
     _show_input_footer "checkbox" "$((available_count + 1))"
 
-    # Build _wiz_choose args with features-style formatting
-    local gum_args=(
-      --no-limit
-      --header="ZFS pool disks (min 1):"
-      --header.foreground "$HEX_CYAN"
-      --cursor "${CLR_ORANGE}›${CLR_RESET} "
-      --cursor.foreground "$HEX_NONE"
-      --cursor-prefix "◦ "
-      --selected.foreground "$HEX_WHITE"
-      --selected-prefix "${CLR_CYAN}✓${CLR_RESET} "
-      --unselected-prefix "◦ "
-      --no-show-help
-    )
-
-    # Add preselected items if any
+    local gum_args=(--header="ZFS pool disks (min 1):")
     for item in "${preselected[@]}"; do
       gum_args+=(--selected "$item")
     done
 
     local selected
     local gum_exit_code=0
-    selected=$(printf '%s\n' "$options" | _wiz_choose "${gum_args[@]}") || gum_exit_code=$?
+    selected=$(printf '%s\n' "$options" | _wiz_choose_multi "${gum_args[@]}") || gum_exit_code=$?
 
     # ESC/cancel (any non-zero exit) - keep existing selection
     if [[ $gum_exit_code -ne 0 ]]; then

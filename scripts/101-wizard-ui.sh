@@ -208,6 +208,22 @@ _wiz_choose() {
     "$@"
 }
 
+# Multi-select checkbox variant (for feature toggles)
+_wiz_choose_multi() {
+  gum choose \
+    --no-limit \
+    --padding "0 0 0 1" \
+    --header.foreground "$HEX_CYAN" \
+    --cursor "${CLR_ORANGE}›${CLR_RESET} " \
+    --cursor.foreground "$HEX_NONE" \
+    --cursor-prefix "◦ " \
+    --selected.foreground "$HEX_WHITE" \
+    --selected-prefix "${CLR_CYAN}✓${CLR_RESET} " \
+    --unselected-prefix "◦ " \
+    --no-show-help \
+    "$@"
+}
+
 _wiz_input() {
   gum input \
     --padding "0 0 0 1" \

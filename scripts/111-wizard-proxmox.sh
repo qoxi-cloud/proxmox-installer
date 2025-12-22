@@ -8,7 +8,7 @@ _edit_iso_version() {
   _wiz_start_edit
 
   _wiz_description \
-    "Proxmox VE version to install:" \
+    " Proxmox VE version to install:" \
     "" \
     "  Latest version recommended for new installations." \
     ""
@@ -28,19 +28,18 @@ _edit_iso_version() {
   _show_input_footer "filter" 6
 
   local selected
-  selected=$(
-    printf '%s\n' "$iso_list" | _wiz_choose \
-      --header="Proxmox Version:"
-  )
+  if ! selected=$(printf '%s\n' "$iso_list" | _wiz_choose --header="Proxmox Version:"); then
+    return
+  fi
 
-  [[ -n $selected ]] && PROXMOX_ISO_VERSION="$selected"
+  PROXMOX_ISO_VERSION="$selected"
 }
 
 _edit_repository() {
   _wiz_start_edit
 
   _wiz_description \
-    "Proxmox VE package repository:" \
+    " Proxmox VE package repository:" \
     "" \
     "  {{cyan:No-subscription}}: Free updates, community tested" \
     "  {{cyan:Enterprise}}:      Stable updates, requires license" \
@@ -51,38 +50,35 @@ _edit_repository() {
   _show_input_footer "filter" 4
 
   local selected
-  selected=$(
-    printf '%s\n' "$WIZ_REPO_TYPES" | _wiz_choose \
-      --header="Repository:"
-  )
+  if ! selected=$(printf '%s\n' "$WIZ_REPO_TYPES" | _wiz_choose --header="Repository:"); then
+    return
+  fi
 
-  if [[ -n $selected ]]; then
-    # Map display names to internal values
-    local repo_type=""
-    case "$selected" in
-      "No-subscription (free)") repo_type="no-subscription" ;;
-      "Enterprise") repo_type="enterprise" ;;
-      "Test/Development") repo_type="test" ;;
-    esac
+  # Map display names to internal values
+  local repo_type=""
+  case "$selected" in
+    "No-subscription (free)") repo_type="no-subscription" ;;
+    "Enterprise") repo_type="enterprise" ;;
+    "Test/Development") repo_type="test" ;;
+  esac
 
-    PVE_REPO_TYPE="$repo_type"
+  PVE_REPO_TYPE="$repo_type"
 
-    # If enterprise selected, optionally ask for subscription key
-    if [[ $repo_type == "enterprise" ]]; then
-      _wiz_input_screen "Enter Proxmox subscription key (optional)"
+  # If enterprise selected, optionally ask for subscription key
+  if [[ $repo_type == "enterprise" ]]; then
+    _wiz_input_screen "Enter Proxmox subscription key (optional)"
 
-      local sub_key
-      sub_key=$(
-        _wiz_input \
-          --placeholder "pve2c-..." \
-          --value "$PVE_SUBSCRIPTION_KEY" \
-          --prompt "Subscription Key: "
-      )
+    local sub_key
+    sub_key=$(
+      _wiz_input \
+        --placeholder "pve2c-..." \
+        --value "$PVE_SUBSCRIPTION_KEY" \
+        --prompt "Subscription Key: "
+    )
 
-      PVE_SUBSCRIPTION_KEY="$sub_key"
-    else
-      # Clear subscription key if not enterprise
-      PVE_SUBSCRIPTION_KEY=""
-    fi
+    PVE_SUBSCRIPTION_KEY="$sub_key"
+  else
+    # Clear subscription key if not enterprise
+    PVE_SUBSCRIPTION_KEY=""
   fi
 }

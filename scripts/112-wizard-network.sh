@@ -16,19 +16,18 @@ _edit_interface() {
   _show_input_footer "filter" "$footer_size"
 
   local selected
-  selected=$(
-    printf '%s\n' "$available_interfaces" | _wiz_choose \
-      --header="Network Interface:"
-  )
+  if ! selected=$(printf '%s\n' "$available_interfaces" | _wiz_choose --header="Network Interface:"); then
+    return
+  fi
 
-  [[ -n $selected ]] && INTERFACE_NAME="$selected"
+  INTERFACE_NAME="$selected"
 }
 
 _edit_bridge_mode() {
   _wiz_start_edit
 
   _wiz_description \
-    "Network bridge configuration for VMs:" \
+    " Network bridge configuration for VMs:" \
     "" \
     "  {{cyan:Internal}}: Private network with NAT (10.x.x.x)" \
     "  {{cyan:External}}: VMs get public IPs directly (routed mode)" \
@@ -39,26 +38,22 @@ _edit_bridge_mode() {
   _show_input_footer "filter" 4
 
   local selected
-  selected=$(
-    printf '%s\n' "$WIZ_BRIDGE_MODES" | _wiz_choose \
-      --header="Bridge mode:"
-  )
-
-  if [[ -n $selected ]]; then
-    # Map display names to internal values
-    case "$selected" in
-      "External bridge") BRIDGE_MODE="external" ;;
-      "Internal NAT") BRIDGE_MODE="internal" ;;
-      "Both") BRIDGE_MODE="both" ;;
-    esac
+  if ! selected=$(printf '%s\n' "$WIZ_BRIDGE_MODES" | _wiz_choose --header="Bridge mode:"); then
+    return
   fi
+
+  case "$selected" in
+    "External bridge") BRIDGE_MODE="external" ;;
+    "Internal NAT") BRIDGE_MODE="internal" ;;
+    "Both") BRIDGE_MODE="both" ;;
+  esac
 }
 
 _edit_private_subnet() {
   _wiz_start_edit
 
   _wiz_description \
-    "Private network for VMs (NAT to internet):" \
+    " Private network for VMs (NAT to internet):" \
     "" \
     "  {{cyan:10.0.0.0/24}}:    Class A private (default)" \
     "  {{cyan:192.168.1.0/24}}: Class C private (home-style)" \
@@ -69,13 +64,7 @@ _edit_private_subnet() {
   _show_input_footer "filter" 5
 
   local selected
-  selected=$(
-    printf '%s\n' "$WIZ_PRIVATE_SUBNETS" | _wiz_choose \
-      --header="Private subnet:"
-  )
-
-  # If user cancelled (Esc) or no selection
-  if [[ -z $selected ]]; then
+  if ! selected=$(printf '%s\n' "$WIZ_PRIVATE_SUBNETS" | _wiz_choose --header="Private subnet:"); then
     return
   fi
 
@@ -117,7 +106,7 @@ _edit_bridge_mtu() {
   _wiz_start_edit
 
   _wiz_description \
-    "MTU for private bridge (VM-to-VM traffic):" \
+    " MTU for private bridge (VM-to-VM traffic):" \
     "" \
     "  {{cyan:9000}}:  Jumbo frames (better VM performance)" \
     "  {{cyan:1500}}:  Standard MTU (safe default)" \
@@ -127,10 +116,9 @@ _edit_bridge_mtu() {
   _show_input_footer "filter" 3
 
   local selected
-  selected=$(
-    printf '%s\n' "$WIZ_BRIDGE_MTU" | _wiz_choose \
-      --header="Bridge MTU:"
-  )
+  if ! selected=$(printf '%s\n' "$WIZ_BRIDGE_MTU" | _wiz_choose --header="Bridge MTU:"); then
+    return
+  fi
 
   case "$selected" in
     "9000 (jumbo frames)") BRIDGE_MTU="9000" ;;
@@ -142,7 +130,7 @@ _edit_ipv6() {
   _wiz_start_edit
 
   _wiz_description \
-    "IPv6 network configuration:" \
+    " IPv6 network configuration:" \
     "" \
     "  {{cyan:Auto}}:     Use detected IPv6 from provider" \
     "  {{cyan:Manual}}:   Specify custom IPv6 address/gateway" \
@@ -153,13 +141,7 @@ _edit_ipv6() {
   _show_input_footer "filter" 4
 
   local selected
-  selected=$(
-    printf '%s\n' "$WIZ_IPV6_MODES" | _wiz_choose \
-      --header="IPv6:"
-  )
-
-  # If user cancelled (Esc) or no selection
-  if [[ -z $selected ]]; then
+  if ! selected=$(printf '%s\n' "$WIZ_IPV6_MODES" | _wiz_choose --header="IPv6:"); then
     return
   fi
 
@@ -186,7 +168,7 @@ _edit_ipv6() {
         _wiz_input \
           --placeholder "2001:db8::1/64" \
           --prompt "IPv6 Address: " \
-          --value "${IPV6_ADDRESS:-${MAIN_IPV6:+${MAIN_IPV6}/64}}"
+          --value "${IPV6_ADDRESS:-${FIRST_IPV6_CIDR:-$MAIN_IPV6}}"
       )
 
       # If empty or cancelled, exit manual mode
@@ -249,7 +231,7 @@ _edit_firewall() {
   _wiz_start_edit
 
   _wiz_description \
-    "Host firewall (nftables):" \
+    " Host firewall (nftables):" \
     "" \
     "  {{cyan:Stealth}}:  Blocks ALL incoming (Tailscale/bridges only)" \
     "  {{cyan:Strict}}:   Allows SSH only (port 22)" \
@@ -263,29 +245,26 @@ _edit_firewall() {
   _show_input_footer "filter" 5
 
   local selected
-  selected=$(
-    printf '%s\n' "$WIZ_FIREWALL_MODES" | _wiz_choose \
-      --header="Firewall mode:"
-  )
-
-  if [[ -n $selected ]]; then
-    case "$selected" in
-      "Stealth (Tailscale only)")
-        INSTALL_FIREWALL="yes"
-        FIREWALL_MODE="stealth"
-        ;;
-      "Strict (SSH only)")
-        INSTALL_FIREWALL="yes"
-        FIREWALL_MODE="strict"
-        ;;
-      "Standard (SSH + Web UI)")
-        INSTALL_FIREWALL="yes"
-        FIREWALL_MODE="standard"
-        ;;
-      "Disabled")
-        INSTALL_FIREWALL="no"
-        FIREWALL_MODE=""
-        ;;
-    esac
+  if ! selected=$(printf '%s\n' "$WIZ_FIREWALL_MODES" | _wiz_choose --header="Firewall mode:"); then
+    return
   fi
+
+  case "$selected" in
+    "Stealth (Tailscale only)")
+      INSTALL_FIREWALL="yes"
+      FIREWALL_MODE="stealth"
+      ;;
+    "Strict (SSH only)")
+      INSTALL_FIREWALL="yes"
+      FIREWALL_MODE="strict"
+      ;;
+    "Standard (SSH + Web UI)")
+      INSTALL_FIREWALL="yes"
+      FIREWALL_MODE="standard"
+      ;;
+    "Disabled")
+      INSTALL_FIREWALL="no"
+      FIREWALL_MODE=""
+      ;;
+  esac
 }

@@ -156,13 +156,7 @@ _edit_password() {
     _show_input_footer "filter" 3
 
     local choice
-    choice=$(
-      printf '%s\n' "$WIZ_PASSWORD_OPTIONS" | _wiz_choose \
-        --header="Password:"
-    )
-
-    # If user cancelled (Esc)
-    if [[ -z $choice ]]; then
+    if ! choice=$(printf '%s\n' "$WIZ_PASSWORD_OPTIONS" | _wiz_choose --header="Password:"); then
       return
     fi
 
@@ -222,16 +216,16 @@ _edit_timezone() {
   _show_input_footer "filter" 6
 
   local selected
-  selected=$(echo "$WIZ_TIMEZONES" | _wiz_filter --prompt "Timezone: ")
+  if ! selected=$(echo "$WIZ_TIMEZONES" | _wiz_filter --prompt "Timezone: "); then
+    return
+  fi
 
-  if [[ -n $selected ]]; then
-    TIMEZONE="$selected"
-    # Auto-select country based on timezone (if mapping exists)
-    local country_code="${TZ_TO_COUNTRY[$selected]:-}"
-    if [[ -n $country_code ]]; then
-      COUNTRY="$country_code"
-      _update_locale_from_country
-    fi
+  TIMEZONE="$selected"
+  # Auto-select country based on timezone (if mapping exists)
+  local country_code="${TZ_TO_COUNTRY[$selected]:-}"
+  if [[ -n $country_code ]]; then
+    COUNTRY="$country_code"
+    _update_locale_from_country
   fi
 }
 
@@ -242,11 +236,11 @@ _edit_keyboard() {
   _show_input_footer "filter" 6
 
   local selected
-  selected=$(echo "$WIZ_KEYBOARD_LAYOUTS" | _wiz_filter --prompt "Keyboard: ")
-
-  if [[ -n $selected ]]; then
-    KEYBOARD="$selected"
+  if ! selected=$(echo "$WIZ_KEYBOARD_LAYOUTS" | _wiz_filter --prompt "Keyboard: "); then
+    return
   fi
+
+  KEYBOARD="$selected"
 }
 
 _edit_country() {
@@ -256,10 +250,10 @@ _edit_country() {
   _show_input_footer "filter" 6
 
   local selected
-  selected=$(echo "$WIZ_COUNTRIES" | _wiz_filter --prompt "Country: ")
-
-  if [[ -n $selected ]]; then
-    COUNTRY="$selected"
-    _update_locale_from_country
+  if ! selected=$(echo "$WIZ_COUNTRIES" | _wiz_filter --prompt "Country: "); then
+    return
   fi
+
+  COUNTRY="$selected"
+  _update_locale_from_country
 }

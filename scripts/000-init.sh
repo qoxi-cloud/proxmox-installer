@@ -203,6 +203,27 @@ Generate password"
 readonly WIZ_SSH_KEY_OPTIONS="Use detected key
 Enter different key"
 
+# Feature toggles - Security
+# shellcheck disable=SC2034
+readonly WIZ_FEATURES_SECURITY="apparmor
+auditd
+aide
+chkrootkit
+lynis
+needrestart"
+
+# Feature toggles - Monitoring
+# shellcheck disable=SC2034
+readonly WIZ_FEATURES_MONITORING="vnstat
+netdata
+promtail"
+
+# Feature toggles - Tools
+# shellcheck disable=SC2034
+readonly WIZ_FEATURES_TOOLS="yazi
+nvim
+ringbuffer"
+
 # =============================================================================
 # Disk configuration
 # =============================================================================

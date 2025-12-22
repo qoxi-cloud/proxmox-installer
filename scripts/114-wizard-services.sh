@@ -8,7 +8,7 @@ _edit_tailscale() {
   _wiz_start_edit
 
   _wiz_description \
-    "Tailscale VPN with stealth mode:" \
+    " Tailscale VPN with stealth mode:" \
     "" \
     "  {{cyan:Enabled}}:  Access via Tailscale only (blocks public SSH)" \
     "  {{cyan:Disabled}}: Standard access via public IP" \
@@ -20,10 +20,9 @@ _edit_tailscale() {
   _show_input_footer "filter" 3
 
   local selected
-  selected=$(
-    printf '%s\n' "$WIZ_TOGGLE_OPTIONS" | _wiz_choose \
-      --header="Tailscale:"
-  )
+  if ! selected=$(printf '%s\n' "$WIZ_TOGGLE_OPTIONS" | _wiz_choose --header="Tailscale:"); then
+    return
+  fi
 
   case "$selected" in
     Enabled)
@@ -91,7 +90,7 @@ _edit_ssl() {
   _wiz_start_edit
 
   _wiz_description \
-    "SSL certificate for Proxmox web interface:" \
+    " SSL certificate for Proxmox web interface:" \
     "" \
     "  {{cyan:Self-signed}}:   Works always, browser shows warning" \
     "  {{cyan:Let's Encrypt}}: Trusted cert, requires public DNS" \
@@ -101,10 +100,9 @@ _edit_ssl() {
   _show_input_footer "filter" 3
 
   local selected
-  selected=$(
-    printf '%s\n' "$WIZ_SSL_TYPES" | _wiz_choose \
-      --header="SSL Certificate:"
-  )
+  if ! selected=$(printf '%s\n' "$WIZ_SSL_TYPES" | _wiz_choose --header="SSL Certificate:"); then
+    return
+  fi
 
   # Map display names to internal values
   local ssl_type=""
@@ -222,7 +220,7 @@ _edit_shell() {
   _wiz_start_edit
 
   _wiz_description \
-    "Default shell for root user:" \
+    " Default shell for root user:" \
     "" \
     "  {{cyan:ZSH}}:  Modern shell with Powerlevel10k prompt" \
     "  {{cyan:Bash}}: Standard shell (minimal changes)" \
@@ -232,18 +230,14 @@ _edit_shell() {
   _show_input_footer "filter" 3
 
   local selected
-  selected=$(
-    printf '%s\n' "$WIZ_SHELL_OPTIONS" | _wiz_choose \
-      --header="Shell:"
-  )
-
-  if [[ -n $selected ]]; then
-    # Map display names to internal values
-    case "$selected" in
-      "ZSH") SHELL_TYPE="zsh" ;;
-      "Bash") SHELL_TYPE="bash" ;;
-    esac
+  if ! selected=$(printf '%s\n' "$WIZ_SHELL_OPTIONS" | _wiz_choose --header="Shell:"); then
+    return
   fi
+
+  case "$selected" in
+    "ZSH") SHELL_TYPE="zsh" ;;
+    "Bash") SHELL_TYPE="bash" ;;
+  esac
 }
 
 _edit_power_profile() {
@@ -295,7 +289,7 @@ _edit_power_profile() {
   fi
 
   _wiz_description \
-    "CPU frequency scaling governor:" \
+    " CPU frequency scaling governor:" \
     "" \
     "${descriptions[@]}" \
     ""
@@ -307,27 +301,23 @@ _edit_power_profile() {
   options_str=$(printf '%s\n' "${options[@]}")
 
   local selected
-  selected=$(
-    printf '%s\n' "$options_str" | _wiz_choose \
-      --header="Power profile:"
-  )
-
-  if [[ -n $selected ]]; then
-    # Map display names to governor values
-    case "$selected" in
-      "Performance") CPU_GOVERNOR="performance" ;;
-      "Balanced")
-        # Use ondemand if available, otherwise powersave
-        if printf '%s\n' "$avail_governors" | grep -qw "ondemand"; then
-          CPU_GOVERNOR="ondemand"
-        else
-          CPU_GOVERNOR="powersave"
-        fi
-        ;;
-      "Adaptive") CPU_GOVERNOR="schedutil" ;;
-      "Conservative") CPU_GOVERNOR="conservative" ;;
-    esac
+  if ! selected=$(printf '%s\n' "$options_str" | _wiz_choose --header="Power profile:"); then
+    return
   fi
+
+  case "$selected" in
+    "Performance") CPU_GOVERNOR="performance" ;;
+    "Balanced")
+      # Use ondemand if available, otherwise powersave
+      if printf '%s\n' "$avail_governors" | grep -qw "ondemand"; then
+        CPU_GOVERNOR="ondemand"
+      else
+        CPU_GOVERNOR="powersave"
+      fi
+      ;;
+    "Adaptive") CPU_GOVERNOR="schedutil" ;;
+    "Conservative") CPU_GOVERNOR="conservative" ;;
+  esac
 }
 
 # =============================================================================
@@ -338,7 +328,7 @@ _edit_features_security() {
   _wiz_start_edit
 
   _wiz_description \
-    "Security features (use Space to toggle):" \
+    " Security features (use Space to toggle):" \
     "" \
     "  {{cyan:apparmor}}:    Mandatory access control (MAC)" \
     "  {{cyan:auditd}}:      Security audit logging" \
@@ -350,47 +340,25 @@ _edit_features_security() {
 
   _show_input_footer "checkbox" 7
 
-  local preselected=()
-  [[ $INSTALL_APPARMOR == "yes" ]] && preselected+=("apparmor")
-  [[ $INSTALL_AUDITD == "yes" ]] && preselected+=("auditd")
-  [[ $INSTALL_AIDE == "yes" ]] && preselected+=("aide")
-  [[ $INSTALL_CHKROOTKIT == "yes" ]] && preselected+=("chkrootkit")
-  [[ $INSTALL_LYNIS == "yes" ]] && preselected+=("lynis")
-  [[ $INSTALL_NEEDRESTART == "yes" ]] && preselected+=("needrestart")
-
-  local gum_args=(
-    --no-limit
-    --header="Security:"
-    --header.foreground "$HEX_CYAN"
-    --cursor "${CLR_ORANGE}›${CLR_RESET} "
-    --cursor.foreground "$HEX_NONE"
-    --cursor-prefix "◦ "
-    --selected.foreground "$HEX_WHITE"
-    --selected-prefix "${CLR_CYAN}✓${CLR_RESET} "
-    --unselected-prefix "◦ "
-    --no-show-help
-  )
-
-  for item in "${preselected[@]}"; do
-    gum_args+=(--selected "$item")
-  done
+  local gum_args=(--header="Security:")
+  [[ $INSTALL_APPARMOR == "yes" ]] && gum_args+=(--selected "apparmor")
+  [[ $INSTALL_AUDITD == "yes" ]] && gum_args+=(--selected "auditd")
+  [[ $INSTALL_AIDE == "yes" ]] && gum_args+=(--selected "aide")
+  [[ $INSTALL_CHKROOTKIT == "yes" ]] && gum_args+=(--selected "chkrootkit")
+  [[ $INSTALL_LYNIS == "yes" ]] && gum_args+=(--selected "lynis")
+  [[ $INSTALL_NEEDRESTART == "yes" ]] && gum_args+=(--selected "needrestart")
 
   local selected
-  selected=$(printf '%s\n' apparmor auditd aide chkrootkit lynis needrestart | _wiz_choose "${gum_args[@]}")
+  if ! selected=$(printf '%s\n' "$WIZ_FEATURES_SECURITY" | _wiz_choose_multi "${gum_args[@]}"); then
+    return
+  fi
 
-  INSTALL_APPARMOR="no"
-  INSTALL_AUDITD="no"
-  INSTALL_AIDE="no"
-  INSTALL_CHKROOTKIT="no"
-  INSTALL_LYNIS="no"
-  INSTALL_NEEDRESTART="no"
-
-  [[ $selected == *apparmor* ]] && INSTALL_APPARMOR="yes"
-  [[ $selected == *auditd* ]] && INSTALL_AUDITD="yes"
-  [[ $selected == *aide* ]] && INSTALL_AIDE="yes"
-  [[ $selected == *chkrootkit* ]] && INSTALL_CHKROOTKIT="yes"
-  [[ $selected == *lynis* ]] && INSTALL_LYNIS="yes"
-  [[ $selected == *needrestart* ]] && INSTALL_NEEDRESTART="yes"
+  INSTALL_APPARMOR=$([[ $selected == *apparmor* ]] && echo "yes" || echo "no")
+  INSTALL_AUDITD=$([[ $selected == *auditd* ]] && echo "yes" || echo "no")
+  INSTALL_AIDE=$([[ $selected == *aide* ]] && echo "yes" || echo "no")
+  INSTALL_CHKROOTKIT=$([[ $selected == *chkrootkit* ]] && echo "yes" || echo "no")
+  INSTALL_LYNIS=$([[ $selected == *lynis* ]] && echo "yes" || echo "no")
+  INSTALL_NEEDRESTART=$([[ $selected == *needrestart* ]] && echo "yes" || echo "no")
 }
 
 # =============================================================================
@@ -401,7 +369,7 @@ _edit_features_monitoring() {
   _wiz_start_edit
 
   _wiz_description \
-    "Monitoring features (use Space to toggle):" \
+    " Monitoring features (use Space to toggle):" \
     "" \
     "  {{cyan:vnstat}}:   Network traffic monitoring" \
     "  {{cyan:netdata}}:  Real-time monitoring (port 19999)" \
@@ -410,38 +378,19 @@ _edit_features_monitoring() {
 
   _show_input_footer "checkbox" 4
 
-  local preselected=()
-  [[ $INSTALL_VNSTAT == "yes" ]] && preselected+=("vnstat")
-  [[ $INSTALL_NETDATA == "yes" ]] && preselected+=("netdata")
-  [[ $INSTALL_PROMTAIL == "yes" ]] && preselected+=("promtail")
-
-  local gum_args=(
-    --no-limit
-    --header="Monitoring:"
-    --header.foreground "$HEX_CYAN"
-    --cursor "${CLR_ORANGE}›${CLR_RESET} "
-    --cursor.foreground "$HEX_NONE"
-    --cursor-prefix "◦ "
-    --selected.foreground "$HEX_WHITE"
-    --selected-prefix "${CLR_CYAN}✓${CLR_RESET} "
-    --unselected-prefix "◦ "
-    --no-show-help
-  )
-
-  for item in "${preselected[@]}"; do
-    gum_args+=(--selected "$item")
-  done
+  local gum_args=(--header="Monitoring:")
+  [[ $INSTALL_VNSTAT == "yes" ]] && gum_args+=(--selected "vnstat")
+  [[ $INSTALL_NETDATA == "yes" ]] && gum_args+=(--selected "netdata")
+  [[ $INSTALL_PROMTAIL == "yes" ]] && gum_args+=(--selected "promtail")
 
   local selected
-  selected=$(printf '%s\n' vnstat netdata promtail | _wiz_choose "${gum_args[@]}")
+  if ! selected=$(printf '%s\n' "$WIZ_FEATURES_MONITORING" | _wiz_choose_multi "${gum_args[@]}"); then
+    return
+  fi
 
-  INSTALL_VNSTAT="no"
-  INSTALL_NETDATA="no"
-  INSTALL_PROMTAIL="no"
-
-  [[ $selected == *vnstat* ]] && INSTALL_VNSTAT="yes"
-  [[ $selected == *netdata* ]] && INSTALL_NETDATA="yes"
-  [[ $selected == *promtail* ]] && INSTALL_PROMTAIL="yes"
+  INSTALL_VNSTAT=$([[ $selected == *vnstat* ]] && echo "yes" || echo "no")
+  INSTALL_NETDATA=$([[ $selected == *netdata* ]] && echo "yes" || echo "no")
+  INSTALL_PROMTAIL=$([[ $selected == *promtail* ]] && echo "yes" || echo "no")
 }
 
 # =============================================================================
@@ -452,7 +401,7 @@ _edit_features_tools() {
   _wiz_start_edit
 
   _wiz_description \
-    "Tools (use Space to toggle):" \
+    " Tools (use Space to toggle):" \
     "" \
     "  {{cyan:yazi}}:       Terminal file manager (Catppuccin theme)" \
     "  {{cyan:nvim}}:       Neovim as default editor" \
@@ -461,36 +410,17 @@ _edit_features_tools() {
 
   _show_input_footer "checkbox" 4
 
-  local preselected=()
-  [[ $INSTALL_YAZI == "yes" ]] && preselected+=("yazi")
-  [[ $INSTALL_NVIM == "yes" ]] && preselected+=("nvim")
-  [[ $INSTALL_RINGBUFFER == "yes" ]] && preselected+=("ringbuffer")
-
-  local gum_args=(
-    --no-limit
-    --header="Tools:"
-    --header.foreground "$HEX_CYAN"
-    --cursor "${CLR_ORANGE}›${CLR_RESET} "
-    --cursor.foreground "$HEX_NONE"
-    --cursor-prefix "◦ "
-    --selected.foreground "$HEX_WHITE"
-    --selected-prefix "${CLR_CYAN}✓${CLR_RESET} "
-    --unselected-prefix "◦ "
-    --no-show-help
-  )
-
-  for item in "${preselected[@]}"; do
-    gum_args+=(--selected "$item")
-  done
+  local gum_args=(--header="Tools:")
+  [[ $INSTALL_YAZI == "yes" ]] && gum_args+=(--selected "yazi")
+  [[ $INSTALL_NVIM == "yes" ]] && gum_args+=(--selected "nvim")
+  [[ $INSTALL_RINGBUFFER == "yes" ]] && gum_args+=(--selected "ringbuffer")
 
   local selected
-  selected=$(printf '%s\n' yazi nvim ringbuffer | _wiz_choose "${gum_args[@]}")
+  if ! selected=$(printf '%s\n' "$WIZ_FEATURES_TOOLS" | _wiz_choose_multi "${gum_args[@]}"); then
+    return
+  fi
 
-  INSTALL_YAZI="no"
-  INSTALL_NVIM="no"
-  INSTALL_RINGBUFFER="no"
-
-  [[ $selected == *yazi* ]] && INSTALL_YAZI="yes"
-  [[ $selected == *nvim* ]] && INSTALL_NVIM="yes"
-  [[ $selected == *ringbuffer* ]] && INSTALL_RINGBUFFER="yes"
+  INSTALL_YAZI=$([[ $selected == *yazi* ]] && echo "yes" || echo "no")
+  INSTALL_NVIM=$([[ $selected == *nvim* ]] && echo "yes" || echo "no")
+  INSTALL_RINGBUFFER=$([[ $selected == *ringbuffer* ]] && echo "yes" || echo "no")
 }
