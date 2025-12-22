@@ -18,6 +18,29 @@ WIZ_CURRENT_SCREEN=0
 # Navigation column width
 _NAV_COL_WIDTH=10
 
+# Centers text by adding leading spaces based on terminal width.
+# Strips ANSI codes to calculate visible text length.
+# Parameters:
+#   $1 - Text to center (may contain ANSI color codes)
+# Returns: Centered text via stdout
+_wiz_center() {
+  local text="$1"
+  local term_width
+  term_width=$(tput cols 2>/dev/null || echo 80)
+
+  # Strip ANSI escape codes to get visible length
+  local visible_text
+  visible_text=$(printf '%s' "$text" | sed 's/\x1b\[[0-9;]*m//g')
+  local text_len=${#visible_text}
+
+  # Calculate padding
+  local padding=$(((term_width - text_len) / 2))
+  ((padding < 0)) && padding=0
+
+  # Print padding + text
+  printf '%*s%s' "$padding" "" "$text"
+}
+
 # Repeats a character N times for building navigation lines.
 # Parameters:
 #   $1 - Character to repeat
@@ -668,7 +691,7 @@ _wiz_render_menu() {
 
   output+="\n"
 
-  # Footer with navigation hints
+  # Footer with navigation hints (centered)
   # Left/right/start hints: orange when active, gray when inactive
   local left_clr right_clr start_clr
   left_clr=$([[ $WIZ_CURRENT_SCREEN -gt 0 ]] && echo "$CLR_ORANGE" || echo "$CLR_GRAY")
@@ -681,7 +704,7 @@ _wiz_render_menu() {
   nav_hint+="[${right_clr}→${CLR_GRAY}] next  "
   nav_hint+="[${start_clr}S${CLR_GRAY}] start  [${CLR_ORANGE}Q${CLR_GRAY}] quit"
 
-  output+="${CLR_GRAY}${nav_hint}${CLR_RESET}"
+  output+="$(_wiz_center "${CLR_GRAY}${nav_hint}${CLR_RESET}")"
 
   # Clear screen and output everything atomically
   _wiz_clear

@@ -92,8 +92,9 @@ _render_completion_screen() {
 
   output+="\n"
 
-  # Footer
-  output+="${CLR_GRAY}[${CLR_ORANGE}Enter${CLR_GRAY}] reboot  [${CLR_ORANGE}Q${CLR_GRAY}] quit without reboot${CLR_RESET}"
+  # Centered footer
+  local footer_text="${CLR_GRAY}[${CLR_ORANGE}Enter${CLR_GRAY}] reboot  [${CLR_ORANGE}Q${CLR_GRAY}] quit without reboot${CLR_RESET}"
+  output+="$(_wiz_center "$footer_text")"
 
   # Clear and render
   _wiz_clear
