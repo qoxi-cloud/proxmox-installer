@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.508-pr.21"
+readonly VERSION="2.0.510-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -525,8 +525,8 @@ local dot_pos=$half
 local title_start=$((dot_pos-title_len/2))
 local title_spaces=""
 ((title_start>0))&&title_spaces=$(printf '%*s' "$title_start" '')
-printf '%s  %s%s\n' "$banner_pad" "$title_spaces" "$CLR_GRAY$title$CLR_RESET"
-printf '%s  %s%s%s%s' "$banner_pad" "$CLR_ORANGE$left_line" "$CLR_CYAN●" "$CLR_GRAY$right_line$CLR_RESET" ""
+printf '%s  %s%s\n' "$banner_pad" "$title_spaces" "$CLR_ORANGE$title$CLR_RESET"
+printf '%s  %s%s%s%s' "$banner_pad" "$CLR_CYAN$left_line" "$CLR_ORANGE●" "$CLR_GRAY$right_line$CLR_RESET" ""
 }
 download_file(){
 local output_file="$1"
