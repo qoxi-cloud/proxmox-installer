@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.484-pr.21"
+readonly VERSION="2.0.485-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -293,7 +293,6 @@ done
 log(){
 printf '%s\n' "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >>"$LOG_FILE"
 }
-INSTALL_START_TIME=""
 metrics_start(){
 INSTALL_START_TIME=$(date +%s)
 log "METRIC: installation_started"
@@ -1409,13 +1408,22 @@ case "$key_type" in
 ssh-ed25519)log "INFO: SSH key validated (ED25519)"
 return 0
 ;;
-ssh-rsa|ecdsa-*)local bits
+ecdsa-*)local bits
+bits=$(echo "$key"|ssh-keygen -l -f - 2>/dev/null|awk '{print $1}')
+if [[ $bits -ge 256 ]];then
+log "INFO: SSH key validated ($key_type, $bits bits)"
+return 0
+fi
+log "ERROR: ECDSA key curve too small (current: $bits)"
+return 1
+;;
+ssh-rsa)local bits
 bits=$(echo "$key"|ssh-keygen -l -f - 2>/dev/null|awk '{print $1}')
 if [[ $bits -ge 2048 ]];then
 log "INFO: SSH key validated ($key_type, $bits bits)"
 return 0
 fi
-log "ERROR: RSA/ECDSA key must be >= 2048 bits (current: $bits)"
+log "ERROR: RSA key must be >= 2048 bits (current: $bits)"
 return 1
 ;;
 *)log "ERROR: Unsupported key type: $key_type"
