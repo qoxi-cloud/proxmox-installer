@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.490-pr.21"
+readonly VERSION="2.0.491-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1006,6 +1006,14 @@ raidz2)cmd+=" raidz2 ${vdevs[*]}"
 raidz3)cmd+=" raidz3 ${vdevs[*]}"
 ;;
 raid10)local vdev_count=${#vdevs[@]}
+if ((vdev_count<4));then
+log "ERROR: raid10 requires at least 4 vdevs, got $vdev_count"
+return 1
+fi
+if ((vdev_count%2!=0));then
+log "ERROR: raid10 requires even number of vdevs, got $vdev_count"
+return 1
+fi
 for ((i=0; i<vdev_count; i+=2));do
 cmd+=" mirror ${vdevs[$i]} ${vdevs[$((i+1))]}"
 done
