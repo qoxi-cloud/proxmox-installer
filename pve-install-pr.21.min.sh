@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.510-pr.21"
+readonly VERSION="2.0.512-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -729,7 +729,9 @@ _SSH_SESSION_PASSFILE=""
 _SSH_SESSION_LOGGED=false
 _ssh_passfile_path(){
 local passfile_dir="/dev/shm"
-[[ ! -d /dev/shm ]]||[[ ! -w /dev/shm ]]&&passfile_dir="/tmp"
+if [[ ! -d /dev/shm ]]||[[ ! -w /dev/shm ]];then
+passfile_dir="/tmp"
+fi
 printf '%s\n' "$passfile_dir/pve-ssh-session.$$"
 }
 _ssh_session_init(){
@@ -1329,6 +1331,7 @@ ipv6="${ipv6%%\%*}"
 [[ ! $ipv6 =~ ^[0-9a-fA-F:]+$ ]]&&return 1
 [[ $ipv6 =~ ^:[^:] ]]&&return 1
 [[ $ipv6 =~ [^:]:$ ]]&&return 1
+[[ $ipv6 =~ ::: ]]&&return 1
 local double_colon_count
 double_colon_count=$(grep -o '::' <<<"$ipv6"|wc -l)
 [[ $double_colon_count -gt 1 ]]&&return 1
