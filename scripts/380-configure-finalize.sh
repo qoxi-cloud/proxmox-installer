@@ -42,8 +42,20 @@ restart_ssh_service() {
 validate_installation() {
   log "Generating validation script from template..."
 
+  # Stage template to preserve original
+  local staged
+  staged=$(mktemp) || {
+    log "ERROR: Failed to create temp file for validation.sh"
+    return 1
+  }
+  cp "./templates/validation.sh" "$staged" || {
+    log "ERROR: Failed to stage validation.sh"
+    rm -f "$staged"
+    return 1
+  }
+
   # Generate validation script with current settings
-  apply_template_vars "./templates/validation.sh" \
+  apply_template_vars "$staged" \
     "INSTALL_TAILSCALE=${INSTALL_TAILSCALE:-no}" \
     "INSTALL_FIREWALL=${INSTALL_FIREWALL:-no}" \
     "FIREWALL_MODE=${FIREWALL_MODE:-standard}" \
@@ -63,7 +75,8 @@ validate_installation() {
     "SHELL_TYPE=${SHELL_TYPE:-bash}" \
     "SSL_TYPE=${SSL_TYPE:-self-signed}"
   local validation_script
-  validation_script=$(cat "./templates/validation.sh")
+  validation_script=$(cat "$staged")
+  rm -f "$staged"
 
   log "Validation script generated"
   printf '%s\n' "$validation_script" >>"$LOG_FILE"

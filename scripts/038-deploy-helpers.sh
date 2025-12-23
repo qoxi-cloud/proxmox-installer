@@ -88,6 +88,7 @@ deploy_systemd_timer() {
 }
 
 # Deploys a systemd service file (with optional template vars) and enables it.
+# Stages template to temp location before substitution to preserve originals.
 # Parameters:
 #   $1 - Service name (e.g., "network-ringbuffer" for network-ringbuffer.service)
 #   $@ - Optional: template variable assignments (VAR=value format)
@@ -97,19 +98,34 @@ deploy_systemd_service() {
   shift
   local template="templates/${service_name}.service"
   local dest="/etc/systemd/system/${service_name}.service"
+  local staged
+
+  # Stage template to temp location to preserve original
+  staged=$(mktemp) || {
+    log "ERROR: Failed to create temp file for ${service_name} service"
+    return 1
+  }
+  cp "$template" "$staged" || {
+    log "ERROR: Failed to stage template for ${service_name} service"
+    rm -f "$staged"
+    return 1
+  }
 
   # Apply template vars if provided
   if [[ $# -gt 0 ]]; then
-    apply_template_vars "$template" "$@" || {
+    apply_template_vars "$staged" "$@" || {
       log "ERROR: Template substitution failed for ${service_name} service"
+      rm -f "$staged"
       return 1
     }
   fi
 
-  remote_copy "$template" "$dest" || {
+  remote_copy "$staged" "$dest" || {
     log "ERROR: Failed to deploy ${service_name} service"
+    rm -f "$staged"
     return 1
   }
+  rm -f "$staged"
 
   remote_exec "systemctl daemon-reload && systemctl enable ${service_name}.service" || {
     log "ERROR: Failed to enable ${service_name} service"
@@ -136,6 +152,7 @@ remote_enable_services() {
 }
 
 # Deploys a template with variable substitution and copies to remote.
+# Stages template to temp location before substitution to preserve originals.
 # Combines apply_template_vars + remote_copy pattern.
 # Parameters:
 #   $1 - Template source path
@@ -146,17 +163,32 @@ deploy_template() {
   local template="$1"
   local dest="$2"
   shift 2
+  local staged
+
+  # Stage template to temp location to preserve original
+  staged=$(mktemp) || {
+    log "ERROR: Failed to create temp file for $template"
+    return 1
+  }
+  cp "$template" "$staged" || {
+    log "ERROR: Failed to stage template $template"
+    rm -f "$staged"
+    return 1
+  }
 
   # Apply template vars if any provided
   if [[ $# -gt 0 ]]; then
-    apply_template_vars "$template" "$@" || {
+    apply_template_vars "$staged" "$@" || {
       log "ERROR: Template substitution failed for $template"
+      rm -f "$staged"
       return 1
     }
   fi
 
-  remote_copy "$template" "$dest" || {
+  remote_copy "$staged" "$dest" || {
     log "ERROR: Failed to deploy $template to $dest"
+    rm -f "$staged"
     return 1
   }
+  rm -f "$staged"
 }

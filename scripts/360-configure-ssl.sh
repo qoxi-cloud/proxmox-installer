@@ -12,23 +12,38 @@ _config_ssl() {
   local cert_domain="${FQDN:-$PVE_HOSTNAME.$DOMAIN_SUFFIX}"
   log "configure_ssl_certificate: domain=$cert_domain, email=$EMAIL"
 
-  # Apply template substitutions locally before copying
-  if ! apply_template_vars "./templates/letsencrypt-firstboot.sh" \
+  # Stage template to preserve original, apply substitutions to staged copy
+  local staged
+  staged=$(mktemp) || {
+    log "ERROR: Failed to create temp file for letsencrypt-firstboot.sh"
+    return 1
+  }
+  cp "./templates/letsencrypt-firstboot.sh" "$staged" || {
+    log "ERROR: Failed to stage letsencrypt-firstboot.sh"
+    rm -f "$staged"
+    return 1
+  }
+
+  if ! apply_template_vars "$staged" \
     "CERT_DOMAIN=${cert_domain}" \
     "CERT_EMAIL=${EMAIL}"; then
     log "ERROR: Failed to apply template variables to letsencrypt-firstboot.sh"
+    rm -f "$staged"
     return 1
   fi
 
   # Copy Let's Encrypt templates to VM
   if ! remote_copy "./templates/letsencrypt-deploy-hook.sh" "/tmp/letsencrypt-deploy-hook.sh"; then
     log "ERROR: Failed to copy letsencrypt-deploy-hook.sh"
+    rm -f "$staged"
     return 1
   fi
-  if ! remote_copy "./templates/letsencrypt-firstboot.sh" "/tmp/letsencrypt-firstboot.sh"; then
+  if ! remote_copy "$staged" "/tmp/letsencrypt-firstboot.sh"; then
     log "ERROR: Failed to copy letsencrypt-firstboot.sh"
+    rm -f "$staged"
     return 1
   fi
+  rm -f "$staged"
   if ! remote_copy "./templates/letsencrypt-firstboot.service" "/tmp/letsencrypt-firstboot.service"; then
     log "ERROR: Failed to copy letsencrypt-firstboot.service"
     return 1
