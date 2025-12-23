@@ -8,8 +8,23 @@
 # =============================================================================
 FIXTURE_SSH_ED25519="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl test@example.com"
 FIXTURE_SSH_RSA_4096="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC8gJmY7E8GBi7lJX9vxKzTqK+jXmwIjJY3K3CnZHEIPp9f+8oQnM4qL3WwK1yGYJxZHcMnxJmKqQ3hZ8X/qFKBhFv2bqJfGkWxdZOyJfMJ7K7Kqp7PjKn9VfxVK3LqKvQC4N1p8z3nQyT1QH5y7M8RnU0vZ3J5Y2n5f9K7QwP8v3WfFxVc4q1P6B3N9qK7M8ZnXfJ5Y2n5f9K7QwP8v3WfFxVc4q1P6B3N9qK7M8ZnX test@example.com"
+FIXTURE_SSH_RSA_WEAK="ssh-rsa WEAK1024bit test@example.com"
+FIXTURE_SSH_ECDSA_256="ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYxxx test@example.com"
+FIXTURE_SSH_ECDSA_384="ecdsa-sha2-nistp384 AAAAE2VjZHNhLXNoYTItbmlzdHAzODQxxx test@example.com"
 FIXTURE_SSH_INVALID="not-a-valid-ssh-key"
 FIXTURE_SSH_DSA="ssh-dss AAAAB3NzaC1kc3MAAACBALKc test@example.com"
+
+# =============================================================================
+# Admin Username Fixtures
+# =============================================================================
+FIXTURE_VALID_USERNAME="john"
+FIXTURE_VALID_USERNAME_NUMBERS="user123"
+FIXTURE_VALID_USERNAME_UNDERSCORE="my_user"
+FIXTURE_VALID_USERNAME_HYPHEN="my-user"
+FIXTURE_VALID_USERNAME_MAX="abcdefghijklmnopqrstuvwxyz123456"
+FIXTURE_INVALID_USERNAME_NUMBER_START="1user"
+FIXTURE_INVALID_USERNAME_UPPERCASE="User"
+FIXTURE_INVALID_USERNAME_TOO_LONG="abcdefghijklmnopqrstuvwxyz1234567"
 
 # =============================================================================
 # Hostname Fixtures

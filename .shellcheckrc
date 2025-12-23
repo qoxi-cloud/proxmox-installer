@@ -22,6 +22,11 @@ disable=SC2034
 # Example: TIMEZONES (array) vs TIMEZONE (selected value)
 disable=SC2153
 
+# SC2329: This function is never invoked
+# Reason: ShellSpec tests define mock functions invoked via DSL, not direct calls
+# Example: remote_exec() { ... } defined for mocking in spec files
+disable=SC2329
+
 # =============================================================================
 # Project-specific exclusions
 # =============================================================================

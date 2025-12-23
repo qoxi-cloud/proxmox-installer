@@ -1,17 +1,19 @@
 # shellcheck shell=bash
-# shellcheck disable=SC2016
+# shellcheck disable=SC2016,SC2034
 # =============================================================================
 # Tests for 001-cli.sh
 # =============================================================================
 
 %const SCRIPTS_DIR: "${SHELLSPEC_PROJECT_ROOT}/scripts"
+%const SUPPORT_DIR: "${SHELLSPEC_PROJECT_ROOT}/spec/support"
+
+# Load shared colors
+eval "$(cat "$SUPPORT_DIR/colors.sh")"
 
 Describe "001-cli.sh"
   # Set up required variables from 000-init.sh before testing
   setup_vars() {
     VERSION="2"
-    CLR_RED=$'\033[1;31m'
-    CLR_RESET=$'\033[m'
     QEMU_RAM_OVERRIDE=""
     QEMU_CORES_OVERRIDE=""
     PROXMOX_ISO_VERSION=""

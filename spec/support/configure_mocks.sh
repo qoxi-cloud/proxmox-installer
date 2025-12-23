@@ -3,9 +3,15 @@
 # =============================================================================
 # Shared mocks for configure script tests
 # =============================================================================
+#
+# Usage in spec files:
+#   %const SUPPORT_DIR: "${SHELLSPEC_PROJECT_ROOT}/spec/support"
+#   eval "$(cat "$SUPPORT_DIR/configure_mocks.sh")"
 
+# =============================================================================
 # Mock result controls - set these in your tests
-MOCK_RUN_REMOTE_RESULT=0
+# =============================================================================
+MOCK_REMOTE_RUN_RESULT=0
 MOCK_REMOTE_EXEC_RESULT=0
 MOCK_REMOTE_COPY_RESULT=0
 MOCK_APPLY_TEMPLATE_VARS_RESULT=0

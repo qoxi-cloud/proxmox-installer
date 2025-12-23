@@ -54,5 +54,31 @@ Describe "034-password-utils.sh"
       When call generate_password 100
       The length of output should equal 100
     End
+
+    It "generates non-empty password with default args"
+      When call generate_password
+      The output should not be blank
+    End
+
+    It "returns zero length for zero input"
+      When call generate_password 0
+      The output should be blank
+    End
+
+    It "output contains no newlines or spaces"
+      password=$(generate_password 50)
+      When call bash -c "[[ '$password' != *$'\n'* && '$password' != *' '* ]]"
+      The status should be success
+    End
+
+    It "generates different passwords on successive calls"
+      passwords=""
+      for _ in {1..5}; do
+        passwords="$passwords$(generate_password 16)"$'\n'
+      done
+      unique=$(printf '%s' "$passwords" | grep -c .)
+      distinct=$(printf '%s' "$passwords" | sort -u | grep -c .)
+      The value "$distinct" should equal "$unique"
+    End
   End
 End
