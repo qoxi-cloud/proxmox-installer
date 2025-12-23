@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.515-pr.21"
+readonly VERSION="2.0.516-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -639,40 +639,6 @@ apply_template_vars "$file" \
 "PORT_SSH=${PORT_SSH:-22}" \
 "PORT_PROXMOX_UI=${PORT_PROXMOX_UI:-8006}"
 }
-postprocess_interfaces_bridge_mode(){
-local file="$1"
-local mode="${BRIDGE_MODE:-internal}"
-if [[ ! -f $file ]];then
-log "ERROR: Interfaces file not found: $file"
-return 1
-fi
-log "Processing interfaces for bridge mode: $mode"
-case "$mode" in
-internal)sed -i '/^# === IFACE_MANUAL_START ===/,/^# === IFACE_MANUAL_END ===/d' "$file"
-sed -i '/^# === VMBR0_EXTERNAL_START ===/,/^# === VMBR0_EXTERNAL_END ===/d' "$file"
-sed -i '/^# === VMBR1_START ===/,/^# === VMBR1_END ===/d' "$file"
-;;
-external)sed -i '/^# === IFACE_STATIC_START ===/,/^# === IFACE_STATIC_END ===/d' "$file"
-sed -i '/^# === VMBR0_NAT_START ===/,/^# === VMBR0_NAT_END ===/d' "$file"
-sed -i '/^# === VMBR1_START ===/,/^# === VMBR1_END ===/d' "$file"
-;;
-both)sed -i '/^# === IFACE_STATIC_START ===/,/^# === IFACE_STATIC_END ===/d' "$file"
-sed -i '/^# === VMBR0_NAT_START ===/,/^# === VMBR0_NAT_END ===/d' "$file"
-esac
-sed -i '/^# === [A-Z0-9_]*_START ===/d; /^# === [A-Z0-9_]*_END ===/d' "$file"
-sed -i '/^$/N;/^\n$/d' "$file"
-}
-postprocess_interfaces_ipv6(){
-local file="$1"
-if [[ ! -f $file ]];then
-log "ERROR: Interfaces file not found: $file"
-return 1
-fi
-if [[ -z ${MAIN_IPV6:-} ]]||[[ ${IPV6_MODE:-} == "disabled" ]];then
-log "IPv6 disabled - removing inet6 sections from interfaces"
-sed -i '/^iface .* inet6 static$/,/^$/d' "$file"
-fi
-}
 download_template(){
 local local_path="$1"
 local remote_file="${2:-$(basename "$local_path")}"
@@ -1268,6 +1234,157 @@ remote_copy "$template" "$dest"||{
 log "ERROR: Failed to deploy $template to $dest"
 return 1
 }
+}
+_generate_loopback(){
+cat <<'EOF'
+auto lo
+iface lo inet loopback
+
+iface lo inet6 loopback
+EOF
+}
+_generate_iface_manual(){
+cat <<EOF
+# Physical interface (no IP, part of bridge)
+auto $INTERFACE_NAME
+iface $INTERFACE_NAME inet manual
+EOF
+}
+_generate_iface_static(){
+cat <<EOF
+# Physical interface with host IP
+auto $INTERFACE_NAME
+iface $INTERFACE_NAME inet static
+    address $MAIN_IPV4/32
+    gateway $MAIN_IPV4_GW
+    up sysctl --system
+EOF
+if [[ -n ${MAIN_IPV6:-} && ${IPV6_MODE:-} != "disabled" ]];then
+cat <<EOF
+
+iface $INTERFACE_NAME inet6 static
+    address $MAIN_IPV6/128
+    gateway ${IPV6_GATEWAY:-fe80::1}
+    accept_ra 2
+EOF
+fi
+}
+_generate_vmbr0_external(){
+cat <<EOF
+# vmbr0: External bridge - VMs get IPs from router/DHCP
+# Host IP is on this bridge
+auto vmbr0
+iface vmbr0 inet static
+    address $MAIN_IPV4/32
+    gateway $MAIN_IPV4_GW
+    bridge-ports $INTERFACE_NAME
+    bridge-stp off
+    bridge-fd 0
+    up sysctl --system
+EOF
+if [[ -n ${MAIN_IPV6:-} && ${IPV6_MODE:-} != "disabled" ]];then
+cat <<EOF
+
+iface vmbr0 inet6 static
+    address $MAIN_IPV6/128
+    gateway ${IPV6_GATEWAY:-fe80::1}
+    accept_ra 2
+EOF
+fi
+}
+_generate_vmbr0_nat(){
+local mtu="${BRIDGE_MTU:-9000}"
+local private_ip="${PRIVATE_IP_CIDR:-10.0.0.1/24}"
+cat <<EOF
+# vmbr0: Private NAT network for VMs
+# All VMs connect here and access internet via NAT
+# MTU $mtu (jumbo frames) for improved VM-to-VM performance
+auto vmbr0
+iface vmbr0 inet static
+    address $private_ip
+    bridge-ports none
+    bridge-stp off
+    bridge-fd 0
+    mtu $mtu
+    # NAT masquerade handled by nftables (/etc/nftables.conf)
+    # CT zone for Proxmox bridge tracking (required for VM networking)
+    post-up   iptables -t raw -I PREROUTING -i fwbr+ -j CT --zone 1
+    post-down iptables -t raw -D PREROUTING -i fwbr+ -j CT --zone 1 || true
+EOF
+if [[ -n ${FIRST_IPV6_CIDR:-} && ${IPV6_MODE:-} != "disabled" ]];then
+cat <<EOF
+
+iface vmbr0 inet6 static
+    address $FIRST_IPV6_CIDR
+EOF
+fi
+}
+_generate_vmbr1_nat(){
+local mtu="${BRIDGE_MTU:-9000}"
+local private_ip="${PRIVATE_IP_CIDR:-10.0.0.1/24}"
+cat <<EOF
+# vmbr1: Private NAT network for VMs
+# VMs connect here for isolated network with NAT to internet
+# MTU $mtu (jumbo frames) for improved VM-to-VM performance
+auto vmbr1
+iface vmbr1 inet static
+    address $private_ip
+    bridge-ports none
+    bridge-stp off
+    bridge-fd 0
+    mtu $mtu
+    # NAT masquerade handled by nftables (/etc/nftables.conf)
+    # CT zone for Proxmox bridge tracking (required for VM networking)
+    post-up   iptables -t raw -I PREROUTING -i fwbr+ -j CT --zone 1
+    post-down iptables -t raw -D PREROUTING -i fwbr+ -j CT --zone 1 || true
+EOF
+if [[ -n ${FIRST_IPV6_CIDR:-} && ${IPV6_MODE:-} != "disabled" ]];then
+cat <<EOF
+
+iface vmbr1 inet6 static
+    address $FIRST_IPV6_CIDR
+EOF
+fi
+}
+_generate_interfaces_conf(){
+local mode="${BRIDGE_MODE:-internal}"
+cat <<'EOF'
+# network interface settings; autogenerated
+# Please do NOT modify this file directly, unless you know what
+# you're doing.
+#
+# If you want to manage parts of the network configuration manually,
+# please utilize the 'source' or 'source-directory' directives to do
+# so.
+# PVE will preserve these directives, but will NOT read its network
+# configuration from sourced files, so do not attempt to move any of
+# the PVE managed interfaces into external files!
+
+source /etc/network/interfaces.d/*
+
+EOF
+_generate_loopback
+echo ""
+case "$mode" in
+internal)_generate_iface_static
+echo ""
+_generate_vmbr0_nat
+;;
+external)_generate_iface_manual
+echo ""
+_generate_vmbr0_external
+;;
+both)_generate_iface_manual
+echo ""
+_generate_vmbr0_external
+echo ""
+_generate_vmbr1_nat
+esac
+}
+generate_interfaces_file(){
+local output="${1:-./templates/interfaces}"
+_generate_interfaces_conf >"$output"
+log "Generated interfaces config (mode: ${BRIDGE_MODE:-internal})"
 }
 validate_hostname(){
 local hostname="$1"
@@ -4379,9 +4496,7 @@ return 1
 }
 _modify_template_files(){
 apply_common_template_vars "./templates/hosts"
-apply_common_template_vars "./templates/interfaces"
-postprocess_interfaces_bridge_mode "./templates/interfaces"
-postprocess_interfaces_ipv6 "./templates/interfaces"
+generate_interfaces_file "./templates/interfaces"
 apply_common_template_vars "./templates/resolv.conf"
 apply_template_vars "./templates/cpupower.service" "CPU_GOVERNOR=${CPU_GOVERNOR:-performance}"
 apply_common_template_vars "./templates/locale.sh"
@@ -4444,7 +4559,6 @@ local -a template_list=(
 "./templates/proxmox.sources:$proxmox_sources_template"
 "./templates/sshd_config:sshd_config"
 "./templates/resolv.conf:resolv.conf"
-"./templates/interfaces:interfaces"
 "./templates/locale.sh:locale.sh"
 "./templates/default-locale:default-locale"
 "./templates/environment:environment"
