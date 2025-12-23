@@ -15,11 +15,6 @@ _config_ringbuffer() {
 }
 
 # =============================================================================
-# Public wrapper
+# Public wrapper (generated via factory)
 # =============================================================================
-
-# Public wrapper for ring buffer configuration
-configure_ringbuffer() {
-  [[ ${INSTALL_RINGBUFFER:-} != "yes" ]] && return 0
-  _config_ringbuffer
-}
+make_feature_wrapper "ringbuffer" "INSTALL_RINGBUFFER"

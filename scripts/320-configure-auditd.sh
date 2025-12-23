@@ -31,11 +31,6 @@ _config_auditd() {
 }
 
 # =============================================================================
-# Public wrapper
+# Public wrapper (generated via factory)
 # =============================================================================
-
-# Public wrapper for auditd configuration
-configure_auditd() {
-  [[ ${INSTALL_AUDITD:-} != "yes" ]] && return 0
-  _config_auditd
-}
+make_feature_wrapper "auditd" "INSTALL_AUDITD"

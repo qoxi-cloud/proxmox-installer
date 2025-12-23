@@ -24,11 +24,6 @@ _config_aide() {
 }
 
 # =============================================================================
-# Public wrapper
+# Public wrapper (generated via factory)
 # =============================================================================
-
-# Public wrapper for AIDE configuration
-configure_aide() {
-  [[ ${INSTALL_AIDE:-} != "yes" ]] && return 0
-  _config_aide
-}
+make_feature_wrapper "aide" "INSTALL_AIDE"

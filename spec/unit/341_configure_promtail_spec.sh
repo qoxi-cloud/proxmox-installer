@@ -217,10 +217,22 @@ Describe "341-configure-promtail.sh"
         The status should be success
         The variable config_called should equal true
       End
+    End
 
-      It "returns success even when _config_promtail fails (non-fatal)"
+    # -------------------------------------------------------------------------
+    # Error propagation
+    # -------------------------------------------------------------------------
+    Describe "error propagation"
+      It "propagates failure from _config_promtail"
         INSTALL_PROMTAIL="yes"
         _config_promtail() { return 1; }
+        When call configure_promtail
+        The status should be failure
+      End
+
+      It "returns success when _config_promtail succeeds"
+        INSTALL_PROMTAIL="yes"
+        _config_promtail() { return 0; }
         When call configure_promtail
         The status should be success
       End

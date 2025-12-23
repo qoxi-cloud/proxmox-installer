@@ -6,7 +6,7 @@
 # Config is deployed to admin user's home directory (not root)
 # =============================================================================
 
-# Installation function for yazi - downloads binary from GitHub
+# Installation helper for yazi - downloads binary from GitHub
 # shellcheck disable=SC2016
 _install_yazi() {
   # Download latest yazi release, extract, and install to /usr/local/bin
@@ -21,33 +21,18 @@ _install_yazi() {
   ' "Yazi installed"
 }
 
-# Configuration function for yazi
+# Configuration function for yazi - installs binary and deploys theme
 _config_yazi() {
+  _install_yazi || return 1
+
   deploy_user_config "templates/yazi-theme.toml" ".config/yazi/theme.toml" || {
     log "ERROR: Failed to deploy yazi theme"
     return 1
   }
 }
 
-# Combined install and config for run_with_progress
-_install_and_config_yazi() {
-  _install_yazi || return 1
-  _config_yazi || return 1
-}
-
-# Installs and configures yazi file manager with Catppuccin theme.
-# Deploys custom theme configuration.
-configure_yazi() {
-  # Skip if yazi installation is not requested
-  if [[ $INSTALL_YAZI != "yes" ]]; then
-    log "Skipping yazi (not requested)"
-    return 0
-  fi
-
-  log "Installing and configuring yazi"
-
-  if ! run_with_progress "Installing yazi" "Yazi configured" _install_and_config_yazi; then
-    log "WARNING: Yazi setup failed"
-  fi
-  return 0 # Non-fatal error
-}
+# =============================================================================
+# Public wrapper (generated via factory)
+# Installs yazi file manager with Catppuccin theme
+# =============================================================================
+make_feature_wrapper "yazi" "INSTALL_YAZI"

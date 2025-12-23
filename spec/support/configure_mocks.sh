@@ -25,6 +25,7 @@ ADMIN_USERNAME="testadmin"
 # Logging mocks
 # =============================================================================
 log() { :; }
+add_log() { :; }
 
 # =============================================================================
 # Display mocks
@@ -88,6 +89,23 @@ parallel_mark_configured() {
 }
 
 # =============================================================================
+# Package installation mocks
+# =============================================================================
+install_base_packages() { :; }
+batch_install_packages() { :; }
+
+# =============================================================================
+# Color constants (used by some configure scripts)
+# =============================================================================
+CLR_RED=''
+CLR_CYAN=''
+CLR_YELLOW=''
+CLR_ORANGE=''
+CLR_GRAY=''
+CLR_GOLD=''
+CLR_RESET=''
+
+# =============================================================================
 # Progress mocks
 # =============================================================================
 show_progress() {
@@ -103,4 +121,14 @@ run_with_progress() {
     return $?
   fi
   return 0
+}
+
+# =============================================================================
+# Feature wrapper factory (real implementation for tests)
+# =============================================================================
+# shellcheck disable=SC2086,SC2154
+make_feature_wrapper() {
+  local feature="$1"
+  local flag_var="$2"
+  eval "configure_${feature}() { [[ \${${flag_var}:-} != \"yes\" ]] && return 0; _config_${feature}; }"
 }

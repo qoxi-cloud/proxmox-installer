@@ -25,11 +25,6 @@ _config_nvim() {
 }
 
 # =============================================================================
-# Public wrapper
+# Public wrapper (generated via factory)
 # =============================================================================
-
-# Public wrapper for Neovim configuration
-configure_nvim() {
-  [[ ${INSTALL_NVIM:-} != "yes" ]] && return 0
-  _config_nvim
-}
+make_feature_wrapper "nvim" "INSTALL_NVIM"

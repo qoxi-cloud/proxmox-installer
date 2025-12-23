@@ -46,139 +46,154 @@ Describe "350-configure-yazi.sh"
   # _config_yazi()
   # ===========================================================================
   Describe "_config_yazi()"
-    BeforeEach 'MOCK_REMOTE_COPY_RESULT=0'
-
-    It "configures successfully"
-      When call _config_yazi
-      The status should be success
-    End
-
-    It "fails when deploy_user_config fails"
-      MOCK_REMOTE_COPY_RESULT=1
-      When call _config_yazi
-      The status should be failure
-    End
-
-    It "deploys yazi theme to correct path"
-      deploy_src=""
-      deploy_dest=""
-      deploy_user_config() {
-        deploy_src="$1"
-        deploy_dest="$2"
-        return 0
-      }
-      When call _config_yazi
-      The status should be success
-      The variable deploy_src should equal "templates/yazi-theme.toml"
-      The variable deploy_dest should equal ".config/yazi/theme.toml"
-    End
-  End
-
-  # ===========================================================================
-  # _install_and_config_yazi()
-  # ===========================================================================
-  Describe "_install_and_config_yazi()"
     BeforeEach 'MOCK_REMOTE_RUN_RESULT=0; MOCK_REMOTE_COPY_RESULT=0'
 
-    It "succeeds when both install and config succeed"
-      When call _install_and_config_yazi
-      The status should be success
+    Describe "successful configuration"
+      It "completes all steps successfully"
+        When call _config_yazi
+        The status should be success
+      End
+
+      It "deploys yazi theme to correct path"
+        deploy_src=""
+        deploy_dest=""
+        deploy_user_config() {
+          deploy_src="$1"
+          deploy_dest="$2"
+          return 0
+        }
+        When call _config_yazi
+        The status should be success
+        The variable deploy_src should equal "templates/yazi-theme.toml"
+        The variable deploy_dest should equal ".config/yazi/theme.toml"
+      End
     End
 
-    It "fails when _install_yazi fails"
-      MOCK_REMOTE_RUN_RESULT=1
-      When call _install_and_config_yazi
-      The status should be failure
-    End
+    Describe "failure handling"
+      It "fails when _install_yazi fails"
+        MOCK_REMOTE_RUN_RESULT=1
+        When call _config_yazi
+        The status should be failure
+      End
 
-    It "fails when _config_yazi fails"
-      MOCK_REMOTE_COPY_RESULT=1
-      When call _install_and_config_yazi
-      The status should be failure
-    End
+      It "fails when deploy_user_config fails"
+        MOCK_REMOTE_COPY_RESULT=1
+        When call _config_yazi
+        The status should be failure
+      End
 
-    It "does not call _config_yazi when _install_yazi fails"
-      MOCK_REMOTE_RUN_RESULT=1
-      config_called=""
-      # Override _config_yazi to track if it's called
-      _config_yazi() { config_called="yes"; return 0; }
-      When call _install_and_config_yazi
-      The status should be failure
-      The variable config_called should equal ""
-    End
+      It "does not deploy theme when install fails"
+        MOCK_REMOTE_RUN_RESULT=1
+        deploy_called=false
+        deploy_user_config() { deploy_called=true; return 0; }
+        When call _config_yazi
+        The status should be failure
+        The variable deploy_called should equal false
+      End
 
-    It "calls _config_yazi after successful install"
-      config_called=""
-      _config_yazi() { config_called="yes"; return 0; }
-      When call _install_and_config_yazi
-      The status should be success
-      The variable config_called should equal "yes"
+      It "logs error when deploy_user_config fails"
+        MOCK_REMOTE_COPY_RESULT=1
+        log_message=""
+        log() { log_message="$*"; }
+        When call _config_yazi
+        The status should be failure
+        The variable log_message should include "ERROR"
+        The variable log_message should include "yazi theme"
+      End
     End
   End
 
   # ===========================================================================
-  # configure_yazi()
+  # configure_yazi() - public wrapper
   # ===========================================================================
   Describe "configure_yazi()"
     BeforeEach 'MOCK_REMOTE_RUN_RESULT=0; MOCK_REMOTE_COPY_RESULT=0'
 
-    It "skips when INSTALL_YAZI is not yes"
-      INSTALL_YAZI="no"
-      When call configure_yazi
-      The status should be success
+    # -------------------------------------------------------------------------
+    # Skip conditions
+    # -------------------------------------------------------------------------
+    Describe "skip conditions"
+      It "skips when INSTALL_YAZI is not yes"
+        INSTALL_YAZI="no"
+        config_called=false
+        _config_yazi() { config_called=true; return 0; }
+        When call configure_yazi
+        The status should be success
+        The variable config_called should equal false
+      End
+
+      It "skips when INSTALL_YAZI is unset"
+        unset INSTALL_YAZI
+        config_called=false
+        _config_yazi() { config_called=true; return 0; }
+        When call configure_yazi
+        The status should be success
+        The variable config_called should equal false
+      End
+
+      It "skips when INSTALL_YAZI is empty"
+        INSTALL_YAZI=""
+        config_called=false
+        _config_yazi() { config_called=true; return 0; }
+        When call configure_yazi
+        The status should be success
+        The variable config_called should equal false
+      End
+
+      It "skips when INSTALL_YAZI is 'Yes' (case sensitive)"
+        INSTALL_YAZI="Yes"
+        config_called=false
+        _config_yazi() { config_called=true; return 0; }
+        When call configure_yazi
+        The status should be success
+        The variable config_called should equal false
+      End
     End
 
-    It "skips when INSTALL_YAZI is unset"
-      unset INSTALL_YAZI
-      When call configure_yazi
-      The status should be success
+    # -------------------------------------------------------------------------
+    # Execution when enabled
+    # -------------------------------------------------------------------------
+    Describe "execution when enabled"
+      It "configures yazi when INSTALL_YAZI is yes"
+        INSTALL_YAZI="yes"
+        config_called=false
+        _config_yazi() { config_called=true; return 0; }
+        When call configure_yazi
+        The status should be success
+        The variable config_called should equal true
+      End
+
+      It "configures yazi successfully with real function"
+        INSTALL_YAZI="yes"
+        When call configure_yazi
+        The status should be success
+      End
     End
 
-    It "skips when INSTALL_YAZI is empty"
-      INSTALL_YAZI=""
-      When call configure_yazi
-      The status should be success
-    End
+    # -------------------------------------------------------------------------
+    # Error propagation
+    # -------------------------------------------------------------------------
+    Describe "error propagation"
+      It "propagates failure from _config_yazi"
+        INSTALL_YAZI="yes"
+        _config_yazi() { return 1; }
+        When call configure_yazi
+        The status should be failure
+      End
 
-    It "installs when INSTALL_YAZI is yes"
-      INSTALL_YAZI="yes"
-      When call configure_yazi
-      The status should be success
-    End
+      It "returns success when _config_yazi succeeds"
+        INSTALL_YAZI="yes"
+        _config_yazi() { return 0; }
+        When call configure_yazi
+        The status should be success
+      End
 
-    It "calls run_with_progress with correct arguments"
-      INSTALL_YAZI="yes"
-      progress_label=""
-      progress_msg=""
-      progress_func=""
-      run_with_progress() {
-        progress_label="$1"
-        progress_msg="$2"
-        progress_func="$3"
-        return 0
-      }
-      When call configure_yazi
-      The status should be success
-      The variable progress_label should equal "Installing yazi"
-      The variable progress_msg should equal "Yazi configured"
-      The variable progress_func should equal "_install_and_config_yazi"
-    End
-
-    It "returns success even when run_with_progress fails (non-fatal)"
-      INSTALL_YAZI="yes"
-      run_with_progress() { return 1; }
-      When call configure_yazi
-      The status should be success
-    End
-
-    It "logs warning when setup fails"
-      INSTALL_YAZI="yes"
-      logged_msg=""
-      log() { logged_msg="$*"; }
-      run_with_progress() { return 1; }
-      When call configure_yazi
-      The status should be success
-      The variable logged_msg should include "Yazi setup failed"
+      It "propagates specific exit codes"
+        INSTALL_YAZI="yes"
+        _config_yazi() { return 42; }
+        When call configure_yazi
+        The status should equal 42
+      End
     End
   End
 End

@@ -19,20 +19,10 @@ _config_netdata() {
   remote_enable_services "netdata"
 }
 
-# Configures Netdata for real-time monitoring.
-# Package already installed via batch_install_packages().
+# =============================================================================
+# Public wrapper (generated via factory)
 # Provides web dashboard on PORT_NETDATA (see 000-init.sh).
 # If Tailscale enabled: accessible via Tailscale network
 # Otherwise: localhost only (use reverse proxy for external access)
-configure_netdata() {
-  if [[ $INSTALL_NETDATA != "yes" ]]; then
-    log "Skipping netdata (not requested)"
-    return 0
-  fi
-
-  log "Configuring netdata"
-  if ! run_with_progress "Configuring netdata" "netdata configured" _config_netdata; then
-    log "WARNING: netdata setup failed"
-  fi
-  return 0 # Non-fatal
-}
+# =============================================================================
+make_feature_wrapper "netdata" "INSTALL_NETDATA"

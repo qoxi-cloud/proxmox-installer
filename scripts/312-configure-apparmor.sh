@@ -25,11 +25,6 @@ _config_apparmor() {
 }
 
 # =============================================================================
-# Public wrapper
+# Public wrapper (generated via factory)
 # =============================================================================
-
-# Public wrapper for AppArmor configuration
-configure_apparmor() {
-  [[ ${INSTALL_APPARMOR:-} != "yes" ]] && return 0
-  _config_apparmor
-}
+make_feature_wrapper "apparmor" "INSTALL_APPARMOR"

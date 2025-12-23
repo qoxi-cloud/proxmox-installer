@@ -192,3 +192,23 @@ deploy_template() {
   }
   rm -f "$staged"
 }
+
+# =============================================================================
+# Feature wrapper factory
+# =============================================================================
+
+# Creates a configure_* wrapper that checks INSTALL_* flag before calling _config_*.
+# Eliminates duplicate wrapper boilerplate across configure scripts.
+# Parameters:
+#   $1 - Feature name (e.g., "apparmor")
+#   $2 - Flag variable name (e.g., "INSTALL_APPARMOR")
+# Side effects: Defines configure_<feature>() function globally
+# Example:
+#   make_feature_wrapper "apparmor" "INSTALL_APPARMOR"
+#   # Creates: configure_apparmor() that guards _config_apparmor()
+# shellcheck disable=SC2086,SC2154
+make_feature_wrapper() {
+  local feature="$1"
+  local flag_var="$2"
+  eval "configure_${feature}() { [[ \${${flag_var}:-} != \"yes\" ]] && return 0; _config_${feature}; }"
+}

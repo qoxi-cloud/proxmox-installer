@@ -21,11 +21,6 @@ _config_chkrootkit() {
 }
 
 # =============================================================================
-# Public wrapper
+# Public wrapper (generated via factory)
 # =============================================================================
-
-# Public wrapper for chkrootkit configuration
-configure_chkrootkit() {
-  [[ ${INSTALL_CHKROOTKIT:-} != "yes" ]] && return 0
-  _config_chkrootkit
-}
+make_feature_wrapper "chkrootkit" "INSTALL_CHKROOTKIT"

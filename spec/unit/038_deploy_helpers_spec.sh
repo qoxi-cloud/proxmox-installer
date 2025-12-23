@@ -430,4 +430,93 @@ Description={{DESC}}" >"$tmpdir/templates/vartest.service"
       End
     End
   End
+
+  # ===========================================================================
+  # make_feature_wrapper()
+  # ===========================================================================
+  Describe "make_feature_wrapper()"
+    Describe "wrapper creation"
+      It "creates wrapper that skips when flag is not yes"
+        _config_test_feature() { echo "called"; }
+        make_feature_wrapper "test_feature" "INSTALL_TEST"
+        INSTALL_TEST="no"
+        When call configure_test_feature
+        The status should be success
+        The output should be blank
+      End
+
+      It "creates wrapper that skips when flag is unset"
+        _config_test_feature2() { echo "called"; }
+        make_feature_wrapper "test_feature2" "INSTALL_TEST2"
+        unset INSTALL_TEST2
+        When call configure_test_feature2
+        The status should be success
+        The output should be blank
+      End
+
+      It "creates wrapper that skips when flag is empty"
+        _config_test_feature3() { echo "called"; }
+        make_feature_wrapper "test_feature3" "INSTALL_TEST3"
+        INSTALL_TEST3=""
+        When call configure_test_feature3
+        The status should be success
+        The output should be blank
+      End
+
+      It "creates wrapper that calls _config when flag is yes"
+        _config_test_feature4() { echo "called"; return 0; }
+        make_feature_wrapper "test_feature4" "INSTALL_TEST4"
+        INSTALL_TEST4="yes"
+        When call configure_test_feature4
+        The status should be success
+        The output should equal "called"
+      End
+    End
+
+    Describe "error propagation"
+      It "propagates errors from _config function"
+        _config_test_feature5() { return 42; }
+        make_feature_wrapper "test_feature5" "INSTALL_TEST5"
+        INSTALL_TEST5="yes"
+        When call configure_test_feature5
+        The status should equal 42
+      End
+
+      It "returns success from _config function"
+        _config_test_feature6() { return 0; }
+        make_feature_wrapper "test_feature6" "INSTALL_TEST6"
+        INSTALL_TEST6="yes"
+        When call configure_test_feature6
+        The status should be success
+      End
+
+      It "returns failure from _config function"
+        _config_test_feature7() { return 1; }
+        make_feature_wrapper "test_feature7" "INSTALL_TEST7"
+        INSTALL_TEST7="yes"
+        When call configure_test_feature7
+        The status should be failure
+      End
+    End
+
+    Describe "case sensitivity"
+      It "skips when flag is 'Yes' (case sensitive)"
+        _config_test_feature8() { echo "called"; }
+        make_feature_wrapper "test_feature8" "INSTALL_TEST8"
+        INSTALL_TEST8="Yes"
+        When call configure_test_feature8
+        The status should be success
+        The output should be blank
+      End
+
+      It "skips when flag is 'YES' (case sensitive)"
+        _config_test_feature9() { echo "called"; }
+        make_feature_wrapper "test_feature9" "INSTALL_TEST9"
+        INSTALL_TEST9="YES"
+        When call configure_test_feature9
+        The status should be success
+        The output should be blank
+      End
+    End
+  End
 End

@@ -21,11 +21,6 @@ _config_lynis() {
 }
 
 # =============================================================================
-# Public wrapper
+# Public wrapper (generated via factory)
 # =============================================================================
-
-# Public wrapper for Lynis configuration
-configure_lynis() {
-  [[ ${INSTALL_LYNIS:-} != "yes" ]] && return 0
-  _config_lynis
-}
+make_feature_wrapper "lynis" "INSTALL_LYNIS"

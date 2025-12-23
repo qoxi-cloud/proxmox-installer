@@ -29,12 +29,7 @@ _config_vnstat() {
 }
 
 # =============================================================================
-# Public wrapper
-# =============================================================================
-
-# Public wrapper for vnstat configuration
+# Public wrapper (generated via factory)
 # Called via run_parallel_group() in parallel execution
-configure_vnstat() {
-  [[ ${INSTALL_VNSTAT:-} != "yes" ]] && return 0
-  _config_vnstat
-}
+# =============================================================================
+make_feature_wrapper "vnstat" "INSTALL_VNSTAT"

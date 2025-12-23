@@ -25,19 +25,9 @@ _config_promtail() {
   parallel_mark_configured "promtail"
 }
 
-# Configures Promtail log collector.
-# Package already installed via batch_install_packages().
+# =============================================================================
+# Public wrapper (generated via factory)
 # Collects logs from: /var/log/syslog, auth.log, pve*.log, kernel, journal
 # Loki URL must be configured post-installation in /etc/promtail/promtail.yml
-configure_promtail() {
-  if [[ $INSTALL_PROMTAIL != "yes" ]]; then
-    log "Skipping promtail (not requested)"
-    return 0
-  fi
-
-  log "Configuring promtail"
-  if ! run_with_progress "Configuring promtail" "promtail configured" _config_promtail; then
-    log "WARNING: promtail setup failed"
-  fi
-  return 0 # Non-fatal
-}
+# =============================================================================
+make_feature_wrapper "promtail" "INSTALL_PROMTAIL"

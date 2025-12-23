@@ -18,11 +18,6 @@ _config_needrestart() {
 }
 
 # =============================================================================
-# Public wrapper
+# Public wrapper (generated via factory)
 # =============================================================================
-
-# Public wrapper for needrestart configuration
-configure_needrestart() {
-  [[ ${INSTALL_NEEDRESTART:-} != "yes" ]] && return 0
-  _config_needrestart
-}
+make_feature_wrapper "needrestart" "INSTALL_NEEDRESTART"

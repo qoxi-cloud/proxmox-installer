@@ -178,31 +178,26 @@ Describe "342-configure-netdata.sh"
         The status should be success
         The variable config_called should equal true
       End
+    End
 
-      It "returns success even when _config_netdata fails (non-fatal)"
+    # -------------------------------------------------------------------------
+    # Error propagation
+    # -------------------------------------------------------------------------
+    Describe "error propagation"
+      It "propagates failure from _config_netdata"
         INSTALL_NETDATA="yes"
         INSTALL_TAILSCALE="no"
         _config_netdata() { return 1; }
         When call configure_netdata
-        The status should be success
+        The status should be failure
       End
 
-      It "calls run_with_progress with correct label"
+      It "returns success when _config_netdata succeeds"
         INSTALL_NETDATA="yes"
         INSTALL_TAILSCALE="no"
-        progress_label=""
-        run_with_progress() {
-          progress_label="$1"
-          local func="${3:-}"
-          if [[ -n $func ]] && declare -F "$func" &>/dev/null; then
-            "$func"
-            return $?
-          fi
-          return 0
-        }
+        _config_netdata() { return 0; }
         When call configure_netdata
         The status should be success
-        The variable progress_label should equal "Configuring netdata"
       End
     End
   End
