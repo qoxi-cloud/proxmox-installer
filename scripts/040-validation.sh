@@ -107,7 +107,9 @@ validate_subnet() {
   octet3="${temp%%.*}"
   octet4="${temp#*.}"
 
-  [[ $octet1 -le 255 && $octet2 -le 255 && $octet3 -le 255 && $octet4 -le 255 ]]
+  # Use 10# prefix to force base-10 interpretation (prevents 08/09 octal errors)
+  # shellcheck disable=SC2309 # arithmetic comparison is intentional
+  [[ 10#$octet1 -le 255 && 10#$octet2 -le 255 && 10#$octet3 -le 255 && 10#$octet4 -le 255 ]]
 }
 
 # =============================================================================
