@@ -100,7 +100,10 @@ deploy_systemd_service() {
 
   # Apply template vars if provided
   if [[ $# -gt 0 ]]; then
-    apply_template_vars "$template" "$@"
+    apply_template_vars "$template" "$@" || {
+      log "ERROR: Template substitution failed for ${service_name} service"
+      return 1
+    }
   fi
 
   remote_copy "$template" "$dest" || {
@@ -146,7 +149,10 @@ deploy_template() {
 
   # Apply template vars if any provided
   if [[ $# -gt 0 ]]; then
-    apply_template_vars "$template" "$@"
+    apply_template_vars "$template" "$@" || {
+      log "ERROR: Template substitution failed for $template"
+      return 1
+    }
   fi
 
   remote_copy "$template" "$dest" || {
