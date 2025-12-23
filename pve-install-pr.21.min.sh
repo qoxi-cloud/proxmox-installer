@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.516-pr.21"
+readonly VERSION="2.0.519-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1201,13 +1201,29 @@ local service_name="$1"
 shift
 local template="templates/$service_name.service"
 local dest="/etc/systemd/system/$service_name.service"
-if [[ $# -gt 0 ]];then
-apply_template_vars "$template" "$@"
-fi
-remote_copy "$template" "$dest"||{
-log "ERROR: Failed to deploy $service_name service"
+local staged
+staged=$(mktemp)||{
+log "ERROR: Failed to create temp file for $service_name service"
 return 1
 }
+cp "$template" "$staged"||{
+log "ERROR: Failed to stage template for $service_name service"
+rm -f "$staged"
+return 1
+}
+if [[ $# -gt 0 ]];then
+apply_template_vars "$staged" "$@"||{
+log "ERROR: Template substitution failed for $service_name service"
+rm -f "$staged"
+return 1
+}
+fi
+remote_copy "$staged" "$dest"||{
+log "ERROR: Failed to deploy $service_name service"
+rm -f "$staged"
+return 1
+}
+rm -f "$staged"
 remote_exec "systemctl daemon-reload && systemctl enable $service_name.service"||{
 log "ERROR: Failed to enable $service_name service"
 return 1
@@ -1227,13 +1243,29 @@ deploy_template(){
 local template="$1"
 local dest="$2"
 shift 2
-if [[ $# -gt 0 ]];then
-apply_template_vars "$template" "$@"
-fi
-remote_copy "$template" "$dest"||{
-log "ERROR: Failed to deploy $template to $dest"
+local staged
+staged=$(mktemp)||{
+log "ERROR: Failed to create temp file for $template"
 return 1
 }
+cp "$template" "$staged"||{
+log "ERROR: Failed to stage template $template"
+rm -f "$staged"
+return 1
+}
+if [[ $# -gt 0 ]];then
+apply_template_vars "$staged" "$@"||{
+log "ERROR: Template substitution failed for $template"
+rm -f "$staged"
+return 1
+}
+fi
+remote_copy "$staged" "$dest"||{
+log "ERROR: Failed to deploy $template to $dest"
+rm -f "$staged"
+return 1
+}
+rm -f "$staged"
 }
 _generate_loopback(){
 cat <<'EOF'
@@ -1439,7 +1471,7 @@ octet2="${temp%%.*}"
 temp="${temp#*.}"
 octet3="${temp%%.*}"
 octet4="${temp#*.}"
-[[ $octet1 -le 255 && $octet2 -le 255 && $octet3 -le 255 && $octet4 -le 255 ]]
+[[ 10#$octet1 -le 255 && 10#$octet2 -le 255 && 10#$octet3 -le 255 && 10#$octet4 -le 255 ]]
 }
 validate_ipv6(){
 local ipv6="$1"
@@ -5303,20 +5335,34 @@ _config_ssl(){
 log "_config_ssl: SSL_TYPE=$SSL_TYPE"
 local cert_domain="${FQDN:-$PVE_HOSTNAME.$DOMAIN_SUFFIX}"
 log "configure_ssl_certificate: domain=$cert_domain, email=$EMAIL"
-if ! apply_template_vars "./templates/letsencrypt-firstboot.sh" \
+local staged
+staged=$(mktemp)||{
+log "ERROR: Failed to create temp file for letsencrypt-firstboot.sh"
+return 1
+}
+cp "./templates/letsencrypt-firstboot.sh" "$staged"||{
+log "ERROR: Failed to stage letsencrypt-firstboot.sh"
+rm -f "$staged"
+return 1
+}
+if ! apply_template_vars "$staged" \
 "CERT_DOMAIN=$cert_domain" \
 "CERT_EMAIL=$EMAIL";then
 log "ERROR: Failed to apply template variables to letsencrypt-firstboot.sh"
+rm -f "$staged"
 return 1
 fi
 if ! remote_copy "./templates/letsencrypt-deploy-hook.sh" "/tmp/letsencrypt-deploy-hook.sh";then
 log "ERROR: Failed to copy letsencrypt-deploy-hook.sh"
+rm -f "$staged"
 return 1
 fi
-if ! remote_copy "./templates/letsencrypt-firstboot.sh" "/tmp/letsencrypt-firstboot.sh";then
+if ! remote_copy "$staged" "/tmp/letsencrypt-firstboot.sh";then
 log "ERROR: Failed to copy letsencrypt-firstboot.sh"
+rm -f "$staged"
 return 1
 fi
+rm -f "$staged"
 if ! remote_copy "./templates/letsencrypt-firstboot.service" "/tmp/letsencrypt-firstboot.service";then
 log "ERROR: Failed to copy letsencrypt-firstboot.service"
 return 1
@@ -5508,7 +5554,17 @@ fi
 }
 validate_installation(){
 log "Generating validation script from template..."
-apply_template_vars "./templates/validation.sh" \
+local staged
+staged=$(mktemp)||{
+log "ERROR: Failed to create temp file for validation.sh"
+return 1
+}
+cp "./templates/validation.sh" "$staged"||{
+log "ERROR: Failed to stage validation.sh"
+rm -f "$staged"
+return 1
+}
+apply_template_vars "$staged" \
 "INSTALL_TAILSCALE=${INSTALL_TAILSCALE:-no}" \
 "INSTALL_FIREWALL=${INSTALL_FIREWALL:-no}" \
 "FIREWALL_MODE=${FIREWALL_MODE:-standard}" \
@@ -5528,7 +5584,8 @@ apply_template_vars "./templates/validation.sh" \
 "SHELL_TYPE=${SHELL_TYPE:-bash}" \
 "SSL_TYPE=${SSL_TYPE:-self-signed}"
 local validation_script
-validation_script=$(cat "./templates/validation.sh")
+validation_script=$(cat "$staged")
+rm -f "$staged"
 log "Validation script generated"
 printf '%s\n' "$validation_script" >>"$LOG_FILE"
 start_task "$CLR_ORANGE├─$CLR_RESET Validating installation"
