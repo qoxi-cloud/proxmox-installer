@@ -28,12 +28,17 @@ EOF
 }
 
 # Generates physical interface section with static IP
+# Uses detected CIDR from rescue system (MAIN_IPV4_CIDR, IPV6_CIDR)
+# Falls back to /32 and /128 for Hetzner-style point-to-point routing if not detected
 _generate_iface_static() {
+  local ipv4_addr="${MAIN_IPV4_CIDR:-${MAIN_IPV4}/32}"
+  local ipv6_addr="${IPV6_CIDR:-${MAIN_IPV6}/128}"
+
   cat <<EOF
 # Physical interface with host IP
 auto ${INTERFACE_NAME}
 iface ${INTERFACE_NAME} inet static
-    address ${MAIN_IPV4}/32
+    address ${ipv4_addr}
     gateway ${MAIN_IPV4_GW}
     up sysctl --system
 EOF
@@ -43,7 +48,7 @@ EOF
     cat <<EOF
 
 iface ${INTERFACE_NAME} inet6 static
-    address ${MAIN_IPV6}/128
+    address ${ipv6_addr}
     gateway ${IPV6_GATEWAY:-fe80::1}
     accept_ra 2
 EOF
@@ -51,13 +56,17 @@ EOF
 }
 
 # Generates vmbr0 as external bridge (host IP on bridge)
+# Uses detected CIDR (see _generate_iface_static for fallback logic)
 _generate_vmbr0_external() {
+  local ipv4_addr="${MAIN_IPV4_CIDR:-${MAIN_IPV4}/32}"
+  local ipv6_addr="${IPV6_CIDR:-${MAIN_IPV6}/128}"
+
   cat <<EOF
 # vmbr0: External bridge - VMs get IPs from router/DHCP
 # Host IP is on this bridge
 auto vmbr0
 iface vmbr0 inet static
-    address ${MAIN_IPV4}/32
+    address ${ipv4_addr}
     gateway ${MAIN_IPV4_GW}
     bridge-ports ${INTERFACE_NAME}
     bridge-stp off
@@ -70,7 +79,7 @@ EOF
     cat <<EOF
 
 iface vmbr0 inet6 static
-    address ${MAIN_IPV6}/128
+    address ${ipv6_addr}
     gateway ${IPV6_GATEWAY:-fe80::1}
     accept_ra 2
 EOF
