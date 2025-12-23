@@ -30,8 +30,12 @@ create_virtio_mapping() {
     ((virtio_idx++))
   fi
 
-  # Add pool disks
+  # Add pool disks (skip if already mapped as boot disk)
   for drive in "${pool_disks[@]}"; do
+    if [[ -n ${VIRTIO_MAP[$drive]:-} ]]; then
+      log "Virtio mapping: $drive already mapped as boot disk, skipping"
+      continue
+    fi
     local vdev="vd${vdev_letters[$virtio_idx]}"
     VIRTIO_MAP["$drive"]="$vdev"
     log "Virtio mapping: $drive → /dev/$vdev (pool)"

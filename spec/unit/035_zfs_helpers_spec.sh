@@ -195,6 +195,29 @@ Describe "035-zfs-helpers.sh"
       When call cat /tmp/virtio_map.env
       The output should include 'declare -gA VIRTIO_MAP'
     End
+
+    Describe "boot disk overlap handling"
+      It "skips pool disk that matches boot disk"
+        (create_virtio_mapping "/dev/nvme0n1" "/dev/nvme0n1" "/dev/nvme1n1") || true
+        When call cat /tmp/virtio_map.env
+        The output should include '[/dev/nvme0n1]="vda"'
+        The output should include '[/dev/nvme1n1]="vdb"'
+      End
+
+      It "does not create duplicate vda mapping"
+        (create_virtio_mapping "/dev/sda" "/dev/sda" "/dev/sdb") || true
+        load_virtio_mapping
+        When call echo "${VIRTIO_MAP[/dev/sda]}"
+        The output should equal "vda"
+      End
+
+      It "preserves sequential virtio naming when boot disk overlaps"
+        (create_virtio_mapping "/dev/sda" "/dev/sda" "/dev/sdb" "/dev/sdc") || true
+        load_virtio_mapping
+        When call map_disks_to_virtio "toml_array" "/dev/sda" "/dev/sdb" "/dev/sdc"
+        The output should equal '["vda", "vdb", "vdc"]'
+      End
+    End
   End
 
   # ===========================================================================
