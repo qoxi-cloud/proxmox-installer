@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.512-pr.21"
+readonly VERSION="2.0.513-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -4438,6 +4438,7 @@ esac
 log "Using repository template: $proxmox_sources_template"
 local -a template_list=(
 "./templates/99-proxmox.conf:99-proxmox.conf"
+"./templates/99-limits.conf:99-limits.conf"
 "./templates/hosts:hosts"
 "./templates/debian.sources:debian.sources"
 "./templates/proxmox.sources:$proxmox_sources_template"
@@ -4643,11 +4644,19 @@ fi
 _config_system_services(){
 run_with_progress "Configuring chrony" "Chrony configured" _configure_chrony
 run_with_progress "Configuring Unattended Upgrades" "Unattended Upgrades configured" _configure_unattended_upgrades
-remote_run "Configuring nf_conntrack" '
-        if ! grep -q "nf_conntrack" /etc/modules 2>/dev/null; then
-            echo "nf_conntrack" >> /etc/modules
-        fi
-    ' "nf_conntrack configured"
+remote_run "Configuring kernel modules" '
+        for mod in nf_conntrack tcp_bbr; do
+            if ! grep -q "^${mod}$" /etc/modules 2>/dev/null; then
+                echo "$mod" >> /etc/modules
+            fi
+        done
+        modprobe tcp_bbr 2>/dev/null || true
+    ' "Kernel modules configured"
+run_with_progress "Configuring system limits" "System limits configured" \
+remote_copy "templates/99-limits.conf" "/etc/security/limits.d/99-proxmox.conf"
+remote_run "Optimizing APT configuration" '
+        echo "Acquire::Languages \"none\";" > /etc/apt/apt.conf.d/99-disable-translations
+    ' "APT configuration optimized"
 local governor="${CPU_GOVERNOR:-performance}"
 run_with_progress "Configuring CPU governor ($governor)" "CPU governor configured" _configure_cpu_governor
 run_with_progress "Configuring I/O scheduler" "I/O scheduler configured" _configure_io_scheduler
