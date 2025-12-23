@@ -8,8 +8,9 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
-# Get staged .sh files
+# Get staged .sh files (exclude spec files - ShellSpec DSL not compatible with shfmt)
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.sh$' || true)
+STAGED_FILES_NO_SPEC=$(echo "$STAGED_FILES" | grep -v '^spec/' || true)
 
 if [[ -z "$STAGED_FILES" ]]; then
   exit 0
@@ -41,7 +42,8 @@ if ! command -v shfmt &>/dev/null; then
 else
   echo -e "${NC}Running shfmt...${NC}"
   UNFORMATTED=""
-  for file in $STAGED_FILES; do
+  # Use STAGED_FILES_NO_SPEC - spec files use ShellSpec DSL incompatible with shfmt
+  for file in $STAGED_FILES_NO_SPEC; do
     if [[ -f "$file" ]]; then
       if ! shfmt -d "$file" &>/dev/null; then
         UNFORMATTED="$UNFORMATTED $file"
