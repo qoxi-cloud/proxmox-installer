@@ -124,8 +124,6 @@ make_templates() {
     "./templates/letsencrypt-firstboot.service:letsencrypt-firstboot.service"
     # Tailscale
     "./templates/disable-openssh.service:disable-openssh.service"
-    # Firewall
-    "./templates/nftables.conf:nftables.conf"
     # Security - Fail2Ban
     "./templates/fail2ban-jail.local:fail2ban-jail.local"
     "./templates/fail2ban-proxmox.conf:fail2ban-proxmox.conf"

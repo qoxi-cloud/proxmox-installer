@@ -6,244 +6,252 @@
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# Rule definitions (data-driven configuration)
+# Rule generators (return nftables rule text via stdout)
 # -----------------------------------------------------------------------------
 
-# Port rules by firewall mode: "port1 port2 ..."
-# Empty = no public ports (stealth mode)
-declare -A FIREWALL_PORT_RULES=(
-  [stealth]=""
-  [strict]="${PORT_SSH}"
-  [standard]="${PORT_SSH} ${PORT_PROXMOX_UI}"
-)
-
-# Bridge interfaces by bridge mode
-declare -A BRIDGE_IFACES=(
-  [internal]="vmbr0"
-  [external]="vmbr1"
-  [both]="vmbr0 vmbr1"
-)
-
-# Bridge descriptions for comments (key format: iface_mode)
-declare -A BRIDGE_DESCRIPTIONS=(
-  [vmbr0_internal]="private NAT network"
-  [vmbr0_external]="external bridge"
-  [vmbr0_both]="private NAT network"
-  [vmbr1_external]="external bridge"
-  [vmbr1_both]="public IPs"
-)
-
-# -----------------------------------------------------------------------------
-# Rule generators
-# -----------------------------------------------------------------------------
-
-# Generates nftables port accept rules based on firewall mode.
-# Parameters:
-#   $1 - Firewall mode (stealth, strict, standard)
-# Returns: nftables rule text via stdout
+# Generates port accept rules based on firewall mode
 _generate_port_rules() {
-  local mode="$1"
-  local ports="${FIREWALL_PORT_RULES[$mode]:-${FIREWALL_PORT_RULES[standard]}}"
+  local mode="${1:-standard}"
+  local ssh="${PORT_SSH:-22}"
+  local webui="${PORT_PROXMOX_UI:-8006}"
 
-  if [[ -z $ports ]]; then
-    printf '%s\n' "# Stealth mode: all public ports blocked
-        # Access only via Tailscale VPN or VM bridges"
-    return
-  fi
+  case "$mode" in
+    stealth)
+      cat <<'EOF'
+        # Stealth mode: all public ports blocked
+        # Access only via Tailscale VPN or VM bridges
+EOF
+      ;;
+    strict)
+      cat <<EOF
+        # SSH access (port $ssh)
+        tcp dport $ssh ct state new accept
+EOF
+      ;;
+    standard | *)
+      cat <<EOF
+        # SSH access (port $ssh)
+        tcp dport $ssh ct state new accept
 
-  local first=true
-  for port in $ports; do
-    local desc=""
-    case "$port" in
-      "${PORT_SSH}") desc="SSH" ;;
-      "${PORT_PROXMOX_UI}") desc="Proxmox Web UI" ;;
-      *) desc="Service" ;;
-    esac
-
-    $first || printf '\n'
-    printf '        # %s access (port %s)\n' "$desc" "$port"
-    printf '        tcp dport %s ct state new accept' "$port"
-    first=false
-  done
-  printf '\n'
+        # Proxmox Web UI (port $webui)
+        tcp dport $webui ct state new accept
+EOF
+      ;;
+  esac
 }
 
-# Generates nftables bridge interface rules for a specific chain.
-# Parameters:
-#   $1 - Chain type: "input" or "forward"
-# Uses: BRIDGE_MODE global for interface selection
-# Returns: nftables rule text via stdout
-_generate_bridge_rules() {
-  local chain="$1"
-  local mode="${BRIDGE_MODE:-internal}"
-  local ifaces="${BRIDGE_IFACES[$mode]:-${BRIDGE_IFACES[internal]}}"
-
-  local first=true
-  for iface in $ifaces; do
-    local desc="${BRIDGE_DESCRIPTIONS[${iface}_${mode}]:-bridge}"
-    $first || printf '\n'
-
-    case "$chain" in
-      input)
-        printf '        # Allow traffic from %s (%s)\n' "$iface" "$desc"
-        printf '        iifname "%s" accept' "$iface"
-        ;;
-      forward)
-        printf '        # Allow forwarding for %s (%s)\n' "$iface" "$desc"
-        printf '        iifname "%s" accept\n' "$iface"
-        printf '        oifname "%s" accept' "$iface"
-        ;;
-    esac
-    first=false
-  done
-  printf '\n'
-}
-
-# Generates bridge input chain rules. Wrapper for _generate_bridge_rules.
-# Returns: nftables rule text via stdout
+# Generates bridge interface rules for input chain
 _generate_bridge_input_rules() {
-  _generate_bridge_rules "input"
+  local mode="${BRIDGE_MODE:-internal}"
+
+  case "$mode" in
+    internal)
+      cat <<'EOF'
+        # Allow traffic from vmbr0 (private NAT network)
+        iifname "vmbr0" accept
+EOF
+      ;;
+    external)
+      cat <<'EOF'
+        # Allow traffic from vmbr1 (external bridge)
+        iifname "vmbr1" accept
+EOF
+      ;;
+    both)
+      cat <<'EOF'
+        # Allow traffic from vmbr0 (private NAT network)
+        iifname "vmbr0" accept
+
+        # Allow traffic from vmbr1 (public IPs)
+        iifname "vmbr1" accept
+EOF
+      ;;
+  esac
 }
 
-# Generates bridge forward chain rules. Wrapper for _generate_bridge_rules.
-# Returns: nftables rule text via stdout
+# Generates bridge interface rules for forward chain
 _generate_bridge_forward_rules() {
-  _generate_bridge_rules "forward"
+  local mode="${BRIDGE_MODE:-internal}"
+
+  case "$mode" in
+    internal)
+      cat <<'EOF'
+        # Allow forwarding for vmbr0 (private NAT network)
+        iifname "vmbr0" accept
+        oifname "vmbr0" accept
+EOF
+      ;;
+    external)
+      cat <<'EOF'
+        # Allow forwarding for vmbr1 (external bridge)
+        iifname "vmbr1" accept
+        oifname "vmbr1" accept
+EOF
+      ;;
+    both)
+      cat <<'EOF'
+        # Allow forwarding for vmbr0 (private NAT network)
+        iifname "vmbr0" accept
+        oifname "vmbr0" accept
+
+        # Allow forwarding for vmbr1 (public IPs)
+        iifname "vmbr1" accept
+        oifname "vmbr1" accept
+EOF
+      ;;
+  esac
 }
 
-# Generates nftables rules for Tailscale interface if enabled.
-# Uses: INSTALL_TAILSCALE global
-# Returns: nftables rule text via stdout
+# Generates Tailscale interface rules if enabled
 _generate_tailscale_rules() {
   if [[ $INSTALL_TAILSCALE == "yes" ]]; then
-    printf '%s\n' '# Allow Tailscale VPN interface
-        iifname "tailscale0" accept'
+    cat <<'EOF'
+        # Allow Tailscale VPN interface
+        iifname "tailscale0" accept
+EOF
   else
-    printf '%s\n' "# Tailscale not installed"
+    echo "        # Tailscale not installed"
   fi
 }
 
-# Generates NAT masquerade rules for private subnet internet access.
-# Only generates rules for internal/both modes (private networks).
-# Uses: BRIDGE_MODE, PRIVATE_SUBNET globals
-# Returns: nftables rule text via stdout
+# Generates NAT masquerade rules for private subnet
 _generate_nat_rules() {
   local mode="${BRIDGE_MODE:-internal}"
   local subnet="${PRIVATE_SUBNET:-10.0.0.0/24}"
-  local rules=""
 
-  # NAT is only needed for internal/both modes (private networks)
   case "$mode" in
     internal | both)
-      # Masquerade traffic from private subnet to allow internet access
-      rules="# Masquerade traffic from private subnet to internet
-        oifname != \"lo\" ip saddr ${subnet} masquerade"
+      cat <<EOF
+        # Masquerade traffic from private subnet to internet
+        oifname != "lo" ip saddr $subnet masquerade
+EOF
       ;;
     external)
-      # External mode - no NAT needed (VMs have public IPs)
-      rules="# External mode: no NAT needed (VMs have public IPs)"
+      echo "        # External mode: no NAT needed (VMs have public IPs)"
       ;;
   esac
-
-  printf '%s\n' "$rules"
 }
 
-# Main implementation for nftables configuration.
-# Generates rules from template, validates syntax, enables service.
-# Side effects: Writes /etc/nftables.conf, enables nftables service
+# -----------------------------------------------------------------------------
+# Main configuration
+# -----------------------------------------------------------------------------
+
+# Generates complete nftables.conf content
+_generate_nftables_conf() {
+  cat <<EOF
+#!/usr/sbin/nft -f
+# =============================================================================
+# nftables firewall configuration for Proxmox VE
+# Generated by proxmox-installer
+# Bridge mode: ${BRIDGE_MODE:-internal}
+# Firewall mode: ${FIREWALL_MODE:-standard}
+# =============================================================================
+
+flush ruleset
+
+# =============================================================================
+# Main filter table for IPv4/IPv6
+# =============================================================================
+table inet filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+
+        # Allow established and related connections (stateful firewall)
+        ct state established,related accept
+
+        # Drop invalid packets
+        ct state invalid drop
+
+        # Allow loopback interface (required for local services)
+        iifname "lo" accept
+
+$(_generate_bridge_input_rules)
+
+$(_generate_tailscale_rules)
+
+        # ICMPv4: allow essential types with rate limiting
+        ip protocol icmp icmp type { echo-request, echo-reply, destination-unreachable, time-exceeded } limit rate 10/second accept
+
+        # ICMPv6: allow essential types (required for IPv6 to work properly)
+        ip6 nexthdr icmpv6 icmpv6 type { echo-request, echo-reply, destination-unreachable, packet-too-big, time-exceeded, parameter-problem, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert } limit rate 10/second accept
+
+$(_generate_port_rules "$FIREWALL_MODE")
+
+        # Everything else is dropped (default policy)
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy accept;
+
+$(_generate_bridge_forward_rules)
+
+        # Allow established/related
+        ct state established,related accept
+
+        # Drop invalid packets
+        ct state invalid drop
+    }
+
+    chain output {
+        type filter hook output priority filter; policy accept;
+        # Allow all outbound traffic
+    }
+}
+
+# =============================================================================
+# NAT table for VM internet access (masquerading)
+# =============================================================================
+table inet nat {
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
+
+$(_generate_nat_rules)
+    }
+}
+EOF
+}
+
+# Main implementation for nftables configuration
 _config_nftables() {
-  # Set up iptables-nft compatibility layer for tools that call iptables directly
+  # Set up iptables-nft compatibility layer
   remote_exec '
     update-alternatives --set iptables /usr/sbin/iptables-nft
     update-alternatives --set ip6tables /usr/sbin/ip6tables-nft
-  ' || log "WARNING: Could not set iptables-nft alternatives (nftables still works directly)"
+  ' || log "WARNING: Could not set iptables-nft alternatives"
 
-  # Read the template
-  local template_content
-  template_content=$(cat "./templates/nftables.conf")
+  # Generate complete config
+  local config_file="./templates/nftables.conf.generated"
+  _generate_nftables_conf >"$config_file"
 
-  # Generate all rules
-  local port_rules bridge_input_rules bridge_forward_rules nat_rules tailscale_rules
+  log "Generated nftables config (mode: $FIREWALL_MODE, bridge: $BRIDGE_MODE)"
 
-  port_rules=$(_generate_port_rules "$FIREWALL_MODE")
-  bridge_input_rules=$(_generate_bridge_input_rules)
-  bridge_forward_rules=$(_generate_bridge_forward_rules)
-  nat_rules=$(_generate_nat_rules)
-  tailscale_rules=$(_generate_tailscale_rules)
-
-  # Build the final config by replacing placeholders
-  local nftables_conf="$template_content"
-
-  # Replace bridge mode comment
-  nftables_conf="${nftables_conf//\{\{BRIDGE_MODE\}\}/$BRIDGE_MODE}"
-
-  # Replace port rules (multiline block replacement - portable awk)
-  nftables_conf=$(printf '%s\n' "$nftables_conf" | awk -v rules="$port_rules" '
-    /# === FIREWALL_RULES_START ===/ { skip=1; print "        # === FIREWALL_RULES_START ==="; print rules; next }
-    /# === FIREWALL_RULES_END ===/ { skip=0; print "        # === FIREWALL_RULES_END ==="; next }
-    !skip { print }
-  ')
-
-  # Replace single-line placeholders (portable awk)
-  nftables_conf=$(printf '%s\n' "$nftables_conf" | awk -v rules="$bridge_input_rules" '
-    /# === BRIDGE_INPUT_RULES ===/ { print rules; next }
-    { print }
-  ')
-
-  nftables_conf=$(printf '%s\n' "$nftables_conf" | awk -v rules="$tailscale_rules" '
-    /# === TAILSCALE_RULES ===/ { print rules; next }
-    { print }
-  ')
-
-  nftables_conf=$(printf '%s\n' "$nftables_conf" | awk -v rules="$bridge_forward_rules" '
-    /# === BRIDGE_FORWARD_RULES ===/ { print rules; next }
-    { print }
-  ')
-
-  nftables_conf=$(printf '%s\n' "$nftables_conf" | awk -v rules="$nat_rules" '
-    /# === NAT_RULES ===/ { print rules; next }
-    { print }
-  ')
-
-  # Write to temp file
-  printf '%s\n' "$nftables_conf" >"./templates/nftables.conf.generated"
-
-  # Log the generated config for debugging
-  log "Generated nftables config:"
-  log "  Bridge mode: $BRIDGE_MODE"
-  log "  Firewall mode: $FIREWALL_MODE"
-  log "  Private subnet: ${PRIVATE_SUBNET:-N/A}"
-
-  # Copy configuration to VM
-  remote_copy "templates/nftables.conf.generated" "/etc/nftables.conf" || {
+  # Deploy to VM
+  remote_copy "$config_file" "/etc/nftables.conf" || {
     log "ERROR: Failed to deploy nftables config"
+    rm -f "$config_file"
     return 1
   }
 
-  # Validate config syntax before enabling (catches errors before SSH gets blocked)
+  # Validate syntax
   remote_exec "nft -c -f /etc/nftables.conf" || {
     log "ERROR: nftables config syntax validation failed"
+    rm -f "$config_file"
     return 1
   }
 
-  # Enable nftables to start on boot (don't start now - will activate after reboot)
+  # Enable service
   remote_exec "systemctl enable nftables" || {
     log "ERROR: Failed to enable nftables"
+    rm -f "$config_file"
     return 1
   }
 
-  # Clean up temp file
-  rm -f "./templates/nftables.conf.generated"
+  rm -f "$config_file"
 }
 
-# Configures nftables firewall based on INSTALL_FIREWALL and FIREWALL_MODE settings.
-# Also considers BRIDGE_MODE for interface rules and PRIVATE_SUBNET for NAT.
-# Modes:
-#   - stealth: blocks ALL incoming (only tailscale/bridges/loopback)
-#   - strict: allows SSH only (port 22)
-#   - standard: allows SSH + Proxmox Web UI (8006)
+# Public function: configures nftables firewall
+# Modes: stealth (VPN only), strict (SSH only), standard (SSH + Web UI)
 configure_firewall() {
-  # Skip if firewall is disabled
   if [[ $INSTALL_FIREWALL != "yes" ]]; then
     log "Skipping firewall configuration (INSTALL_FIREWALL=$INSTALL_FIREWALL)"
     return 0
@@ -251,7 +259,6 @@ configure_firewall() {
 
   log "Configuring nftables firewall (mode: $FIREWALL_MODE, bridge: $BRIDGE_MODE)"
 
-  # Build mode display string for progress message
   local mode_display=""
   case "$FIREWALL_MODE" in
     stealth) mode_display="stealth (Tailscale only)" ;;
@@ -260,9 +267,8 @@ configure_firewall() {
     *) mode_display="$FIREWALL_MODE" ;;
   esac
 
-  # Configure using helper (package already installed via batch_install_packages)
   if ! run_with_progress "Configuring nftables firewall" "Firewall configured ($mode_display)" _config_nftables; then
     log "WARNING: Firewall setup failed"
   fi
-  return 0 # Non-fatal error
+  return 0
 }
