@@ -255,12 +255,25 @@ _config_system_services() {
   # Configure Unattended Upgrades (package already installed)
   run_with_progress "Configuring Unattended Upgrades" "Unattended Upgrades configured" _configure_unattended_upgrades
 
-  # Configure nf_conntrack module (sysctl params already in 99-proxmox.conf.tmpl)
-  remote_run "Configuring nf_conntrack" '
-        if ! grep -q "nf_conntrack" /etc/modules 2>/dev/null; then
-            echo "nf_conntrack" >> /etc/modules
-        fi
-    ' "nf_conntrack configured"
+  # Configure kernel modules (nf_conntrack, tcp_bbr)
+  # shellcheck disable=SC2016 # Single quotes intentional - executed on remote
+  remote_run "Configuring kernel modules" '
+        for mod in nf_conntrack tcp_bbr; do
+            if ! grep -q "^${mod}$" /etc/modules 2>/dev/null; then
+                echo "$mod" >> /etc/modules
+            fi
+        done
+        modprobe tcp_bbr 2>/dev/null || true
+    ' "Kernel modules configured"
+
+  # Configure system limits (nofile for containers/monitoring)
+  run_with_progress "Configuring system limits" "System limits configured" \
+    remote_copy "templates/99-limits.conf" "/etc/security/limits.d/99-proxmox.conf"
+
+  # Disable APT translations (saves disk/bandwidth on servers)
+  remote_run "Optimizing APT configuration" '
+        echo "Acquire::Languages \"none\";" > /etc/apt/apt.conf.d/99-disable-translations
+    ' "APT configuration optimized"
 
   # Configure CPU governor using linux-cpupower
   # Governor already validated by wizard (only shows available options)

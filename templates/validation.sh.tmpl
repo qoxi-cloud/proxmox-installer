@@ -133,6 +133,8 @@ _check_file /etc/sysctl.d/99-proxmox.conf && {
 
 # Verify key sysctls are active in running kernel
 _check_sysctl "net.ipv4.ip_forward" "1" && _ok "IP forwarding active"
+_check_sysctl "net.ipv4.tcp_congestion_control" "bbr" && _ok "TCP BBR congestion control active" ||
+	_warn "TCP BBR not active (using default congestion control)"
 
 # Hosts file must contain hostname mapping
 _check_file /etc/hosts && {

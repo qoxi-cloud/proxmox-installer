@@ -92,6 +92,7 @@ make_templates() {
   local -a template_list=(
     # System base
     "./templates/99-proxmox.conf:99-proxmox.conf"
+    "./templates/99-limits.conf:99-limits.conf"
     "./templates/hosts:hosts"
     "./templates/debian.sources:debian.sources"
     "./templates/proxmox.sources:${proxmox_sources_template}"
