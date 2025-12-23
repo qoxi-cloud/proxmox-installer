@@ -17,28 +17,17 @@ Describe "350-configure-yazi.sh"
   # _install_yazi()
   # ===========================================================================
   Describe "_install_yazi()"
-    BeforeEach 'MOCK_REMOTE_RUN_RESULT=0'
+    BeforeEach 'MOCK_REMOTE_EXEC_RESULT=0'
 
-    It "calls remote_run successfully"
+    It "calls remote_exec successfully"
       When call _install_yazi
       The status should be success
     End
 
-    It "fails when remote_run fails"
-      MOCK_REMOTE_RUN_RESULT=1
+    It "fails when remote_exec fails"
+      MOCK_REMOTE_EXEC_RESULT=1
       When call _install_yazi
       The status should be failure
-    End
-
-    It "passes correct arguments to remote_run"
-      remote_run_label=""
-      remote_run() {
-        remote_run_label="$1"
-        return 0
-      }
-      When call _install_yazi
-      The status should be success
-      The variable remote_run_label should equal "Installing yazi"
     End
   End
 
@@ -46,7 +35,7 @@ Describe "350-configure-yazi.sh"
   # _config_yazi()
   # ===========================================================================
   Describe "_config_yazi()"
-    BeforeEach 'MOCK_REMOTE_RUN_RESULT=0; MOCK_REMOTE_COPY_RESULT=0'
+    BeforeEach 'MOCK_REMOTE_EXEC_RESULT=0; MOCK_REMOTE_COPY_RESULT=0'
 
     Describe "successful configuration"
       It "completes all steps successfully"
@@ -71,7 +60,7 @@ Describe "350-configure-yazi.sh"
 
     Describe "failure handling"
       It "fails when _install_yazi fails"
-        MOCK_REMOTE_RUN_RESULT=1
+        MOCK_REMOTE_EXEC_RESULT=1
         When call _config_yazi
         The status should be failure
       End
@@ -83,7 +72,7 @@ Describe "350-configure-yazi.sh"
       End
 
       It "does not deploy theme when install fails"
-        MOCK_REMOTE_RUN_RESULT=1
+        MOCK_REMOTE_EXEC_RESULT=1
         deploy_called=false
         deploy_user_config() { deploy_called=true; return 0; }
         When call _config_yazi
@@ -107,7 +96,7 @@ Describe "350-configure-yazi.sh"
   # configure_yazi() - public wrapper
   # ===========================================================================
   Describe "configure_yazi()"
-    BeforeEach 'MOCK_REMOTE_RUN_RESULT=0; MOCK_REMOTE_COPY_RESULT=0'
+    BeforeEach 'MOCK_REMOTE_EXEC_RESULT=0; MOCK_REMOTE_COPY_RESULT=0'
 
     # -------------------------------------------------------------------------
     # Skip conditions
