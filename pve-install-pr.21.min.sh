@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.530-pr.21"
+readonly VERSION="2.0.531-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1106,12 +1106,11 @@ export PARALLEL_RESULT_DIR="$result_dir"
 trap "rm -rf '$result_dir'" RETURN
 local i=0
 for func in "${funcs[@]}";do
-(if
-"$func" 2>&1
-then
-touch "$result_dir/success_$i"
-else
-touch "$result_dir/fail_$i"
+(idx=$i
+trap 'touch "$result_dir/fail_$idx" 2>/dev/null' EXIT
+if "$func" 2>&1;then
+trap - EXIT
+touch "$result_dir/success_$idx"
 fi) > \
 /dev/null&
 ((i++))
