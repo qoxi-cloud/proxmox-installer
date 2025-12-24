@@ -115,6 +115,15 @@ Describe "039-network-helpers.sh"
       The output should include "gateway 2001:db8::ffff"
     End
 
+    It "translates 'auto' IPv6 gateway to fe80::1"
+      MAIN_IPV6="2001:db8::1"
+      IPV6_MODE="slaac"
+      IPV6_GATEWAY="auto"
+      When call _generate_iface_static
+      The output should include "gateway fe80::1"
+      The output should not include "gateway auto"
+    End
+
     It "adds on-link route for /128 with non-link-local gateway"
       MAIN_IPV6="2001:db8::1"
       IPV6_MODE="slaac"
@@ -184,6 +193,15 @@ Describe "039-network-helpers.sh"
       When call _generate_vmbr0_external
       The output should include "address 2001:db8::1/64"
       The output should not include "address 2001:db8::1/128"
+    End
+
+    It "translates 'auto' IPv6 gateway to fe80::1"
+      MAIN_IPV6="2001:db8::1"
+      IPV6_MODE="slaac"
+      IPV6_GATEWAY="auto"
+      When call _generate_vmbr0_external
+      The output should include "gateway fe80::1"
+      The output should not include "gateway auto"
     End
   End
 

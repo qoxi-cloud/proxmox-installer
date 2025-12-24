@@ -60,6 +60,8 @@ EOF
   # Add IPv6 if enabled
   if [[ -n ${MAIN_IPV6:-} && ${IPV6_MODE:-} != "disabled" ]]; then
     local ipv6_gw="${IPV6_GATEWAY:-fe80::1}"
+    # Translate "auto" to link-local default (Hetzner standard)
+    [[ $ipv6_gw == "auto" ]] && ipv6_gw="fe80::1"
     cat <<EOF
 
 iface ${INTERFACE_NAME} inet6 static
@@ -112,6 +114,8 @@ EOF
   # Add IPv6 if enabled
   if [[ -n ${MAIN_IPV6:-} && ${IPV6_MODE:-} != "disabled" ]]; then
     local ipv6_gw="${IPV6_GATEWAY:-fe80::1}"
+    # Translate "auto" to link-local default (Hetzner standard)
+    [[ $ipv6_gw == "auto" ]] && ipv6_gw="fe80::1"
     cat <<EOF
 
 iface vmbr0 inet6 static
