@@ -462,6 +462,72 @@ Describe "021-ssh.sh"
   End
 
   # ===========================================================================
+  # cleanup_and_error_handler integration
+  # ===========================================================================
+  Describe "cleanup_and_error_handler integration"
+    # Test that the main cleanup handler calls _ssh_session_cleanup
+    # This verifies the fix for fragile trap chaining logic
+
+    cleanup_and_error_handler() {
+      # Simplified version matching 000-init.sh logic
+      if type _ssh_session_cleanup &>/dev/null; then
+        _ssh_session_cleanup
+      fi
+    }
+
+    test_cleanup_removes_passfile() {
+      _SSH_SESSION_PASSFILE=""
+      _ssh_session_init
+      local passfile="$_SSH_SESSION_PASSFILE"
+      [[ -f "$passfile" ]] || return 1
+      cleanup_and_error_handler
+      [[ ! -f "$passfile" ]]
+    }
+
+    It "calls _ssh_session_cleanup when function is available"
+      When call test_cleanup_removes_passfile
+      The status should be success
+    End
+
+    test_handles_missing_cleanup_func() {
+      # Temporarily hide the function
+      local original_func
+      original_func=$(declare -f _ssh_session_cleanup)
+      unset -f _ssh_session_cleanup
+
+      cleanup_and_error_handler
+      local result=$?
+
+      # Restore function
+      eval "$original_func"
+      return $result
+    }
+
+    It "handles case when _ssh_session_cleanup is not defined"
+      When call test_handles_missing_cleanup_func
+      The status should be success
+    End
+
+    test_passfile_content_and_cleanup() {
+      _SSH_SESSION_PASSFILE=""
+      _ssh_session_init
+      local passfile="$_SSH_SESSION_PASSFILE"
+      # Verify passfile exists and has content
+      [[ -f "$passfile" ]] || return 1
+      [[ "$(cat "$passfile")" == "$NEW_ROOT_PASSWORD" ]] || return 1
+      # Run cleanup
+      cleanup_and_error_handler
+      # Verify passfile is removed
+      [[ ! -f "$passfile" ]]
+    }
+
+    It "cleans up passfile with correct content"
+      When call test_passfile_content_and_cleanup
+      The status should be success
+    End
+  End
+
+  # ===========================================================================
   # SSH_OPTS and SSH_PORT defaults
   # ===========================================================================
   Describe "module constants"

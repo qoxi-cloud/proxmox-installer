@@ -47,24 +47,10 @@ _ssh_session_init() {
   chmod 600 "$passfile_path"
   _SSH_SESSION_PASSFILE="$passfile_path"
 
-  # Register cleanup on exit - but ONLY in main shell, not in subshells
-  # Command substitution like $(func) runs in subshell, and EXIT trap would
-  # delete the passfile immediately when subshell exits
-  if [[ $BASHPID == "$$" ]]; then
-    local existing_trap
-    existing_trap=$(trap -p EXIT 2>/dev/null | sed "s/trap -- '\\(.*\\)' EXIT/\\1/" || true)
-    if [[ -n $existing_trap ]]; then
-      # shellcheck disable=SC2064
-      trap "${existing_trap}; _ssh_session_cleanup" EXIT
-    else
-      trap '_ssh_session_cleanup' EXIT
-    fi
-
-    # Only log once from main shell
-    if [[ $_SSH_SESSION_LOGGED != true ]]; then
-      log "SSH session initialized: $passfile_path"
-      _SSH_SESSION_LOGGED=true
-    fi
+  # Log once from main shell (cleanup handled by cleanup_and_error_handler in 000-init.sh)
+  if [[ $BASHPID == "$$" ]] && [[ $_SSH_SESSION_LOGGED != true ]]; then
+    log "SSH session initialized: $passfile_path"
+    _SSH_SESSION_LOGGED=true
   fi
 }
 

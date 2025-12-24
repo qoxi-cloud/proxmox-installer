@@ -314,6 +314,11 @@ cleanup_and_error_handler() {
   jobs -p | xargs -r kill 2>/dev/null || true
   sleep 1
 
+  # Clean up SSH session passfile
+  if type _ssh_session_cleanup &>/dev/null; then
+    _ssh_session_cleanup
+  fi
+
   # Clean up temporary files
   cleanup_temp_files
 
