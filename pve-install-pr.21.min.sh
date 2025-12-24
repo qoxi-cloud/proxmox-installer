@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.538-pr.21"
+readonly VERSION="2.0.540-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -600,9 +600,9 @@ fi
 if [[ ${#sed_args[@]} -gt 0 ]];then
 sed -i "${sed_args[@]}" "$file"
 fi
-if grep -qE '\{\{[A-Z_]+\}\}' "$file" 2>/dev/null;then
+if grep -qE '\{\{[A-Z0-9_]+\}\}' "$file" 2>/dev/null;then
 local remaining
-remaining=$(grep -oE '\{\{[A-Z_]+\}\}' "$file" 2>/dev/null|sort -u|tr '\n' ' ')
+remaining=$(grep -oE '\{\{[A-Z0-9_]+\}\}' "$file" 2>/dev/null|sort -u|tr '\n' ' ')
 log "WARNING: Unsubstituted placeholders remain in $file: $remaining"
 return 1
 fi
