@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.528-pr.21"
+readonly VERSION="2.0.530-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -894,6 +894,10 @@ log "Virtio mapping: $boot_disk → /dev/$vdev (boot)"
 ((virtio_idx++))
 fi
 for drive in "${pool_disks[@]}";do
+if [[ -n ${VIRTIO_MAP[$drive]:-} ]];then
+log "Virtio mapping: $drive already mapped as boot disk, skipping"
+continue
+fi
 local vdev="vd${vdev_letters[$virtio_idx]}"
 VIRTIO_MAP["$drive"]="$vdev"
 log "Virtio mapping: $drive → /dev/$vdev (pool)"
@@ -5278,7 +5282,7 @@ remote_enable_services "netdata"
 }
 make_feature_wrapper "netdata" "INSTALL_NETDATA"
 _install_yazi(){
-remote_run "Installing yazi" '
+remote_exec '
     set -e
     YAZI_VERSION=$(curl -s https://api.github.com/repos/sxyazi/yazi/releases/latest | grep "tag_name" | cut -d "\"" -f 4 | sed "s/^v//")
     curl -sL "https://github.com/sxyazi/yazi/releases/download/v${YAZI_VERSION}/yazi-x86_64-unknown-linux-gnu.zip" -o /tmp/yazi.zip
@@ -5286,7 +5290,11 @@ remote_run "Installing yazi" '
     chmod +x /tmp/yazi-x86_64-unknown-linux-gnu/yazi
     mv /tmp/yazi-x86_64-unknown-linux-gnu/yazi /usr/local/bin/
     rm -rf /tmp/yazi.zip /tmp/yazi-x86_64-unknown-linux-gnu
-  ' "Yazi installed"
+  '||{
+log "ERROR: Failed to install yazi"
+return 1
+}
+log "Yazi binary installed"
 }
 _config_yazi(){
 _install_yazi||return 1
