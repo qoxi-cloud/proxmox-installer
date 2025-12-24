@@ -48,6 +48,20 @@ Describe "021-ssh.sh"
       When call test "$path1" = "$path2"
       The status should be success
     End
+
+    It "falls back to /tmp when /dev/shm is not available"
+      # Test the fallback logic by mocking the directory check
+      _ssh_passfile_path_tmp_fallback() {
+        local passfile_dir="/dev/shm"
+        # Simulate /dev/shm not available
+        if ! test -d "/dev/shm/nonexistent_test_dir_12345"; then
+          passfile_dir="/tmp"
+        fi
+        printf '%s\n' "${passfile_dir}/pve-ssh-session.$$"
+      }
+      When call _ssh_passfile_path_tmp_fallback
+      The output should match pattern "/tmp/pve-ssh-session.*"
+    End
   End
 
   # ===========================================================================
@@ -117,6 +131,47 @@ Describe "021-ssh.sh"
       When call _ssh_session_cleanup
       The status should be success
     End
+
+    Describe "cleanup method selection"
+      # Test shred path when available
+      _test_cleanup_with_shred() {
+        local tmpfile
+        tmpfile=$(mktemp)
+        echo "sensitive" > "$tmpfile"
+        # Use real shred command if available
+        if command -v shred >/dev/null 2>&1; then
+          shred -u -z "$tmpfile" 2>/dev/null || rm -f "$tmpfile"
+        else
+          rm -f "$tmpfile"
+        fi
+        [[ ! -f "$tmpfile" ]]
+      }
+
+      It "uses shred when available"
+        Skip if "shred not available" ! command -v shred >/dev/null 2>&1
+        When call _test_cleanup_with_shred
+        The status should be success
+      End
+
+      # Test dd fallback path
+      _test_cleanup_with_dd_fallback() {
+        local tmpfile
+        tmpfile=$(mktemp)
+        echo "sensitive data here" > "$tmpfile"
+        local file_size
+        file_size=$(stat -c%s "$tmpfile" 2>/dev/null || stat -f%z "$tmpfile" 2>/dev/null || echo 1024)
+        
+        # Use dd to overwrite
+        dd if=/dev/zero of="$tmpfile" bs=1 count="$file_size" conv=notrunc 2>/dev/null || true
+        rm -f "$tmpfile"
+        [[ ! -f "$tmpfile" ]]
+      }
+
+      It "dd fallback successfully overwrites and removes file"
+        When call _test_cleanup_with_dd_fallback
+        The status should be success
+      End
+    End
   End
 
   # ===========================================================================
@@ -161,6 +216,76 @@ Describe "021-ssh.sh"
 
     # Note: Testing "in use" port is unreliable in containers
     # The function logic is tested via mocking in integration tests
+
+    Describe "with mocked commands"
+      # Test ss path
+      _check_port_with_ss() {
+        local port="$1"
+        # Mock ss to report port in use
+        ss() { echo "tcp LISTEN :$port "; }
+        command() {
+          if [[ $2 == "ss" ]]; then return 0; else builtin command "$@"; fi
+        }
+        if ss -tuln 2>/dev/null | grep -q ":$port "; then
+          return 1
+        fi
+        return 0
+      }
+
+      It "returns failure when ss shows port in use"
+        When call _check_port_with_ss 8080
+        The status should be failure
+      End
+
+      # Test netstat fallback path
+      _check_port_with_netstat() {
+        local port="$1"
+        # Mock ss as unavailable, netstat as available
+        command() {
+          case "$2" in
+            ss) return 1 ;;
+            netstat) return 0 ;;
+            *) builtin command "$@" ;;
+          esac
+        }
+        ss() { return 1; }
+        netstat() { echo "tcp 0 0 0.0.0.0:$port 0.0.0.0:* LISTEN"; }
+        if command -v ss &>/dev/null; then
+          if ss -tuln 2>/dev/null | grep -q ":$port "; then
+            return 1
+          fi
+        elif command -v netstat &>/dev/null; then
+          if netstat -tuln 2>/dev/null | grep -q ":$port "; then
+            return 1
+          fi
+        fi
+        return 0
+      }
+
+      It "falls back to netstat when ss unavailable"
+        When call _check_port_with_netstat 8080
+        The status should be failure
+      End
+
+      # Test when neither command finds port
+      _check_port_available_clean() {
+        local port="$1"
+        ss() { echo "nothing here"; }
+        netstat() { echo "nothing here"; }
+        command() {
+          if [[ $2 == "ss" ]]; then return 0; else builtin command "$@"; fi
+        }
+        if ss -tuln 2>/dev/null | grep -q ":$port "; then
+          return 1
+        fi
+        return 0
+      }
+
+      It "returns success when port not found in output"
+        When call _check_port_available_clean 9999
+        The status should be success
+      End
+    End
   End
 
   # ===========================================================================

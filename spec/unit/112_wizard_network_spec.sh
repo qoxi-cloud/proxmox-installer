@@ -309,6 +309,7 @@ enp3s0"
         The variable PRIVATE_SUBNET should equal "original"
       End
     End
+
   End
 
   # ===========================================================================

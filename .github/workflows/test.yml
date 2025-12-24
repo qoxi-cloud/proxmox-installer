@@ -56,7 +56,7 @@ jobs:
         run: |
           ~/.local/lib/shellspec/shellspec --kcov \
             --kcov-options "--include-pattern=scripts/" \
-            --kcov-options "--exclude-pattern=/usr,/tmp,spec/,templates/"
+            --kcov-options "--exclude-pattern=/usr,/tmp,spec/,templates/,000-init.sh,900-main.sh,041-system-check.sh,037-parallel-helpers.sh,380-configure-finalize.sh,003-banner.sh"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5

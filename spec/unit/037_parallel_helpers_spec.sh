@@ -264,6 +264,43 @@ Describe "037-parallel-helpers.sh"
       End
     End
 
+    Describe "with custom repository setup"
+      It "sets up Tailscale repo when INSTALL_TAILSCALE is yes"
+        INSTALL_TAILSCALE="yes"
+        When call batch_install_packages
+        The status should be success
+        The variable MOCK_REMOTE_RUN_COMMANDS should include "pkgs.tailscale.com"
+        The variable MOCK_REMOTE_RUN_COMMANDS should include "tailscale-archive-keyring"
+      End
+
+      It "sets up Netdata repo when INSTALL_NETDATA is yes"
+        INSTALL_NETDATA="yes"
+        When call batch_install_packages
+        The status should be success
+        The variable MOCK_REMOTE_RUN_COMMANDS should include "repo.netdata.cloud"
+        The variable MOCK_REMOTE_RUN_COMMANDS should include "netdata-archive-keyring"
+      End
+
+      It "sets up Grafana repo when INSTALL_PROMTAIL is yes"
+        INSTALL_PROMTAIL="yes"
+        When call batch_install_packages
+        The status should be success
+        The variable MOCK_REMOTE_RUN_COMMANDS should include "apt.grafana.com"
+        The variable MOCK_REMOTE_RUN_COMMANDS should include "grafana-archive-keyring"
+      End
+
+      It "sets up multiple repos when multiple features enabled"
+        INSTALL_TAILSCALE="yes"
+        INSTALL_NETDATA="yes"
+        INSTALL_PROMTAIL="yes"
+        When call batch_install_packages
+        The status should be success
+        The variable MOCK_REMOTE_RUN_COMMANDS should include "pkgs.tailscale.com"
+        The variable MOCK_REMOTE_RUN_COMMANDS should include "repo.netdata.cloud"
+        The variable MOCK_REMOTE_RUN_COMMANDS should include "apt.grafana.com"
+      End
+    End
+
     Describe "with multiple features"
       It "installs all packages in one batch"
         INSTALL_FIREWALL="yes"

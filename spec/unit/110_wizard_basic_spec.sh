@@ -627,6 +627,121 @@ Describe "110-wizard-basic.sh"
         When call _country_to_locale "ir"
         The output should equal "fa_IR.UTF-8"
       End
+
+      It "returns it_IT.UTF-8 for Italy"
+        When call _country_to_locale "it"
+        The output should equal "it_IT.UTF-8"
+      End
+
+      It "returns sk_SK.UTF-8 for Slovakia"
+        When call _country_to_locale "sk"
+        The output should equal "sk_SK.UTF-8"
+      End
+
+      It "returns hu_HU.UTF-8 for Hungary"
+        When call _country_to_locale "hu"
+        The output should equal "hu_HU.UTF-8"
+      End
+
+      It "returns ro_RO.UTF-8 for Romania"
+        When call _country_to_locale "ro"
+        The output should equal "ro_RO.UTF-8"
+      End
+
+      It "returns bg_BG.UTF-8 for Bulgaria"
+        When call _country_to_locale "bg"
+        The output should equal "bg_BG.UTF-8"
+      End
+
+      It "returns hr_HR.UTF-8 for Croatia"
+        When call _country_to_locale "hr"
+        The output should equal "hr_HR.UTF-8"
+      End
+
+      It "returns sr_RS.UTF-8 for Serbia"
+        When call _country_to_locale "rs"
+        The output should equal "sr_RS.UTF-8"
+      End
+
+      It "returns sl_SI.UTF-8 for Slovenia"
+        When call _country_to_locale "si"
+        The output should equal "sl_SI.UTF-8"
+      End
+
+      It "returns et_EE.UTF-8 for Estonia"
+        When call _country_to_locale "ee"
+        The output should equal "et_EE.UTF-8"
+      End
+
+      It "returns lv_LV.UTF-8 for Latvia"
+        When call _country_to_locale "lv"
+        The output should equal "lv_LV.UTF-8"
+      End
+
+      It "returns lt_LT.UTF-8 for Lithuania"
+        When call _country_to_locale "lt"
+        The output should equal "lt_LT.UTF-8"
+      End
+
+      It "returns el_GR.UTF-8 for Greece"
+        When call _country_to_locale "gr"
+        The output should equal "el_GR.UTF-8"
+      End
+
+      It "returns he_IL.UTF-8 for Israel"
+        When call _country_to_locale "il"
+        The output should equal "he_IL.UTF-8"
+      End
+
+      It "returns hi_IN.UTF-8 for India"
+        When call _country_to_locale "in"
+        The output should equal "hi_IN.UTF-8"
+      End
+
+      It "returns th_TH.UTF-8 for Thailand"
+        When call _country_to_locale "th"
+        The output should equal "th_TH.UTF-8"
+      End
+
+      It "returns vi_VN.UTF-8 for Vietnam"
+        When call _country_to_locale "vn"
+        The output should equal "vi_VN.UTF-8"
+      End
+
+      It "returns id_ID.UTF-8 for Indonesia"
+        When call _country_to_locale "id"
+        The output should equal "id_ID.UTF-8"
+      End
+
+      It "returns ms_MY.UTF-8 for Malaysia"
+        When call _country_to_locale "my"
+        The output should equal "ms_MY.UTF-8"
+      End
+
+      It "returns en_PH.UTF-8 for Philippines"
+        When call _country_to_locale "ph"
+        The output should equal "en_PH.UTF-8"
+      End
+
+      It "returns en_SG.UTF-8 for Singapore"
+        When call _country_to_locale "sg"
+        The output should equal "en_SG.UTF-8"
+      End
+
+      It "returns en_ZA.UTF-8 for South Africa"
+        When call _country_to_locale "za"
+        The output should equal "en_ZA.UTF-8"
+      End
+
+      It "returns ar_SA.UTF-8 for Saudi Arabia"
+        When call _country_to_locale "sa"
+        The output should equal "ar_SA.UTF-8"
+      End
+
+      It "returns ar_AE.UTF-8 for UAE"
+        When call _country_to_locale "ae"
+        The output should equal "ar_AE.UTF-8"
+      End
     End
 
     Describe "country/locale chain"

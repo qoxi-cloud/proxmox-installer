@@ -156,6 +156,46 @@ Describe "360-configure-ssl.sh"
     End
 
     # -------------------------------------------------------------------------
+    # Error handling - mktemp/staging failures
+    # -------------------------------------------------------------------------
+    Describe "temp file creation failure"
+      It "fails when mktemp fails"
+        mktemp() { return 1; }
+        When call _config_ssl
+        The status should be failure
+      End
+
+      It "logs error when mktemp fails"
+        mktemp() { return 1; }
+        log_message=""
+        log() { log_message="$log_message $*"; }
+        When call _config_ssl
+        The status should be failure
+        The variable log_message should include "ERROR"
+      End
+    End
+
+    Describe "template staging failure"
+      It "fails when cp fails to stage template"
+        mktemp() { echo "/tmp/mock_staged"; }
+        cp() { return 1; }
+        When call _config_ssl
+        The status should be failure
+      End
+
+      It "logs error when cp fails"
+        mktemp() { echo "/tmp/mock_staged"; }
+        cp() { return 1; }
+        log_message=""
+        log() { log_message="$log_message $*"; }
+        When call _config_ssl
+        The status should be failure
+        The variable log_message should include "ERROR"
+        The variable log_message should include "stage"
+      End
+    End
+
+    # -------------------------------------------------------------------------
     # Error handling - apply_template_vars failure
     # -------------------------------------------------------------------------
     Describe "apply_template_vars failure"
