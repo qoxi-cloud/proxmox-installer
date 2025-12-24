@@ -164,13 +164,16 @@ run_parallel_group() {
   trap "rm -rf '$result_dir'" RETURN
 
   # Start all functions in background, each writes result to file
+  # Use trap to ensure marker created even if function calls exit 1 (like remote_run)
   local i=0
   for func in "${funcs[@]}"; do
     (
+      idx=$i # Capture in subshell
+      # Default to failure marker on ANY exit (handles remote_run's exit 1)
+      trap 'touch "$result_dir/fail_$idx" 2>/dev/null' EXIT
       if "$func" 2>&1; then
-        touch "$result_dir/success_$i"
-      else
-        touch "$result_dir/fail_$i"
+        trap - EXIT # Clear trap on success
+        touch "$result_dir/success_$idx"
       fi
     ) >/dev/null &
     ((i++))

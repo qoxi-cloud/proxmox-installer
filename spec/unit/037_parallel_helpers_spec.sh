@@ -294,6 +294,7 @@ Describe "037-parallel-helpers.sh"
     # Test helper functions
     _test_success_func() { return 0; }
     _test_fail_func() { return 1; }
+    _test_exit_func() { exit 1; }  # Simulates remote_run failure
     _test_slow_func() { sleep 0.1; return 0; }
 
     It "returns success with no functions"
@@ -318,6 +319,17 @@ Describe "037-parallel-helpers.sh"
 
     It "handles mix of success and failure"
       When call run_parallel_group "Test Group" "Done" _test_success_func _test_fail_func _test_success_func
+      The status should be success
+    End
+
+    It "handles function that calls exit (like remote_run)"
+      # This was the bug: exit 1 in subshell skipped marker file creation
+      When call run_parallel_group "Test Group" "Done" _test_exit_func
+      The status should be success
+    End
+
+    It "handles mix of exit and return failures"
+      When call run_parallel_group "Test Group" "Done" _test_success_func _test_exit_func _test_fail_func
       The status should be success
     End
 
