@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.533-pr.21"
+readonly VERSION="2.0.534-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -162,6 +162,9 @@ cleanup_and_error_handler(){
 local exit_code=$?
 jobs -p|xargs -r kill 2>/dev/null||true
 sleep 1
+if type _ssh_session_cleanup &>/dev/null;then
+_ssh_session_cleanup
+fi
 cleanup_temp_files
 if [[ -n ${QEMU_PID:-} ]]&&kill -0 "$QEMU_PID" 2>/dev/null;then
 log "Cleaning up QEMU process $QEMU_PID"
@@ -707,18 +710,9 @@ fi
 printf '%s\n' "$NEW_ROOT_PASSWORD" >"$passfile_path"
 chmod 600 "$passfile_path"
 _SSH_SESSION_PASSFILE="$passfile_path"
-if [[ $BASHPID == "$$" ]];then
-local existing_trap
-existing_trap=$(trap -p EXIT 2>/dev/null|sed "s/trap -- '\\(.*\\)' EXIT/\\1/"||true)
-if [[ -n $existing_trap ]];then
-trap "$existing_trap; _ssh_session_cleanup" EXIT
-else
-trap '_ssh_session_cleanup' EXIT
-fi
-if [[ $_SSH_SESSION_LOGGED != true ]];then
+if [[ $BASHPID == "$$" ]]&&[[ $_SSH_SESSION_LOGGED != true ]];then
 log "SSH session initialized: $passfile_path"
 _SSH_SESSION_LOGGED=true
-fi
 fi
 }
 _ssh_session_cleanup(){
