@@ -207,6 +207,8 @@ Describe "200-packages.sh"
   # prepare_packages()
   # ===========================================================================
   Describe "prepare_packages()"
+    # Skip when running under kcov - background subshells cause kcov to hang
+    Skip if "running under kcov" is_running_under_kcov
 
     Describe "successful execution"
       It "completes all steps and calls curl"

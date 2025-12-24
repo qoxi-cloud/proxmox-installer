@@ -225,6 +225,9 @@ Describe "021-ssh.sh"
   # _remote_exec_with_progress()
   # ===========================================================================
   Describe "_remote_exec_with_progress()"
+    # Skip when running under kcov - background subshells cause kcov to hang
+    Skip if "running under kcov" is_running_under_kcov
+
     BeforeEach '_ssh_session_init'
 
     It "returns success when script succeeds"
@@ -257,6 +260,9 @@ Describe "021-ssh.sh"
   # remote_run()
   # ===========================================================================
   Describe "remote_run()"
+    # Skip when running under kcov - background subshells cause kcov to hang
+    Skip if "running under kcov" is_running_under_kcov
+
     BeforeEach '_ssh_session_init'
 
     # Note: remote_run exits on failure, so we test success path

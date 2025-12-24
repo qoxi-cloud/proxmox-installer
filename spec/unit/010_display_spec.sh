@@ -179,6 +179,9 @@ Describe "010-display.sh"
   # show_progress()
   # ===========================================================================
   Describe "show_progress()"
+    # Skip when running under kcov - background subshells cause kcov to hang
+    Skip if "running under kcov" is_running_under_kcov
+
     It "returns success for successful background process"
       (sleep 0.01; exit 0) &
       pid=$!

@@ -289,6 +289,9 @@ Describe "037-parallel-helpers.sh"
   # run_parallel_group()
   # ===========================================================================
   Describe "run_parallel_group()"
+    # Skip when running under kcov - background subshells cause kcov to hang
+    Skip if "running under kcov" is_running_under_kcov
+
     BeforeEach 'reset_mocks'
 
     # Test helper functions

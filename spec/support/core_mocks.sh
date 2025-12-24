@@ -10,6 +10,14 @@
 #   eval "$(cat "$SUPPORT_DIR/core_mocks.sh")"
 
 # =============================================================================
+# kcov detection helper for Skip conditions
+# =============================================================================
+# Usage: Skip if "running under kcov" is_running_under_kcov
+is_running_under_kcov() {
+  test -n "${KCOV_BASH_XTRACEFD:-}"
+}
+
+# =============================================================================
 # Silent logging mock
 # =============================================================================
 log() { :; }
