@@ -8,6 +8,7 @@
 %const SUPPORT_DIR: "${SHELLSPEC_PROJECT_ROOT}/spec/support"
 
 # Load shared mocks
+eval "$(cat "$SUPPORT_DIR/core_mocks.sh")"
 eval "$(cat "$SUPPORT_DIR/configure_mocks.sh")"
 
 # Additional mocks specific to this script
@@ -104,27 +105,32 @@ Describe "301-configure-tailscale.sh"
         The variable complete_task_called should equal true
       End
 
-      It "sets TAILSCALE_IP from remote response"
-        # Use variable-based mock output (variables propagate to subshells, inline functions don't)
-        MOCK_REMOTE_EXEC_OUTPUT=$'100.100.100.1\thost.tailnet.ts.net'
-        When call _config_tailscale
-        The status should be success
-        The variable TAILSCALE_IP should equal "100.100.100.1"
-      End
+      Describe "IP and hostname extraction"
+        # Skip when running under kcov - background subshells cause kcov to hang
+        Skip if "running under kcov" is_running_under_kcov
 
-      It "sets TAILSCALE_HOSTNAME from remote response"
-        MOCK_REMOTE_EXEC_OUTPUT=$'100.100.100.1\tmyhost.tailnet.ts.net'
-        When call _config_tailscale
-        The status should be success
-        The variable TAILSCALE_HOSTNAME should equal "myhost.tailnet.ts.net"
-      End
+        It "sets TAILSCALE_IP from remote response"
+          # Use variable-based mock output (variables propagate to subshells, inline functions don't)
+          MOCK_REMOTE_EXEC_OUTPUT=$'100.100.100.1\thost.tailnet.ts.net'
+          When call _config_tailscale
+          The status should be success
+          The variable TAILSCALE_IP should equal "100.100.100.1"
+        End
 
-      It "returns empty when no IP from remote (cat succeeds on empty file)"
-        # When remote_exec returns nothing, cat reads empty file successfully
-        MOCK_REMOTE_EXEC_OUTPUT=""
-        When call _config_tailscale
-        The status should be success
-        The variable TAILSCALE_IP should equal ""
+        It "sets TAILSCALE_HOSTNAME from remote response"
+          MOCK_REMOTE_EXEC_OUTPUT=$'100.100.100.1\tmyhost.tailnet.ts.net'
+          When call _config_tailscale
+          The status should be success
+          The variable TAILSCALE_HOSTNAME should equal "myhost.tailnet.ts.net"
+        End
+
+        It "returns empty when no IP from remote (cat succeeds on empty file)"
+          # When remote_exec returns nothing, cat reads empty file successfully
+          MOCK_REMOTE_EXEC_OUTPUT=""
+          When call _config_tailscale
+          The status should be success
+          The variable TAILSCALE_IP should equal ""
+        End
       End
     End
 
