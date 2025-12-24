@@ -300,7 +300,7 @@ Describe "380-configure-finalize.sh"
   # ===========================================================================
   Describe "finalize_vm()"
     # Skip when running under kcov - background subshells cause kcov to hang
-    Skip if "running under kcov" is_running_under_kcov
+    Skip if "running under kcov" test -n "${KCOV_BASH_XTRACEFD:-}"
 
     setup_finalize() {
       # Create a dummy background process
@@ -349,7 +349,7 @@ Describe "380-configure-finalize.sh"
   # ===========================================================================
   Describe "configure_proxmox_via_ssh()"
     # Skip when running under kcov - background subshells cause kcov to hang
-    Skip if "running under kcov" is_running_under_kcov
+    Skip if "running under kcov" test -n "${KCOV_BASH_XTRACEFD:-}"
 
     setup_configure() {
       # Create dummy QEMU process for finalize_vm

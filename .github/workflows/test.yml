@@ -16,10 +16,13 @@ jobs:
       image: ubuntu:22.04
 
     steps:
-      - name: Install git
+      - name: Install dependencies
         run: |
           apt-get update -qq
-          apt-get install -y -qq git curl ca-certificates >/dev/null
+          apt-get install -y -qq git curl ca-certificates locales >/dev/null
+          locale-gen en_US.UTF-8
+          echo "LANG=en_US.UTF-8" >> "$GITHUB_ENV"
+          echo "LC_ALL=en_US.UTF-8" >> "$GITHUB_ENV"
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -42,7 +45,10 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get update -qq
-          apt-get install -y -qq git curl ca-certificates kcov bc gpg >/dev/null
+          apt-get install -y -qq git curl ca-certificates kcov bc gpg locales >/dev/null
+          locale-gen en_US.UTF-8
+          echo "LANG=en_US.UTF-8" >> "$GITHUB_ENV"
+          echo "LC_ALL=en_US.UTF-8" >> "$GITHUB_ENV"
 
       - name: Checkout repository
         uses: actions/checkout@v4

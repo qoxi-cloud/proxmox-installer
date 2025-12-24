@@ -351,7 +351,7 @@ Describe "021-ssh.sh"
   # ===========================================================================
   Describe "_remote_exec_with_progress()"
     # Skip when running under kcov - background subshells cause kcov to hang
-    Skip if "running under kcov" is_running_under_kcov
+    Skip if "running under kcov" test -n "${KCOV_BASH_XTRACEFD:-}"
 
     BeforeEach '_ssh_session_init'
 
@@ -386,7 +386,7 @@ Describe "021-ssh.sh"
   # ===========================================================================
   Describe "remote_run()"
     # Skip when running under kcov - background subshells cause kcov to hang
-    Skip if "running under kcov" is_running_under_kcov
+    Skip if "running under kcov" test -n "${KCOV_BASH_XTRACEFD:-}"
 
     BeforeEach '_ssh_session_init'
 

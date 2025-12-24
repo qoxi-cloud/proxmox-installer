@@ -107,7 +107,7 @@ Describe "301-configure-tailscale.sh"
 
       Describe "IP and hostname extraction"
         # Skip when running under kcov - background subshells cause kcov to hang
-        Skip if "running under kcov" is_running_under_kcov
+        Skip if "running under kcov" test -n "${KCOV_BASH_XTRACEFD:-}"
 
         It "sets TAILSCALE_IP from remote response"
           # Use variable-based mock output (variables propagate to subshells, inline functions don't)

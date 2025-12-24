@@ -180,7 +180,7 @@ Describe "010-display.sh"
   # ===========================================================================
   Describe "show_progress()"
     # Skip when running under kcov - background subshells cause kcov to hang
-    Skip if "running under kcov" is_running_under_kcov
+    Skip if "running under kcov" test -n "${KCOV_BASH_XTRACEFD:-}"
 
     It "returns success for successful background process"
       (sleep 0.01; exit 0) &

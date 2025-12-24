@@ -10,12 +10,11 @@
 #   eval "$(cat "$SUPPORT_DIR/core_mocks.sh")"
 
 # =============================================================================
-# kcov detection helper for Skip conditions
+# kcov detection - use inline test in Skip conditions
 # =============================================================================
-# Usage: Skip if "running under kcov" is_running_under_kcov
-is_running_under_kcov() {
-  test -n "${KCOV_BASH_XTRACEFD:-}"
-}
+# Usage: Skip if "running under kcov" test -n "${KCOV_BASH_XTRACEFD:-}"
+# Note: Functions defined here are not available at parse time for Skip conditions.
+#       Use the inline test command directly in spec files.
 
 # =============================================================================
 # Silent logging mock

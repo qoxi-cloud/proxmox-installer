@@ -270,7 +270,7 @@ Describe "042-live-logs.sh"
   # ===========================================================================
   Describe "live_show_progress()"
     # Skip when running under kcov - background subshells cause kcov to hang
-    Skip if "running under kcov" is_running_under_kcov
+    Skip if "running under kcov" test -n "${KCOV_BASH_XTRACEFD:-}"
 
     BeforeEach 'render_logs() { :; }; LOG_LINES=(); LOG_COUNT=0'
 
