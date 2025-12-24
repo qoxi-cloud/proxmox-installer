@@ -19,6 +19,9 @@ setup_network_env() {
   MAIN_IPV4_CIDR="192.168.1.100/24"
   MAIN_IPV6=""
   IPV6_MODE="disabled"
+  IPV6_CIDR=""
+  IPV6_ADDRESS=""
+  IPV6_GATEWAY=""
   BRIDGE_MODE="internal"
   BRIDGE_MTU="9000"
   PRIVATE_IP_CIDR="10.0.0.1/24"
@@ -120,6 +123,25 @@ Describe "039-network-helpers.sh"
       When call _generate_iface_static
       The output should include "ip -6 route add 2001:db8::ffff/128"
     End
+
+    It "uses IPV6_ADDRESS (manual input) over IPV6_CIDR (auto-detected)"
+      MAIN_IPV6="2001:db8::1"
+      IPV6_MODE="manual"
+      IPV6_CIDR="2001:db8::1/128"
+      IPV6_ADDRESS="2001:db8::1/64"
+      When call _generate_iface_static
+      The output should include "address 2001:db8::1/64"
+      The output should not include "address 2001:db8::1/128"
+    End
+
+    It "falls back to IPV6_CIDR when IPV6_ADDRESS is unset"
+      MAIN_IPV6="2001:db8::1"
+      IPV6_MODE="slaac"
+      IPV6_CIDR="2001:db8::1/64"
+      unset IPV6_ADDRESS
+      When call _generate_iface_static
+      The output should include "address 2001:db8::1/64"
+    End
   End
 
   # ===========================================================================
@@ -152,6 +174,16 @@ Describe "039-network-helpers.sh"
       IPV6_CIDR="2001:db8::1/64"
       When call _generate_vmbr0_external
       The output should include "iface vmbr0 inet6 static"
+    End
+
+    It "uses IPV6_ADDRESS (manual input) over IPV6_CIDR (auto-detected)"
+      MAIN_IPV6="2001:db8::1"
+      IPV6_MODE="manual"
+      IPV6_CIDR="2001:db8::1/128"
+      IPV6_ADDRESS="2001:db8::1/64"
+      When call _generate_vmbr0_external
+      The output should include "address 2001:db8::1/64"
+      The output should not include "address 2001:db8::1/128"
     End
   End
 
