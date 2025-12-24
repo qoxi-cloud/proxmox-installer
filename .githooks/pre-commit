@@ -8,13 +8,21 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
-# Get staged .sh files (exclude spec files - ShellSpec DSL not compatible with shfmt)
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.sh$' || true)
-STAGED_FILES_NO_SPEC=$(echo "$STAGED_FILES" | grep -v '^spec/' || true)
+# Get staged .sh files as arrays (handles spaces in filenames)
+STAGED_FILES=()
+while IFS= read -r file; do
+  [[ -n "$file" ]] && STAGED_FILES+=("$file")
+done < <(git diff --cached --name-only --diff-filter=ACM | grep '\.sh$' || true)
 
-if [[ -z "$STAGED_FILES" ]]; then
+if [[ ${#STAGED_FILES[@]} -eq 0 ]]; then
   exit 0
 fi
+
+# Filter out spec files
+STAGED_FILES_NO_SPEC=()
+for file in "${STAGED_FILES[@]}"; do
+  [[ "$file" != spec/* ]] && STAGED_FILES_NO_SPEC+=("$file")
+done
 
 ERRORS=0
 
@@ -23,7 +31,7 @@ if ! command -v shellcheck &>/dev/null; then
   echo -e "${YELLOW}⚠ shellcheck not found, skipping lint check${NC}"
 else
   echo -e "${NC}Running shellcheck...${NC}"
-  for file in $STAGED_FILES; do
+  for file in "${STAGED_FILES[@]}"; do
     if [[ -f "$file" ]]; then
       if ! shellcheck "$file" 2>&1; then
         echo -e "${RED}✗ shellcheck failed: $file${NC}"
@@ -41,22 +49,24 @@ if ! command -v shfmt &>/dev/null; then
   echo -e "${YELLOW}⚠ shfmt not found, skipping format check${NC}"
 else
   echo -e "${NC}Running shfmt...${NC}"
-  UNFORMATTED=""
+  UNFORMATTED=()
   # Use STAGED_FILES_NO_SPEC - spec files use ShellSpec DSL incompatible with shfmt
-  for file in $STAGED_FILES_NO_SPEC; do
-    if [[ -f "$file" ]]; then
-      if ! shfmt -d "$file" &>/dev/null; then
-        UNFORMATTED="$UNFORMATTED $file"
+  if [[ ${#STAGED_FILES_NO_SPEC[@]} -gt 0 ]]; then
+    for file in "${STAGED_FILES_NO_SPEC[@]}"; do
+      if [[ -f "$file" ]]; then
+        if ! shfmt -d "$file" &>/dev/null; then
+          UNFORMATTED+=("$file")
+        fi
       fi
-    fi
-  done
+    done
+  fi
 
-  if [[ -n "$UNFORMATTED" ]]; then
+  if [[ ${#UNFORMATTED[@]} -gt 0 ]]; then
     echo -e "${RED}✗ shfmt: files need formatting:${NC}"
-    for file in $UNFORMATTED; do
+    for file in "${UNFORMATTED[@]}"; do
       echo "  $file"
     done
-    echo -e "${YELLOW}Run: shfmt -w$UNFORMATTED${NC}"
+    echo -e "${YELLOW}Run: shfmt -w ${UNFORMATTED[*]}${NC}"
     ERRORS=1
   else
     echo -e "${GREEN}✓ shfmt passed${NC}"
