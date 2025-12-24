@@ -208,6 +208,50 @@ line3"
         The contents of file "$template" should equal "value"
         rm -f "$template"
       End
+
+      It "handles variable names with digits"
+        template=$(mktemp)
+        echo "ip={{MAIN_IPV4}} dns={{DNS6_PRIMARY}}" >"$template"
+        When call apply_template_vars "$template" "MAIN_IPV4=192.168.1.1" "DNS6_PRIMARY=2606:4700::1111"
+        The status should be success
+        The contents of file "$template" should equal "ip=192.168.1.1 dns=2606:4700::1111"
+        rm -f "$template"
+      End
+    End
+
+    Describe "placeholder detection with digits"
+      It "fails when variable with digits remains unsubstituted"
+        template=$(mktemp)
+        echo "ip={{MAIN_IPV4}} gw={{MAIN_IPV4_GW}}" >"$template"
+        When call apply_template_vars "$template" "MAIN_IPV4=192.168.1.1"
+        The status should be failure
+        rm -f "$template"
+      End
+
+      It "detects unsubstituted DNS6_PRIMARY"
+        template=$(mktemp)
+        echo "dns={{DNS6_PRIMARY}}" >"$template"
+        When call apply_template_vars "$template"
+        The status should be failure
+        rm -f "$template"
+      End
+
+      It "detects unsubstituted FIRST_IPV6_CIDR"
+        template=$(mktemp)
+        echo "cidr={{FIRST_IPV6_CIDR}}" >"$template"
+        When call apply_template_vars "$template"
+        The status should be failure
+        rm -f "$template"
+      End
+
+      It "succeeds when all digit-containing variables are substituted"
+        template=$(mktemp)
+        echo "{{VAR1}} {{VAR2A}} {{A3B4C5}}" >"$template"
+        When call apply_template_vars "$template" "VAR1=x" "VAR2A=y" "A3B4C5=z"
+        The status should be success
+        The contents of file "$template" should equal "x y z"
+        rm -f "$template"
+      End
     End
   End
 

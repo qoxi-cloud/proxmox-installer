@@ -51,9 +51,9 @@ apply_template_vars() {
   fi
 
   # Verify no unsubstituted placeholders remain (these were never passed to this function)
-  if grep -qE '\{\{[A-Z_]+\}\}' "$file" 2>/dev/null; then
+  if grep -qE '\{\{[A-Z0-9_]+\}\}' "$file" 2>/dev/null; then
     local remaining
-    remaining=$(grep -oE '\{\{[A-Z_]+\}\}' "$file" 2>/dev/null | sort -u | tr '\n' ' ')
+    remaining=$(grep -oE '\{\{[A-Z0-9_]+\}\}' "$file" 2>/dev/null | sort -u | tr '\n' ' ')
     log "WARNING: Unsubstituted placeholders remain in $file: $remaining"
     return 1
   fi
