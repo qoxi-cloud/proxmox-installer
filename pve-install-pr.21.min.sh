@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.577-pr.21"
+readonly VERSION="2.0.578-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -5017,7 +5017,13 @@ log "EXISTING_POOL_DISKS=(${EXISTING_POOL_DISKS[*]})"
 local virtio_pool_disks=()
 if [[ $USE_EXISTING_POOL == "yes" ]];then
 log "Using existing pool mode - existing pool disks will be passed to QEMU for import"
-virtio_pool_disks=("${EXISTING_POOL_DISKS[@]}")
+for disk in "${EXISTING_POOL_DISKS[@]}";do
+if [[ -b $disk ]];then
+virtio_pool_disks+=("$disk")
+else
+log "WARNING: Pool disk $disk does not exist on host, skipping"
+fi
+done
 else
 virtio_pool_disks=("${ZFS_POOL_DISKS[@]}")
 fi
