@@ -42,17 +42,19 @@ add_log() {
 
 # Renders installation header in wizard style with progress indicator.
 # Positions cursor below banner and displays "Installing Proxmox" header.
+# Output goes to /dev/tty to prevent leaking into log files
 _render_install_header() {
   # Use ANSI escape instead of tput for speed
   printf '\033[%d;0H' "$((LOGO_HEIGHT + 1))"
   format_wizard_header "Installing Proxmox"
   _wiz_blank_line
   _wiz_blank_line
-}
+} >/dev/tty 2>/dev/null
 
 # Renders all log lines with auto-scroll behavior.
 # Shows most recent logs that fit in LOG_AREA_HEIGHT, clears remaining lines.
 # Uses ANSI escapes for flicker-free updates.
+# IMPORTANT: All output goes to /dev/tty to prevent leaking into log files
 render_logs() {
   _render_install_header
 
@@ -71,7 +73,7 @@ render_logs() {
   for ((i = 0; i < remaining; i++)); do
     printf '\033[K\n'
   done
-}
+} >/dev/tty 2>/dev/null
 
 # Starts a task with "..." suffix indicating work in progress.
 # Parameters:
