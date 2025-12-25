@@ -27,6 +27,284 @@ This project is a bash automation framework that installs Proxmox VE on dedicate
 6. **Configuration** (300-380) - Deploy configs, install packages, harden
 7. **Finalization** (380) - Validate, show credentials, shutdown VM
 
+## Flow Diagram
+
+```mermaid
+flowchart TD
+    subgraph INIT["🚀 Initialization (000-006)"]
+        A[Start] --> B[Load core infrastructure<br/>000-colors, 001-constants,<br/>002-wizard-options, 003-init]
+        B --> C[Parse CLI args<br/>004-cli.sh]
+        C --> D[Setup logging & metrics<br/>005-logging.sh]
+        D --> E[Show banner<br/>006-banner.sh]
+    end
+
+    subgraph SYSCHECK["🔍 System Check (050-056)"]
+        E --> F{System<br/>requirements?<br/>051-preflight.sh}
+        F -->|Fail| F1[Show errors]
+        F1 --> F2[Exit 1]
+        F -->|Pass| G[Detect interfaces<br/>052-system-network.sh<br/>Detect disks<br/>053-system-drives.sh]
+    end
+
+    subgraph WIZARD["🧙 Interactive Wizard (100-116)"]
+        G --> H[Enter alternate screen<br/>tput smcup]
+        H --> I[Hide cursor]
+        
+        I --> J[Render menu<br/>103-wizard-menu.sh]
+        
+        J --> K{Read key<br/>102-wizard-nav.sh}
+        
+        K -->|↑↓| L[Change selection]
+        L --> J
+        
+        K -->|←→| M[Switch screen<br/>Basic↔Proxmox↔Network↔Storage↔Services↔Access]
+        M --> J
+        
+        K -->|Enter| N[Edit field]
+        N --> O{Field type?}
+        
+        O -->|Input| P[_wiz_input<br/>gum input]
+        O -->|Select| Q[_wiz_choose<br/>gum choose]
+        O -->|Filter| R[_wiz_filter<br/>gum filter]
+        O -->|Multi| S[_wiz_choose_multi<br/>gum choose --no-limit]
+        
+        P --> T{Valid?<br/>040-043 validators}
+        Q --> U[Update global var]
+        R --> U
+        S --> U
+        
+        T -->|No| V[Show error]
+        V --> N
+        T -->|Yes| U
+        U --> J
+        
+        K -->|Q/Esc| W{Confirm quit?}
+        W -->|Yes| X[Exit 0]
+        W -->|No| J
+        
+        K -->|S| Y{Config complete?}
+        Y -->|No| Z[Show missing fields]
+        Z --> J
+        Y -->|Yes| AA[Exit wizard loop]
+    end
+
+    subgraph INSTALL["📦 Installation (200-204)"]
+        AA --> AB[Download ISO<br/>203-iso-download.sh]
+        AB --> AC[Launch QEMU VM<br/>201-qemu.sh]
+        AC --> AD[Wait for SSH ready<br/>021-ssh.sh]
+        AD --> AE[Deploy answer.toml<br/>204-autoinstall.sh]
+        AE --> AF[Wait for Proxmox install]
+    end
+
+    subgraph CONFIG["⚙️ Configuration (300-380)"]
+        AF --> AG[Enter live logs mode<br/>056-live-logs.sh]
+        
+        AG --> AH[Base config<br/>300-configure-base.sh]
+        
+        AH --> AI[run_parallel_group<br/>Security features]
+        AI --> AJ[310-312: Firewall/Fail2ban/AppArmor<br/>320-324: Auditd/AIDE/chkrootkit/Lynis/needrestart]
+        
+        AJ --> AK[run_parallel_group<br/>Monitoring]
+        AK --> AL[340-342: vnstat/Promtail/Netdata]
+        
+        AL --> AM[run_parallel_group<br/>Tools]
+        AM --> AN[350-351: Yazi/Nvim]
+        
+        AN --> AO[Tailscale config<br/>301-configure-tailscale.sh]
+        AO --> AP[Admin user<br/>302-configure-admin.sh]
+        AP --> AQ[Firewall<br/>310-configure-firewall.sh]
+        AQ --> AR[SSL certs<br/>360-configure-ssl.sh]
+        AR --> AS[ZFS pool<br/>370-371: ZFS config/pool]
+    end
+
+    subgraph FINALIZE["✅ Finalization (380)"]
+        AS --> AT[Run validation script<br/>380-configure-finalize.sh]
+        AT --> AU{All checks pass?}
+        AU -->|No| AV[Show failures]
+        AU -->|Yes| AW[Show credentials]
+        AW --> AX[Shutdown VM]
+        AX --> AY[End]
+    end
+
+    style INIT fill:#1a1a2e,stroke:#16213e
+    style SYSCHECK fill:#1a1a2e,stroke:#16213e
+    style WIZARD fill:#0f3460,stroke:#16213e
+    style INSTALL fill:#533483,stroke:#16213e
+    style CONFIG fill:#e94560,stroke:#16213e
+    style FINALIZE fill:#1a1a2e,stroke:#16213e
+```
+
+## Wizard Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User
+    participant Main as 900-main.sh
+    participant WizCore as 100-wizard-core.sh
+    participant WizNav as 102-wizard-nav.sh
+    participant WizMenu as 103-wizard-menu.sh
+    participant WizUI as 101-wizard-ui.sh
+    participant Editors as 110-116 wizard editors
+    participant Gum as gum (TUI)
+    participant Terminal
+
+    Note over Main,Terminal: Initialization Phase
+
+    Main->>Terminal: tput smcup (alternate screen buffer)
+    Main->>WizUI: _wiz_hide_cursor()
+    Main->>WizCore: show_gum_config_editor()
+    
+    WizCore->>WizCore: trap cleanup handler (EXIT)
+
+    Note over WizCore,Terminal: Main Wizard Loop
+
+    loop until config complete
+        WizCore->>WizCore: _wizard_main()
+        
+        loop until 'S' pressed
+            WizCore->>WizMenu: _wiz_render_menu(selection)
+            
+            WizMenu->>WizMenu: _wiz_build_display_values()
+            Note right of WizMenu: Build _DSP_* vars from<br/>global config state
+            
+            WizMenu->>WizUI: show_banner()
+            WizMenu->>WizNav: _wiz_render_nav()
+            
+            WizNav->>WizNav: Build screen tabs
+            WizNav-->>WizMenu: nav header with dots
+            
+            WizMenu->>WizMenu: _wiz_render_screen_content()
+            
+            WizMenu->>WizUI: _wiz_clear() + printf output
+            WizMenu-->>Terminal: Atomic screen render
+
+            WizCore->>WizNav: _wiz_read_key()
+            WizNav->>Terminal: read -rsn1 (capture key)
+            Terminal-->>WizNav: key press
+            WizNav-->>WizCore: WIZ_KEY
+
+            alt WIZ_KEY = up/down
+                WizCore->>WizCore: selection ± 1
+            else WIZ_KEY = left/right
+                WizCore->>WizCore: WIZ_CURRENT_SCREEN ± 1
+            else WIZ_KEY = enter
+                WizCore->>WizUI: _wiz_show_cursor()
+                WizCore->>Editors: _edit_{field}()
+                
+                Editors->>WizUI: _wiz_start_edit()
+                
+                alt Input field
+                    Editors->>Gum: _wiz_input()
+                    User->>Gum: type value
+                    Gum-->>Editors: new_value
+                    Editors->>Editors: validate + update global
+                else Select field
+                    Editors->>Gum: _wiz_choose(options)
+                    User->>Gum: select
+                    Gum-->>Editors: selected
+                else Checkbox field
+                    Editors->>Gum: _wiz_choose_multi()
+                    User->>Gum: toggle + confirm
+                    Gum-->>Editors: selections[]
+                end
+                
+                Editors-->>WizCore: return
+                WizCore->>WizUI: _wiz_hide_cursor()
+                
+            else WIZ_KEY = start
+                WizCore-->>WizCore: break loop
+            end
+        end
+        
+        WizCore->>WizCore: _validate_config()
+        
+        alt missing fields
+            WizCore->>WizUI: Show missing fields list
+            WizCore->>Gum: _wiz_confirm("Return?")
+        else complete
+            WizCore-->>WizCore: break outer loop
+        end
+    end
+    
+    WizCore-->>Main: return 0
+    Note over Main,Terminal: Proceed to Installation
+```
+
+## Script Numbering Overview
+
+```mermaid
+graph LR
+    subgraph "000-006 Core"
+        A[000-colors]
+        B[001-constants]
+        C[002-wizard-options]
+        D[003-init]
+        E[004-cli]
+        F[005-logging]
+        G[006-banner]
+    end
+
+    subgraph "010-021 Display & Utils"
+        H[010-display]
+        I[011-downloads]
+        J[012-utils]
+        K[020-templates]
+        L[021-ssh]
+    end
+
+    subgraph "030-043 Helpers & Validation"
+        M[030-password-utils]
+        N[031-zfs-helpers]
+        O[032-validation-helpers]
+        P[033-parallel-helpers]
+        Q[034-deploy-helpers]
+        R[035-network-helpers]
+        S[040-043 validators]
+    end
+
+    subgraph "050-056 System Detection"
+        T[050-system-packages]
+        U[051-system-preflight]
+        V[052-system-network]
+        W[053-system-drives]
+        X[054-wizard-data]
+        Y[055-system-status]
+        Z[056-live-logs]
+    end
+
+    subgraph "100-116 Wizard"
+        AA[100-wizard-core]
+        AB[101-wizard-ui]
+        AC[102-wizard-nav]
+        AD[103-wizard-menu]
+        AE[110-116 editors]
+    end
+
+    subgraph "200-204 Installation"
+        AF[200-packages]
+        AG[201-qemu]
+        AH[202-templates]
+        AI[203-iso-download]
+        AJ[204-autoinstall]
+    end
+
+    subgraph "300-380 Configuration"
+        AK[300-302 base/tailscale/admin]
+        AL[310-312 firewall/fail2ban/apparmor]
+        AM[320-324 audit/aide/chkrootkit/lynis/needrestart]
+        AN[330 ringbuffer]
+        AO[340-342 vnstat/promtail/netdata]
+        AP[350-351 yazi/nvim]
+        AQ[360-361 ssl/api-token]
+        AR[370-371 zfs/pool]
+        AS[380 finalize]
+    end
+
+    subgraph "900 Orchestration"
+        AT[900-main.sh]
+    end
+```
+
 ## Component Architecture
 
 ```
