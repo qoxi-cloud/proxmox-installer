@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.568-pr.21"
+readonly VERSION="2.0.569-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -3560,14 +3560,12 @@ esac
 _edit_existing_pool(){
 _wiz_start_edit
 if [[ ${#DETECTED_POOLS[@]} -eq 0 ]];then
-_wiz_description \
-"  {{yellow:No importable ZFS pools detected.}}" \
-"" \
-"  If you have an existing pool, ensure the disks are connected" \
-"  and the pool was properly exported before reinstall." \
-""
-_wiz_dim "Press any key to continue..."
-read -r -n 1
+_wiz_hide_cursor
+_wiz_warn "No importable ZFS pools detected"
+_wiz_blank_line
+_wiz_dim "If you have an existing pool, ensure the disks are connected"
+_wiz_dim "and the pool was properly exported before reinstall."
+sleep "${WIZARD_MESSAGE_DELAY:-3}"
 return
 fi
 _wiz_description \
@@ -3605,9 +3603,7 @@ _wiz_error "Cannot use existing pool without separate boot disk"
 _wiz_blank_line
 _wiz_dim "Select a boot disk first, then enable existing pool."
 _wiz_dim "The boot disk will be formatted for Proxmox system files."
-_wiz_blank_line
-_wiz_dim "Press any key to continue..."
-read -r -n 1
+sleep "${WIZARD_MESSAGE_DELAY:-3}"
 return
 fi
 USE_EXISTING_POOL="yes"
@@ -4237,9 +4233,7 @@ _wiz_hide_cursor
 _wiz_error "Cannot use this boot disk: No disks left for ZFS pool"
 _wiz_blank_line
 _wiz_dim "At least one disk must remain for the ZFS pool."
-_wiz_blank_line
-_wiz_dim "Press any key to continue..."
-read -r -n 1
+sleep "${WIZARD_MESSAGE_DELAY:-3}"
 BOOT_DISK="$old_boot_disk"
 _rebuild_pool_disks
 fi
