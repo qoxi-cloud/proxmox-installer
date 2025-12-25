@@ -88,6 +88,36 @@ _ssh_get_passfile() {
 }
 
 # =============================================================================
+# SSH command construction
+# =============================================================================
+
+# Builds base SSH command with options and authentication.
+# Use this helper to avoid repeating SSH options across functions.
+# Parameters:
+#   $1 - Optional timeout (default: SSH_DEFAULT_TIMEOUT)
+# Returns: Prints command prefix to stdout (use with eval or as array)
+# Example: eval "$(_ssh_base_cmd) 'remote command'"
+_ssh_base_cmd() {
+  local passfile
+  passfile=$(_ssh_get_passfile)
+  local cmd_timeout="${1:-${SSH_COMMAND_TIMEOUT:-$SSH_DEFAULT_TIMEOUT}}"
+  # shellcheck disable=SC2086
+  printf 'timeout %s sshpass -f "%s" ssh -p "%s" %s root@localhost' \
+    "$cmd_timeout" "$passfile" "$SSH_PORT" "$SSH_OPTS"
+}
+
+# Builds SCP command with options and authentication.
+# Parameters: None
+# Returns: Prints command prefix to stdout
+# Example: eval "$(_scp_base_cmd) /local/file root@localhost:/remote/path"
+_scp_base_cmd() {
+  local passfile
+  passfile=$(_ssh_get_passfile)
+  # shellcheck disable=SC2086
+  printf 'sshpass -f "%s" scp -P "%s" %s' "$passfile" "$SSH_PORT" "$SSH_OPTS"
+}
+
+# =============================================================================
 # Port and connection checks
 # =============================================================================
 
@@ -132,8 +162,8 @@ wait_for_ssh_ready() {
       port_check=1
       break
     fi
-    sleep 2
-    ((elapsed += 2))
+    sleep "${RETRY_DELAY_SECONDS:-2}"
+    ((elapsed += RETRY_DELAY_SECONDS))
   done
 
   if [[ $port_check -eq 0 ]]; then
@@ -148,13 +178,14 @@ wait_for_ssh_ready() {
   # Wait for SSH to be ready with background process
   (
     local elapsed=0
+    local retry_delay="${RETRY_DELAY_SECONDS:-2}"
     while ((elapsed < ssh_timeout)); do
       # shellcheck disable=SC2086
       if sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' >/dev/null 2>&1; then
         exit 0
       fi
-      sleep 2
-      ((elapsed += 2))
+      sleep "$retry_delay"
+      ((elapsed += retry_delay))
     done
     exit 1
   ) &
@@ -232,7 +263,7 @@ remote_exec() {
   passfile=$(_ssh_get_passfile)
 
   local cmd_timeout="${SSH_COMMAND_TIMEOUT:-$SSH_DEFAULT_TIMEOUT}"
-  local max_attempts=3
+  local max_attempts="${SSH_RETRY_ATTEMPTS:-3}"
   local attempt=0
 
   while [[ $attempt -lt $max_attempts ]]; do
@@ -250,8 +281,8 @@ remote_exec() {
     fi
 
     if [[ $attempt -lt $max_attempts ]]; then
-      log "SSH attempt $attempt failed, retrying in 2 seconds..."
-      sleep 2
+      log "SSH attempt $attempt failed, retrying in ${RETRY_DELAY_SECONDS:-2} seconds..."
+      sleep "${RETRY_DELAY_SECONDS:-2}"
     fi
   done
 

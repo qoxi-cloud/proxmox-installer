@@ -1,226 +1,7 @@
-#!/usr/bin/env bash
-# Qoxi - Proxmox VE Automated Installer for Dedicated Servers
-# Note: NOT using set -e because it interferes with trap EXIT handler
-# All error handling is done explicitly with exit 1
-cd /root || exit 1
-
-# Ensure UTF-8 locale for proper Unicode display
-export LANG=en_US.UTF-8
-export LC_ALL=en_US.UTF-8
-
+# shellcheck shell=bash
 # =============================================================================
-# Colors and configuration
+# Initialization - temp files, cleanup, runtime variables
 # =============================================================================
-readonly CLR_RED=$'\033[1;31m'
-readonly CLR_CYAN=$'\033[38;2;0;177;255m'
-readonly CLR_YELLOW=$'\033[1;33m'
-readonly CLR_ORANGE=$'\033[38;5;208m'
-readonly CLR_GRAY=$'\033[38;5;240m'
-readonly CLR_GOLD=$'\033[38;5;179m'
-readonly CLR_RESET=$'\033[m'
-
-# Hex colors for gum (terminal UI toolkit)
-readonly HEX_RED="#ff0000"
-readonly HEX_CYAN="#00b1ff"
-readonly HEX_YELLOW="#ffff00"
-readonly HEX_ORANGE="#ff8700"
-readonly HEX_GRAY="#585858"
-readonly HEX_WHITE="#ffffff"
-readonly HEX_NONE="7"
-
-# Version (MAJOR only - MINOR.PATCH added by CI from git tags/commits)
-readonly VERSION="2"
-
-# Terminal width for centering (wizard UI, headers, etc.)
-readonly TERM_WIDTH=80
-
-# Banner dimensions
-readonly BANNER_WIDTH=51
-
-# =============================================================================
-# Configuration constants
-# =============================================================================
-
-# GitHub repository for template downloads (can be overridden via environment)
-GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
-GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
-GITHUB_BASE_URL="https://github.com/${GITHUB_REPO}/raw/refs/heads/${GITHUB_BRANCH}"
-
-# Proxmox ISO download URLs
-readonly PROXMOX_ISO_BASE_URL="https://enterprise.proxmox.com/iso/"
-readonly PROXMOX_CHECKSUM_URL="https://enterprise.proxmox.com/iso/SHA256SUMS"
-
-# DNS servers for connectivity checks and resolution (IPv4)
-readonly DNS_SERVERS=("1.1.1.1" "8.8.8.8" "9.9.9.9")
-readonly DNS_PRIMARY="1.1.1.1"
-readonly DNS_SECONDARY="1.0.0.1"
-
-# DNS servers (IPv6) - Cloudflare
-readonly DNS6_PRIMARY="2606:4700:4700::1111"
-readonly DNS6_SECONDARY="2606:4700:4700::1001"
-
-# Resource requirements (ISO ~3.5GB + QEMU + overhead = 6GB)
-readonly MIN_DISK_SPACE_MB=6000
-readonly MIN_RAM_MB=4000
-readonly MIN_CPU_CORES=2
-
-# QEMU defaults
-readonly MIN_QEMU_RAM=4096
-
-# Download settings
-readonly DOWNLOAD_RETRY_COUNT=3
-readonly DOWNLOAD_RETRY_DELAY=2
-
-# SSH settings
-readonly SSH_CONNECT_TIMEOUT=10
-
-# Ports configuration
-readonly SSH_PORT_QEMU=5555   # SSH port for QEMU VM (installer-internal)
-readonly PORT_SSH=22          # Standard SSH port for firewall rules
-readonly PORT_PROXMOX_UI=8006 # Proxmox Web UI port
-
-# Password settings
-readonly DEFAULT_PASSWORD_LENGTH=16
-
-# QEMU memory settings
-readonly QEMU_MIN_RAM_RESERVE=2048
-
-# DNS lookup timeout (seconds)
-readonly DNS_LOOKUP_TIMEOUT=5
-
-# Retry delays (seconds)
-readonly DNS_RETRY_DELAY=10
-
-# QEMU boot timeouts (seconds)
-readonly QEMU_BOOT_TIMEOUT=300      # Max wait for QEMU to boot and expose SSH port
-readonly QEMU_PORT_CHECK_INTERVAL=3 # Interval between port availability checks
-readonly QEMU_SSH_READY_TIMEOUT=120 # Max wait for SSH to be fully ready
-
-# Keyboard layouts supported by Proxmox installer (from official documentation)
-# shellcheck disable=SC2034
-readonly WIZ_KEYBOARD_LAYOUTS="de
-de-ch
-dk
-en-gb
-en-us
-es
-fi
-fr
-fr-be
-fr-ca
-fr-ch
-hu
-is
-it
-jp
-lt
-mk
-nl
-no
-pl
-pt
-pt-br
-se
-si
-tr"
-
-# =============================================================================
-# Wizard menu option lists (WIZ_ prefix to avoid conflicts)
-# =============================================================================
-
-# Proxmox repository types
-# shellcheck disable=SC2034
-readonly WIZ_REPO_TYPES="No-subscription (free)
-Enterprise
-Test/Development"
-
-# Network bridge modes
-# shellcheck disable=SC2034
-readonly WIZ_BRIDGE_MODES="Internal NAT
-External bridge
-Both"
-
-# Bridge MTU options
-# shellcheck disable=SC2034
-readonly WIZ_BRIDGE_MTU="9000 (jumbo frames)
-1500 (standard)"
-
-# IPv6 configuration modes
-# shellcheck disable=SC2034
-readonly WIZ_IPV6_MODES="Auto
-Manual
-Disabled"
-
-# Private subnet presets
-# shellcheck disable=SC2034
-readonly WIZ_PRIVATE_SUBNETS="10.0.0.0/24
-192.168.1.0/24
-172.16.0.0/24
-Custom"
-
-# ZFS RAID levels (base options, raid5/raid10 added dynamically based on drive count)
-# shellcheck disable=SC2034
-readonly WIZ_ZFS_MODES="Single disk
-RAID-1 (mirror)"
-
-# ZFS ARC memory allocation strategies
-# shellcheck disable=SC2034
-readonly WIZ_ZFS_ARC_MODES="VM-focused (4GB fixed)
-Balanced (25-40% of RAM)
-Storage-focused (50% of RAM)"
-
-# SSL certificate types
-# shellcheck disable=SC2034
-readonly WIZ_SSL_TYPES="Self-signed
-Let's Encrypt"
-
-# Shell options
-# shellcheck disable=SC2034
-readonly WIZ_SHELL_OPTIONS="ZSH
-Bash"
-
-# Firewall modes (nftables)
-# shellcheck disable=SC2034
-readonly WIZ_FIREWALL_MODES="Stealth (Tailscale only)
-Strict (SSH only)
-Standard (SSH + Web UI)
-Disabled"
-
-# Common toggle options (reusable for multiple menus)
-# shellcheck disable=SC2034
-readonly WIZ_TOGGLE_OPTIONS="Enabled
-Disabled"
-
-# Password entry options
-# shellcheck disable=SC2034
-readonly WIZ_PASSWORD_OPTIONS="Manual entry
-Generate password"
-
-# SSH key options (when key detected)
-# shellcheck disable=SC2034
-readonly WIZ_SSH_KEY_OPTIONS="Use detected key
-Enter different key"
-
-# Feature toggles - Security
-# shellcheck disable=SC2034
-readonly WIZ_FEATURES_SECURITY="apparmor
-auditd
-aide
-chkrootkit
-lynis
-needrestart"
-
-# Feature toggles - Monitoring
-# shellcheck disable=SC2034
-readonly WIZ_FEATURES_MONITORING="vnstat
-netdata
-promtail"
-
-# Feature toggles - Tools
-# shellcheck disable=SC2034
-readonly WIZ_FEATURES_TOOLS="yazi
-nvim
-ringbuffer"
 
 # =============================================================================
 # Disk configuration
@@ -310,7 +91,7 @@ cleanup_and_error_handler() {
 
   # Stop all background jobs
   jobs -p | xargs -r kill 2>/dev/null || true
-  sleep 1
+  sleep "${PROCESS_KILL_WAIT:-1}"
 
   # Clean up SSH session passfile
   if type _ssh_session_cleanup &>/dev/null; then
@@ -329,7 +110,7 @@ cleanup_and_error_handler() {
     else
       # Fallback cleanup
       pkill -TERM qemu-system-x86 2>/dev/null || true
-      sleep 2
+      sleep "${RETRY_DELAY_SECONDS:-2}"
       pkill -9 qemu-system-x86 2>/dev/null || true
     fi
   fi
@@ -359,15 +140,15 @@ trap cleanup_and_error_handler EXIT
 # Set during early initialization, used throughout the installation.
 
 # Start time for total duration tracking (epoch seconds)
-# Set: here on script load, used: metrics_finish() in 002-logging.sh
+# Set: here on script load, used: metrics_finish() in 005-logging.sh
 INSTALL_START_TIME=$(date +%s)
 
 # =============================================================================
 # Runtime configuration variables
 # =============================================================================
 # These variables are populated by:
-#   1. CLI arguments (001-cli.sh) - parsed at startup
-#   2. System detection (041-system-check.sh) - hardware detection
+#   1. CLI arguments (004-cli.sh) - parsed at startup
+#   2. System detection (050-059 scripts) - hardware detection
 #   3. Wizard UI (100-wizard.sh) - user input
 #   4. answer.toml (200-packages.sh) - passed to Proxmox installer
 #

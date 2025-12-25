@@ -210,7 +210,7 @@ run_parallel_group() {
         [[ -f "$result_dir/success_$j" || -f "$result_dir/fail_$j" ]] && ((done_count++))
       done
       [[ $done_count -eq $count ]] && break
-      sleep 0.2
+      sleep "${PROGRESS_POLL_INTERVAL:-0.2}"
     done
   ) &
   show_progress $! "$group_name" "$done_msg"

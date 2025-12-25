@@ -49,22 +49,36 @@ _wiz_config_complete() {
 }
 
 # =============================================================================
-# Display value formatters
+# Display value formatters (grouped by screen)
 # =============================================================================
 
-# Builds formatted display values from current configuration state.
-# Converts internal values to user-friendly display strings.
-# Side effects: Sets _DSP_* global variables for menu rendering
-_wiz_build_display_values() {
-  # Password
+# Formats Basic screen values: hostname, password
+_dsp_basic() {
   _DSP_PASS=""
   [[ -n $NEW_ROOT_PASSWORD ]] && _DSP_PASS="********"
 
-  # Hostname
   _DSP_HOSTNAME=""
   [[ -n $PVE_HOSTNAME && -n $DOMAIN_SUFFIX ]] && _DSP_HOSTNAME="${PVE_HOSTNAME}.${DOMAIN_SUFFIX}"
+}
 
-  # IPv6
+# Formats Proxmox screen values: repository, ISO version
+_dsp_proxmox() {
+  _DSP_REPO=""
+  if [[ -n $PVE_REPO_TYPE ]]; then
+    case "$PVE_REPO_TYPE" in
+      no-subscription) _DSP_REPO="No-subscription (free)" ;;
+      enterprise) _DSP_REPO="Enterprise" ;;
+      test) _DSP_REPO="Test/Development" ;;
+      *) _DSP_REPO="$PVE_REPO_TYPE" ;;
+    esac
+  fi
+
+  _DSP_ISO=""
+  [[ -n $PROXMOX_ISO_VERSION ]] && _DSP_ISO=$(get_iso_version "$PROXMOX_ISO_VERSION")
+}
+
+# Formats Network screen values: IPv6, bridge, firewall, MTU
+_dsp_network() {
   _DSP_IPV6=""
   if [[ -n $IPV6_MODE ]]; then
     case "$IPV6_MODE" in
@@ -78,34 +92,6 @@ _wiz_build_display_values() {
     esac
   fi
 
-  # Tailscale
-  _DSP_TAILSCALE=""
-  if [[ -n $INSTALL_TAILSCALE ]]; then
-    [[ $INSTALL_TAILSCALE == "yes" ]] && _DSP_TAILSCALE="Enabled + Stealth" || _DSP_TAILSCALE="Disabled"
-  fi
-
-  # SSL
-  _DSP_SSL=""
-  if [[ -n $SSL_TYPE ]]; then
-    case "$SSL_TYPE" in
-      self-signed) _DSP_SSL="Self-signed" ;;
-      letsencrypt) _DSP_SSL="Let's Encrypt" ;;
-      *) _DSP_SSL="$SSL_TYPE" ;;
-    esac
-  fi
-
-  # Repository
-  _DSP_REPO=""
-  if [[ -n $PVE_REPO_TYPE ]]; then
-    case "$PVE_REPO_TYPE" in
-      no-subscription) _DSP_REPO="No-subscription (free)" ;;
-      enterprise) _DSP_REPO="Enterprise" ;;
-      test) _DSP_REPO="Test/Development" ;;
-      *) _DSP_REPO="$PVE_REPO_TYPE" ;;
-    esac
-  fi
-
-  # Bridge mode
   _DSP_BRIDGE=""
   if [[ -n $BRIDGE_MODE ]]; then
     case "$BRIDGE_MODE" in
@@ -116,102 +102,6 @@ _wiz_build_display_values() {
     esac
   fi
 
-  # ZFS mode
-  _DSP_ZFS=""
-  if [[ -n $ZFS_RAID ]]; then
-    case "$ZFS_RAID" in
-      single) _DSP_ZFS="Single disk" ;;
-      raid0) _DSP_ZFS="RAID-0 (striped)" ;;
-      raid1) _DSP_ZFS="RAID-1 (mirror)" ;;
-      raidz1) _DSP_ZFS="RAID-Z1 (parity)" ;;
-      raidz2) _DSP_ZFS="RAID-Z2 (double parity)" ;;
-      raid10) _DSP_ZFS="RAID-10 (striped mirrors)" ;;
-      *) _DSP_ZFS="$ZFS_RAID" ;;
-    esac
-  fi
-
-  # ZFS ARC
-  _DSP_ARC=""
-  if [[ -n $ZFS_ARC_MODE ]]; then
-    case "$ZFS_ARC_MODE" in
-      vm-focused) _DSP_ARC="VM-focused (4GB)" ;;
-      balanced) _DSP_ARC="Balanced (25-40%)" ;;
-      storage-focused) _DSP_ARC="Storage-focused (50%)" ;;
-      *) _DSP_ARC="$ZFS_ARC_MODE" ;;
-    esac
-  fi
-
-  # Shell
-  _DSP_SHELL=""
-  if [[ -n $SHELL_TYPE ]]; then
-    case "$SHELL_TYPE" in
-      zsh) _DSP_SHELL="ZSH" ;;
-      bash) _DSP_SHELL="Bash" ;;
-      *) _DSP_SHELL="$SHELL_TYPE" ;;
-    esac
-  fi
-
-  # Power profile
-  _DSP_POWER=""
-  if [[ -n $CPU_GOVERNOR ]]; then
-    case "$CPU_GOVERNOR" in
-      performance) _DSP_POWER="Performance" ;;
-      ondemand | powersave) _DSP_POWER="Balanced" ;;
-      schedutil) _DSP_POWER="Adaptive" ;;
-      conservative) _DSP_POWER="Conservative" ;;
-      *) _DSP_POWER="$CPU_GOVERNOR" ;;
-    esac
-  fi
-
-  # Security features
-  _DSP_SECURITY="none"
-  local sec_items=()
-  [[ $INSTALL_APPARMOR == "yes" ]] && sec_items+=("apparmor")
-  [[ $INSTALL_AUDITD == "yes" ]] && sec_items+=("auditd")
-  [[ $INSTALL_AIDE == "yes" ]] && sec_items+=("aide")
-  [[ $INSTALL_CHKROOTKIT == "yes" ]] && sec_items+=("chkrootkit")
-  [[ $INSTALL_LYNIS == "yes" ]] && sec_items+=("lynis")
-  [[ $INSTALL_NEEDRESTART == "yes" ]] && sec_items+=("needrestart")
-  [[ ${#sec_items[@]} -gt 0 ]] && _DSP_SECURITY="${sec_items[*]}"
-
-  # Monitoring features
-  _DSP_MONITORING="none"
-  local mon_items=()
-  [[ $INSTALL_VNSTAT == "yes" ]] && mon_items+=("vnstat")
-  [[ $INSTALL_NETDATA == "yes" ]] && mon_items+=("netdata")
-  [[ $INSTALL_PROMTAIL == "yes" ]] && mon_items+=("promtail")
-  [[ ${#mon_items[@]} -gt 0 ]] && _DSP_MONITORING="${mon_items[*]}"
-
-  # Tools
-  _DSP_TOOLS="none"
-  local tool_items=()
-  [[ $INSTALL_YAZI == "yes" ]] && tool_items+=("yazi")
-  [[ $INSTALL_NVIM == "yes" ]] && tool_items+=("nvim")
-  [[ $INSTALL_RINGBUFFER == "yes" ]] && tool_items+=("ringbuffer")
-  [[ ${#tool_items[@]} -gt 0 ]] && _DSP_TOOLS="${tool_items[*]}"
-
-  # API Token
-  _DSP_API=""
-  if [[ -n $INSTALL_API_TOKEN ]]; then
-    case "$INSTALL_API_TOKEN" in
-      yes) _DSP_API="Yes (${API_TOKEN_NAME})" ;;
-      no) _DSP_API="No" ;;
-    esac
-  fi
-
-  # SSH Key
-  _DSP_SSH=""
-  [[ -n $SSH_PUBLIC_KEY ]] && _DSP_SSH="${SSH_PUBLIC_KEY:0:20}..."
-
-  # Admin User
-  _DSP_ADMIN_USER=""
-  [[ -n $ADMIN_USERNAME ]] && _DSP_ADMIN_USER="$ADMIN_USERNAME"
-
-  # Admin Password
-  _DSP_ADMIN_PASS=""
-  [[ -n $ADMIN_PASSWORD ]] && _DSP_ADMIN_PASS="********"
-
-  # Firewall
   _DSP_FIREWALL=""
   if [[ -n $INSTALL_FIREWALL ]]; then
     if [[ $INSTALL_FIREWALL == "yes" ]]; then
@@ -226,15 +116,35 @@ _wiz_build_display_values() {
     fi
   fi
 
-  # ISO Version
-  _DSP_ISO=""
-  [[ -n $PROXMOX_ISO_VERSION ]] && _DSP_ISO=$(get_iso_version "$PROXMOX_ISO_VERSION")
-
-  # MTU
   _DSP_MTU="${BRIDGE_MTU:-9000}"
   [[ $_DSP_MTU == "9000" ]] && _DSP_MTU="9000 (jumbo)"
+}
 
-  # Boot disk
+# Formats Storage screen values: ZFS mode, ARC, boot/pool disks
+_dsp_storage() {
+  _DSP_ZFS=""
+  if [[ -n $ZFS_RAID ]]; then
+    case "$ZFS_RAID" in
+      single) _DSP_ZFS="Single disk" ;;
+      raid0) _DSP_ZFS="RAID-0 (striped)" ;;
+      raid1) _DSP_ZFS="RAID-1 (mirror)" ;;
+      raidz1) _DSP_ZFS="RAID-Z1 (parity)" ;;
+      raidz2) _DSP_ZFS="RAID-Z2 (double parity)" ;;
+      raid10) _DSP_ZFS="RAID-10 (striped mirrors)" ;;
+      *) _DSP_ZFS="$ZFS_RAID" ;;
+    esac
+  fi
+
+  _DSP_ARC=""
+  if [[ -n $ZFS_ARC_MODE ]]; then
+    case "$ZFS_ARC_MODE" in
+      vm-focused) _DSP_ARC="VM-focused (4GB)" ;;
+      balanced) _DSP_ARC="Balanced (25-40%)" ;;
+      storage-focused) _DSP_ARC="Storage-focused (50%)" ;;
+      *) _DSP_ARC="$ZFS_ARC_MODE" ;;
+    esac
+  fi
+
   _DSP_BOOT="All in pool"
   if [[ -n $BOOT_DISK ]]; then
     for i in "${!DRIVES[@]}"; do
@@ -245,8 +155,101 @@ _wiz_build_display_values() {
     done
   fi
 
-  # Pool disks
   _DSP_POOL="${#ZFS_POOL_DISKS[@]} disks"
+}
+
+# Formats Services screen values: Tailscale, SSL, shell, power, features
+_dsp_services() {
+  _DSP_TAILSCALE=""
+  if [[ -n $INSTALL_TAILSCALE ]]; then
+    [[ $INSTALL_TAILSCALE == "yes" ]] && _DSP_TAILSCALE="Enabled + Stealth" || _DSP_TAILSCALE="Disabled"
+  fi
+
+  _DSP_SSL=""
+  if [[ -n $SSL_TYPE ]]; then
+    case "$SSL_TYPE" in
+      self-signed) _DSP_SSL="Self-signed" ;;
+      letsencrypt) _DSP_SSL="Let's Encrypt" ;;
+      *) _DSP_SSL="$SSL_TYPE" ;;
+    esac
+  fi
+
+  _DSP_SHELL=""
+  if [[ -n $SHELL_TYPE ]]; then
+    case "$SHELL_TYPE" in
+      zsh) _DSP_SHELL="ZSH" ;;
+      bash) _DSP_SHELL="Bash" ;;
+      *) _DSP_SHELL="$SHELL_TYPE" ;;
+    esac
+  fi
+
+  _DSP_POWER=""
+  if [[ -n $CPU_GOVERNOR ]]; then
+    case "$CPU_GOVERNOR" in
+      performance) _DSP_POWER="Performance" ;;
+      ondemand | powersave) _DSP_POWER="Balanced" ;;
+      schedutil) _DSP_POWER="Adaptive" ;;
+      conservative) _DSP_POWER="Conservative" ;;
+      *) _DSP_POWER="$CPU_GOVERNOR" ;;
+    esac
+  fi
+
+  # Feature lists
+  _DSP_SECURITY="none"
+  local sec_items=()
+  [[ $INSTALL_APPARMOR == "yes" ]] && sec_items+=("apparmor")
+  [[ $INSTALL_AUDITD == "yes" ]] && sec_items+=("auditd")
+  [[ $INSTALL_AIDE == "yes" ]] && sec_items+=("aide")
+  [[ $INSTALL_CHKROOTKIT == "yes" ]] && sec_items+=("chkrootkit")
+  [[ $INSTALL_LYNIS == "yes" ]] && sec_items+=("lynis")
+  [[ $INSTALL_NEEDRESTART == "yes" ]] && sec_items+=("needrestart")
+  [[ ${#sec_items[@]} -gt 0 ]] && _DSP_SECURITY="${sec_items[*]}"
+
+  _DSP_MONITORING="none"
+  local mon_items=()
+  [[ $INSTALL_VNSTAT == "yes" ]] && mon_items+=("vnstat")
+  [[ $INSTALL_NETDATA == "yes" ]] && mon_items+=("netdata")
+  [[ $INSTALL_PROMTAIL == "yes" ]] && mon_items+=("promtail")
+  [[ ${#mon_items[@]} -gt 0 ]] && _DSP_MONITORING="${mon_items[*]}"
+
+  _DSP_TOOLS="none"
+  local tool_items=()
+  [[ $INSTALL_YAZI == "yes" ]] && tool_items+=("yazi")
+  [[ $INSTALL_NVIM == "yes" ]] && tool_items+=("nvim")
+  [[ $INSTALL_RINGBUFFER == "yes" ]] && tool_items+=("ringbuffer")
+  [[ ${#tool_items[@]} -gt 0 ]] && _DSP_TOOLS="${tool_items[*]}"
+}
+
+# Formats Access screen values: admin user, SSH key, API token
+_dsp_access() {
+  _DSP_ADMIN_USER=""
+  [[ -n $ADMIN_USERNAME ]] && _DSP_ADMIN_USER="$ADMIN_USERNAME"
+
+  _DSP_ADMIN_PASS=""
+  [[ -n $ADMIN_PASSWORD ]] && _DSP_ADMIN_PASS="********"
+
+  _DSP_SSH=""
+  [[ -n $SSH_PUBLIC_KEY ]] && _DSP_SSH="${SSH_PUBLIC_KEY:0:20}..."
+
+  _DSP_API=""
+  if [[ -n $INSTALL_API_TOKEN ]]; then
+    case "$INSTALL_API_TOKEN" in
+      yes) _DSP_API="Yes (${API_TOKEN_NAME})" ;;
+      no) _DSP_API="No" ;;
+    esac
+  fi
+}
+
+# Builds formatted display values from current configuration state.
+# Calls individual formatters for each screen category.
+# Side effects: Sets _DSP_* global variables for menu rendering
+_wiz_build_display_values() {
+  _dsp_basic
+  _dsp_proxmox
+  _dsp_network
+  _dsp_storage
+  _dsp_services
+  _dsp_access
 }
 
 # =============================================================================

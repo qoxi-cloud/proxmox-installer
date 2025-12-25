@@ -17,5 +17,5 @@ show_validation_error() {
 
   # Show error message (replaces blank line, footer stays below)
   _wiz_error "$message"
-  sleep 3
+  sleep "${WIZARD_MESSAGE_DELAY:-3}"
 }

@@ -4,6 +4,93 @@
 # tailscale, ssl, shell, power_profile, features
 # =============================================================================
 
+# =============================================================================
+# Tailscale configuration helpers
+# =============================================================================
+
+# Prompts for Tailscale auth key with validation.
+# Returns: auth key via stdout, empty if cancelled
+_tailscale_get_auth_key() {
+  local auth_key=""
+
+  while true; do
+    _wiz_start_edit
+    _show_input_footer
+
+    auth_key=$(
+      _wiz_input \
+        --placeholder "tskey-auth-..." \
+        --prompt "Auth Key: "
+    )
+
+    [[ -z $auth_key ]] && return
+
+    if validate_tailscale_key "$auth_key"; then
+      printf '%s' "$auth_key"
+      return 0
+    fi
+
+    show_validation_error "Invalid key format. Expected: tskey-auth-xxx-xxx"
+  done
+}
+
+# Prompts for Tailscale Web UI (Serve) configuration.
+# Side effects: Sets TAILSCALE_WEBUI global
+_tailscale_configure_webui() {
+  _wiz_start_edit
+  _wiz_description \
+    "  Expose Proxmox Web UI via Tailscale Serve?" \
+    "" \
+    "  {{cyan:Enabled}}:  Access Web UI at https://<tailscale-hostname>" \
+    "  {{cyan:Disabled}}: Web UI only via direct IP" \
+    "" \
+    "  Uses: tailscale serve --bg --https=443 https://127.0.0.1:8006" \
+    ""
+
+  _show_input_footer "filter" 3
+
+  local webui_selected
+  if webui_selected=$(printf '%s\n' "$WIZ_TOGGLE_OPTIONS" | _wiz_choose --header="Tailscale Web UI:"); then
+    case "$webui_selected" in
+      Enabled) TAILSCALE_WEBUI="yes" ;;
+      Disabled) TAILSCALE_WEBUI="no" ;;
+    esac
+  else
+    TAILSCALE_WEBUI="no"
+  fi
+}
+
+# Enables Tailscale with auth key and configures related settings.
+# Parameters: $1 - auth key
+# Side effects: Sets INSTALL_TAILSCALE, TAILSCALE_AUTH_KEY, SSL_TYPE, FIREWALL_MODE
+_tailscale_enable() {
+  local auth_key="$1"
+
+  INSTALL_TAILSCALE="yes"
+  TAILSCALE_AUTH_KEY="$auth_key"
+
+  _tailscale_configure_webui
+
+  SSL_TYPE="self-signed"
+  if [[ -z $INSTALL_FIREWALL ]]; then
+    INSTALL_FIREWALL="yes"
+    FIREWALL_MODE="stealth"
+  fi
+}
+
+# Disables Tailscale and clears related settings.
+# Side effects: Clears INSTALL_TAILSCALE, TAILSCALE_AUTH_KEY, TAILSCALE_WEBUI, SSL_TYPE
+_tailscale_disable() {
+  INSTALL_TAILSCALE="no"
+  TAILSCALE_AUTH_KEY=""
+  TAILSCALE_WEBUI=""
+  SSL_TYPE=""
+  if [[ -z $INSTALL_FIREWALL ]]; then
+    INSTALL_FIREWALL="yes"
+    FIREWALL_MODE="standard"
+  fi
+}
+
 # Edits Tailscale VPN configuration.
 # Prompts for auth key if enabled, validates key format.
 # Updates INSTALL_TAILSCALE, TAILSCALE_AUTH_KEY, SSL_TYPE, FIREWALL_MODE globals.
@@ -19,7 +106,6 @@ _edit_tailscale() {
     "  Stealth mode blocks ALL incoming traffic on public IP." \
     ""
 
-  # 1 header + 2 items for gum choose
   _show_input_footer "filter" 3
 
   local selected
@@ -29,84 +115,134 @@ _edit_tailscale() {
 
   case "$selected" in
     Enabled)
-      # Request auth key with validation loop
-      local auth_key=""
-
-      while true; do
-        _wiz_start_edit
-        _show_input_footer
-
-        auth_key=$(
-          _wiz_input \
-            --placeholder "tskey-auth-..." \
-            --prompt "Auth Key: "
-        )
-
-        # Empty = cancel
-        [[ -z $auth_key ]] && break
-
-        # Validate key format
-        if validate_tailscale_key "$auth_key"; then
-          break
-        fi
-
-        show_validation_error "Invalid key format. Expected: tskey-auth-xxx-xxx"
-      done
-
-      # If valid auth key provided, enable Tailscale
+      local auth_key
+      auth_key=$(_tailscale_get_auth_key)
       if [[ -n $auth_key ]]; then
-        INSTALL_TAILSCALE="yes"
-        TAILSCALE_AUTH_KEY="$auth_key"
-
-        # Ask about web access via Tailscale Serve
-        _wiz_start_edit
-        _wiz_description \
-          "  Expose Proxmox Web UI via Tailscale Serve?" \
-          "" \
-          "  {{cyan:Enabled}}:  Access Web UI at https://<tailscale-hostname>" \
-          "  {{cyan:Disabled}}: Web UI only via direct IP" \
-          "" \
-          "  Uses: tailscale serve --bg --https=443 https://127.0.0.1:8006" \
-          ""
-
-        _show_input_footer "filter" 3
-
-        local webui_selected
-        if webui_selected=$(printf '%s\n' "$WIZ_TOGGLE_OPTIONS" | _wiz_choose --header="Tailscale Web UI:"); then
-          case "$webui_selected" in
-            Enabled) TAILSCALE_WEBUI="yes" ;;
-            Disabled) TAILSCALE_WEBUI="no" ;;
-          esac
-        else
-          TAILSCALE_WEBUI="no" # Default to no on cancel
-        fi
-
-        SSL_TYPE="self-signed" # Tailscale uses its own certs
-        # Suggest stealth firewall mode when Tailscale is enabled
-        if [[ -z $INSTALL_FIREWALL ]]; then
-          INSTALL_FIREWALL="yes"
-          FIREWALL_MODE="stealth"
-        fi
+        _tailscale_enable "$auth_key"
       else
-        # Auth key required - disable Tailscale if not provided
-        INSTALL_TAILSCALE="no"
-        TAILSCALE_AUTH_KEY=""
-        TAILSCALE_WEBUI=""
-        SSL_TYPE="" # Let user choose
+        _tailscale_disable
       fi
       ;;
     Disabled)
-      INSTALL_TAILSCALE="no"
-      TAILSCALE_AUTH_KEY=""
-      TAILSCALE_WEBUI=""
-      SSL_TYPE="" # Let user choose
-      # Suggest standard firewall when Tailscale is disabled
-      if [[ -z $INSTALL_FIREWALL ]]; then
-        INSTALL_FIREWALL="yes"
-        FIREWALL_MODE="standard"
-      fi
+      _tailscale_disable
       ;;
   esac
+}
+
+# =============================================================================
+# SSL configuration helpers
+# =============================================================================
+
+# Validates FQDN for Let's Encrypt.
+# Returns: 0 if valid, 1 if missing, 2 if invalid format
+_ssl_validate_fqdn() {
+  if [[ -z $FQDN ]]; then
+    _wiz_start_edit
+    _wiz_hide_cursor
+    _wiz_error "Error: Hostname not configured!"
+    _wiz_blank_line
+    _wiz_dim "Let's Encrypt requires a fully qualified domain name."
+    _wiz_dim "Please configure hostname first."
+    sleep "${WIZARD_MESSAGE_DELAY:-3}"
+    return 1
+  fi
+
+  if [[ $FQDN == *.local ]] || ! validate_fqdn "$FQDN"; then
+    _wiz_start_edit
+    _wiz_hide_cursor
+    _wiz_error "Error: Invalid domain name!"
+    _wiz_blank_line
+    _wiz_dim "Current hostname: ${CLR_ORANGE}${FQDN}${CLR_RESET}"
+    _wiz_dim "Let's Encrypt requires a valid public FQDN (e.g., pve.example.com)."
+    _wiz_dim "Domains ending with .local are not supported."
+    sleep "${WIZARD_MESSAGE_DELAY:-3}"
+    return 2
+  fi
+
+  return 0
+}
+
+# Runs DNS validation with animated progress dots.
+# Returns: DNS validation result (0=success, 1=no resolution, 2=wrong IP)
+_ssl_check_dns_animated() {
+  _wiz_start_edit
+  _wiz_hide_cursor
+  _wiz_blank_line
+  _wiz_dim "Domain: ${CLR_ORANGE}${FQDN}${CLR_RESET}"
+  _wiz_dim "Expected IP: ${CLR_ORANGE}${MAIN_IPV4}${CLR_RESET}"
+  _wiz_blank_line
+
+  local dns_result_file
+  dns_result_file=$(mktemp)
+  register_temp_file "$dns_result_file"
+
+  (
+    validate_dns_resolution "$FQDN" "$MAIN_IPV4"
+    printf '%s\n' "$?" >"$dns_result_file"
+  ) >/dev/null 2>&1 &
+
+  local dns_pid=$!
+
+  printf "%s" "${CLR_CYAN}Validating DNS resolution${CLR_RESET}"
+  while kill -0 "$dns_pid" 2>/dev/null; do
+    sleep 0.3
+    local dots_count=$((($(date +%s) % 3) + 1))
+    local dots
+    dots=$(printf '.%.0s' $(seq 1 $dots_count))
+    printf "\r%sValidating DNS resolution%s%-3s%s" "${CLR_CYAN}" "${CLR_ORANGE}" "$dots" "${CLR_RESET}"
+  done
+
+  wait "$dns_pid" 2>/dev/null
+  local dns_result
+  dns_result=$(cat "$dns_result_file")
+  rm -f "$dns_result_file"
+
+  printf "\r%-80s\r" " "
+  return "$dns_result"
+}
+
+# Displays DNS error and falls back to self-signed.
+# Parameters: $1 - error type (1=no resolution, 2=wrong IP)
+_ssl_show_dns_error() {
+  local error_type="$1"
+
+  _wiz_hide_cursor
+  if [[ $error_type -eq 1 ]]; then
+    _wiz_error "Domain does not resolve to any IP address"
+    _wiz_blank_line
+    _wiz_dim "Please configure DNS A record:"
+    _wiz_dim "${CLR_ORANGE}${FQDN}${CLR_RESET} → ${CLR_ORANGE}${MAIN_IPV4}${CLR_RESET}"
+  else
+    _wiz_error "Domain resolves to wrong IP address"
+    _wiz_blank_line
+    _wiz_dim "Current DNS: ${CLR_ORANGE}${FQDN}${CLR_RESET} → ${CLR_RED}${DNS_RESOLVED_IP}${CLR_RESET}"
+    _wiz_dim "Expected:    ${CLR_ORANGE}${FQDN}${CLR_RESET} → ${CLR_ORANGE}${MAIN_IPV4}${CLR_RESET}"
+    _wiz_blank_line
+    _wiz_dim "Please update DNS A record to point to ${CLR_ORANGE}${MAIN_IPV4}${CLR_RESET}"
+  fi
+  _wiz_blank_line
+  _wiz_dim "Falling back to self-signed certificate."
+  sleep "$((WIZARD_MESSAGE_DELAY + 2))"
+}
+
+# Validates Let's Encrypt requirements: FQDN format and DNS resolution.
+# Returns: 0 if valid, 1 if should fallback to self-signed
+_ssl_validate_letsencrypt() {
+  _ssl_validate_fqdn || return 1
+
+  local dns_result
+  _ssl_check_dns_animated
+  dns_result=$?
+
+  if [[ $dns_result -ne 0 ]]; then
+    _ssl_show_dns_error "$dns_result"
+    return 1
+  fi
+
+  _wiz_info "DNS resolution successful"
+  _wiz_dim "${CLR_ORANGE}${FQDN}${CLR_RESET} → ${CLR_CYAN}${DNS_RESOLVED_IP}${CLR_RESET}"
+  sleep "${WIZARD_MESSAGE_DELAY:-3}"
+  return 0
 }
 
 # Edits SSL certificate type for Proxmox web interface.
@@ -122,7 +258,6 @@ _edit_ssl() {
     "  {{cyan:Let's Encrypt}}: Trusted cert, requires public DNS" \
     ""
 
-  # 1 header + 2 items for gum choose
   _show_input_footer "filter" 3
 
   local selected
@@ -130,112 +265,17 @@ _edit_ssl() {
     return
   fi
 
-  # Map display names to internal values
   local ssl_type=""
   case "$selected" in
     "Self-signed") ssl_type="self-signed" ;;
     "Let's Encrypt") ssl_type="letsencrypt" ;;
   esac
 
-  # Validate Let's Encrypt selection
   if [[ $ssl_type == "letsencrypt" ]]; then
-    # Check if FQDN is set and is a valid domain
-    if [[ -z $FQDN ]]; then
-      _wiz_start_edit
-      _wiz_hide_cursor
-      _wiz_error "Error: Hostname not configured!"
-      _wiz_blank_line
-      _wiz_dim "Let's Encrypt requires a fully qualified domain name."
-      _wiz_dim "Please configure hostname first."
-      sleep 3
-      SSL_TYPE="self-signed"
-      return
-    fi
-
-    if [[ $FQDN == *.local ]] || ! validate_fqdn "$FQDN"; then
-      _wiz_start_edit
-      _wiz_hide_cursor
-      _wiz_error "Error: Invalid domain name!"
-      _wiz_blank_line
-      _wiz_dim "Current hostname: ${CLR_ORANGE}${FQDN}${CLR_RESET}"
-      _wiz_dim "Let's Encrypt requires a valid public FQDN (e.g., pve.example.com)."
-      _wiz_dim "Domains ending with .local are not supported."
-      sleep 3
-      SSL_TYPE="self-signed"
-      return
-    fi
-
-    # Check DNS resolution
-    _wiz_start_edit
-    _wiz_hide_cursor
-    _wiz_blank_line
-    _wiz_dim "Domain: ${CLR_ORANGE}${FQDN}${CLR_RESET}"
-    _wiz_dim "Expected IP: ${CLR_ORANGE}${MAIN_IPV4}${CLR_RESET}"
-    _wiz_blank_line
-
-    # Run DNS validation in background with animated dots
-    local dns_result_file
-    dns_result_file=$(mktemp)
-    register_temp_file "$dns_result_file"
-
-    (
-      validate_dns_resolution "$FQDN" "$MAIN_IPV4"
-      printf '%s\n' "$?" >"$dns_result_file"
-    ) >/dev/null 2>&1 &
-
-    local dns_pid=$!
-
-    # Show animated dots while validating (like live logs)
-    printf "%s" "${CLR_CYAN}Validating DNS resolution${CLR_RESET}"
-    while kill -0 "$dns_pid" 2>/dev/null; do
-      sleep 0.3
-      local dots_count=$((($(date +%s) % 3) + 1))
-      local dots
-      dots=$(printf '.%.0s' $(seq 1 $dots_count))
-      # Update line with animated dots (up to 3)
-      printf "\r%sValidating DNS resolution%s%-3s%s" "${CLR_CYAN}" "${CLR_ORANGE}" "$dots" "${CLR_RESET}"
-    done
-
-    wait "$dns_pid" 2>/dev/null
-    local dns_result
-    dns_result=$(cat "$dns_result_file")
-    rm -f "$dns_result_file"
-
-    # Clear the line
-    printf "\r%-80s\r" " "
-
-    if [[ $dns_result -eq 1 ]]; then
-      # No DNS resolution
-      _wiz_hide_cursor
-      _wiz_error "Domain does not resolve to any IP address"
-      _wiz_blank_line
-      _wiz_dim "Please configure DNS A record:"
-      _wiz_dim "${CLR_ORANGE}${FQDN}${CLR_RESET} → ${CLR_ORANGE}${MAIN_IPV4}${CLR_RESET}"
-      _wiz_blank_line
-      _wiz_dim "Falling back to self-signed certificate."
-      sleep 5
-      SSL_TYPE="self-signed"
-      return
-    elif [[ $dns_result -eq 2 ]]; then
-      # Wrong IP
-      _wiz_hide_cursor
-      _wiz_error "Domain resolves to wrong IP address"
-      _wiz_blank_line
-      _wiz_dim "Current DNS: ${CLR_ORANGE}${FQDN}${CLR_RESET} → ${CLR_RED}${DNS_RESOLVED_IP}${CLR_RESET}"
-      _wiz_dim "Expected:    ${CLR_ORANGE}${FQDN}${CLR_RESET} → ${CLR_ORANGE}${MAIN_IPV4}${CLR_RESET}"
-      _wiz_blank_line
-      _wiz_dim "Please update DNS A record to point to ${CLR_ORANGE}${MAIN_IPV4}${CLR_RESET}"
-      _wiz_blank_line
-      _wiz_dim "Falling back to self-signed certificate."
-      sleep 5
-      SSL_TYPE="self-signed"
-      return
-    else
-      # Success
-      _wiz_info "DNS resolution successful"
-      _wiz_dim "${CLR_ORANGE}${FQDN}${CLR_RESET} → ${CLR_CYAN}${DNS_RESOLVED_IP}${CLR_RESET}"
-      sleep 3
+    if _ssl_validate_letsencrypt; then
       SSL_TYPE="$ssl_type"
+    else
+      SSL_TYPE="self-signed"
     fi
   else
     [[ -n $ssl_type ]] && SSL_TYPE="$ssl_type"

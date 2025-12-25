@@ -163,7 +163,7 @@ live_show_progress() {
 
   # Wait for process with periodic updates
   while kill -0 "$pid" 2>/dev/null; do
-    sleep 0.3
+    sleep 0.3 # Animation timing, kept at 0.3 for visual smoothness
     # Update the task line with animated dots (orange)
     local dots_count=$((($(date +%s) % 3) + 1))
     local dots

@@ -19,41 +19,60 @@ This project is a bash automation framework that installs Proxmox VE on dedicate
 
 **Execution Stages:**
 
-1. **Initialization** (000-009) - Load colors, parse CLI args, setup logging
-2. **System Check** (040-049) - Verify requirements (root, RAM, disk, KVM)
-3. **Wizard** (100-119) - Interactive configuration via TUI
-4. **QEMU Setup** (200-209) - Download ISO, launch VM, wait for SSH
-5. **Installation** (200-209) - Proxmox auto-install via templates
+1. **Initialization** (000-006) - Load colors, constants, parse CLI args, setup logging
+2. **System Check** (050-056) - Verify requirements (root, RAM, disk, KVM), detect hardware
+3. **Wizard** (100-116) - Interactive configuration via TUI
+4. **QEMU Setup** (200-204) - Download ISO, launch VM, wait for SSH
+5. **Installation** (200-204) - Proxmox auto-install via templates
 6. **Configuration** (300-380) - Deploy configs, install packages, harden
-7. **Finalization** (380-389) - Validate, show credentials, shutdown VM
+7. **Finalization** (380) - Validate, show credentials, shutdown VM
 
 ## Component Architecture
 
 ```
 scripts/
-├── 000-009: Core Infrastructure
-│   ├── 000-init.sh      # Globals, colors, constants, cleanup trap
-│   ├── 001-cli.sh       # CLI argument parsing
-│   ├── 002-logging.sh   # Log functions, metrics
-│   └── 003-banner.sh    # ASCII art banner
+├── 000-006: Core Infrastructure
+│   ├── 000-colors.sh    # Terminal colors (CLR_*, HEX_*), version
+│   ├── 001-constants.sh # DNS servers, timeouts, ports, resource limits
+│   ├── 002-wizard-options.sh # WIZ_* menu option lists
+│   ├── 003-init.sh      # Globals, cleanup trap, runtime variables
+│   ├── 004-cli.sh       # CLI argument parsing
+│   ├── 005-logging.sh   # Log functions, metrics
+│   └── 006-banner.sh    # ASCII art banner
 │
-├── 010-049: Utilities Layer
+├── 010-012: Display & Utilities
 │   ├── 010-display.sh   # print_* functions, progress indicator
 │   ├── 011-downloads.sh # File download with retry
-│   ├── 012-utils.sh     # Secure file deletion
-│   ├── 020-templates.sh # Template variable substitution
-│   ├── 021-ssh.sh       # SSH session management, remote_*
-│   ├── 034-password-utils.sh     # Password generation
-│   ├── 035-zfs-helpers.sh        # ZFS RAID mapping
-│   ├── 036-validation-helpers.sh # Validation UI helpers
-│   ├── 037-parallel-helpers.sh   # Parallel execution
-│   ├── 038-deploy-helpers.sh     # Deployment helpers
-│   ├── 039-network-helpers.sh    # Network detection utilities
-│   ├── 040-validation.sh         # Input validators
-│   ├── 041-system-check.sh       # Requirements validation
-│   └── 042-live-logs.sh          # Live log display
+│   └── 012-utils.sh     # Secure file deletion
 │
-├── 100-119: Wizard Layer
+├── 020-021: Templates & SSH
+│   ├── 020-templates.sh # Template variable substitution
+│   └── 021-ssh.sh       # SSH session management, remote_*
+│
+├── 030-035: Helpers
+│   ├── 030-password-utils.sh     # Password generation
+│   ├── 031-zfs-helpers.sh        # ZFS RAID mapping
+│   ├── 032-validation-helpers.sh # Validation UI helpers
+│   ├── 033-parallel-helpers.sh   # Parallel execution
+│   ├── 034-deploy-helpers.sh     # Deployment helpers
+│   └── 035-network-helpers.sh    # Network detection utilities
+│
+├── 040-043: Validation Layer
+│   ├── 040-validation-basic.sh   # Hostname, user, email, password
+│   ├── 041-validation-network.sh # Subnet, IPv6
+│   ├── 042-validation-dns.sh     # DNS resolution
+│   └── 043-validation-security.sh# SSH key, Tailscale, disk space
+│
+├── 050-056: System Detection Layer
+│   ├── 050-system-packages.sh    # Required package installation
+│   ├── 051-system-preflight.sh   # Requirements validation (root, RAM, etc.)
+│   ├── 052-system-network.sh     # Interface, IP detection
+│   ├── 053-system-drives.sh      # Drive detection, role assignment
+│   ├── 054-system-wizard-data.sh # Timezones, countries loading
+│   ├── 055-system-status.sh      # Status display
+│   └── 056-live-logs.sh          # Live log display
+│
+├── 100-116: Wizard Layer
 │   ├── 100-wizard-core.sh    # Main wizard loop
 │   ├── 101-wizard-ui.sh      # UI rendering, gum wrappers
 │   ├── 102-wizard-nav.sh     # Navigation logic (screen switching)
@@ -105,7 +124,7 @@ scripts/
 
 ### Configuration State
 
-All configuration stored in global variables (defined in `000-init.sh`):
+All configuration stored in global variables (defined in `003-init.sh`, constants in `001-constants.sh`):
 
 ```
 User Input (Wizard) → Global Variables → Template Substitution → Remote Files
@@ -304,22 +323,23 @@ spec/
 
 | Range     | Purpose                                      |
 |-----------|----------------------------------------------|
-| 000-009   | Initialization (init, cli, logging, banner)  |
-| 010-019   | Display & downloads                          |
-| 020-029   | Templates & SSH                              |
-| 030-039   | Helpers (password, zfs, validation, etc.)    |
-| 040-049   | Validation & system checks                   |
-| 100-109   | Wizard core (main logic, UI, nav, menu)      |
-| 110-119   | Wizard editors (screens)                     |
-| 200-209   | Installation (packages, QEMU, ISO, templates)|
-| 300-309   | Base configuration                           |
-| 310-319   | Security - Firewall & access control         |
-| 320-329   | Security - Auditing & integrity              |
-| 330-339   | Network & performance                        |
-| 340-349   | Monitoring                                   |
-| 350-359   | Tools                                        |
-| 360-369   | SSL & API                                    |
-| 370-379   | Storage (ZFS)                                |
-| 380-389   | Finalization                                 |
-| 900-999   | Main orchestrator                            |
+| 000-006   | Core init (colors, constants, wizard opts, init, cli, logging, banner) |
+| 010-012   | Display & utilities                          |
+| 020-021   | Templates & SSH                              |
+| 030-035   | Helpers (password, zfs, validation, parallel, deploy, network) |
+| 040-043   | Validation (basic, network, dns, security)   |
+| 050-056   | System detection (packages, preflight, network, drives, status, live-logs) |
+| 100-103   | Wizard core (main logic, UI, nav, menu)      |
+| 110-116   | Wizard editors (screens)                     |
+| 200-204   | Installation (packages, QEMU, templates, ISO, autoinstall) |
+| 300-302   | Base configuration                           |
+| 310-312   | Security - Firewall & access control         |
+| 320-324   | Security - Auditing & integrity              |
+| 330       | Network & performance (ringbuffer)           |
+| 340-342   | Monitoring                                   |
+| 350-351   | Tools                                        |
+| 360-361   | SSL & API                                    |
+| 370-371   | Storage (ZFS)                                |
+| 380       | Finalization                                 |
+| 900       | Main orchestrator                            |
 

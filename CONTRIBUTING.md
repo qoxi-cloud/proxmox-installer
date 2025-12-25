@@ -37,9 +37,12 @@ git config core.hooksPath .githooks
 ```
 proxmox-installer/
 ├── scripts/           # Source scripts (numbered for execution order)
-│   ├── 000-init.sh    # Initialization, colors, constants, cleanup trap
-│   ├── 001-cli.sh     # CLI argument parsing
-│   ├── 002-logging.sh # Logging and metrics
+│   ├── 000-colors.sh  # Terminal colors, version
+│   ├── 001-constants.sh # DNS, timeouts, ports, resource limits
+│   ├── 002-wizard-options.sh # WIZ_* menu option lists
+│   ├── 003-init.sh    # Globals, cleanup trap, runtime variables
+│   ├── 004-cli.sh     # CLI argument parsing
+│   ├── 005-logging.sh # Logging and metrics
 │   ├── ...
 │   └── 900-main.sh    # Main orchestrator
 ├── templates/         # Configuration templates (.tmpl extension)
@@ -53,16 +56,17 @@ proxmox-installer/
 
 | Range   | Purpose                                           |
 |---------|---------------------------------------------------|
-| 000-009 | Init, CLI, logging, banner                        |
-| 010-019 | Display, downloads, utils                         |
-| 020-029 | Templates, SSH                                    |
-| 030-039 | Helpers (password, zfs, validation, parallel, deploy) |
-| 040-049 | Validation, system-check, live-logs               |
-| 100-109 | Wizard core (main loop, UI, navigation)           |
-| 110-119 | Wizard editors (screens)                          |
-| 200-209 | Installation (packages, QEMU, templates, ISO)     |
-| 300-389 | Configuration (base, security, monitoring, etc.)  |
-| 900-999 | Main orchestrator                                 |
+| 000-006 | Core init (colors, constants, wizard opts, init, cli, logging, banner) |
+| 010-012 | Display & utilities                               |
+| 020-021 | Templates & SSH                                   |
+| 030-035 | Helpers (password, zfs, validation, parallel, deploy, network) |
+| 040-043 | Validation (basic, network, dns, security)        |
+| 050-056 | System detection (packages, preflight, network, drives, status, live-logs) |
+| 100-103 | Wizard core (main loop, UI, navigation, menu)     |
+| 110-116 | Wizard editors (screens)                          |
+| 200-204 | Installation (packages, QEMU, templates, ISO, autoinstall) |
+| 300-380 | Configuration (base, security, monitoring, etc.)  |
+| 900     | Main orchestrator                                 |
 
 ## Making Changes
 
@@ -80,7 +84,7 @@ Follow existing patterns in the codebase. Key references:
 
 - **Remote execution:** Use `remote_run` for config steps, `remote_exec` for status checks
 - **Templates:** Use `deploy_template` helper, see [Templates Guide](docs/templates-guide.md)
-- **Validation:** Add to `040-validation.sh`, follow existing function patterns
+- **Validation:** Add to `040-043-validation-*.sh`, follow existing function patterns
 - **Wizard fields:** See [Wizard Development](docs/wizard-development.md)
 
 ### 3. Lint and Format
@@ -213,13 +217,13 @@ Changes:
 | `_wiz_` | 101-wizard-ui.sh | Wizard UI helpers |
 | `_edit_` | 110-116 wizard | Field editors |
 | `print_` | 010-display.sh | User messages |
-| `validate_` | 040-validation.sh | Input validation |
+| `validate_` | 040-043-validation-*.sh | Input validation |
 | `remote_` | 021-ssh.sh | Remote execution |
-| `deploy_` | 038-deploy-helpers.sh | Deployment helpers |
+| `deploy_` | 034-deploy-helpers.sh | Deployment helpers |
 | `configure_` | 300-380 | Post-install config |
 | `_config_` | configure scripts | Private config functions |
-| `add_` / `start_` / `complete_` | 042-live-logs.sh | Live log operations |
-| `log_` | 002-logging.sh, 042-live-logs.sh | Logging functions |
+| `add_` / `start_` / `complete_` | 056-live-logs.sh | Live log operations |
+| `log_` | 005-logging.sh, 056-live-logs.sh | Logging functions |
 
 ### Comments
 

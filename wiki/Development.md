@@ -10,24 +10,25 @@ The project is a modular bash framework. Individual scripts in `scripts/` are co
 
 | Range | Purpose |
 |-------|---------|
-| **000-009** | Core: init, cli, logging, banner |
-| **010-019** | Display & downloads |
-| **020-029** | Templates & SSH |
-| **030-039** | Helpers: password, zfs, validation, parallel, deploy, network |
-| **040-049** | Validation & system checks |
-| **100-109** | Wizard: core, ui, navigation, menu |
-| **110-119** | Wizard: editors (basic, proxmox, network, storage, services, access, disks) |
-| **200-209** | Installation: packages, QEMU, templates, ISO download, autoinstall |
-| **300-309** | Configuration: base, tailscale, admin user |
-| **310-319** | Security: firewall, fail2ban, apparmor |
-| **320-329** | Security: auditd, aide, chkrootkit, lynis, needrestart |
-| **330-339** | Network: ringbuffer tuning |
-| **340-349** | Monitoring: vnstat, promtail, netdata |
-| **350-359** | Tools: yazi, nvim |
-| **360-369** | SSL & API token |
-| **370-379** | Storage: ZFS ARC, pool creation |
-| **380-389** | Finalization: validation, completion |
-| **900-999** | Main orchestrator |
+| **000-006** | Core: colors, constants, wizard opts, init, cli, logging, banner |
+| **010-012** | Display & utilities |
+| **020-021** | Templates & SSH |
+| **030-035** | Helpers: password, zfs, validation, parallel, deploy, network |
+| **040-043** | Validation: basic, network, dns, security |
+| **050-056** | System: packages, preflight, network, drives, wizard-data, status, live-logs |
+| **100-103** | Wizard: core, ui, navigation, menu |
+| **110-116** | Wizard: editors (basic, proxmox, network, storage, services, access, disks) |
+| **200-204** | Installation: packages, QEMU, templates, ISO download, autoinstall |
+| **300-302** | Configuration: base, tailscale, admin user |
+| **310-312** | Security: firewall, fail2ban, apparmor |
+| **320-324** | Security: auditd, aide, chkrootkit, lynis, needrestart |
+| **330** | Network: ringbuffer tuning |
+| **340-342** | Monitoring: vnstat, promtail, netdata |
+| **350-351** | Tools: yazi, nvim |
+| **360-361** | SSL & API token |
+| **370-371** | Storage: ZFS ARC, pool creation |
+| **380** | Finalization: validation, completion |
+| **900** | Main orchestrator |
 
 ### Data Flow
 
@@ -35,7 +36,7 @@ The project is a modular bash framework. Individual scripts in `scripts/` are co
 User Input (Wizard) → Global Variables → Template Substitution → Remote Files
 ```
 
-All configuration is stored in global variables (defined in `000-init.sh`), which are then used for template substitution and remote configuration.
+All configuration is stored in global variables (defined in `003-init.sh`, constants in `001-constants.sh`), which are then used for template substitution and remote configuration.
 
 ### Template System
 
@@ -133,7 +134,7 @@ Uses Semantic Versioning with automatic calculation:
 
 | Component | Source |
 |-----------|--------|
-| MAJOR | Manual in `000-init.sh` as `VERSION="X"` |
+| MAJOR | Manual in `000-colors.sh` as `VERSION="X"` |
 | MINOR | Count of git tags matching `vX.*` |
 | PATCH | Commits since last tag |
 

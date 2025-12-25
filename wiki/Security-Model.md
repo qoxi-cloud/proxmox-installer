@@ -108,7 +108,7 @@ _ssh_session_cleanup() {
 Global cleanup handler ensures credentials are deleted on any exit:
 
 ```bash
-# In 000-init.sh
+# In 003-init.sh
 trap 'cleanup_and_error_handler' EXIT
 
 cleanup_and_error_handler() {

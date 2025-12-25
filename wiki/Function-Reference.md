@@ -186,7 +186,7 @@ SSH_PUBLIC_KEY=$(get_rescue_ssh_key)
 
 ---
 
-## Deployment Helpers (`038-deploy-helpers.sh`)
+## Deployment Helpers (`034-deploy-helpers.sh`)
 
 ### deploy_template
 
@@ -251,7 +251,7 @@ make_feature_wrapper "apparmor" "INSTALL_APPARMOR"
 
 ---
 
-## Parallel Execution (`037-parallel-helpers.sh`)
+## Parallel Execution (`033-parallel-helpers.sh`)
 
 ### run_parallel_group
 
@@ -297,7 +297,7 @@ _config_apparmor() {
 
 ---
 
-## Validation Functions (`040-validation.sh`)
+## Validation Functions (`040-043-validation-*.sh`)
 
 ### validate_hostname
 
@@ -417,7 +417,7 @@ is_ascii_printable "hello" && echo "valid"
 
 ---
 
-## Logging Functions (`002-logging.sh`)
+## Logging Functions (`005-logging.sh`)
 
 ### log
 
@@ -462,7 +462,7 @@ metrics_finish
 
 ---
 
-## Live Logs Functions (`042-live-logs.sh`)
+## Live Logs Functions (`056-live-logs.sh`)
 
 ### start_task
 
@@ -574,7 +574,7 @@ download_file "/tmp/iso.img" "https://example.com/file.iso"
 
 ---
 
-## Password Functions (`034-password-utils.sh`)
+## Password Functions (`030-password-utils.sh`)
 
 ### generate_password
 
@@ -589,7 +589,7 @@ password=$(generate_password 24)   # 24 chars
 
 ---
 
-## Validation UI Functions (`036-validation-helpers.sh`)
+## Validation UI Functions (`032-validation-helpers.sh`)
 
 ### show_validation_error
 

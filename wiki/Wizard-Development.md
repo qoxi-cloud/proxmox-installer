@@ -82,7 +82,7 @@ esac
 
 ### 4. Add Global Variable
 
-In `000-init.sh`:
+In `003-init.sh`:
 
 ```bash
 INSTALL_MY_FEATURE="${INSTALL_MY_FEATURE:-no}"
@@ -278,7 +278,7 @@ gum filter \
   --match.foreground "#00d7ff"
 ```
 
-Color constants are defined in `000-init.sh`:
+Color constants are defined in `000-colors.sh`:
 
 ```bash
 HEX_ORANGE="#ff8700"

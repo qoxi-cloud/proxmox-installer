@@ -150,6 +150,30 @@ download_template() {
         return 1
       fi
       ;;
+    nftables.conf)
+      # nftables config must have table definition
+      if ! grep -q "table inet" "$local_path" 2>/dev/null; then
+        print_error "Template $remote_file appears corrupted (missing table inet definition)"
+        log "ERROR: Template $remote_file corrupted - missing table inet"
+        return 1
+      fi
+      ;;
+    promtail.yml | promtail.yaml)
+      # Promtail config must have server and clients sections
+      if ! grep -q "server:" "$local_path" 2>/dev/null || ! grep -q "clients:" "$local_path" 2>/dev/null; then
+        print_error "Template $remote_file appears corrupted (missing YAML structure)"
+        log "ERROR: Template $remote_file corrupted - missing server: or clients: section"
+        return 1
+      fi
+      ;;
+    chrony | chrony.conf)
+      # Chrony config must have pool or server directive
+      if ! grep -qE "^(pool|server)" "$local_path" 2>/dev/null; then
+        print_error "Template $remote_file appears corrupted (missing NTP server config)"
+        log "ERROR: Template $remote_file corrupted - missing pool or server directive"
+        return 1
+      fi
+      ;;
     *.conf | *.sources | *.service | *.timer)
       # Config files should have some content
       if [[ $(wc -l <"$local_path" 2>/dev/null || echo 0) -lt 2 ]]; then

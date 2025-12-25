@@ -33,7 +33,7 @@ Use double curly braces: `{{VARIABLE_NAME}}`
 ### Variable Naming Convention
 
 - **UPPERCASE** with underscores: `{{MAIN_IPV4}}`, `{{SSH_PORT}}`
-- Match global variable names from `000-init.sh`
+- Match global variable names from `003-init.sh` and `001-constants.sh`
 - Use descriptive names: `{{PRIVATE_SUBNET}}` not `{{PRIV_SUB}}`
 
 ## Using Templates
@@ -111,7 +111,7 @@ _config_myapp() {
 ### 3. Add Global Variable (if needed)
 
 ```bash
-# scripts/000-init.sh
+# scripts/003-init.sh (or 001-constants.sh for constants)
 MYAPP_PORT="${MYAPP_PORT:-8080}"
 ```
 

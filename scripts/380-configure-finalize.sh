@@ -134,8 +134,8 @@ finalize_vm() {
       if ! kill -0 "$QEMU_PID" 2>/dev/null; then
         exit 0
       fi
-      sleep 1
-      ((elapsed += 1))
+      sleep "${PROCESS_KILL_WAIT:-1}"
+      ((elapsed += PROCESS_KILL_WAIT))
     done
     exit 1
   ) &
@@ -151,36 +151,30 @@ finalize_vm() {
 }
 
 # =============================================================================
-# Main configuration function
+# Configuration phases (broken out for maintainability and testability)
 # =============================================================================
 
-# Main entry point for post-install Proxmox configuration via SSH.
-# Orchestrates all configuration steps with parallel execution where safe.
-# Uses batch package installation and parallel config groups for speed.
-configure_proxmox_via_ssh() {
-  log "Starting Proxmox configuration via SSH"
-
-  # ==========================================================================
-  # PHASE 1: Base Configuration (sequential - dependencies)
-  # ==========================================================================
+# PHASE 1: Base Configuration (sequential - dependencies)
+# Must run first - sets up admin user and base system
+_phase_base_configuration() {
   make_templates
   configure_admin_user # Must be first - other configs need admin user's home dir
   configure_base_system
   configure_shell
   configure_system_services
+}
 
-  # ==========================================================================
-  # PHASE 2: Storage Configuration (sequential - ZFS dependencies)
-  # ==========================================================================
+# PHASE 2: Storage Configuration (sequential - ZFS dependencies)
+_phase_storage_configuration() {
   configure_zfs_arc
   configure_zfs_pool
   configure_zfs_scrub
+}
 
-  # ==========================================================================
-  # PHASE 3: Security Configuration (parallel after batch install)
-  # ==========================================================================
+# PHASE 3: Security Configuration (parallel after batch install)
+# Returns: 0 on success, 1 on failure
+_phase_security_configuration() {
   # Batch install security & optional packages first
-  # Uses remote_run internally - exits on failure
   batch_install_packages
 
   # Tailscale (needs package installed, needed for firewall rules)
@@ -202,10 +196,10 @@ configure_proxmox_via_ssh() {
     print_error "Security hardening failed. Check $LOG_FILE for details."
     return 1
   fi
+}
 
-  # ==========================================================================
-  # PHASE 4: Monitoring & Tools (parallel where possible)
-  # ==========================================================================
+# PHASE 4: Monitoring & Tools (parallel where possible)
+_phase_monitoring_tools() {
   # Special installers (non-apt) - run in parallel
   (
     local pids=()
@@ -230,29 +224,45 @@ configure_proxmox_via_ssh() {
 
   # Wait for special installers
   wait $special_pid 2>/dev/null || true
+}
 
-  # ==========================================================================
-  # PHASE 5: SSL & API Configuration
-  # ==========================================================================
+# PHASE 5: SSL & API Configuration
+_phase_ssl_api() {
   configure_ssl_certificate
   if [[ $INSTALL_API_TOKEN == "yes" ]]; then
     run_with_progress "Creating API token" "API token created" create_api_token
   fi
+}
 
-  # ==========================================================================
-  # PHASE 6: Validation & Finalization
-  # ==========================================================================
+# PHASE 6: Validation & Finalization
+_phase_finalization() {
   # Deploy SSH hardening config BEFORE validation (so validation can verify it)
-  # But DON'T restart sshd yet - we still need password auth for remaining commands
   deploy_ssh_hardening_config
 
   # Validate installation (SSH config file now has hardened settings)
   validate_installation
 
   # Restart SSH as the LAST operation - after this, password auth is disabled
-  # and root login is blocked. Only admin user with SSH key can connect.
   restart_ssh_service
 
   # Power off VM - SSH no longer available, use QEMU ACPI shutdown
   finalize_vm
+}
+
+# =============================================================================
+# Main configuration function
+# =============================================================================
+
+# Main entry point for post-install Proxmox configuration via SSH.
+# Orchestrates all configuration steps with parallel execution where safe.
+# Uses batch package installation and parallel config groups for speed.
+configure_proxmox_via_ssh() {
+  log "Starting Proxmox configuration via SSH"
+
+  _phase_base_configuration
+  _phase_storage_configuration
+  _phase_security_configuration || return 1
+  _phase_monitoring_tools
+  _phase_ssl_api
+  _phase_finalization
 }

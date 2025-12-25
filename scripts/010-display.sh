@@ -69,9 +69,10 @@ show_progress() {
   [[ ${3:-} == "--silent" ]] && done_message="$message"
 
   # Use gum spin to wait for the process
+  local poll_interval="${PROGRESS_POLL_INTERVAL:-0.2}"
   gum spin --spinner meter --spinner.foreground "#ff8700" --title "$message" -- bash -c "
     while kill -0 $pid 2>/dev/null; do
-      sleep 0.2
+      sleep $poll_interval
     done
   "
 

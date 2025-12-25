@@ -1,0 +1,98 @@
+# shellcheck shell=bash
+# =============================================================================
+# Wizard menu option lists (WIZ_ prefix to avoid conflicts)
+# =============================================================================
+
+# Proxmox repository types
+# shellcheck disable=SC2034
+readonly WIZ_REPO_TYPES="No-subscription (free)
+Enterprise
+Test/Development"
+
+# Network bridge modes
+# shellcheck disable=SC2034
+readonly WIZ_BRIDGE_MODES="Internal NAT
+External bridge
+Both"
+
+# Bridge MTU options
+# shellcheck disable=SC2034
+readonly WIZ_BRIDGE_MTU="9000 (jumbo frames)
+1500 (standard)"
+
+# IPv6 configuration modes
+# shellcheck disable=SC2034
+readonly WIZ_IPV6_MODES="Auto
+Manual
+Disabled"
+
+# Private subnet presets
+# shellcheck disable=SC2034
+readonly WIZ_PRIVATE_SUBNETS="10.0.0.0/24
+192.168.1.0/24
+172.16.0.0/24
+Custom"
+
+# ZFS RAID levels (base options, raid5/raid10 added dynamically based on drive count)
+# shellcheck disable=SC2034
+readonly WIZ_ZFS_MODES="Single disk
+RAID-1 (mirror)"
+
+# ZFS ARC memory allocation strategies
+# shellcheck disable=SC2034
+readonly WIZ_ZFS_ARC_MODES="VM-focused (4GB fixed)
+Balanced (25-40% of RAM)
+Storage-focused (50% of RAM)"
+
+# SSL certificate types
+# shellcheck disable=SC2034
+readonly WIZ_SSL_TYPES="Self-signed
+Let's Encrypt"
+
+# Shell options
+# shellcheck disable=SC2034
+readonly WIZ_SHELL_OPTIONS="ZSH
+Bash"
+
+# Firewall modes (nftables)
+# shellcheck disable=SC2034
+readonly WIZ_FIREWALL_MODES="Stealth (Tailscale only)
+Strict (SSH only)
+Standard (SSH + Web UI)
+Disabled"
+
+# Common toggle options (reusable for multiple menus)
+# shellcheck disable=SC2034
+readonly WIZ_TOGGLE_OPTIONS="Enabled
+Disabled"
+
+# Password entry options
+# shellcheck disable=SC2034
+readonly WIZ_PASSWORD_OPTIONS="Manual entry
+Generate password"
+
+# SSH key options (when key detected)
+# shellcheck disable=SC2034
+readonly WIZ_SSH_KEY_OPTIONS="Use detected key
+Enter different key"
+
+# Feature toggles - Security
+# shellcheck disable=SC2034
+readonly WIZ_FEATURES_SECURITY="apparmor
+auditd
+aide
+chkrootkit
+lynis
+needrestart"
+
+# Feature toggles - Monitoring
+# shellcheck disable=SC2034
+readonly WIZ_FEATURES_MONITORING="vnstat
+netdata
+promtail"
+
+# Feature toggles - Tools
+# shellcheck disable=SC2034
+readonly WIZ_FEATURES_TOOLS="yazi
+nvim
+ringbuffer"

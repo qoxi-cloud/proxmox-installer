@@ -111,18 +111,18 @@ _kill_processes_by_pattern() {
     for pid in $pids; do
       _signal_process "$pid" "TERM" "Sending TERM to process $pid"
     done
-    sleep 3
+    sleep "${WIZARD_MESSAGE_DELAY:-3}"
 
     # Force kill if still running (SIGKILL)
     for pid in $pids; do
       _signal_process "$pid" "9" "Force killing process $pid"
     done
-    sleep 1
+    sleep "${PROCESS_KILL_WAIT:-1}"
   fi
 
   # Also try pkill as fallback
   pkill -TERM "$pattern" 2>/dev/null || true
-  sleep 1
+  sleep "${PROCESS_KILL_WAIT:-1}"
   pkill -9 "$pattern" 2>/dev/null || true
 }
 
@@ -251,7 +251,7 @@ release_drives() {
   _unmount_drive_filesystems
 
   # Additional pause for locks to release
-  sleep 2
+  sleep "${RETRY_DELAY_SECONDS:-2}"
 
   # Kill any remaining processes holding drives
   _kill_drive_holders
@@ -328,7 +328,7 @@ EOF
   local qemu_pid=$!
 
   # Give QEMU a moment to start or fail
-  sleep 2
+  sleep "${RETRY_DELAY_SECONDS:-2}"
 
   # Check if QEMU is still running
   if ! kill -0 $qemu_pid 2>/dev/null; then

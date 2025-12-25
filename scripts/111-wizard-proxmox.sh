@@ -22,7 +22,7 @@ _edit_iso_version() {
   if [[ -z $iso_list ]]; then
     _wiz_hide_cursor
     _wiz_error "Failed to fetch ISO list"
-    sleep 2
+    sleep "${RETRY_DELAY_SECONDS:-2}"
     return
   fi
 

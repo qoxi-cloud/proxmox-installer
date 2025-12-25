@@ -11,22 +11,13 @@
 # Files: hosts, interfaces, sysctl, debian.sources, proxmox.sources, resolv.conf
 # Returns: 0 on success, 1 if any copy fails
 _copy_config_files() {
-  local -a copy_pids=()
-  remote_copy "templates/hosts" "/etc/hosts" >/dev/null 2>&1 &
-  copy_pids+=($!)
-  remote_copy "templates/interfaces" "/etc/network/interfaces" >/dev/null 2>&1 &
-  copy_pids+=($!)
-  remote_copy "templates/99-proxmox.conf" "/etc/sysctl.d/99-proxmox.conf" >/dev/null 2>&1 &
-  copy_pids+=($!)
-  remote_copy "templates/debian.sources" "/etc/apt/sources.list.d/debian.sources" >/dev/null 2>&1 &
-  copy_pids+=($!)
-  remote_copy "templates/proxmox.sources" "/etc/apt/sources.list.d/proxmox.sources" >/dev/null 2>&1 &
-  copy_pids+=($!)
-  remote_copy "templates/resolv.conf" "/etc/resolv.conf" >/dev/null 2>&1 &
-  copy_pids+=($!)
-  for pid in "${copy_pids[@]}"; do
-    wait "$pid" || return 1
-  done
+  run_parallel_copies \
+    "templates/hosts:/etc/hosts" \
+    "templates/interfaces:/etc/network/interfaces" \
+    "templates/99-proxmox.conf:/etc/sysctl.d/99-proxmox.conf" \
+    "templates/debian.sources:/etc/apt/sources.list.d/debian.sources" \
+    "templates/proxmox.sources:/etc/apt/sources.list.d/proxmox.sources" \
+    "templates/resolv.conf:/etc/resolv.conf"
 }
 
 # Applies basic system settings: backs up sources.list, sets hostname.
