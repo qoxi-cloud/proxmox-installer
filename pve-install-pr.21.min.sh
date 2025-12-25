@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.583-pr.21"
+readonly VERSION="2.0.586-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -608,7 +608,11 @@ for pair in "$@";do
 local var="${pair%%=*}"
 local value="${pair#*=}"
 if [[ -z $value ]]&&grep -qF "{{$var}}" "$file" 2>/dev/null;then
-log "DEBUG: Template variable $var is empty, {{$var}} will be replaced with empty string in $file"
+local skip_log=false
+case "$var" in
+MAIN_IPV6|IPV6_ADDRESS|IPV6_GATEWAY|IPV6_PREFIX)[[ ${IPV6_MODE:-} != "Auto" && ${IPV6_MODE:-} != "Manual" ]]&&skip_log=true
+esac
+[[ $skip_log == false ]]&&log "DEBUG: Template variable $var is empty, {{$var}} will be replaced with empty string in $file"
 fi
 value="${value//\\/\\\\}"
 value="${value//&/\\&}"
@@ -5116,8 +5120,6 @@ log "Creating autoinstall ISO"
 log "Input: pve.iso exists: $(test -f pve.iso&&echo 'yes'||echo 'no')"
 log "Input: answer.toml exists: $(test -f answer.toml&&echo 'yes'||echo 'no')"
 log "Current directory: $(pwd)"
-log "Files in current directory:"
-ls -la >>"$LOG_FILE" 2>&1
 proxmox-auto-install-assistant prepare-iso pve.iso --fetch-from iso --answer-file answer.toml --output pve-autoinstall.iso >>"$LOG_FILE" 2>&1&
 show_progress $! "Creating autoinstall ISO" "Autoinstall ISO created"
 local exit_code=$?
@@ -5126,8 +5128,6 @@ log "WARNING: proxmox-auto-install-assistant exited with code $exit_code"
 fi
 if [[ ! -f "./pve-autoinstall.iso" ]];then
 log "ERROR: Autoinstall ISO not found after creation attempt"
-log "Files in current directory after attempt:"
-ls -la >>"$LOG_FILE" 2>&1
 exit 1
 fi
 log "Autoinstall ISO created successfully: $(stat -c%s pve-autoinstall.iso 2>/dev/null|awk '{printf "%.1fM", $1/1024/1024}')"
@@ -5410,7 +5410,7 @@ fi
 else
 TAILSCALE_IP="auth failed"
 TAILSCALE_HOSTNAME=""
-complete_task "$TASK_INDEX" "$CLR_ORANGE├─$CLR_RESET $CLR_YELLOW⚠️$CLR_RESET Tailscale auth failed - check auth key" "error"
+complete_task "$TASK_INDEX" "$CLR_ORANGE├─$CLR_RESET ${CLR_YELLOW}Tailscale auth failed - check auth key$CLR_RESET" "warning"
 log "WARNING: Tailscale authentication failed. Auth key may be invalid or expired."
 if [[ ${FIREWALL_MODE:-standard} == "stealth" ]];then
 add_log "$CLR_ORANGE│$CLR_RESET   ${CLR_YELLOW}SSH will remain enabled (Tailscale auth failed)$CLR_RESET"
