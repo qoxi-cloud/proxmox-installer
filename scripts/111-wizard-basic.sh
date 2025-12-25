@@ -7,15 +7,12 @@
 # Edits hostname and domain settings via input dialogs.
 # Validates hostname format and updates PVE_HOSTNAME, DOMAIN_SUFFIX, FQDN.
 _edit_hostname() {
-  local new_hostname
-  new_hostname=$(_wiz_input_validated "validate_hostname" "Invalid hostname format" \
+  _wiz_input_validated "PVE_HOSTNAME" "validate_hostname" "Invalid hostname format" \
     --placeholder "e.g., pve, proxmox, node1" \
     --value "$PVE_HOSTNAME" \
-    --prompt "Hostname: ") || return
+    --prompt "Hostname: " || return
 
-  PVE_HOSTNAME="$new_hostname"
-
-  # Domain input loop (no validation - accepts any non-empty)
+  # Domain input (no validation - accepts any non-empty)
   _wiz_start_edit
   _show_input_footer
 
@@ -37,13 +34,10 @@ _edit_hostname() {
 # Edits admin email address via input dialog.
 # Validates email format and updates EMAIL global.
 _edit_email() {
-  local new_email
-  new_email=$(_wiz_input_validated "validate_email" "Invalid email format" \
+  _wiz_input_validated "EMAIL" "validate_email" "Invalid email format" \
     --placeholder "admin@example.com" \
     --value "$EMAIL" \
-    --prompt "Email: ") || return
-
-  EMAIL="$new_email"
+    --prompt "Email: "
 }
 
 # Edits root password via manual entry or generation.

@@ -4,9 +4,11 @@
 # =============================================================================
 
 # Prompts for Tailscale auth key with validation.
-# Returns: auth key via stdout, empty if cancelled
+# Sets _TAILSCALE_TMP_KEY on success, clears on cancel.
 _tailscale_get_auth_key() {
-  _wiz_input_validated "validate_tailscale_key" "Invalid key format. Expected: tskey-auth-xxx-xxx" \
+  _TAILSCALE_TMP_KEY=""
+  _wiz_input_validated "_TAILSCALE_TMP_KEY" "validate_tailscale_key" \
+    "Invalid key format. Expected: tskey-auth-xxx-xxx" \
     --placeholder "tskey-auth-..." \
     --prompt "Auth Key: "
 }
@@ -85,10 +87,8 @@ _edit_tailscale() {
     return
   elif [[ $result -eq 2 ]]; then
     # Enabled - get auth key
-    local auth_key
-    auth_key=$(_tailscale_get_auth_key)
-    if [[ -n $auth_key ]]; then
-      _tailscale_enable "$auth_key"
+    if _tailscale_get_auth_key && [[ -n $_TAILSCALE_TMP_KEY ]]; then
+      _tailscale_enable "$_TAILSCALE_TMP_KEY"
     else
       _tailscale_disable
     fi

@@ -11,18 +11,20 @@
 # Input field with validation loop.
 # Prompts user until valid input or cancel (empty input).
 # Parameters:
-#   $1 - Validation function name (e.g., "validate_hostname")
-#   $2 - Error message on validation failure
+#   $1 - Variable name to set (e.g., "PVE_HOSTNAME")
+#   $2 - Validation function name (e.g., "validate_hostname")
+#   $3 - Error message on validation failure
 #   $@ - All remaining args passed to _wiz_input (--prompt, --value, etc.)
-# Returns: 0 with value on stdout if valid, 1 on cancel
-# Side effects: None (caller sets global)
+# Returns: 0 on valid input, 1 on cancel
+# Side effects: Sets the named global variable
 # Example:
-#   hostname=$(_wiz_input_validated "validate_hostname" "Invalid hostname format" \
-#     --placeholder "e.g., pve" --value "$PVE_HOSTNAME" --prompt "Hostname: ")
+#   _wiz_input_validated "PVE_HOSTNAME" "validate_hostname" "Invalid hostname format" \
+#     --placeholder "e.g., pve" --value "$PVE_HOSTNAME" --prompt "Hostname: "
 _wiz_input_validated() {
-  local validate_func="$1"
-  local error_msg="$2"
-  shift 2
+  local var_name="$1"
+  local validate_func="$2"
+  local error_msg="$3"
+  shift 3
 
   while true; do
     _wiz_start_edit
@@ -35,7 +37,7 @@ _wiz_input_validated() {
     [[ -z $value ]] && return 1
 
     if "$validate_func" "$value"; then
-      printf '%s' "$value"
+      declare -g "$var_name=$value"
       return 0
     fi
 
