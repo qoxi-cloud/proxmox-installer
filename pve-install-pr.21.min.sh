@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.581-pr.21"
+readonly VERSION="2.0.583-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -132,6 +132,46 @@ SYSTEM_UTILITIES="btop iotop ncdu tmux pigz smartmontools jq bat fastfetch sysst
 OPTIONAL_PACKAGES="libguestfs-tools"
 LOG_FILE="/root/pve-install-$(date +%Y%m%d-%H%M%S).log"
 INSTALL_COMPLETED=false
+INSTALL_START_TIME=$(date +%s)
+QEMU_RAM_OVERRIDE=""
+QEMU_CORES_OVERRIDE=""
+PROXMOX_ISO_VERSION=""
+PVE_REPO_TYPE=""
+PVE_SUBSCRIPTION_KEY=""
+SSL_TYPE=""
+SHELL_TYPE=""
+KEYBOARD="en-us"
+COUNTRY="us"
+LOCALE="en_US.UTF-8"
+TIMEZONE="UTC"
+CPU_GOVERNOR=""
+ZFS_ARC_MODE=""
+INSTALL_AUDITD=""
+INSTALL_AIDE=""
+INSTALL_APPARMOR=""
+INSTALL_CHKROOTKIT=""
+INSTALL_LYNIS=""
+INSTALL_NEEDRESTART=""
+INSTALL_NETDATA=""
+INSTALL_VNSTAT=""
+INSTALL_PROMTAIL=""
+INSTALL_RINGBUFFER=""
+INSTALL_YAZI=""
+INSTALL_NVIM=""
+INSTALL_UNATTENDED_UPGRADES=""
+INSTALL_TAILSCALE=""
+TAILSCALE_AUTH_KEY=""
+TAILSCALE_WEBUI=""
+BRIDGE_MTU=""
+INSTALL_API_TOKEN=""
+API_TOKEN_NAME="automation"
+API_TOKEN_VALUE=""
+API_TOKEN_ID=""
+NEW_ROOT_PASSWORD=""
+ADMIN_USERNAME=""
+ADMIN_PASSWORD=""
+INSTALL_FIREWALL=""
+FIREWALL_MODE=""
 _TEMP_FILES=()
 register_temp_file(){
 _TEMP_FILES+=("$1")
@@ -196,46 +236,6 @@ printf '\n'
 fi
 }
 trap cleanup_and_error_handler EXIT
-INSTALL_START_TIME=$(date +%s)
-QEMU_RAM_OVERRIDE=""
-QEMU_CORES_OVERRIDE=""
-PROXMOX_ISO_VERSION=""
-PVE_REPO_TYPE=""
-PVE_SUBSCRIPTION_KEY=""
-SSL_TYPE=""
-SHELL_TYPE=""
-KEYBOARD="en-us"
-COUNTRY="us"
-LOCALE="en_US.UTF-8"
-TIMEZONE="UTC"
-CPU_GOVERNOR=""
-ZFS_ARC_MODE=""
-INSTALL_AUDITD=""
-INSTALL_AIDE=""
-INSTALL_APPARMOR=""
-INSTALL_CHKROOTKIT=""
-INSTALL_LYNIS=""
-INSTALL_NEEDRESTART=""
-INSTALL_NETDATA=""
-INSTALL_VNSTAT=""
-INSTALL_PROMTAIL=""
-INSTALL_RINGBUFFER=""
-INSTALL_YAZI=""
-INSTALL_NVIM=""
-INSTALL_UNATTENDED_UPGRADES=""
-INSTALL_TAILSCALE=""
-TAILSCALE_AUTH_KEY=""
-TAILSCALE_WEBUI=""
-BRIDGE_MTU=""
-INSTALL_API_TOKEN=""
-API_TOKEN_NAME="automation"
-API_TOKEN_VALUE=""
-API_TOKEN_ID=""
-NEW_ROOT_PASSWORD=""
-ADMIN_USERNAME=""
-ADMIN_PASSWORD=""
-INSTALL_FIREWALL=""
-FIREWALL_MODE=""
 show_help(){
 cat <<EOF
 Qoxi Automated Installer v$VERSION
@@ -842,6 +842,28 @@ local wait_pid=$!
 show_progress $wait_pid "Waiting for SSH to be ready" "SSH connection established"
 return $?
 }
+parse_ssh_key(){
+local key="$1"
+SSH_KEY_TYPE=""
+SSH_KEY_DATA=""
+SSH_KEY_COMMENT=""
+SSH_KEY_SHORT=""
+[[ -z $key ]]&&return 1
+SSH_KEY_TYPE=$(printf '%s\n' "$key"|awk '{print $1}')
+SSH_KEY_DATA=$(printf '%s\n' "$key"|awk '{print $2}')
+SSH_KEY_COMMENT=$(printf '%s\n' "$key"|awk '{$1=""; $2=""; print}'|sed 's/^ *//')
+if [[ ${#SSH_KEY_DATA} -gt 35 ]];then
+SSH_KEY_SHORT="${SSH_KEY_DATA:0:20}...${SSH_KEY_DATA: -10}"
+else
+SSH_KEY_SHORT="$SSH_KEY_DATA"
+fi
+return 0
+}
+get_rescue_ssh_key(){
+if [[ -f /root/.ssh/authorized_keys ]];then
+grep -E "^ssh-(rsa|ed25519|ecdsa)" /root/.ssh/authorized_keys 2>/dev/null|head -1
+fi
+}
 readonly SSH_DEFAULT_TIMEOUT=300
 _sanitize_script_for_log(){
 local script="$1"
@@ -921,28 +943,6 @@ passfile=$(_ssh_get_passfile)
 if ! sshpass -f "$passfile" scp -P "$SSH_PORT" $SSH_OPTS "$src" "root@localhost:$dst";then
 log "ERROR: Failed to copy $src to $dst"
 return 1
-fi
-}
-parse_ssh_key(){
-local key="$1"
-SSH_KEY_TYPE=""
-SSH_KEY_DATA=""
-SSH_KEY_COMMENT=""
-SSH_KEY_SHORT=""
-[[ -z $key ]]&&return 1
-SSH_KEY_TYPE=$(printf '%s\n' "$key"|awk '{print $1}')
-SSH_KEY_DATA=$(printf '%s\n' "$key"|awk '{print $2}')
-SSH_KEY_COMMENT=$(printf '%s\n' "$key"|awk '{$1=""; $2=""; print}'|sed 's/^ *//')
-if [[ ${#SSH_KEY_DATA} -gt 35 ]];then
-SSH_KEY_SHORT="${SSH_KEY_DATA:0:20}...${SSH_KEY_DATA: -10}"
-else
-SSH_KEY_SHORT="$SSH_KEY_DATA"
-fi
-return 0
-}
-get_rescue_ssh_key(){
-if [[ -f /root/.ssh/authorized_keys ]];then
-grep -E "^ssh-(rsa|ed25519|ecdsa)" /root/.ssh/authorized_keys 2>/dev/null|head -1
 fi
 }
 generate_password(){
@@ -1236,6 +1236,32 @@ parallel_mark_configured(){
 local feature="$1"
 [[ -n ${PARALLEL_RESULT_DIR:-} ]]&&printf '%s' "$feature" >"$PARALLEL_RESULT_DIR/ran_$BASHPID"
 }
+run_parallel_copies(){
+local -a pids=()
+local -a pairs=("$@")
+for pair in "${pairs[@]}";do
+local src="${pair%%:*}"
+local dst="${pair#*:}"
+remote_copy "$src" "$dst" >/dev/null 2>&1&
+pids+=($!)
+done
+local failures=0
+for pid in "${pids[@]}";do
+if ! wait "$pid";then
+((failures++))
+fi
+done
+if [[ $failures -gt 0 ]];then
+log "ERROR: $failures/${#pairs[@]} parallel copies failed"
+return 1
+fi
+return 0
+}
+make_feature_wrapper(){
+local feature="$1"
+local flag_var="$2"
+eval "configure_$feature() { [[ \${$flag_var:-} != \"yes\" ]] && return 0; _config_$feature; }"
+}
 deploy_user_config(){
 local template="$1"
 local relative_path="$2"
@@ -1357,32 +1383,6 @@ rm -f "$staged"
 return 1
 }
 rm -f "$staged"
-}
-run_parallel_copies(){
-local -a pids=()
-local -a pairs=("$@")
-for pair in "${pairs[@]}";do
-local src="${pair%%:*}"
-local dst="${pair#*:}"
-remote_copy "$src" "$dst" >/dev/null 2>&1&
-pids+=($!)
-done
-local failures=0
-for pid in "${pids[@]}";do
-if ! wait "$pid";then
-((failures++))
-fi
-done
-if [[ $failures -gt 0 ]];then
-log "ERROR: $failures/${#pairs[@]} parallel copies failed"
-return 1
-fi
-return 0
-}
-make_feature_wrapper(){
-local feature="$1"
-local flag_var="$2"
-eval "configure_$feature() { [[ \${$flag_var:-} != \"yes\" ]] && return 0; _config_$feature; }"
 }
 _generate_loopback(){
 cat <<'EOF'
@@ -2910,6 +2910,100 @@ fi
 [[ $FIREWALL_MODE == "stealth" && $INSTALL_TAILSCALE != "yes" ]]&&return 1
 return 0
 }
+_wiz_render_screen_content(){
+local screen="$1"
+local selection="$2"
+case $screen in
+0)_add_field "Hostname         " "$(_wiz_fmt "$_DSP_HOSTNAME")" "hostname"
+_add_field "Email            " "$(_wiz_fmt "$EMAIL")" "email"
+_add_field "Password         " "$(_wiz_fmt "$_DSP_PASS")" "password"
+_add_field "Timezone         " "$(_wiz_fmt "$TIMEZONE")" "timezone"
+_add_field "Keyboard         " "$(_wiz_fmt "$KEYBOARD")" "keyboard"
+_add_field "Country          " "$(_wiz_fmt "$COUNTRY")" "country"
+;;
+1)_add_field "Version          " "$(_wiz_fmt "$_DSP_ISO")" "iso_version"
+_add_field "Repository       " "$(_wiz_fmt "$_DSP_REPO")" "repository"
+;;
+2)if
+[[ ${INTERFACE_COUNT:-1} -gt 1 ]]
+then
+_add_field "Interface        " "$(_wiz_fmt "$INTERFACE_NAME")" "interface"
+fi
+_add_field "Bridge mode      " "$(_wiz_fmt "$_DSP_BRIDGE")" "bridge_mode"
+if [[ $BRIDGE_MODE == "internal" || $BRIDGE_MODE == "both" ]];then
+_add_field "Private subnet   " "$(_wiz_fmt "$PRIVATE_SUBNET")" "private_subnet"
+_add_field "Bridge MTU       " "$(_wiz_fmt "$_DSP_MTU")" "bridge_mtu"
+fi
+_add_field "IPv6             " "$(_wiz_fmt "$_DSP_IPV6")" "ipv6"
+_add_field "Firewall         " "$(_wiz_fmt "$_DSP_FIREWALL")" "firewall"
+;;
+3)if
+[[ $DRIVE_COUNT -gt 1 ]]
+then
+_add_field "Boot disk        " "$(_wiz_fmt "$_DSP_BOOT")" "boot_disk"
+_add_field "Pool mode        " "$(_wiz_fmt "$_DSP_EXISTING_POOL")" "existing_pool"
+if [[ $USE_EXISTING_POOL != "yes" ]];then
+_add_field "Pool disks       " "$(_wiz_fmt "$_DSP_POOL")" "pool_disks"
+_add_field "ZFS mode         " "$(_wiz_fmt "$_DSP_ZFS")" "zfs_mode"
+fi
+else
+_add_field "ZFS mode         " "$(_wiz_fmt "$_DSP_ZFS")" "zfs_mode"
+fi
+_add_field "ZFS ARC          " "$(_wiz_fmt "$_DSP_ARC")" "zfs_arc"
+;;
+4)_add_field "Tailscale        " "$(_wiz_fmt "$_DSP_TAILSCALE")" "tailscale"
+if [[ $INSTALL_TAILSCALE != "yes" ]];then
+_add_field "SSL Certificate  " "$(_wiz_fmt "$_DSP_SSL")" "ssl"
+fi
+_add_field "Shell            " "$(_wiz_fmt "$_DSP_SHELL")" "shell"
+_add_field "Power profile    " "$(_wiz_fmt "$_DSP_POWER")" "power_profile"
+_add_field "Security         " "$(_wiz_fmt "$_DSP_SECURITY")" "security"
+_add_field "Monitoring       " "$(_wiz_fmt "$_DSP_MONITORING")" "monitoring"
+_add_field "Tools            " "$(_wiz_fmt "$_DSP_TOOLS")" "tools"
+;;
+5)_add_field "Admin User       " "$(_wiz_fmt "$_DSP_ADMIN_USER")" "admin_username"
+_add_field "Admin Password   " "$(_wiz_fmt "$_DSP_ADMIN_PASS")" "admin_password"
+_add_field "SSH Key          " "$(_wiz_fmt "$_DSP_SSH")" "ssh_key"
+_add_field "API Token        " "$(_wiz_fmt "$_DSP_API")" "api_token"
+esac
+}
+_wiz_render_menu(){
+local selection="$1"
+local output=""
+local banner_output
+banner_output=$(show_banner)
+_wiz_build_display_values
+output+="$banner_output\n\n$(_wiz_render_nav)\n\n"
+_WIZ_FIELD_MAP=()
+local field_idx=0
+_add_field(){
+local label="$1"
+local value="$2"
+local field_name="$3"
+_WIZ_FIELD_MAP+=("$field_name")
+if [[ $field_idx -eq $selection ]];then
+output+="$CLR_ORANGE›$CLR_RESET $CLR_GRAY$label$CLR_RESET$value\n"
+else
+output+="  $CLR_GRAY$label$CLR_RESET$value\n"
+fi
+((field_idx++))
+}
+_wiz_render_screen_content "$WIZ_CURRENT_SCREEN" "$selection"
+_WIZ_FIELD_COUNT=$field_idx
+output+="\n"
+local left_clr right_clr start_clr
+left_clr=$([[ $WIZ_CURRENT_SCREEN -gt 0 ]]&&echo "$CLR_ORANGE"||echo "$CLR_GRAY")
+right_clr=$([[ $WIZ_CURRENT_SCREEN -lt $((${#WIZ_SCREENS[@]}-1)) ]]&&echo "$CLR_ORANGE"||echo "$CLR_GRAY")
+start_clr=$(_wiz_config_complete&&echo "$CLR_ORANGE"||echo "$CLR_GRAY")
+local nav_hint=""
+nav_hint+="[$left_clr←$CLR_GRAY] prev  "
+nav_hint+="[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] edit  "
+nav_hint+="[$right_clr→$CLR_GRAY] next  "
+nav_hint+="[${start_clr}S$CLR_GRAY] start  [${CLR_ORANGE}Q$CLR_GRAY] quit"
+output+="$(_wiz_center "$CLR_GRAY$nav_hint$CLR_RESET")"
+_wiz_clear
+printf '%b' "$output"
+}
 _dsp_basic(){
 _DSP_PASS=""
 [[ -n $NEW_ROOT_PASSWORD ]]&&_DSP_PASS="********"
@@ -3086,100 +3180,6 @@ _dsp_network
 _dsp_storage
 _dsp_services
 _dsp_access
-}
-_wiz_render_screen_content(){
-local screen="$1"
-local selection="$2"
-case $screen in
-0)_add_field "Hostname         " "$(_wiz_fmt "$_DSP_HOSTNAME")" "hostname"
-_add_field "Email            " "$(_wiz_fmt "$EMAIL")" "email"
-_add_field "Password         " "$(_wiz_fmt "$_DSP_PASS")" "password"
-_add_field "Timezone         " "$(_wiz_fmt "$TIMEZONE")" "timezone"
-_add_field "Keyboard         " "$(_wiz_fmt "$KEYBOARD")" "keyboard"
-_add_field "Country          " "$(_wiz_fmt "$COUNTRY")" "country"
-;;
-1)_add_field "Version          " "$(_wiz_fmt "$_DSP_ISO")" "iso_version"
-_add_field "Repository       " "$(_wiz_fmt "$_DSP_REPO")" "repository"
-;;
-2)if
-[[ ${INTERFACE_COUNT:-1} -gt 1 ]]
-then
-_add_field "Interface        " "$(_wiz_fmt "$INTERFACE_NAME")" "interface"
-fi
-_add_field "Bridge mode      " "$(_wiz_fmt "$_DSP_BRIDGE")" "bridge_mode"
-if [[ $BRIDGE_MODE == "internal" || $BRIDGE_MODE == "both" ]];then
-_add_field "Private subnet   " "$(_wiz_fmt "$PRIVATE_SUBNET")" "private_subnet"
-_add_field "Bridge MTU       " "$(_wiz_fmt "$_DSP_MTU")" "bridge_mtu"
-fi
-_add_field "IPv6             " "$(_wiz_fmt "$_DSP_IPV6")" "ipv6"
-_add_field "Firewall         " "$(_wiz_fmt "$_DSP_FIREWALL")" "firewall"
-;;
-3)if
-[[ $DRIVE_COUNT -gt 1 ]]
-then
-_add_field "Boot disk        " "$(_wiz_fmt "$_DSP_BOOT")" "boot_disk"
-_add_field "Pool mode        " "$(_wiz_fmt "$_DSP_EXISTING_POOL")" "existing_pool"
-if [[ $USE_EXISTING_POOL != "yes" ]];then
-_add_field "Pool disks       " "$(_wiz_fmt "$_DSP_POOL")" "pool_disks"
-_add_field "ZFS mode         " "$(_wiz_fmt "$_DSP_ZFS")" "zfs_mode"
-fi
-else
-_add_field "ZFS mode         " "$(_wiz_fmt "$_DSP_ZFS")" "zfs_mode"
-fi
-_add_field "ZFS ARC          " "$(_wiz_fmt "$_DSP_ARC")" "zfs_arc"
-;;
-4)_add_field "Tailscale        " "$(_wiz_fmt "$_DSP_TAILSCALE")" "tailscale"
-if [[ $INSTALL_TAILSCALE != "yes" ]];then
-_add_field "SSL Certificate  " "$(_wiz_fmt "$_DSP_SSL")" "ssl"
-fi
-_add_field "Shell            " "$(_wiz_fmt "$_DSP_SHELL")" "shell"
-_add_field "Power profile    " "$(_wiz_fmt "$_DSP_POWER")" "power_profile"
-_add_field "Security         " "$(_wiz_fmt "$_DSP_SECURITY")" "security"
-_add_field "Monitoring       " "$(_wiz_fmt "$_DSP_MONITORING")" "monitoring"
-_add_field "Tools            " "$(_wiz_fmt "$_DSP_TOOLS")" "tools"
-;;
-5)_add_field "Admin User       " "$(_wiz_fmt "$_DSP_ADMIN_USER")" "admin_username"
-_add_field "Admin Password   " "$(_wiz_fmt "$_DSP_ADMIN_PASS")" "admin_password"
-_add_field "SSH Key          " "$(_wiz_fmt "$_DSP_SSH")" "ssh_key"
-_add_field "API Token        " "$(_wiz_fmt "$_DSP_API")" "api_token"
-esac
-}
-_wiz_render_menu(){
-local selection="$1"
-local output=""
-local banner_output
-banner_output=$(show_banner)
-_wiz_build_display_values
-output+="$banner_output\n\n$(_wiz_render_nav)\n\n"
-_WIZ_FIELD_MAP=()
-local field_idx=0
-_add_field(){
-local label="$1"
-local value="$2"
-local field_name="$3"
-_WIZ_FIELD_MAP+=("$field_name")
-if [[ $field_idx -eq $selection ]];then
-output+="$CLR_ORANGE›$CLR_RESET $CLR_GRAY$label$CLR_RESET$value\n"
-else
-output+="  $CLR_GRAY$label$CLR_RESET$value\n"
-fi
-((field_idx++))
-}
-_wiz_render_screen_content "$WIZ_CURRENT_SCREEN" "$selection"
-_WIZ_FIELD_COUNT=$field_idx
-output+="\n"
-local left_clr right_clr start_clr
-left_clr=$([[ $WIZ_CURRENT_SCREEN -gt 0 ]]&&echo "$CLR_ORANGE"||echo "$CLR_GRAY")
-right_clr=$([[ $WIZ_CURRENT_SCREEN -lt $((${#WIZ_SCREENS[@]}-1)) ]]&&echo "$CLR_ORANGE"||echo "$CLR_GRAY")
-start_clr=$(_wiz_config_complete&&echo "$CLR_ORANGE"||echo "$CLR_GRAY")
-local nav_hint=""
-nav_hint+="[$left_clr←$CLR_GRAY] prev  "
-nav_hint+="[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] edit  "
-nav_hint+="[$right_clr→$CLR_GRAY] next  "
-nav_hint+="[${start_clr}S$CLR_GRAY] start  [${CLR_ORANGE}Q$CLR_GRAY] quit"
-output+="$(_wiz_center "$CLR_GRAY$nav_hint$CLR_RESET")"
-_wiz_clear
-printf '%b' "$output"
 }
 _country_to_locale(){
 local country="${1:-us}"
@@ -3613,6 +3613,110 @@ FIREWALL_MODE="standard"
 FIREWALL_MODE=""
 esac
 }
+_edit_admin_username(){
+while true;do
+_wiz_start_edit
+_wiz_description \
+"  Non-root admin username for SSH and Proxmox access:" \
+"" \
+"  Root SSH login will be {{cyan:completely disabled}}." \
+"  All SSH access must use this admin account." \
+"  The admin user will have sudo privileges." \
+""
+_show_input_footer
+local new_username
+new_username=$(_wiz_input \
+--placeholder "e.g., sysadmin, deploy, operator" \
+--value "$ADMIN_USERNAME" \
+--prompt "Admin username: ")
+if [[ -z $new_username ]];then
+return
+fi
+if validate_admin_username "$new_username";then
+ADMIN_USERNAME="$new_username"
+break
+else
+show_validation_error "Invalid username. Use lowercase letters/numbers, 1-32 chars. Reserved names (root, admin) not allowed."
+fi
+done
+}
+_edit_admin_password(){
+while true;do
+_wiz_start_edit
+_show_input_footer "filter" 3
+local choice
+choice=$(printf '%s\n' "$WIZ_PASSWORD_OPTIONS"|_wiz_choose \
+--header="Admin Password:")
+if [[ -z $choice ]];then
+return
+fi
+case "$choice" in
+"Generate password")ADMIN_PASSWORD=$(generate_password "$DEFAULT_PASSWORD_LENGTH")
+_wiz_start_edit
+_wiz_hide_cursor
+_wiz_warn "Please save this password - it will be required for sudo and Proxmox UI"
+_wiz_blank_line
+printf '%s\n' "$WIZ_NOTIFY_INDENT${CLR_CYAN}Generated admin password:$CLR_RESET $CLR_ORANGE$ADMIN_PASSWORD$CLR_RESET"
+_wiz_blank_line
+printf '%s\n' "$WIZ_NOTIFY_INDENT${CLR_GRAY}Press any key to continue...$CLR_RESET"
+read -n 1 -s -r
+break
+;;
+"Manual entry")_wiz_start_edit
+_show_input_footer
+local new_password
+new_password=$(_wiz_input \
+--password \
+--placeholder "Enter admin password" \
+--prompt "Admin Password: ")
+if [[ -z $new_password ]];then
+continue
+fi
+local password_error
+password_error=$(get_password_error "$new_password")
+if [[ -n $password_error ]];then
+show_validation_error "$password_error"
+continue
+fi
+ADMIN_PASSWORD="$new_password"
+break
+esac
+done
+}
+_edit_api_token(){
+_wiz_start_edit
+_wiz_description \
+"  Proxmox API token for automation:" \
+"" \
+"  {{cyan:Enabled}}:  Create privileged token (Terraform, Ansible)" \
+"  {{cyan:Disabled}}: No API token" \
+"" \
+"  Token has full Administrator permissions, no expiration." \
+""
+_show_input_footer "filter" 3
+local selected
+if ! selected=$(printf '%s\n' "$WIZ_TOGGLE_OPTIONS"|_wiz_choose --header="API Token (privileged, no expiration):");then
+return
+fi
+case "$selected" in
+Enabled)_wiz_input_screen "Enter API token name (default: automation)"
+local token_name
+token_name=$(_wiz_input \
+--placeholder "automation" \
+--prompt "Token name: " \
+--no-show-help \
+--value="${API_TOKEN_NAME:-automation}")
+if [[ -n $token_name && $token_name =~ ^[a-zA-Z0-9_-]+$ ]];then
+API_TOKEN_NAME="$token_name"
+INSTALL_API_TOKEN="yes"
+else
+API_TOKEN_NAME="automation"
+INSTALL_API_TOKEN="yes"
+fi
+;;
+Disabled)INSTALL_API_TOKEN="no"
+esac
+}
 _edit_existing_pool(){
 _wiz_start_edit
 if [[ ${#DETECTED_POOLS[@]} -eq 0 ]];then
@@ -3769,91 +3873,6 @@ case "$selected" in
 "Storage-focused (50% of RAM)")ZFS_ARC_MODE="storage-focused"
 esac
 }
-_tailscale_get_auth_key(){
-local auth_key=""
-while true;do
-_wiz_start_edit
-_show_input_footer
-auth_key=$(_wiz_input \
---placeholder "tskey-auth-..." \
---prompt "Auth Key: ")
-[[ -z $auth_key ]]&&return
-if validate_tailscale_key "$auth_key";then
-printf '%s' "$auth_key"
-return 0
-fi
-show_validation_error "Invalid key format. Expected: tskey-auth-xxx-xxx"
-done
-}
-_tailscale_configure_webui(){
-_wiz_start_edit
-_wiz_description \
-"  Expose Proxmox Web UI via Tailscale Serve?" \
-"" \
-"  {{cyan:Enabled}}:  Access Web UI at https://<tailscale-hostname>" \
-"  {{cyan:Disabled}}: Web UI only via direct IP" \
-"" \
-"  Uses: tailscale serve --bg --https=443 https://127.0.0.1:8006" \
-""
-_show_input_footer "filter" 3
-local webui_selected
-if webui_selected=$(printf '%s\n' "$WIZ_TOGGLE_OPTIONS"|_wiz_choose --header="Tailscale Web UI:");then
-case "$webui_selected" in
-Enabled)TAILSCALE_WEBUI="yes";;
-Disabled)TAILSCALE_WEBUI="no"
-esac
-else
-TAILSCALE_WEBUI="no"
-fi
-}
-_tailscale_enable(){
-local auth_key="$1"
-INSTALL_TAILSCALE="yes"
-TAILSCALE_AUTH_KEY="$auth_key"
-_tailscale_configure_webui
-SSL_TYPE="self-signed"
-if [[ -z $INSTALL_FIREWALL ]];then
-INSTALL_FIREWALL="yes"
-FIREWALL_MODE="stealth"
-fi
-}
-_tailscale_disable(){
-INSTALL_TAILSCALE="no"
-TAILSCALE_AUTH_KEY=""
-TAILSCALE_WEBUI=""
-SSL_TYPE=""
-if [[ -z $INSTALL_FIREWALL ]];then
-INSTALL_FIREWALL="yes"
-FIREWALL_MODE="standard"
-fi
-}
-_edit_tailscale(){
-_wiz_start_edit
-_wiz_description \
-"  Tailscale VPN with stealth mode:" \
-"" \
-"  {{cyan:Enabled}}:  Access via Tailscale only (blocks public SSH)" \
-"  {{cyan:Disabled}}: Standard access via public IP" \
-"" \
-"  Stealth mode blocks ALL incoming traffic on public IP." \
-""
-_show_input_footer "filter" 3
-local selected
-if ! selected=$(printf '%s\n' "$WIZ_TOGGLE_OPTIONS"|_wiz_choose --header="Tailscale:");then
-return
-fi
-case "$selected" in
-Enabled)local auth_key
-auth_key=$(_tailscale_get_auth_key)
-if [[ -n $auth_key ]];then
-_tailscale_enable "$auth_key"
-else
-_tailscale_disable
-fi
-;;
-Disabled)_tailscale_disable
-esac
-}
 _ssl_validate_fqdn(){
 if [[ -z $FQDN ]];then
 _wiz_start_edit
@@ -3968,6 +3987,366 @@ fi
 else
 [[ -n $ssl_type ]]&&SSL_TYPE="$ssl_type"
 fi
+}
+_tailscale_get_auth_key(){
+local auth_key=""
+while true;do
+_wiz_start_edit
+_show_input_footer
+auth_key=$(_wiz_input \
+--placeholder "tskey-auth-..." \
+--prompt "Auth Key: ")
+[[ -z $auth_key ]]&&return
+if validate_tailscale_key "$auth_key";then
+printf '%s' "$auth_key"
+return 0
+fi
+show_validation_error "Invalid key format. Expected: tskey-auth-xxx-xxx"
+done
+}
+_tailscale_configure_webui(){
+_wiz_start_edit
+_wiz_description \
+"  Expose Proxmox Web UI via Tailscale Serve?" \
+"" \
+"  {{cyan:Enabled}}:  Access Web UI at https://<tailscale-hostname>" \
+"  {{cyan:Disabled}}: Web UI only via direct IP" \
+"" \
+"  Uses: tailscale serve --bg --https=443 https://127.0.0.1:8006" \
+""
+_show_input_footer "filter" 3
+local webui_selected
+if webui_selected=$(printf '%s\n' "$WIZ_TOGGLE_OPTIONS"|_wiz_choose --header="Tailscale Web UI:");then
+case "$webui_selected" in
+Enabled)TAILSCALE_WEBUI="yes";;
+Disabled)TAILSCALE_WEBUI="no"
+esac
+else
+TAILSCALE_WEBUI="no"
+fi
+}
+_tailscale_enable(){
+local auth_key="$1"
+INSTALL_TAILSCALE="yes"
+TAILSCALE_AUTH_KEY="$auth_key"
+_tailscale_configure_webui
+SSL_TYPE="self-signed"
+if [[ -z $INSTALL_FIREWALL ]];then
+INSTALL_FIREWALL="yes"
+FIREWALL_MODE="stealth"
+fi
+}
+_tailscale_disable(){
+INSTALL_TAILSCALE="no"
+TAILSCALE_AUTH_KEY=""
+TAILSCALE_WEBUI=""
+SSL_TYPE=""
+if [[ -z $INSTALL_FIREWALL ]];then
+INSTALL_FIREWALL="yes"
+FIREWALL_MODE="standard"
+fi
+}
+_edit_tailscale(){
+_wiz_start_edit
+_wiz_description \
+"  Tailscale VPN with stealth mode:" \
+"" \
+"  {{cyan:Enabled}}:  Access via Tailscale only (blocks public SSH)" \
+"  {{cyan:Disabled}}: Standard access via public IP" \
+"" \
+"  Stealth mode blocks ALL incoming traffic on public IP." \
+""
+_show_input_footer "filter" 3
+local selected
+if ! selected=$(printf '%s\n' "$WIZ_TOGGLE_OPTIONS"|_wiz_choose --header="Tailscale:");then
+return
+fi
+case "$selected" in
+Enabled)local auth_key
+auth_key=$(_tailscale_get_auth_key)
+if [[ -n $auth_key ]];then
+_tailscale_enable "$auth_key"
+else
+_tailscale_disable
+fi
+;;
+Disabled)_tailscale_disable
+esac
+}
+_edit_admin_username(){
+while true;do
+_wiz_start_edit
+_wiz_description \
+"  Non-root admin username for SSH and Proxmox access:" \
+"" \
+"  Root SSH login will be {{cyan:completely disabled}}." \
+"  All SSH access must use this admin account." \
+"  The admin user will have sudo privileges." \
+""
+_show_input_footer
+local new_username
+new_username=$(_wiz_input \
+--placeholder "e.g., sysadmin, deploy, operator" \
+--value "$ADMIN_USERNAME" \
+--prompt "Admin username: ")
+if [[ -z $new_username ]];then
+return
+fi
+if validate_admin_username "$new_username";then
+ADMIN_USERNAME="$new_username"
+break
+else
+show_validation_error "Invalid username. Use lowercase letters/numbers, 1-32 chars. Reserved names (root, admin) not allowed."
+fi
+done
+}
+_edit_admin_password(){
+while true;do
+_wiz_start_edit
+_show_input_footer "filter" 3
+local choice
+choice=$(printf '%s\n' "$WIZ_PASSWORD_OPTIONS"|_wiz_choose \
+--header="Admin Password:")
+if [[ -z $choice ]];then
+return
+fi
+case "$choice" in
+"Generate password")ADMIN_PASSWORD=$(generate_password "$DEFAULT_PASSWORD_LENGTH")
+_wiz_start_edit
+_wiz_hide_cursor
+_wiz_warn "Please save this password - it will be required for sudo and Proxmox UI"
+_wiz_blank_line
+printf '%s\n' "$WIZ_NOTIFY_INDENT${CLR_CYAN}Generated admin password:$CLR_RESET $CLR_ORANGE$ADMIN_PASSWORD$CLR_RESET"
+_wiz_blank_line
+printf '%s\n' "$WIZ_NOTIFY_INDENT${CLR_GRAY}Press any key to continue...$CLR_RESET"
+read -n 1 -s -r
+break
+;;
+"Manual entry")_wiz_start_edit
+_show_input_footer
+local new_password
+new_password=$(_wiz_input \
+--password \
+--placeholder "Enter admin password" \
+--prompt "Admin Password: ")
+if [[ -z $new_password ]];then
+continue
+fi
+local password_error
+password_error=$(get_password_error "$new_password")
+if [[ -n $password_error ]];then
+show_validation_error "$password_error"
+continue
+fi
+ADMIN_PASSWORD="$new_password"
+break
+esac
+done
+}
+_edit_api_token(){
+_wiz_start_edit
+_wiz_description \
+"  Proxmox API token for automation:" \
+"" \
+"  {{cyan:Enabled}}:  Create privileged token (Terraform, Ansible)" \
+"  {{cyan:Disabled}}: No API token" \
+"" \
+"  Token has full Administrator permissions, no expiration." \
+""
+_show_input_footer "filter" 3
+local selected
+if ! selected=$(printf '%s\n' "$WIZ_TOGGLE_OPTIONS"|_wiz_choose --header="API Token (privileged, no expiration):");then
+return
+fi
+case "$selected" in
+Enabled)_wiz_input_screen "Enter API token name (default: automation)"
+local token_name
+token_name=$(_wiz_input \
+--placeholder "automation" \
+--prompt "Token name: " \
+--no-show-help \
+--value="${API_TOKEN_NAME:-automation}")
+if [[ -n $token_name && $token_name =~ ^[a-zA-Z0-9_-]+$ ]];then
+API_TOKEN_NAME="$token_name"
+INSTALL_API_TOKEN="yes"
+else
+API_TOKEN_NAME="automation"
+INSTALL_API_TOKEN="yes"
+fi
+;;
+Disabled)INSTALL_API_TOKEN="no"
+esac
+}
+_edit_ssh_key(){
+while true;do
+_wiz_start_edit
+local detected_key
+detected_key=$(get_rescue_ssh_key)
+if [[ -n $detected_key ]];then
+parse_ssh_key "$detected_key"
+_wiz_hide_cursor
+_wiz_warn "Detected SSH key from Rescue System:"
+_wiz_blank_line
+printf '%s\n' "$WIZ_NOTIFY_INDENT${CLR_GRAY}Type:$CLR_RESET    $SSH_KEY_TYPE"
+printf '%s\n' "$WIZ_NOTIFY_INDENT${CLR_GRAY}Key:$CLR_RESET     $SSH_KEY_SHORT"
+[[ -n $SSH_KEY_COMMENT ]]&&printf '%s\n' "$WIZ_NOTIFY_INDENT${CLR_GRAY}Comment:$CLR_RESET $SSH_KEY_COMMENT"
+_wiz_blank_line
+_show_input_footer "filter" 3
+local choice
+choice=$(printf '%s\n' "$WIZ_SSH_KEY_OPTIONS"|_wiz_choose \
+--header="SSH Key:")
+if [[ -z $choice ]];then
+return
+fi
+case "$choice" in
+"Use detected key")SSH_PUBLIC_KEY="$detected_key"
+break
+;;
+"Enter different key")
+esac
+fi
+_wiz_input_screen "Paste your SSH public key (ssh-rsa, ssh-ed25519, etc.)"
+local new_key
+new_key=$(_wiz_input \
+--placeholder "ssh-ed25519 AAAA... user@host" \
+--value "$SSH_PUBLIC_KEY" \
+--prompt "SSH Key: ")
+if [[ -z $new_key ]];then
+if [[ -n $detected_key ]];then
+continue
+else
+return
+fi
+fi
+if validate_ssh_key_secure "$new_key";then
+SSH_PUBLIC_KEY="$new_key"
+break
+else
+show_validation_error "Invalid SSH key. Must be ED25519, RSA/ECDSA ≥2048 bits"
+if [[ -n $detected_key ]];then
+continue
+fi
+fi
+done
+}
+_edit_boot_disk(){
+_wiz_start_edit
+_wiz_description \
+"  Separate boot disk selection (auto-detected by disk size):" \
+"" \
+"  {{cyan:None}}: All disks in ZFS rpool (system + VMs)" \
+"  {{cyan:Disk}}: Boot disk uses ext4 (system + ISO/templates)" \
+"       Pool disks use ZFS tank (VMs only)" \
+""
+local options="None (all in pool)"
+for i in "${!DRIVES[@]}";do
+local disk_name="${DRIVE_NAMES[$i]}"
+local disk_size="${DRIVE_SIZES[$i]}"
+local disk_model="${DRIVE_MODELS[$i]:0:25}"
+options+=$'\n'"$disk_name - $disk_size  $disk_model"
+done
+_show_input_footer "filter" "$((DRIVE_COUNT+2))"
+local selected
+if ! selected=$(printf '%s' "$options"|_wiz_choose --header="Boot disk:");then
+return
+fi
+if [[ -n $selected ]];then
+local old_boot_disk="$BOOT_DISK"
+if [[ $selected == "None (all in pool)" ]];then
+BOOT_DISK=""
+else
+local disk_name="${selected%% -*}"
+BOOT_DISK="/dev/$disk_name"
+fi
+_rebuild_pool_disks
+if [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]];then
+_wiz_start_edit
+_wiz_hide_cursor
+_wiz_error "Cannot use this boot disk: No disks left for ZFS pool"
+_wiz_blank_line
+_wiz_dim "At least one disk must remain for the ZFS pool."
+sleep "${WIZARD_MESSAGE_DELAY:-3}"
+BOOT_DISK="$old_boot_disk"
+_rebuild_pool_disks
+fi
+fi
+}
+_edit_pool_disks(){
+while true;do
+_wiz_start_edit
+_wiz_description \
+"  Select disks for ZFS storage pool:" \
+"" \
+"  These disks will store VMs, containers, and data." \
+"  RAID level is auto-selected based on disk count." \
+""
+local options=""
+local preselected=()
+for i in "${!DRIVES[@]}";do
+if [[ -z $BOOT_DISK || ${DRIVES[$i]} != "$BOOT_DISK" ]];then
+local disk_name="${DRIVE_NAMES[$i]}"
+local disk_size="${DRIVE_SIZES[$i]}"
+local disk_model="${DRIVE_MODELS[$i]:0:25}"
+local disk_label="$disk_name - $disk_size  $disk_model"
+[[ -n $options ]]&&options+=$'\n'
+options+="$disk_label"
+for pool_disk in "${ZFS_POOL_DISKS[@]}";do
+if [[ $pool_disk == "/dev/$disk_name" ]];then
+preselected+=("$disk_label")
+break
+fi
+done
+fi
+done
+local available_count
+if [[ -n $BOOT_DISK ]];then
+available_count=$((DRIVE_COUNT-1))
+else
+available_count=$DRIVE_COUNT
+fi
+_show_input_footer "checkbox" "$((available_count+1))"
+local gum_args=(--header="ZFS pool disks (min 1):")
+for item in "${preselected[@]}";do
+gum_args+=(--selected "$item")
+done
+local selected
+local gum_exit_code=0
+selected=$(printf '%s\n' "$options"|_wiz_choose_multi "${gum_args[@]}")||gum_exit_code=$?
+if [[ $gum_exit_code -ne 0 ]];then
+return 0
+fi
+if [[ -z $selected ]];then
+if [[ ${#ZFS_POOL_DISKS[@]} -gt 0 ]];then
+return 0
+fi
+show_validation_error "✗ At least one disk must be selected for ZFS pool"
+continue
+fi
+ZFS_POOL_DISKS=()
+while IFS= read -r line;do
+local disk_name="${line%% -*}"
+ZFS_POOL_DISKS+=("/dev/$disk_name")
+done <<<"$selected"
+_update_zfs_mode_options
+break
+done
+}
+_rebuild_pool_disks(){
+ZFS_POOL_DISKS=()
+for drive in "${DRIVES[@]}";do
+[[ -z $BOOT_DISK || $drive != "$BOOT_DISK" ]]&&ZFS_POOL_DISKS+=("$drive")
+done
+_update_zfs_mode_options
+}
+_update_zfs_mode_options(){
+local pool_count=${#ZFS_POOL_DISKS[@]}
+case "$ZFS_RAID" in
+single)[[ $pool_count -ne 1 ]]&&ZFS_RAID="";;
+raid1|raid0)[[ $pool_count -lt 2 ]]&&ZFS_RAID="";;
+raid5|raidz1)[[ $pool_count -lt 3 ]]&&ZFS_RAID="";;
+raid10|raidz2)[[ $pool_count -lt 4 ]]&&ZFS_RAID="";;
+raidz3)[[ $pool_count -lt 5 ]]&&ZFS_RAID=""
+esac
 }
 _edit_shell(){
 _wiz_start_edit
@@ -4120,281 +4499,6 @@ fi
 INSTALL_YAZI=$([[ $selected == *yazi* ]]&&echo "yes"||echo "no")
 INSTALL_NVIM=$([[ $selected == *nvim* ]]&&echo "yes"||echo "no")
 INSTALL_RINGBUFFER=$([[ $selected == *ringbuffer* ]]&&echo "yes"||echo "no")
-}
-_edit_ssh_key(){
-while true;do
-_wiz_start_edit
-local detected_key
-detected_key=$(get_rescue_ssh_key)
-if [[ -n $detected_key ]];then
-parse_ssh_key "$detected_key"
-_wiz_hide_cursor
-_wiz_warn "Detected SSH key from Rescue System:"
-_wiz_blank_line
-printf '%s\n' "$WIZ_NOTIFY_INDENT${CLR_GRAY}Type:$CLR_RESET    $SSH_KEY_TYPE"
-printf '%s\n' "$WIZ_NOTIFY_INDENT${CLR_GRAY}Key:$CLR_RESET     $SSH_KEY_SHORT"
-[[ -n $SSH_KEY_COMMENT ]]&&printf '%s\n' "$WIZ_NOTIFY_INDENT${CLR_GRAY}Comment:$CLR_RESET $SSH_KEY_COMMENT"
-_wiz_blank_line
-_show_input_footer "filter" 3
-local choice
-choice=$(printf '%s\n' "$WIZ_SSH_KEY_OPTIONS"|_wiz_choose \
---header="SSH Key:")
-if [[ -z $choice ]];then
-return
-fi
-case "$choice" in
-"Use detected key")SSH_PUBLIC_KEY="$detected_key"
-break
-;;
-"Enter different key")
-esac
-fi
-_wiz_input_screen "Paste your SSH public key (ssh-rsa, ssh-ed25519, etc.)"
-local new_key
-new_key=$(_wiz_input \
---placeholder "ssh-ed25519 AAAA... user@host" \
---value "$SSH_PUBLIC_KEY" \
---prompt "SSH Key: ")
-if [[ -z $new_key ]];then
-if [[ -n $detected_key ]];then
-continue
-else
-return
-fi
-fi
-if validate_ssh_key_secure "$new_key";then
-SSH_PUBLIC_KEY="$new_key"
-break
-else
-show_validation_error "Invalid SSH key. Must be ED25519, RSA/ECDSA ≥2048 bits"
-if [[ -n $detected_key ]];then
-continue
-fi
-fi
-done
-}
-_edit_admin_username(){
-while true;do
-_wiz_start_edit
-_wiz_description \
-"  Non-root admin username for SSH and Proxmox access:" \
-"" \
-"  Root SSH login will be {{cyan:completely disabled}}." \
-"  All SSH access must use this admin account." \
-"  The admin user will have sudo privileges." \
-""
-_show_input_footer
-local new_username
-new_username=$(_wiz_input \
---placeholder "e.g., sysadmin, deploy, operator" \
---value "$ADMIN_USERNAME" \
---prompt "Admin username: ")
-if [[ -z $new_username ]];then
-return
-fi
-if validate_admin_username "$new_username";then
-ADMIN_USERNAME="$new_username"
-break
-else
-show_validation_error "Invalid username. Use lowercase letters/numbers, 1-32 chars. Reserved names (root, admin) not allowed."
-fi
-done
-}
-_edit_admin_password(){
-while true;do
-_wiz_start_edit
-_show_input_footer "filter" 3
-local choice
-choice=$(printf '%s\n' "$WIZ_PASSWORD_OPTIONS"|_wiz_choose \
---header="Admin Password:")
-if [[ -z $choice ]];then
-return
-fi
-case "$choice" in
-"Generate password")ADMIN_PASSWORD=$(generate_password "$DEFAULT_PASSWORD_LENGTH")
-_wiz_start_edit
-_wiz_hide_cursor
-_wiz_warn "Please save this password - it will be required for sudo and Proxmox UI"
-_wiz_blank_line
-printf '%s\n' "$WIZ_NOTIFY_INDENT${CLR_CYAN}Generated admin password:$CLR_RESET $CLR_ORANGE$ADMIN_PASSWORD$CLR_RESET"
-_wiz_blank_line
-printf '%s\n' "$WIZ_NOTIFY_INDENT${CLR_GRAY}Press any key to continue...$CLR_RESET"
-read -n 1 -s -r
-break
-;;
-"Manual entry")_wiz_start_edit
-_show_input_footer
-local new_password
-new_password=$(_wiz_input \
---password \
---placeholder "Enter admin password" \
---prompt "Admin Password: ")
-if [[ -z $new_password ]];then
-continue
-fi
-local password_error
-password_error=$(get_password_error "$new_password")
-if [[ -n $password_error ]];then
-show_validation_error "$password_error"
-continue
-fi
-ADMIN_PASSWORD="$new_password"
-break
-esac
-done
-}
-_edit_api_token(){
-_wiz_start_edit
-_wiz_description \
-"  Proxmox API token for automation:" \
-"" \
-"  {{cyan:Enabled}}:  Create privileged token (Terraform, Ansible)" \
-"  {{cyan:Disabled}}: No API token" \
-"" \
-"  Token has full Administrator permissions, no expiration." \
-""
-_show_input_footer "filter" 3
-local selected
-if ! selected=$(printf '%s\n' "$WIZ_TOGGLE_OPTIONS"|_wiz_choose --header="API Token (privileged, no expiration):");then
-return
-fi
-case "$selected" in
-Enabled)_wiz_input_screen "Enter API token name (default: automation)"
-local token_name
-token_name=$(_wiz_input \
---placeholder "automation" \
---prompt "Token name: " \
---no-show-help \
---value="${API_TOKEN_NAME:-automation}")
-if [[ -n $token_name && $token_name =~ ^[a-zA-Z0-9_-]+$ ]];then
-API_TOKEN_NAME="$token_name"
-INSTALL_API_TOKEN="yes"
-else
-API_TOKEN_NAME="automation"
-INSTALL_API_TOKEN="yes"
-fi
-;;
-Disabled)INSTALL_API_TOKEN="no"
-esac
-}
-_edit_boot_disk(){
-_wiz_start_edit
-_wiz_description \
-"  Separate boot disk selection (auto-detected by disk size):" \
-"" \
-"  {{cyan:None}}: All disks in ZFS rpool (system + VMs)" \
-"  {{cyan:Disk}}: Boot disk uses ext4 (system + ISO/templates)" \
-"       Pool disks use ZFS tank (VMs only)" \
-""
-local options="None (all in pool)"
-for i in "${!DRIVES[@]}";do
-local disk_name="${DRIVE_NAMES[$i]}"
-local disk_size="${DRIVE_SIZES[$i]}"
-local disk_model="${DRIVE_MODELS[$i]:0:25}"
-options+=$'\n'"$disk_name - $disk_size  $disk_model"
-done
-_show_input_footer "filter" "$((DRIVE_COUNT+2))"
-local selected
-if ! selected=$(printf '%s' "$options"|_wiz_choose --header="Boot disk:");then
-return
-fi
-if [[ -n $selected ]];then
-local old_boot_disk="$BOOT_DISK"
-if [[ $selected == "None (all in pool)" ]];then
-BOOT_DISK=""
-else
-local disk_name="${selected%% -*}"
-BOOT_DISK="/dev/$disk_name"
-fi
-_rebuild_pool_disks
-if [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]];then
-_wiz_start_edit
-_wiz_hide_cursor
-_wiz_error "Cannot use this boot disk: No disks left for ZFS pool"
-_wiz_blank_line
-_wiz_dim "At least one disk must remain for the ZFS pool."
-sleep "${WIZARD_MESSAGE_DELAY:-3}"
-BOOT_DISK="$old_boot_disk"
-_rebuild_pool_disks
-fi
-fi
-}
-_edit_pool_disks(){
-while true;do
-_wiz_start_edit
-_wiz_description \
-"  Select disks for ZFS storage pool:" \
-"" \
-"  These disks will store VMs, containers, and data." \
-"  RAID level is auto-selected based on disk count." \
-""
-local options=""
-local preselected=()
-for i in "${!DRIVES[@]}";do
-if [[ -z $BOOT_DISK || ${DRIVES[$i]} != "$BOOT_DISK" ]];then
-local disk_name="${DRIVE_NAMES[$i]}"
-local disk_size="${DRIVE_SIZES[$i]}"
-local disk_model="${DRIVE_MODELS[$i]:0:25}"
-local disk_label="$disk_name - $disk_size  $disk_model"
-[[ -n $options ]]&&options+=$'\n'
-options+="$disk_label"
-for pool_disk in "${ZFS_POOL_DISKS[@]}";do
-if [[ $pool_disk == "/dev/$disk_name" ]];then
-preselected+=("$disk_label")
-break
-fi
-done
-fi
-done
-local available_count
-if [[ -n $BOOT_DISK ]];then
-available_count=$((DRIVE_COUNT-1))
-else
-available_count=$DRIVE_COUNT
-fi
-_show_input_footer "checkbox" "$((available_count+1))"
-local gum_args=(--header="ZFS pool disks (min 1):")
-for item in "${preselected[@]}";do
-gum_args+=(--selected "$item")
-done
-local selected
-local gum_exit_code=0
-selected=$(printf '%s\n' "$options"|_wiz_choose_multi "${gum_args[@]}")||gum_exit_code=$?
-if [[ $gum_exit_code -ne 0 ]];then
-return 0
-fi
-if [[ -z $selected ]];then
-if [[ ${#ZFS_POOL_DISKS[@]} -gt 0 ]];then
-return 0
-fi
-show_validation_error "✗ At least one disk must be selected for ZFS pool"
-continue
-fi
-ZFS_POOL_DISKS=()
-while IFS= read -r line;do
-local disk_name="${line%% -*}"
-ZFS_POOL_DISKS+=("/dev/$disk_name")
-done <<<"$selected"
-_update_zfs_mode_options
-break
-done
-}
-_rebuild_pool_disks(){
-ZFS_POOL_DISKS=()
-for drive in "${DRIVES[@]}";do
-[[ -z $BOOT_DISK || $drive != "$BOOT_DISK" ]]&&ZFS_POOL_DISKS+=("$drive")
-done
-_update_zfs_mode_options
-}
-_update_zfs_mode_options(){
-local pool_count=${#ZFS_POOL_DISKS[@]}
-case "$ZFS_RAID" in
-single)[[ $pool_count -ne 1 ]]&&ZFS_RAID="";;
-raid1|raid0)[[ $pool_count -lt 2 ]]&&ZFS_RAID="";;
-raid5|raidz1)[[ $pool_count -lt 3 ]]&&ZFS_RAID="";;
-raid10|raidz2)[[ $pool_count -lt 4 ]]&&ZFS_RAID="";;
-raidz3)[[ $pool_count -lt 5 ]]&&ZFS_RAID=""
-esac
 }
 prepare_packages(){
 log "Starting package preparation"
@@ -4586,108 +4690,6 @@ sleep "${RETRY_DELAY_SECONDS:-2}"
 _kill_drive_holders
 log "Drives released"
 }
-install_proxmox(){
-local qemu_config_file
-qemu_config_file=$(mktemp)
-(setup_qemu_config
-cat >"$qemu_config_file" <<EOF
-QEMU_CORES=$QEMU_CORES
-QEMU_RAM=$QEMU_RAM
-UEFI_MODE=$(is_uefi_mode&&echo "yes"||echo "no")
-KVM_OPTS='$KVM_OPTS'
-UEFI_OPTS='$UEFI_OPTS'
-CPU_OPTS='$CPU_OPTS'
-DRIVE_ARGS='$DRIVE_ARGS'
-EOF
-if [[ ! -f "./pve-autoinstall.iso" ]];then
-print_error "Autoinstall ISO not found!"
-exit 1
-fi
-release_drives) \
-&
-local prep_pid=$!
-local timeout=10
-while [[ ! -s $qemu_config_file ]]&&((timeout>0));do
-sleep 0.1
-((timeout--))
-done
-if [[ -s $qemu_config_file ]];then
-source "$qemu_config_file"
-rm -f "$qemu_config_file"
-fi
-show_progress $prep_pid "Starting QEMU ($QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM)" "QEMU started ($QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM)"
-if [[ $UEFI_MODE == "yes" ]];then
-live_log_subtask "UEFI mode detected"
-else
-live_log_subtask "Legacy BIOS mode"
-fi
-live_log_subtask "KVM acceleration enabled"
-live_log_subtask "Configured $QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM"
-qemu-system-x86_64 $KVM_OPTS $UEFI_OPTS \
-$CPU_OPTS -smp "$QEMU_CORES" -m "$QEMU_RAM" \
--boot d -cdrom ./pve-autoinstall.iso \
-$DRIVE_ARGS -no-reboot -display none >qemu_install.log 2>&1&
-local qemu_pid=$!
-sleep "${RETRY_DELAY_SECONDS:-2}"
-if ! kill -0 $qemu_pid 2>/dev/null;then
-log "ERROR: QEMU failed to start"
-log "QEMU install log:"
-cat qemu_install.log >>"$LOG_FILE" 2>&1
-exit 1
-fi
-show_progress "$qemu_pid" "Installing Proxmox VE" "Proxmox VE installed"
-local exit_code=$?
-if [[ $exit_code -ne 0 ]];then
-log "ERROR: QEMU installation failed with exit code $exit_code"
-log "QEMU install log:"
-cat qemu_install.log >>"$LOG_FILE" 2>&1
-exit 1
-fi
-}
-boot_proxmox_with_port_forwarding(){
-_deactivate_lvm
-setup_qemu_config
-if ! check_port_available "$SSH_PORT";then
-print_error "Port $SSH_PORT is already in use"
-log "ERROR: Port $SSH_PORT is already in use"
-exit 1
-fi
-nohup qemu-system-x86_64 $KVM_OPTS $UEFI_OPTS \
-$CPU_OPTS -device e1000,netdev=net0 \
--netdev user,id=net0,hostfwd=tcp::$SSH_PORT_QEMU-:22 \
--smp "$QEMU_CORES" -m "$QEMU_RAM" \
-$DRIVE_ARGS -display none > \
-qemu_output.log 2>&1&
-QEMU_PID=$!
-local timeout="${QEMU_BOOT_TIMEOUT:-300}"
-local check_interval="${QEMU_PORT_CHECK_INTERVAL:-3}"
-(local elapsed=0
-while ((elapsed<timeout));do
-if exec 3<>/dev/tcp/localhost/"$SSH_PORT_QEMU" 2>/dev/null;then
-exec 3<&-
-exit 0
-fi 2>/dev/null
-sleep "$check_interval"
-((elapsed+=check_interval))
-done
-exit 1) 2> \
-/dev/null&
-local wait_pid=$!
-show_progress $wait_pid "Booting installed Proxmox" "Proxmox booted"
-local exit_code=$?
-if [[ $exit_code -ne 0 ]];then
-log "ERROR: Timeout waiting for SSH port"
-log "QEMU output log:"
-cat qemu_output.log >>"$LOG_FILE" 2>&1
-return 1
-fi
-wait_for_ssh_ready "${QEMU_SSH_READY_TIMEOUT:-120}"||{
-log "ERROR: SSH connection failed"
-log "QEMU output log:"
-cat qemu_output.log >>"$LOG_FILE" 2>&1
-return 1
-}
-}
 _modify_template_files(){
 apply_common_template_vars "./templates/hosts"
 generate_interfaces_file "./templates/interfaces"
@@ -4802,24 +4804,6 @@ log "Derived PRIVATE_IP_CIDR=$PRIVATE_IP_CIDR from PRIVATE_SUBNET=$PRIVATE_SUBNE
 fi
 run_with_progress "Modifying template files" "Template files modified" _modify_template_files
 }
-_ISO_LIST_CACHE=""
-_CHECKSUM_CACHE=""
-prefetch_proxmox_iso_info(){
-_ISO_LIST_CACHE=$(curl -s "$PROXMOX_ISO_BASE_URL" 2>/dev/null|grep -oE 'proxmox-ve_[0-9]+\.[0-9]+-[0-9]+\.iso'|sort -uV)||true
-_CHECKSUM_CACHE=$(curl -s "$PROXMOX_CHECKSUM_URL" 2>/dev/null)||true
-}
-get_available_proxmox_isos(){
-local count="${1:-5}"
-printf '%s\n' "$_ISO_LIST_CACHE"|grep -E '^proxmox-ve_(9|[1-9][0-9]+)\.'|tail -n "$count"|tac
-}
-get_proxmox_iso_url(){
-local iso_filename="$1"
-printf '%s\n' "$PROXMOX_ISO_BASE_URL$iso_filename"
-}
-get_iso_version(){
-local iso_filename="$1"
-printf '%s\n' "$iso_filename"|sed -E 's/proxmox-ve_([0-9]+\.[0-9]+-[0-9]+)\.iso/\1/'
-}
 _download_iso_curl(){
 local url="$1"
 local output="$2"
@@ -4904,6 +4888,24 @@ rm -f "$output" 2>/dev/null
 fi
 log "All download methods failed"
 return 1
+}
+_ISO_LIST_CACHE=""
+_CHECKSUM_CACHE=""
+prefetch_proxmox_iso_info(){
+_ISO_LIST_CACHE=$(curl -s "$PROXMOX_ISO_BASE_URL" 2>/dev/null|grep -oE 'proxmox-ve_[0-9]+\.[0-9]+-[0-9]+\.iso'|sort -uV)||true
+_CHECKSUM_CACHE=$(curl -s "$PROXMOX_CHECKSUM_URL" 2>/dev/null)||true
+}
+get_available_proxmox_isos(){
+local count="${1:-5}"
+printf '%s\n' "$_ISO_LIST_CACHE"|grep -E '^proxmox-ve_(9|[1-9][0-9]+)\.'|tail -n "$count"|tac
+}
+get_proxmox_iso_url(){
+local iso_filename="$1"
+printf '%s\n' "$PROXMOX_ISO_BASE_URL$iso_filename"
+}
+get_iso_version(){
+local iso_filename="$1"
+printf '%s\n' "$iso_filename"|sed -E 's/proxmox-ve_([0-9]+\.[0-9]+-[0-9]+)\.iso/\1/'
 }
 download_proxmox_iso(){
 log "Starting Proxmox ISO download"
@@ -5135,6 +5137,108 @@ fi
 log "Removing original ISO to save disk space"
 rm -f pve.iso
 }
+install_proxmox(){
+local qemu_config_file
+qemu_config_file=$(mktemp)
+(setup_qemu_config
+cat >"$qemu_config_file" <<EOF
+QEMU_CORES=$QEMU_CORES
+QEMU_RAM=$QEMU_RAM
+UEFI_MODE=$(is_uefi_mode&&echo "yes"||echo "no")
+KVM_OPTS='$KVM_OPTS'
+UEFI_OPTS='$UEFI_OPTS'
+CPU_OPTS='$CPU_OPTS'
+DRIVE_ARGS='$DRIVE_ARGS'
+EOF
+if [[ ! -f "./pve-autoinstall.iso" ]];then
+print_error "Autoinstall ISO not found!"
+exit 1
+fi
+release_drives) \
+&
+local prep_pid=$!
+local timeout=10
+while [[ ! -s $qemu_config_file ]]&&((timeout>0));do
+sleep 0.1
+((timeout--))
+done
+if [[ -s $qemu_config_file ]];then
+source "$qemu_config_file"
+rm -f "$qemu_config_file"
+fi
+show_progress $prep_pid "Starting QEMU ($QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM)" "QEMU started ($QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM)"
+if [[ $UEFI_MODE == "yes" ]];then
+live_log_subtask "UEFI mode detected"
+else
+live_log_subtask "Legacy BIOS mode"
+fi
+live_log_subtask "KVM acceleration enabled"
+live_log_subtask "Configured $QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM"
+qemu-system-x86_64 $KVM_OPTS $UEFI_OPTS \
+$CPU_OPTS -smp "$QEMU_CORES" -m "$QEMU_RAM" \
+-boot d -cdrom ./pve-autoinstall.iso \
+$DRIVE_ARGS -no-reboot -display none >qemu_install.log 2>&1&
+local qemu_pid=$!
+sleep "${RETRY_DELAY_SECONDS:-2}"
+if ! kill -0 $qemu_pid 2>/dev/null;then
+log "ERROR: QEMU failed to start"
+log "QEMU install log:"
+cat qemu_install.log >>"$LOG_FILE" 2>&1
+exit 1
+fi
+show_progress "$qemu_pid" "Installing Proxmox VE" "Proxmox VE installed"
+local exit_code=$?
+if [[ $exit_code -ne 0 ]];then
+log "ERROR: QEMU installation failed with exit code $exit_code"
+log "QEMU install log:"
+cat qemu_install.log >>"$LOG_FILE" 2>&1
+exit 1
+fi
+}
+boot_proxmox_with_port_forwarding(){
+_deactivate_lvm
+setup_qemu_config
+if ! check_port_available "$SSH_PORT";then
+print_error "Port $SSH_PORT is already in use"
+log "ERROR: Port $SSH_PORT is already in use"
+exit 1
+fi
+nohup qemu-system-x86_64 $KVM_OPTS $UEFI_OPTS \
+$CPU_OPTS -device e1000,netdev=net0 \
+-netdev user,id=net0,hostfwd=tcp::$SSH_PORT_QEMU-:22 \
+-smp "$QEMU_CORES" -m "$QEMU_RAM" \
+$DRIVE_ARGS -display none > \
+qemu_output.log 2>&1&
+QEMU_PID=$!
+local timeout="${QEMU_BOOT_TIMEOUT:-300}"
+local check_interval="${QEMU_PORT_CHECK_INTERVAL:-3}"
+(local elapsed=0
+while ((elapsed<timeout));do
+if exec 3<>/dev/tcp/localhost/"$SSH_PORT_QEMU" 2>/dev/null;then
+exec 3<&-
+exit 0
+fi 2>/dev/null
+sleep "$check_interval"
+((elapsed+=check_interval))
+done
+exit 1) 2> \
+/dev/null&
+local wait_pid=$!
+show_progress $wait_pid "Booting installed Proxmox" "Proxmox booted"
+local exit_code=$?
+if [[ $exit_code -ne 0 ]];then
+log "ERROR: Timeout waiting for SSH port"
+log "QEMU output log:"
+cat qemu_output.log >>"$LOG_FILE" 2>&1
+return 1
+fi
+wait_for_ssh_ready "${QEMU_SSH_READY_TIMEOUT:-120}"||{
+log "ERROR: SSH connection failed"
+log "QEMU output log:"
+cat qemu_output.log >>"$LOG_FILE" 2>&1
+return 1
+}
+}
 _copy_config_files(){
 run_parallel_copies \
 "templates/hosts:/etc/hosts" \
@@ -5170,33 +5274,6 @@ _configure_zsh_files(){
 deploy_user_config "templates/zshrc" ".zshrc"||return 1
 deploy_user_config "templates/p10k.zsh" ".p10k.zsh"||return 1
 remote_exec 'chsh -s /bin/zsh '"$ADMIN_USERNAME"''||return 1
-}
-_configure_chrony(){
-remote_exec "systemctl stop chrony"||true
-remote_copy "templates/chrony" "/etc/chrony/chrony.conf"||return 1
-remote_exec "systemctl enable chrony"||return 1
-}
-_configure_unattended_upgrades(){
-remote_copy "templates/50unattended-upgrades" "/etc/apt/apt.conf.d/50unattended-upgrades"||return 1
-remote_copy "templates/20auto-upgrades" "/etc/apt/apt.conf.d/20auto-upgrades"||return 1
-remote_exec "systemctl enable unattended-upgrades"||return 1
-}
-_configure_cpu_governor(){
-local governor="${CPU_GOVERNOR:-performance}"
-remote_copy "templates/cpupower.service" "/etc/systemd/system/cpupower.service"||return 1
-remote_exec "
-    systemctl daemon-reload
-    systemctl enable cpupower.service
-    cpupower frequency-set -g '$governor' 2>/dev/null || true
-  "||return 1
-}
-_configure_io_scheduler(){
-remote_copy "templates/60-io-scheduler.rules" "/etc/udev/rules.d/60-io-scheduler.rules"||return 1
-remote_exec "udevadm control --reload-rules && udevadm trigger"||return 1
-}
-_remove_subscription_notice(){
-remote_copy "templates/remove-subscription-nag.sh" "/tmp/remove-subscription-nag.sh"||return 1
-remote_exec "chmod +x /tmp/remove-subscription-nag.sh && /tmp/remove-subscription-nag.sh && rm -f /tmp/remove-subscription-nag.sh"||return 1
 }
 _config_base_system(){
 run_with_progress "Copying configuration files" "Configuration files copied" _copy_config_files
@@ -5272,38 +5349,11 @@ else
 add_log "$CLR_ORANGE├─$CLR_RESET Default shell: Bash $CLR_CYAN✓$CLR_RESET"
 fi
 }
-_config_system_services(){
-run_with_progress "Configuring chrony" "Chrony configured" _configure_chrony
-run_with_progress "Configuring Unattended Upgrades" "Unattended Upgrades configured" _configure_unattended_upgrades
-remote_run "Configuring kernel modules" '
-        for mod in nf_conntrack tcp_bbr; do
-            if ! grep -q "^${mod}$" /etc/modules 2>/dev/null; then
-                echo "$mod" >> /etc/modules
-            fi
-        done
-        modprobe tcp_bbr 2>/dev/null || true
-    ' "Kernel modules configured"
-run_with_progress "Configuring system limits" "System limits configured" \
-remote_copy "templates/99-limits.conf" "/etc/security/limits.d/99-proxmox.conf"
-remote_run "Optimizing APT configuration" '
-        echo "Acquire::Languages \"none\";" > /etc/apt/apt.conf.d/99-disable-translations
-    ' "APT configuration optimized"
-local governor="${CPU_GOVERNOR:-performance}"
-run_with_progress "Configuring CPU governor ($governor)" "CPU governor configured" _configure_cpu_governor
-run_with_progress "Configuring I/O scheduler" "I/O scheduler configured" _configure_io_scheduler
-if [[ ${PVE_REPO_TYPE:-no-subscription} != "enterprise" ]];then
-log "configure_system_services: removing subscription notice (non-enterprise)"
-run_with_progress "Removing Proxmox subscription notice" "Subscription notice removed" _remove_subscription_notice
-fi
-}
 configure_base_system(){
 _config_base_system
 }
 configure_shell(){
 _config_shell
-}
-configure_system_services(){
-_config_system_services
 }
 _config_tailscale(){
 remote_run "Starting Tailscale" '
@@ -5404,6 +5454,60 @@ return 1
 fi
 log "Admin user $ADMIN_USERNAME created successfully"
 return 0
+}
+_configure_chrony(){
+remote_exec "systemctl stop chrony"||true
+remote_copy "templates/chrony" "/etc/chrony/chrony.conf"||return 1
+remote_exec "systemctl enable chrony"||return 1
+}
+_configure_unattended_upgrades(){
+remote_copy "templates/50unattended-upgrades" "/etc/apt/apt.conf.d/50unattended-upgrades"||return 1
+remote_copy "templates/20auto-upgrades" "/etc/apt/apt.conf.d/20auto-upgrades"||return 1
+remote_exec "systemctl enable unattended-upgrades"||return 1
+}
+_configure_cpu_governor(){
+local governor="${CPU_GOVERNOR:-performance}"
+remote_copy "templates/cpupower.service" "/etc/systemd/system/cpupower.service"||return 1
+remote_exec "
+    systemctl daemon-reload
+    systemctl enable cpupower.service
+    cpupower frequency-set -g '$governor' 2>/dev/null || true
+  "||return 1
+}
+_configure_io_scheduler(){
+remote_copy "templates/60-io-scheduler.rules" "/etc/udev/rules.d/60-io-scheduler.rules"||return 1
+remote_exec "udevadm control --reload-rules && udevadm trigger"||return 1
+}
+_remove_subscription_notice(){
+remote_copy "templates/remove-subscription-nag.sh" "/tmp/remove-subscription-nag.sh"||return 1
+remote_exec "chmod +x /tmp/remove-subscription-nag.sh && /tmp/remove-subscription-nag.sh && rm -f /tmp/remove-subscription-nag.sh"||return 1
+}
+_config_system_services(){
+run_with_progress "Configuring chrony" "Chrony configured" _configure_chrony
+run_with_progress "Configuring Unattended Upgrades" "Unattended Upgrades configured" _configure_unattended_upgrades
+remote_run "Configuring kernel modules" '
+        for mod in nf_conntrack tcp_bbr; do
+            if ! grep -q "^${mod}$" /etc/modules 2>/dev/null; then
+                echo "$mod" >> /etc/modules
+            fi
+        done
+        modprobe tcp_bbr 2>/dev/null || true
+    ' "Kernel modules configured"
+run_with_progress "Configuring system limits" "System limits configured" \
+remote_copy "templates/99-limits.conf" "/etc/security/limits.d/99-proxmox.conf"
+remote_run "Optimizing APT configuration" '
+        echo "Acquire::Languages \"none\";" > /etc/apt/apt.conf.d/99-disable-translations
+    ' "APT configuration optimized"
+local governor="${CPU_GOVERNOR:-performance}"
+run_with_progress "Configuring CPU governor ($governor)" "CPU governor configured" _configure_cpu_governor
+run_with_progress "Configuring I/O scheduler" "I/O scheduler configured" _configure_io_scheduler
+if [[ ${PVE_REPO_TYPE:-no-subscription} != "enterprise" ]];then
+log "configure_system_services: removing subscription notice (non-enterprise)"
+run_with_progress "Removing Proxmox subscription notice" "Subscription notice removed" _remove_subscription_notice
+fi
+}
+configure_system_services(){
+_config_system_services
 }
 _generate_port_rules(){
 local mode="${1:-standard}"
@@ -6132,6 +6236,15 @@ log "WARNING: QEMU process did not exit cleanly within 120 seconds"
 kill -9 "$QEMU_PID" 2>/dev/null||true
 fi
 }
+configure_proxmox_via_ssh(){
+log "Starting Proxmox configuration via SSH"
+_phase_base_configuration
+_phase_storage_configuration
+_phase_security_configuration||return 1
+_phase_monitoring_tools
+_phase_ssl_api
+_phase_finalization
+}
 _phase_base_configuration(){
 make_templates
 configure_admin_user
@@ -6192,15 +6305,6 @@ deploy_ssh_hardening_config
 validate_installation
 restart_ssh_service
 finalize_vm
-}
-configure_proxmox_via_ssh(){
-log "Starting Proxmox configuration via SSH"
-_phase_base_configuration
-_phase_storage_configuration
-_phase_security_configuration||return 1
-_phase_monitoring_tools
-_phase_ssl_api
-_phase_finalization
 }
 _render_completion_screen(){
 local output=""
