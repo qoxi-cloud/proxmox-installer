@@ -25,6 +25,11 @@ deploy_user_config() {
       log "ERROR: Failed to create directory $dest_dir"
       return 1
     }
+    # Fix ownership of created directories (mkdir runs as root)
+    remote_exec "chown -R ${ADMIN_USERNAME}:${ADMIN_USERNAME} '$dest_dir'" || {
+      log "ERROR: Failed to set ownership on $dest_dir"
+      return 1
+    }
   fi
 
   # Copy file
