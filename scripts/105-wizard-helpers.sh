@@ -139,6 +139,39 @@ _wiz_choose_mapped() {
 }
 
 # =============================================================================
+# Toggle (Enabled/Disabled) helper
+# =============================================================================
+
+# Toggle chooser that maps Enabled→yes, Disabled→no.
+# Returns 2 if "Enabled" selected (for chaining with &&).
+# Parameters:
+#   $1 - Variable name to set (e.g., "TAILSCALE_WEBUI")
+#   $2 - Header text (e.g., "Tailscale Web UI:")
+#   $3 - Default value on cancel ("yes" or "no", default: "no")
+# Returns: 0 on Disabled, 1 on cancel, 2 on Enabled
+# Example:
+#   _wiz_toggle "INSTALL_FEATURE" "Enable feature:" && do_something_on_enabled
+_wiz_toggle() {
+  local var_name="$1"
+  local header="$2"
+  local default_on_cancel="${3:-no}"
+
+  local selected
+  if ! selected=$(printf '%s\n' "Enabled" "Disabled" | _wiz_choose --header="$header"); then
+    declare -g "$var_name=$default_on_cancel"
+    return 1
+  fi
+
+  if [[ $selected == "Enabled" ]]; then
+    declare -g "$var_name=yes"
+    return 2
+  else
+    declare -g "$var_name=no"
+    return 0
+  fi
+}
+
+# =============================================================================
 # Feature checkbox editor helper
 # =============================================================================
 

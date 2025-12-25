@@ -76,35 +76,27 @@ _edit_api_token() {
   # 1 header + 2 items for gum choose
   _show_input_footer "filter" 3
 
-  local selected
-  if ! selected=$(printf '%s\n' "$WIZ_TOGGLE_OPTIONS" | _wiz_choose --header="API Token (privileged, no expiration):"); then
-    return
+  local result
+  _wiz_toggle "INSTALL_API_TOKEN" "API Token (privileged, no expiration):"
+  result=$?
+
+  [[ $result -eq 1 ]] && return
+  [[ $result -ne 2 ]] && return
+
+  # Enabled - request token name
+  _wiz_input_screen "Enter API token name (default: automation)"
+
+  local token_name
+  token_name=$(_wiz_input \
+    --placeholder "automation" \
+    --prompt "Token name: " \
+    --no-show-help \
+    --value="${API_TOKEN_NAME:-automation}")
+
+  # Validate: alphanumeric, dash, underscore only
+  if [[ -n $token_name && $token_name =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    API_TOKEN_NAME="$token_name"
+  else
+    API_TOKEN_NAME="automation"
   fi
-
-  case "$selected" in
-    Enabled)
-      # Request token name
-      _wiz_input_screen "Enter API token name (default: automation)"
-
-      local token_name
-      token_name=$(_wiz_input \
-        --placeholder "automation" \
-        --prompt "Token name: " \
-        --no-show-help \
-        --value="${API_TOKEN_NAME:-automation}")
-
-      # Validate: alphanumeric, dash, underscore only
-      if [[ -n $token_name && $token_name =~ ^[a-zA-Z0-9_-]+$ ]]; then
-        API_TOKEN_NAME="$token_name"
-        INSTALL_API_TOKEN="yes"
-      else
-        # Invalid name - use default
-        API_TOKEN_NAME="automation"
-        INSTALL_API_TOKEN="yes"
-      fi
-      ;;
-    Disabled)
-      INSTALL_API_TOKEN="no"
-      ;;
-  esac
 }

@@ -44,15 +44,7 @@ _tailscale_configure_webui() {
 
   _show_input_footer "filter" 3
 
-  local webui_selected
-  if webui_selected=$(printf '%s\n' "$WIZ_TOGGLE_OPTIONS" | _wiz_choose --header="Tailscale Web UI:"); then
-    case "$webui_selected" in
-      Enabled) TAILSCALE_WEBUI="yes" ;;
-      Disabled) TAILSCALE_WEBUI="no" ;;
-    esac
-  else
-    TAILSCALE_WEBUI="no"
-  fi
+  _wiz_toggle "TAILSCALE_WEBUI" "Tailscale Web UI:" "no"
 }
 
 # Enables Tailscale with auth key and configures related settings.
@@ -103,23 +95,22 @@ _edit_tailscale() {
 
   _show_input_footer "filter" 3
 
-  local selected
-  if ! selected=$(printf '%s\n' "$WIZ_TOGGLE_OPTIONS" | _wiz_choose --header="Tailscale:"); then
-    return
-  fi
+  local result
+  _wiz_toggle "INSTALL_TAILSCALE" "Tailscale:"
+  result=$?
 
-  case "$selected" in
-    Enabled)
-      local auth_key
-      auth_key=$(_tailscale_get_auth_key)
-      if [[ -n $auth_key ]]; then
-        _tailscale_enable "$auth_key"
-      else
-        _tailscale_disable
-      fi
-      ;;
-    Disabled)
+  if [[ $result -eq 1 ]]; then
+    return
+  elif [[ $result -eq 2 ]]; then
+    # Enabled - get auth key
+    local auth_key
+    auth_key=$(_tailscale_get_auth_key)
+    if [[ -n $auth_key ]]; then
+      _tailscale_enable "$auth_key"
+    else
       _tailscale_disable
-      ;;
-  esac
+    fi
+  else
+    _tailscale_disable
+  fi
 }
