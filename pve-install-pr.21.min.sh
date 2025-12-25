@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.579-pr.21"
+readonly VERSION="2.0.580-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -5750,8 +5750,8 @@ remote_exec '
     YAZI_VERSION=$(curl -s https://api.github.com/repos/sxyazi/yazi/releases/latest | grep "tag_name" | cut -d "\"" -f 4 | sed "s/^v//")
     curl -sL "https://github.com/sxyazi/yazi/releases/download/v${YAZI_VERSION}/yazi-x86_64-unknown-linux-gnu.zip" -o /tmp/yazi.zip
     unzip -q /tmp/yazi.zip -d /tmp/
-    chmod +x /tmp/yazi-x86_64-unknown-linux-gnu/yazi
-    mv /tmp/yazi-x86_64-unknown-linux-gnu/yazi /usr/local/bin/
+    chmod +x /tmp/yazi-x86_64-unknown-linux-gnu/yazi /tmp/yazi-x86_64-unknown-linux-gnu/ya
+    mv /tmp/yazi-x86_64-unknown-linux-gnu/yazi /tmp/yazi-x86_64-unknown-linux-gnu/ya /usr/local/bin/
     rm -rf /tmp/yazi.zip /tmp/yazi-x86_64-unknown-linux-gnu
   '||{
 log "ERROR: Failed to install yazi"
@@ -5761,8 +5761,26 @@ log "Yazi binary installed"
 }
 _config_yazi(){
 _install_yazi||return 1
+remote_exec 'su - '"$ADMIN_USER"' -c "
+    ya pack -a kalidyasin/yazi-flavors:tokyonight-night
+    ya pack -a yazi-rs/plugins:chmod
+    ya pack -a yazi-rs/plugins:smart-enter
+    ya pack -a yazi-rs/plugins:smart-filter
+    ya pack -a yazi-rs/plugins:full-border
+  "'||{
+log "ERROR: Failed to install yazi plugins"
+return 1
+}
 deploy_user_config "templates/yazi-theme.toml" ".config/yazi/theme.toml"||{
 log "ERROR: Failed to deploy yazi theme"
+return 1
+}
+deploy_user_config "templates/yazi-init.lua" ".config/yazi/init.lua"||{
+log "ERROR: Failed to deploy yazi init.lua"
+return 1
+}
+deploy_user_config "templates/yazi-keymap.toml" ".config/yazi/keymap.toml"||{
+log "ERROR: Failed to deploy yazi keymap"
 return 1
 }
 }
