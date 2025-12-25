@@ -550,6 +550,57 @@ log_subtasks "nginx" "php-fpm" "redis"
 
 ---
 
+## ZFS Functions (`031-zfs-helpers.sh`, `053-system-drives.sh`)
+
+### detect_existing_pools
+
+Detects existing ZFS pools available for import.
+
+```bash
+detect_existing_pools
+# Output: pool_name|state|/dev/disk1,/dev/disk2 (one per line)
+```
+
+**Returns:** Pool info via stdout (name|status|disks format).
+
+### get_pool_disks
+
+Gets disk paths for a specific pool.
+
+```bash
+disks=$(get_pool_disks "tank")
+# Returns: /dev/nvme0n1,/dev/nvme1n1
+```
+
+### build_zpool_command
+
+Builds zpool create command for given RAID type.
+
+```bash
+cmd=$(build_zpool_command "tank" "raid1" /dev/vda /dev/vdb)
+# Returns: zpool create -f tank mirror /dev/vda /dev/vdb
+```
+
+### create_virtio_mapping
+
+Creates mapping between physical and virtio disks for QEMU.
+
+```bash
+create_virtio_mapping "/dev/nvme2n1" "/dev/nvme0n1" "/dev/nvme1n1"
+# Creates: /tmp/virtio_map.env
+```
+
+### load_virtio_mapping
+
+Loads virtio mapping from saved file.
+
+```bash
+load_virtio_mapping
+echo "${VIRTIO_MAP[/dev/nvme0n1]}"  # vdb
+```
+
+---
+
 ## Utility Functions (`012-utils.sh`)
 
 ### secure_delete_file

@@ -79,6 +79,49 @@ Minimal changes - standard Debian bash configuration.
 | Compression | `lz4` | Fast compression |
 | Scrub schedule | Weekly | Data integrity checks |
 
+### Using Existing ZFS Pool (Upgrade Mode)
+
+When "Use existing pool" is selected during installation:
+
+1. **Pool is imported** with `zpool import -f` after Proxmox installation
+2. **Existing datasets** are preserved (VMs, containers, data)
+3. **Proxmox storage** is automatically configured to use the imported pool
+4. **VMs/containers** should appear in Proxmox after boot
+
+**After installation with existing pool:**
+
+```bash
+# Verify pool status
+zpool status
+
+# List imported datasets
+zfs list
+
+# Check Proxmox storage
+pvesm status
+
+# If VMs don't appear, rescan storage
+pvesm set <poolname> --content images,rootdir
+qm rescan
+
+# For containers
+pct rescan
+```
+
+**Troubleshooting:**
+
+```bash
+# If pool wasn't imported automatically
+zpool import -f <poolname>
+
+# If VMs are not visible, check configuration database
+# VMs are stored in /etc/pve/nodes/<node>/qemu-server/
+# Containers in /etc/pve/nodes/<node>/lxc/
+
+# Re-register existing VM disk
+qm set <vmid> -virtio0 <pool>:vm-<vmid>-disk-0
+```
+
 **ARC Memory Strategies:**
 
 | Strategy | Allocation |

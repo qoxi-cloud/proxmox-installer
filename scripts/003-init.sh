@@ -13,6 +13,13 @@ BOOT_DISK=""
 # ZFS pool disks (array of paths like "/dev/nvme0n1")
 ZFS_POOL_DISKS=()
 
+# Use existing ZFS pool instead of creating new one
+# When "yes": import existing pool, preserve all data
+# When empty/"no": create new pool (default behavior)
+USE_EXISTING_POOL=""
+EXISTING_POOL_NAME=""  # Pool name to import (e.g., "tank", "rpool", "data")
+EXISTING_POOL_DISKS=() # Disks containing the existing pool (detected or manual)
+
 # System utilities to install on Proxmox
 SYSTEM_UTILITIES="btop iotop ncdu tmux pigz smartmontools jq bat fastfetch sysstat nethogs ethtool curl gnupg"
 OPTIONAL_PACKAGES="libguestfs-tools"

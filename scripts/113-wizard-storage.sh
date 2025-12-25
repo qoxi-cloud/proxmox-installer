@@ -1,8 +1,94 @@
 # shellcheck shell=bash
 # =============================================================================
 # Configuration Wizard - Storage Settings Editors
-# zfs_mode, zfs_arc
+# zfs_mode, zfs_arc, existing_pool
 # =============================================================================
+
+# Edits existing pool setting (use existing vs create new).
+# Updates USE_EXISTING_POOL and EXISTING_POOL_NAME globals.
+_edit_existing_pool() {
+  _wiz_start_edit
+
+  # Detect available pools for import
+  local pools=()
+  while IFS= read -r line; do
+    [[ -n $line ]] && pools+=("$line")
+  done < <(detect_existing_pools)
+
+  if [[ ${#pools[@]} -eq 0 ]]; then
+    _wiz_description \
+      "  {{yellow:No importable ZFS pools detected.}}" \
+      "" \
+      "  If you have an existing pool, ensure the disks are connected" \
+      "  and the pool was properly exported before reinstall." \
+      ""
+    _wiz_dim "Press any key to continue..."
+    read -r -n 1
+    return
+  fi
+
+  _wiz_description \
+    "  Preserve existing ZFS pool during reinstall:" \
+    "" \
+    "  {{cyan:Create new}}: Format pool disks, create fresh ZFS pool" \
+    "  {{cyan:Use existing}}: Import pool, preserve all VMs and data" \
+    "" \
+    "  {{yellow:WARNING}}: Using existing pool skips disk formatting." \
+    "  Ensure the pool is healthy before proceeding." \
+    ""
+
+  # Build options: "Create new pool" + detected pools
+  local options="Create new pool (format disks)"
+  for pool_info in "${pools[@]}"; do
+    local pool_name="${pool_info%%|*}"
+    local rest="${pool_info#*|}"
+    local pool_state="${rest%%|*}"
+    options+=$'\n'"Use existing: ${pool_name} (${pool_state})"
+  done
+
+  local item_count
+  item_count=$(wc -l <<<"$options")
+  _show_input_footer "filter" "$((item_count + 1))"
+
+  local selected
+  if ! selected=$(printf '%s\n' "$options" | _wiz_choose --header="Pool mode:"); then
+    return
+  fi
+
+  if [[ $selected == "Create new pool (format disks)" ]]; then
+    USE_EXISTING_POOL=""
+    EXISTING_POOL_NAME=""
+    EXISTING_POOL_DISKS=()
+  elif [[ $selected =~ ^Use\ existing:\ ([^[:space:]]+) ]]; then
+    # Check if boot disk is set - required for existing pool mode
+    if [[ -z $BOOT_DISK ]]; then
+      _wiz_start_edit
+      _wiz_hide_cursor
+      _wiz_error "Cannot use existing pool without separate boot disk"
+      _wiz_blank_line
+      _wiz_dim "Select a boot disk first, then enable existing pool."
+      _wiz_dim "The boot disk will be formatted for Proxmox system files."
+      _wiz_blank_line
+      _wiz_dim "Press any key to continue..."
+      read -r -n 1
+      return
+    fi
+
+    USE_EXISTING_POOL="yes"
+    EXISTING_POOL_NAME="${BASH_REMATCH[1]}"
+
+    # Get disks for this pool
+    local disks_csv
+    disks_csv=$(get_pool_disks "$EXISTING_POOL_NAME")
+    IFS=',' read -ra EXISTING_POOL_DISKS <<<"$disks_csv"
+
+    # Clear pool disks since we won't be creating new pool
+    ZFS_POOL_DISKS=()
+    ZFS_RAID=""
+
+    log "Selected existing pool: $EXISTING_POOL_NAME with disks: ${EXISTING_POOL_DISKS[*]}"
+  fi
+}
 
 # Edits ZFS RAID level for data pool.
 # Options vary based on pool disk count (single, raid0/1, raidz1/2/3, raid10).

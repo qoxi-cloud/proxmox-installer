@@ -97,10 +97,20 @@ All settings are configured through the interactive wizard. This reference docum
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| Boot Disk | Proxmox installation disk | First detected |
+| Boot Disk | Proxmox installation disk (ext4) | First detected |
+| Pool Mode | Create new or use existing ZFS pool | Create new |
 | Pool Disks | Disks for ZFS data pool | All remaining disks |
 | ZFS Mode | ZFS RAID level | RAID-1 if 2+ disks |
 | ZFS ARC | Memory allocation strategy | Balanced |
+
+**Pool Modes:**
+
+| Mode | Description |
+|------|-------------|
+| Create new | Format pool disks, create fresh ZFS pool |
+| Use existing | Import existing pool, preserve all VMs and data |
+
+> **Use existing pool:** Allows Proxmox upgrade/reinstall while preserving VMs. Requires separate boot disk. Existing pool will be imported with `zpool import -f` after installation.
 
 **ZFS RAID Modes:**
 

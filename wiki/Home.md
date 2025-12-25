@@ -36,6 +36,15 @@ The installer runs a local QEMU VM with the Proxmox ISO inside your server's res
 └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
 
+## Key Features
+
+- **6-screen wizard** - Configure everything interactively
+- **Flexible storage** - ZFS RAID or separate boot disk + existing pool
+- **Upgrade without data loss** - Import existing ZFS pool to preserve VMs
+- **Security hardening** - Firewall, AppArmor, auditd, AIDE, and more
+- **Tailscale integration** - Stealth mode for secure remote access
+- **ZSH with Powerlevel10k** - Beautiful terminal out of the box
+
 ## Compatible Providers
 
 Works on any dedicated server with a KVM-enabled rescue system:

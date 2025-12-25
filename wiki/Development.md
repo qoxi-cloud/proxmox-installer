@@ -26,7 +26,7 @@ The project is a modular bash framework. Individual scripts in `scripts/` are co
 | **340-342** | Monitoring: vnstat, promtail, netdata |
 | **350-351** | Tools: yazi, nvim |
 | **360-361** | SSL & API token |
-| **370-371** | Storage: ZFS ARC, pool creation |
+| **370-371** | Storage: ZFS ARC, pool creation/import |
 | **380** | Finalization: validation, completion |
 | **900** | Main orchestrator |
 

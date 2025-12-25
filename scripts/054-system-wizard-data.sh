@@ -49,6 +49,22 @@ _build_tz_to_country() {
   done <"$zone_tab"
 }
 
+# Detects existing ZFS pools for wizard display.
+# Side effects: Populates DETECTED_POOLS array
+_detect_pools() {
+  DETECTED_POOLS=()
+  while IFS= read -r line; do
+    [[ -n $line ]] && DETECTED_POOLS+=("$line")
+  done < <(detect_existing_pools 2>/dev/null)
+
+  if [[ ${#DETECTED_POOLS[@]} -gt 0 ]]; then
+    log "Detected ${#DETECTED_POOLS[@]} existing ZFS pool(s):"
+    for pool in "${DETECTED_POOLS[@]}"; do
+      log "  - $pool"
+    done
+  fi
+}
+
 # Loads all dynamic wizard data from system.
 # Orchestrates loading of timezones, countries, and TZ-to-country mapping.
 # Called by collect_system_info() during initialization.
@@ -56,4 +72,5 @@ _load_wizard_data() {
   _load_timezones
   _load_countries
   _build_tz_to_country
+  _detect_pools
 }

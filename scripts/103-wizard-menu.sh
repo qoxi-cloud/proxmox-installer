@@ -35,12 +35,17 @@ _wiz_config_complete() {
   [[ -z $BRIDGE_MODE ]] && return 1
   [[ -z $PRIVATE_SUBNET ]] && return 1
   [[ -z $IPV6_MODE ]] && return 1
-  [[ -z $ZFS_RAID ]] && return 1
+  # ZFS validation: require raid/disks only when NOT using existing pool
+  if [[ $USE_EXISTING_POOL == "yes" ]]; then
+    [[ -z $EXISTING_POOL_NAME ]] && return 1
+  else
+    [[ -z $ZFS_RAID ]] && return 1
+    [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]] && return 1
+  fi
   [[ -z $ZFS_ARC_MODE ]] && return 1
   [[ -z $SHELL_TYPE ]] && return 1
   [[ -z $CPU_GOVERNOR ]] && return 1
   [[ -z $SSH_PUBLIC_KEY ]] && return 1
-  [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]] && return 1
   # SSL required if Tailscale disabled
   [[ $INSTALL_TAILSCALE != "yes" && -z $SSL_TYPE ]] && return 1
   # Stealth firewall requires Tailscale
@@ -120,8 +125,16 @@ _dsp_network() {
   [[ $_DSP_MTU == "9000" ]] && _DSP_MTU="9000 (jumbo)"
 }
 
-# Formats Storage screen values: ZFS mode, ARC, boot/pool disks
+# Formats Storage screen values: ZFS mode, ARC, boot/pool disks, existing pool
 _dsp_storage() {
+  # Existing pool mode
+  _DSP_EXISTING_POOL=""
+  if [[ $USE_EXISTING_POOL == "yes" && -n $EXISTING_POOL_NAME ]]; then
+    _DSP_EXISTING_POOL="Use: ${EXISTING_POOL_NAME} (${#EXISTING_POOL_DISKS[@]} disks)"
+  else
+    _DSP_EXISTING_POOL="Create new"
+  fi
+
   _DSP_ZFS=""
   if [[ -n $ZFS_RAID ]]; then
     case "$ZFS_RAID" in
@@ -133,6 +146,8 @@ _dsp_storage() {
       raid10) _DSP_ZFS="RAID-10 (striped mirrors)" ;;
       *) _DSP_ZFS="$ZFS_RAID" ;;
     esac
+  elif [[ $USE_EXISTING_POOL == "yes" ]]; then
+    _DSP_ZFS="(preserved)"
   fi
 
   _DSP_ARC=""
@@ -155,7 +170,11 @@ _dsp_storage() {
     done
   fi
 
-  _DSP_POOL="${#ZFS_POOL_DISKS[@]} disks"
+  if [[ $USE_EXISTING_POOL == "yes" ]]; then
+    _DSP_POOL="(existing pool)"
+  else
+    _DSP_POOL="${#ZFS_POOL_DISKS[@]} disks"
+  fi
 }
 
 # Formats Services screen values: Tailscale, SSL, shell, power, features
@@ -293,9 +312,16 @@ _wiz_render_screen_content() {
     3) # Storage
       if [[ $DRIVE_COUNT -gt 1 ]]; then
         _add_field "Boot disk        " "$(_wiz_fmt "$_DSP_BOOT")" "boot_disk"
-        _add_field "Pool disks       " "$(_wiz_fmt "$_DSP_POOL")" "pool_disks"
+        _add_field "Pool mode        " "$(_wiz_fmt "$_DSP_EXISTING_POOL")" "existing_pool"
+        # Only show pool disk options if not using existing pool
+        if [[ $USE_EXISTING_POOL != "yes" ]]; then
+          _add_field "Pool disks       " "$(_wiz_fmt "$_DSP_POOL")" "pool_disks"
+          _add_field "ZFS mode         " "$(_wiz_fmt "$_DSP_ZFS")" "zfs_mode"
+        fi
+      else
+        # Single disk: no pool selection needed
+        _add_field "ZFS mode         " "$(_wiz_fmt "$_DSP_ZFS")" "zfs_mode"
       fi
-      _add_field "ZFS mode         " "$(_wiz_fmt "$_DSP_ZFS")" "zfs_mode"
       _add_field "ZFS ARC          " "$(_wiz_fmt "$_DSP_ARC")" "zfs_arc"
       ;;
     4) # Services

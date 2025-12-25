@@ -21,7 +21,7 @@ The wizard has 6 screens:
 | 0 | Basic | 110-wizard-basic.sh | hostname, email, password, timezone, keyboard, country |
 | 1 | Proxmox | 111-wizard-proxmox.sh | iso_version, repository |
 | 2 | Network | 112-wizard-network.sh | interface, bridge_mode, private_subnet, ipv6 |
-| 3 | Storage | 113-wizard-storage.sh | boot_disk, pool_disks, zfs_mode, zfs_arc |
+| 3 | Storage | 113-wizard-storage.sh, 116-wizard-disks.sh | boot_disk, existing_pool, pool_disks, zfs_mode, zfs_arc |
 | 4 | Services | 114-wizard-services.sh | tailscale, ssl, firewall, security, monitoring, tools |
 | 5 | Access | 115-wizard-access.sh | admin_username, admin_password, ssh_key |
 

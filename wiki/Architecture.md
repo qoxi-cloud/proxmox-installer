@@ -113,16 +113,20 @@ flowchart TD
         AO --> AP[Admin user<br/>302-configure-admin.sh]
         AP --> AQ[Firewall<br/>310-configure-firewall.sh]
         AQ --> AR[SSL certs<br/>360-configure-ssl.sh]
-        AR --> AS[ZFS pool<br/>370-371: ZFS config/pool]
+        AR --> AS{USE_EXISTING_POOL?}
+        AS -->|Yes| AT1[Import pool<br/>zpool import -f]
+        AS -->|No| AT2[Create pool<br/>zpool create]
+        AT1 --> AU[Configure storage]
+        AT2 --> AU
     end
 
     subgraph FINALIZE["✅ Finalization (380)"]
-        AS --> AT[Run validation script<br/>380-configure-finalize.sh]
-        AT --> AU{All checks pass?}
-        AU -->|No| AV[Show failures]
-        AU -->|Yes| AW[Show credentials]
-        AW --> AX[Shutdown VM]
-        AX --> AY[End]
+        AU --> AV[Run validation script<br/>380-configure-finalize.sh]
+        AV --> AW{All checks pass?}
+        AW -->|No| AX[Show failures]
+        AW -->|Yes| AY[Show credentials]
+        AY --> AZ[Shutdown VM]
+        AZ --> BA[End]
     end
 
     style INIT fill:#1a1a2e,stroke:#16213e
@@ -358,7 +362,7 @@ scripts/
 │   ├── 110-wizard-basic.sh   # Hostname, email, password, timezone
 │   ├── 111-wizard-proxmox.sh # ISO version, repo type
 │   ├── 112-wizard-network.sh # Interface, bridge, IPv4/IPv6
-│   ├── 113-wizard-storage.sh # Boot disk, pool disks, ZFS mode
+│   ├── 113-wizard-storage.sh # Boot disk, pool mode (new/existing), ZFS mode
 │   ├── 114-wizard-services.sh# Features, Tailscale, SSL
 │   ├── 115-wizard-access.sh  # Admin user, SSH key
 │   └── 116-wizard-disks.sh   # Disk detection
@@ -391,7 +395,7 @@ scripts/
 │   ├── 360-configure-ssl.sh       # Certificates
 │   ├── 361-configure-api-token.sh # Proxmox API
 │   ├── 370-configure-zfs.sh       # ZFS ARC tuning
-│   ├── 371-configure-zfs-pool.sh  # Pool creation
+│   ├── 371-configure-zfs-pool.sh  # Pool creation or import (existing)
 │   └── 380-configure-finalize.sh  # Validation, completion
 │
 └── 900-999: Orchestration
@@ -412,7 +416,10 @@ User Input (Wizard) → Global Variables → Template Substitution → Remote Fi
 
 - `PVE_*` - Proxmox settings (hostname, repo, ISO)
 - `MAIN_IPV4/6*` - Network configuration
-- `ZFS_*` - Storage settings
+- `ZFS_*` - Storage settings (RAID mode, ARC)
+- `BOOT_DISK` - Separate boot disk path
+- `USE_EXISTING_POOL` - Import existing pool instead of creating
+- `EXISTING_POOL_NAME` - Pool name to import
 - `INSTALL_*` - Feature flags (yes/no)
 - `ADMIN_*` - User credentials
 

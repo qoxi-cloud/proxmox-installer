@@ -80,10 +80,13 @@ The wizard guides you through configuration in 6 screens:
 - **Firewall** - Stealth, Strict, Standard, or Disabled
 
 ### Storage Settings
-- **Boot Disk** - Disk for Proxmox installation
-- **Pool Disks** - Disks for ZFS data pool
+- **Boot Disk** - Disk for Proxmox installation (ext4)
+- **Pool Mode** - Create new or use existing ZFS pool
+- **Pool Disks** - Disks for ZFS data pool (if creating new)
 - **ZFS Mode** - Single, RAID-0/1, RAID-Z1/Z2/Z3, RAID-10
 - **ZFS ARC** - Memory allocation strategy
+
+> **Upgrading Proxmox?** Select "Use existing" pool to preserve VMs during reinstall.
 
 ### Services
 - **Tailscale** - VPN with optional stealth mode

@@ -49,10 +49,23 @@ make_answer_toml() {
   log "Creating answer.toml for autoinstall"
   log "ZFS_RAID=$ZFS_RAID, BOOT_DISK=$BOOT_DISK"
   log "ZFS_POOL_DISKS=(${ZFS_POOL_DISKS[*]})"
+  log "USE_EXISTING_POOL=$USE_EXISTING_POOL, EXISTING_POOL_NAME=$EXISTING_POOL_NAME"
+  log "EXISTING_POOL_DISKS=(${EXISTING_POOL_DISKS[*]})"
+
+  # When using existing pool, don't pass pool disks to QEMU
+  # This prevents them from being formatted/touched during install
+  local virtio_pool_disks=()
+  if [[ $USE_EXISTING_POOL == "yes" ]]; then
+    log "Using existing pool mode - pool disks will NOT be passed to QEMU"
+    # No pool disks for QEMU - only boot disk (if set)
+    virtio_pool_disks=()
+  else
+    virtio_pool_disks=("${ZFS_POOL_DISKS[@]}")
+  fi
 
   # Create virtio mapping in background (pass values as args since arrays can't be exported)
   run_with_progress "Creating disk mapping" "Disk mapping created" \
-    create_virtio_mapping "$BOOT_DISK" "${ZFS_POOL_DISKS[@]}"
+    create_virtio_mapping "$BOOT_DISK" "${virtio_pool_disks[@]}"
 
   # Load mapping into current shell
   load_virtio_mapping || {
@@ -67,17 +80,25 @@ make_answer_toml() {
   local all_disks=()
 
   if [[ -n $BOOT_DISK ]]; then
-    # Separate boot disk mode: ext4 on boot disk, ZFS pool created later
+    # Separate boot disk mode: ext4 on boot disk, ZFS pool created/imported later
     FILESYSTEM="ext4"
     all_disks=("$BOOT_DISK")
 
-    # Validate we have pool disks for post-install ZFS creation
-    if [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]]; then
-      log "ERROR: BOOT_DISK set but no pool disks for ZFS tank creation"
-      exit 1
+    if [[ $USE_EXISTING_POOL == "yes" ]]; then
+      # Validate existing pool name is set
+      if [[ -z $EXISTING_POOL_NAME ]]; then
+        log "ERROR: USE_EXISTING_POOL=yes but EXISTING_POOL_NAME is empty"
+        exit 1
+      fi
+      log "Boot disk mode: ext4 on boot disk, existing pool '$EXISTING_POOL_NAME' will be imported"
+    else
+      # Validate we have pool disks for post-install ZFS creation
+      if [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]]; then
+        log "ERROR: BOOT_DISK set but no pool disks for ZFS tank creation"
+        exit 1
+      fi
+      log "Boot disk mode: ext4 on boot disk, ZFS 'tank' pool will be created from ${#ZFS_POOL_DISKS[@]} pool disk(s)"
     fi
-
-    log "Boot disk mode: ext4 on boot disk, ZFS 'tank' pool will be created from ${#ZFS_POOL_DISKS[@]} pool disk(s)"
   else
     # All-ZFS mode: all disks in ZFS rpool
     FILESYSTEM="zfs"
