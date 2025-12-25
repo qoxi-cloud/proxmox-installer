@@ -33,7 +33,7 @@ prepare_packages() {
   # Update package lists
   log "Updating package lists"
   apt clean >>"$LOG_FILE" 2>&1
-  apt update >>"$LOG_FILE" 2>&1 &
+  apt-get update >>"$LOG_FILE" 2>&1 &
   show_progress $! "Updating package lists" "Package lists updated"
   wait $!
   exit_code=$?
@@ -50,7 +50,7 @@ prepare_packages() {
 
   # Install packages
   log "Installing required packages: proxmox-auto-install-assistant xorriso ovmf wget sshpass"
-  apt install -yq proxmox-auto-install-assistant xorriso ovmf wget sshpass >>"$LOG_FILE" 2>&1 &
+  apt-get install -yq proxmox-auto-install-assistant xorriso ovmf wget sshpass >>"$LOG_FILE" 2>&1 &
   show_progress $! "Installing required packages" "Required packages installed"
   wait $!
   exit_code=$?
