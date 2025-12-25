@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.570-pr.21"
+readonly VERSION="2.0.571-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1800,9 +1800,17 @@ return 1
 }
 _install_zfs_if_needed(){
 command -v zpool &>/dev/null&&return 0
-if [[ -x /root/.oldroot/nfs/install/zfs.sh ]];then
-echo "y"|/root/.oldroot/nfs/install/zfs.sh >/dev/null 2>&1||true
-elif [[ -f /etc/debian_version ]];then
+local zfs_scripts=(
+"/root/.oldroot/nfs/install/zfs.sh"
+"/root/zfs-install.sh"
+"/usr/local/bin/install-zfs")
+for script in "${zfs_scripts[@]}";do
+if [[ -x $script ]];then
+echo "y"|"$script" >/dev/null 2>&1||true
+command -v zpool &>/dev/null&&return 0
+fi
+done
+if [[ -f /etc/debian_version ]];then
 apt-get install -qq -y zfsutils-linux >/dev/null 2>&1||true
 fi
 }
