@@ -80,19 +80,25 @@ batch_install_packages() {
   log "Batch installing packages: ${packages[*]}"
 
   # Build repo setup commands for packages needing custom repos
-  local repo_setup=""
+  # Detect Debian codename dynamically to support future releases (trixie, etc.)
+  # shellcheck disable=SC2016
+  local repo_setup='
+    DEBIAN_CODENAME=$(grep -oP "VERSION_CODENAME=\K\w+" /etc/os-release 2>/dev/null || echo "bookworm")
+  '
 
   if [[ $INSTALL_TAILSCALE == "yes" ]]; then
+    # shellcheck disable=SC2016
     repo_setup+='
-      curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
-      curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.tailscale-keyring.list | tee /etc/apt/sources.list.d/tailscale.list
+      curl -fsSL "https://pkgs.tailscale.com/stable/debian/${DEBIAN_CODENAME}.noarmor.gpg" | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+      curl -fsSL "https://pkgs.tailscale.com/stable/debian/${DEBIAN_CODENAME}.tailscale-keyring.list" | tee /etc/apt/sources.list.d/tailscale.list
     '
   fi
 
   if [[ $INSTALL_NETDATA == "yes" ]]; then
+    # shellcheck disable=SC2016
     repo_setup+='
       curl -fsSL https://repo.netdata.cloud/netdatabot.gpg.key | gpg --dearmor -o /usr/share/keyrings/netdata-archive-keyring.gpg
-      echo "deb [signed-by=/usr/share/keyrings/netdata-archive-keyring.gpg] https://repo.netdata.cloud/repos/stable/debian/ bookworm/" > /etc/apt/sources.list.d/netdata.list
+      echo "deb [signed-by=/usr/share/keyrings/netdata-archive-keyring.gpg] https://repo.netdata.cloud/repos/stable/debian/ ${DEBIAN_CODENAME}/" > /etc/apt/sources.list.d/netdata.list
     '
   fi
 
@@ -118,6 +124,27 @@ batch_install_packages() {
   log_subtasks "${packages[@]}"
 
   return 0
+}
+
+# Internal: runs a single task in parallel group with proper error handling.
+# Receives index as argument to avoid race conditions with loop variable.
+# Parameters:
+#   $1 - Result directory path
+#   $2 - Task index (for result file naming)
+#   $3 - Function name to execute
+_run_parallel_task() {
+  local result_dir="$1"
+  local idx="$2"
+  local func="$3"
+
+  # Default to failure marker on ANY exit (handles remote_run's exit 1)
+  # shellcheck disable=SC2064
+  trap "touch '$result_dir/fail_$idx' 2>/dev/null" EXIT
+
+  if "$func" >/dev/null 2>&1; then
+    trap - EXIT # Clear trap on success
+    touch "$result_dir/success_$idx"
+  fi
 }
 
 # Runs multiple config functions in parallel with a single progress indicator.
@@ -165,17 +192,11 @@ run_parallel_group() {
 
   # Start all functions in background, each writes result to file
   # Use trap to ensure marker created even if function calls exit 1 (like remote_run)
+  # NOTE: Each subshell gets its own copy of variables at fork time.
+  # We pass idx as function argument to guarantee correct value capture.
   local i=0
   for func in "${funcs[@]}"; do
-    (
-      idx=$i # Capture in subshell
-      # Default to failure marker on ANY exit (handles remote_run's exit 1)
-      trap 'touch "$result_dir/fail_$idx" 2>/dev/null' EXIT
-      if "$func" 2>&1; then
-        trap - EXIT # Clear trap on success
-        touch "$result_dir/success_$idx"
-      fi
-    ) >/dev/null &
+    _run_parallel_task "$result_dir" "$i" "$func" &
     ((i++))
   done
 

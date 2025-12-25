@@ -515,6 +515,27 @@ Exits alternate screen buffer and restores terminal.
 finish_live_installation
 ```
 
+### add_subtask_log
+
+Adds a single indented subtask log entry with tree structure prefix.
+
+```bash
+add_subtask_log "Installing package"
+add_subtask_log "Optional step" "$CLR_GRAY"  # Custom color
+```
+
+**Parameters:**
+1. Message to display
+2. Optional color (default: `CLR_GRAY`)
+
+### live_log_subtask
+
+Alias for `add_subtask_log`. Adds subtask during live installation.
+
+```bash
+live_log_subtask "Configuring service"
+```
+
 ### log_subtasks
 
 Logs multiple items as comma-separated list with tree structure prefix.

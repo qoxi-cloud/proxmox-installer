@@ -105,6 +105,7 @@ Test files are in `spec/` directory.
 | `_config_` | Private config functions |
 | `deploy_` | Deployment helpers |
 | `run_` | Execution helpers |
+| `add_` / `start_` / `complete_` | Live log operations |
 
 Private/helper functions start with underscore.
 

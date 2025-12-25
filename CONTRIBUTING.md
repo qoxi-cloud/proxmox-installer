@@ -218,6 +218,8 @@ Changes:
 | `deploy_` | 038-deploy-helpers.sh | Deployment helpers |
 | `configure_` | 300-380 | Post-install config |
 | `_config_` | configure scripts | Private config functions |
+| `add_` / `start_` / `complete_` | 042-live-logs.sh | Live log operations |
+| `log_` | 002-logging.sh, 042-live-logs.sh | Logging functions |
 
 ### Comments
 

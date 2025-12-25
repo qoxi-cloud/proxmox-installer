@@ -195,25 +195,58 @@ wait_for_ssh_ready() {
 #
 # =============================================================================
 
-# Executes command on remote VM via SSH with retry logic.
+# Default timeout for remote commands (seconds)
+# Can be overridden per-call or via SSH_COMMAND_TIMEOUT environment variable
+readonly SSH_DEFAULT_TIMEOUT=300
+
+# Sanitizes script content for logging by masking sensitive values.
+# Replaces passwords and secrets with [REDACTED] to prevent leaks in log files.
+# Parameters:
+#   $1 - Script content to sanitize
+# Returns: Sanitized script via stdout
+_sanitize_script_for_log() {
+  local script="$1"
+
+  # Mask common password patterns (variable assignments and chpasswd)
+  # Pattern: PASSWORD=something or password=something
+  script=$(printf '%s\n' "$script" | sed -E 's/(PASSWORD|password|PASSWD|passwd|SECRET|secret|TOKEN|token|KEY|key)=[^[:space:]"'\'']+/\1=[REDACTED]/g')
+
+  # Pattern: echo "user:password" | chpasswd
+  script=$(printf '%s\n' "$script" | sed -E 's/(echo[[:space:]]+['\''"]?[^:]+:)[^|'\''"]*/\1[REDACTED]/g')
+
+  # Pattern: --authkey='...' or --authkey=...
+  script=$(printf '%s\n' "$script" | sed -E 's/(--authkey=)[^[:space:]'\'']*/\1[REDACTED]/g')
+
+  printf '%s\n' "$script"
+}
+
+# Executes command on remote VM via SSH with retry logic and timeout.
 # Use when you need return code handling or within subshells with own progress.
 # Parameters:
 #   $* - Command to execute remotely
-# Returns: Exit code from remote command
+# Environment:
+#   SSH_COMMAND_TIMEOUT - Override default timeout (seconds, default: 300)
+# Returns: Exit code from remote command (124 on timeout)
 remote_exec() {
   local passfile
   passfile=$(_ssh_get_passfile)
 
+  local cmd_timeout="${SSH_COMMAND_TIMEOUT:-$SSH_DEFAULT_TIMEOUT}"
   local max_attempts=3
   local attempt=0
-  local exit_code=1
 
   while [[ $attempt -lt $max_attempts ]]; do
     attempt=$((attempt + 1))
 
     # shellcheck disable=SC2086
-    if sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost "$@"; then
+    if timeout "$cmd_timeout" sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost "$@"; then
       return 0
+    fi
+
+    local exit_code=$?
+    if [[ $exit_code -eq 124 ]]; then
+      log "ERROR: SSH command timed out after ${cmd_timeout}s: $*"
+      return 124
     fi
 
     if [[ $attempt -lt $max_attempts ]]; then
@@ -239,8 +272,9 @@ _remote_exec_with_progress() {
   local done_message="${3:-$message}"
 
   log "_remote_exec_with_progress: $message"
-  log "--- Script start ---"
-  printf '%s\n' "$script" >>"$LOG_FILE"
+  log "--- Script start (sanitized) ---"
+  # Sanitize script before logging to prevent password leaks
+  _sanitize_script_for_log "$script" >>"$LOG_FILE"
   log "--- Script end ---"
 
   local passfile
@@ -249,8 +283,10 @@ _remote_exec_with_progress() {
   local output_file
   output_file=$(mktemp)
 
+  local cmd_timeout="${SSH_COMMAND_TIMEOUT:-$SSH_DEFAULT_TIMEOUT}"
+
   # shellcheck disable=SC2086
-  printf '%s\n' "$script" | sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'bash -s' >"$output_file" 2>&1 &
+  printf '%s\n' "$script" | timeout "$cmd_timeout" sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'bash -s' >"$output_file" 2>&1 &
   local pid=$!
   show_progress $pid "$message" "$done_message"
   local exit_code=$?
