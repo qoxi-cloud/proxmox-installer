@@ -42,8 +42,8 @@ _ssh_session_init() {
     return 0
   fi
 
-  # Create new passfile
-  printf '%s\n' "$NEW_ROOT_PASSWORD" >"$passfile_path"
+  # Create new passfile (no trailing newline - sshpass reads entire file content)
+  printf '%s' "$NEW_ROOT_PASSWORD" >"$passfile_path"
   chmod 600 "$passfile_path"
   _SSH_SESSION_PASSFILE="$passfile_path"
 
