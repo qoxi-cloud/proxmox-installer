@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.574-pr.21"
+readonly VERSION="2.0.575-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -2631,6 +2631,7 @@ _wiz_description(){
 local output=""
 for line in "$@";do
 line="${line//\{\{cyan:/$CLR_CYAN}"
+line="${line//\{\{yellow:/$CLR_YELLOW}"
 line="${line//\}\}/$CLR_GRAY}"
 output+="$CLR_GRAY$line$CLR_RESET\n"
 done
