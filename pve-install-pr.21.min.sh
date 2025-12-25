@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.561-pr.21"
+readonly VERSION="2.0.565-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -46,6 +46,12 @@ readonly DNS_RETRY_DELAY=10
 readonly QEMU_BOOT_TIMEOUT=300
 readonly QEMU_PORT_CHECK_INTERVAL=3
 readonly QEMU_SSH_READY_TIMEOUT=120
+readonly RETRY_DELAY_SECONDS=2
+readonly SSH_RETRY_ATTEMPTS=3
+readonly PROGRESS_POLL_INTERVAL=0.2
+readonly PROCESS_KILL_WAIT=1
+readonly VM_SHUTDOWN_TIMEOUT=120
+readonly WIZARD_MESSAGE_DELAY=3
 readonly WIZ_KEYBOARD_LAYOUTS="de
 de-ch
 dk
@@ -159,7 +165,7 @@ fi
 cleanup_and_error_handler(){
 local exit_code=$?
 jobs -p|xargs -r kill 2>/dev/null||true
-sleep 1
+sleep "${PROCESS_KILL_WAIT:-1}"
 if type _ssh_session_cleanup &>/dev/null;then
 _ssh_session_cleanup
 fi
@@ -170,7 +176,7 @@ if type release_drives &>/dev/null;then
 release_drives
 else
 pkill -TERM qemu-system-x86 2>/dev/null||true
-sleep 2
+sleep "${RETRY_DELAY_SECONDS:-2}"
 pkill -9 qemu-system-x86 2>/dev/null||true
 fi
 fi
@@ -506,9 +512,10 @@ local done_message="${3:-$message}"
 local silent=false
 [[ ${3:-} == "--silent" || ${4:-} == "--silent" ]]&&silent=true
 [[ ${3:-} == "--silent" ]]&&done_message="$message"
+local poll_interval="${PROGRESS_POLL_INTERVAL:-0.2}"
 gum spin --spinner meter --spinner.foreground "#ff8700" --title "$message" -- bash -c "
     while kill -0 $pid 2>/dev/null; do
-      sleep 0.2
+      sleep $poll_interval
     done
   "
 wait "$pid" 2>/dev/null
@@ -688,6 +695,30 @@ log "ERROR: Template $remote_file corrupted - invalid shell script"
 return 1
 fi
 ;;
+nftables.conf)if
+! grep -q "table inet" "$local_path" 2>/dev/null
+then
+print_error "Template $remote_file appears corrupted (missing table inet definition)"
+log "ERROR: Template $remote_file corrupted - missing table inet"
+return 1
+fi
+;;
+promtail.yml|promtail.yaml)if
+! grep -q "server:" "$local_path" 2>/dev/null||! grep -q "clients:" "$local_path" 2>/dev/null
+then
+print_error "Template $remote_file appears corrupted (missing YAML structure)"
+log "ERROR: Template $remote_file corrupted - missing server: or clients: section"
+return 1
+fi
+;;
+chrony|chrony.conf)if
+! grep -qE "^(pool|server)" "$local_path" 2>/dev/null
+then
+print_error "Template $remote_file appears corrupted (missing NTP server config)"
+log "ERROR: Template $remote_file corrupted - missing pool or server directive"
+return 1
+fi
+;;
 *.conf|*.sources|*.service|*.timer)if
 [[ $(wc -l <"$local_path" 2>/dev/null||echo 0) -lt 2 ]]
 then
@@ -746,6 +777,18 @@ _ssh_get_passfile(){
 _ssh_session_init
 printf '%s\n' "$_SSH_SESSION_PASSFILE"
 }
+_ssh_base_cmd(){
+local passfile
+passfile=$(_ssh_get_passfile)
+local cmd_timeout="${1:-${SSH_COMMAND_TIMEOUT:-$SSH_DEFAULT_TIMEOUT}}"
+printf 'timeout %s sshpass -f "%s" ssh -p "%s" %s root@localhost' \
+"$cmd_timeout" "$passfile" "$SSH_PORT" "$SSH_OPTS"
+}
+_scp_base_cmd(){
+local passfile
+passfile=$(_ssh_get_passfile)
+printf 'sshpass -f "%s" scp -P "%s" %s' "$passfile" "$SSH_PORT" "$SSH_OPTS"
+}
 check_port_available(){
 local port="$1"
 if command -v ss &>/dev/null;then
@@ -771,8 +814,8 @@ if (echo >/dev/tcp/localhost/"$SSH_PORT") 2>/dev/null;then
 port_check=1
 break
 fi
-sleep 2
-((elapsed+=2))
+sleep "${RETRY_DELAY_SECONDS:-2}"
+((elapsed+=RETRY_DELAY_SECONDS))
 done
 if [[ $port_check -eq 0 ]];then
 print_error "Port $SSH_PORT is not accessible"
@@ -782,12 +825,13 @@ fi
 local passfile
 passfile=$(_ssh_get_passfile)
 (local elapsed=0
+local retry_delay="${RETRY_DELAY_SECONDS:-2}"
 while ((elapsed<ssh_timeout));do
 if sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' >/dev/null 2>&1;then
 exit 0
 fi
-sleep 2
-((elapsed+=2))
+sleep "$retry_delay"
+((elapsed+=retry_delay))
 done
 exit 1) \
 &
@@ -807,7 +851,7 @@ remote_exec(){
 local passfile
 passfile=$(_ssh_get_passfile)
 local cmd_timeout="${SSH_COMMAND_TIMEOUT:-$SSH_DEFAULT_TIMEOUT}"
-local max_attempts=3
+local max_attempts="${SSH_RETRY_ATTEMPTS:-3}"
 local attempt=0
 while [[ $attempt -lt $max_attempts ]];do
 attempt=$((attempt+1))
@@ -820,8 +864,8 @@ log "ERROR: SSH command timed out after ${cmd_timeout}s: $*"
 return 124
 fi
 if [[ $attempt -lt $max_attempts ]];then
-log "SSH attempt $attempt failed, retrying in 2 seconds..."
-sleep 2
+log "SSH attempt $attempt failed, retrying in ${RETRY_DELAY_SECONDS:-2} seconds..."
+sleep "${RETRY_DELAY_SECONDS:-2}"
 fi
 done
 log "ERROR: SSH command failed after $max_attempts attempts: $*"
@@ -1048,7 +1092,7 @@ show_validation_error(){
 local message="$1"
 _wiz_hide_cursor
 _wiz_error "$message"
-sleep 3
+sleep "${WIZARD_MESSAGE_DELAY:-3}"
 }
 install_base_packages(){
 local packages="$SYSTEM_UTILITIES $OPTIONAL_PACKAGES locales chrony unattended-upgrades apt-listchanges linux-cpupower"
@@ -1164,7 +1208,7 @@ for j in $(seq 0 $((count-1)));do
 [[ -f "$result_dir/success_$j" || -f "$result_dir/fail_$j" ]]&&((done_count++))
 done
 [[ $done_count -eq $count ]]&&break
-sleep 0.2
+sleep "${PROGRESS_POLL_INTERVAL:-0.2}"
 done) \
 &
 show_progress $! "$group_name" "$done_msg"
@@ -1310,6 +1354,27 @@ rm -f "$staged"
 return 1
 }
 rm -f "$staged"
+}
+run_parallel_copies(){
+local -a pids=()
+local -a pairs=("$@")
+for pair in "${pairs[@]}";do
+local src="${pair%%:*}"
+local dst="${pair#*:}"
+remote_copy "$src" "$dst" >/dev/null 2>&1&
+pids+=($!)
+done
+local failures=0
+for pid in "${pids[@]}";do
+if ! wait "$pid";then
+((failures++))
+fi
+done
+if [[ $failures -gt 0 ]];then
+log "ERROR: $failures/${#pairs[@]} parallel copies failed"
+return 1
+fi
+return 0
 }
 make_feature_wrapper(){
 local feature="$1"
@@ -1730,8 +1795,7 @@ return 0
 fi
 return 1
 }
-collect_system_info(){
-local errors=0
+_install_required_packages(){
 local -A required_commands=(
 [column]="bsdmainutils"
 [ip]="iproute2"
@@ -1760,40 +1824,54 @@ if [[ -n $packages_to_install ]];then
 apt-get update -qq >/dev/null 2>&1
 DEBIAN_FRONTEND=noninteractive apt-get install -qq -y $packages_to_install >/dev/null 2>&1
 fi
+}
+_check_root_access(){
 if [[ $EUID -ne 0 ]];then
 PREFLIGHT_ROOT="✗ Not root"
 PREFLIGHT_ROOT_STATUS="error"
-errors=$((errors+1))
+return 1
 else
 PREFLIGHT_ROOT="Running as root"
 PREFLIGHT_ROOT_STATUS="ok"
+return 0
 fi
+}
+_check_internet(){
 if ping -c 1 -W 3 "$DNS_PRIMARY" >/dev/null 2>&1;then
 PREFLIGHT_NET="Available"
 PREFLIGHT_NET_STATUS="ok"
+return 0
 else
 PREFLIGHT_NET="No connection"
 PREFLIGHT_NET_STATUS="error"
-errors=$((errors+1))
+return 1
 fi
+}
+_check_disk_space(){
 if validate_disk_space "/root" "$MIN_DISK_SPACE_MB";then
 PREFLIGHT_DISK="$DISK_SPACE_MB MB"
 PREFLIGHT_DISK_STATUS="ok"
+return 0
 else
 PREFLIGHT_DISK="${DISK_SPACE_MB:-0} MB (need ${MIN_DISK_SPACE_MB}MB+)"
 PREFLIGHT_DISK_STATUS="error"
-errors=$((errors+1))
+return 1
 fi
+}
+_check_ram(){
 local total_ram_mb
 total_ram_mb=$(free -m|awk '/^Mem:/{print $2}')
 if [[ $total_ram_mb -ge $MIN_RAM_MB ]];then
 PREFLIGHT_RAM="$total_ram_mb MB"
 PREFLIGHT_RAM_STATUS="ok"
+return 0
 else
 PREFLIGHT_RAM="$total_ram_mb MB (need ${MIN_RAM_MB}MB+)"
 PREFLIGHT_RAM_STATUS="error"
-errors=$((errors+1))
+return 1
 fi
+}
+_check_cpu(){
 local cpu_cores
 cpu_cores=$(nproc)
 if [[ $cpu_cores -ge 2 ]];then
@@ -1803,6 +1881,8 @@ else
 PREFLIGHT_CPU="$cpu_cores core(s)"
 PREFLIGHT_CPU_STATUS="warn"
 fi
+}
+_check_kvm(){
 if [[ ! -e /dev/kvm ]];then
 modprobe kvm 2>/dev/null||true
 if grep -q "Intel" /proc/cpuinfo 2>/dev/null;then
@@ -1817,12 +1897,34 @@ fi
 if [[ -e /dev/kvm ]];then
 PREFLIGHT_KVM="Available"
 PREFLIGHT_KVM_STATUS="ok"
+return 0
 else
 PREFLIGHT_KVM="Not available"
 PREFLIGHT_KVM_STATUS="error"
-errors=$((errors+1))
+return 1
 fi
+}
+_run_preflight_checks(){
+local errors=0
+_check_root_access||((errors++))
+_check_internet||((errors++))
+_check_disk_space||((errors++))
+_check_ram||((errors++))
+_check_cpu
+_check_kvm||((errors++))
 PREFLIGHT_ERRORS=$errors
+}
+collect_system_info(){
+_install_required_packages
+_run_preflight_checks
+_detect_default_interface
+_detect_predictable_name
+_detect_available_interfaces
+_detect_ipv4
+_detect_ipv6_and_mac
+_load_wizard_data
+}
+_detect_default_interface(){
 if command -v ip &>/dev/null&&command -v jq &>/dev/null;then
 CURRENT_INTERFACE=$(ip -j route 2>/dev/null|jq -r '.[] | select(.dst == "default") | .dev'|head -n1)
 elif command -v ip &>/dev/null;then
@@ -1843,6 +1945,8 @@ if [[ -z $CURRENT_INTERFACE ]];then
 CURRENT_INTERFACE="eth0"
 log "WARNING: Could not detect network interface, defaulting to eth0"
 fi
+}
+_detect_predictable_name(){
 PREDICTABLE_NAME=""
 if [[ -e "/sys/class/net/$CURRENT_INTERFACE" ]];then
 local udev_info
@@ -1860,6 +1964,8 @@ DEFAULT_INTERFACE="$PREDICTABLE_NAME"
 else
 DEFAULT_INTERFACE="$CURRENT_INTERFACE"
 fi
+}
+_detect_available_interfaces(){
 AVAILABLE_ALTNAMES=$(ip -d link show|grep -v "lo:"|grep -E '(^[0-9]+:|altname)'|awk '/^[0-9]+:/ {interface=$2; gsub(/:/, "", interface); printf "%s", interface} /altname/ {printf ", %s", $2} END {print ""}'|sed 's/, $//')
 if command -v ip &>/dev/null&&command -v jq &>/dev/null;then
 AVAILABLE_INTERFACES=$(ip -j link show 2>/dev/null|jq -r '.[] | select(.ifname != "lo") | .ifname'|sort)
@@ -1872,7 +1978,9 @@ INTERFACE_COUNT=$(printf '%s\n' "$AVAILABLE_INTERFACES"|wc -l)
 if [[ -z $INTERFACE_NAME ]];then
 INTERFACE_NAME="$DEFAULT_INTERFACE"
 fi
-local max_attempts=3
+}
+_detect_ipv4(){
+local max_attempts="${SSH_RETRY_ATTEMPTS:-3}"
 local attempt=0
 while [[ $attempt -lt $max_attempts ]];do
 attempt=$((attempt+1))
@@ -1880,12 +1988,12 @@ if command -v ip &>/dev/null&&command -v jq &>/dev/null;then
 MAIN_IPV4_CIDR=$(ip -j address show "$CURRENT_INTERFACE" 2>/dev/null|jq -r '.[0].addr_info[] | select(.family == "inet" and .scope == "global") | "\(.local)/\(.prefixlen)"'|head -n1)
 MAIN_IPV4="${MAIN_IPV4_CIDR%/*}"
 MAIN_IPV4_GW=$(ip -j route 2>/dev/null|jq -r '.[] | select(.dst == "default") | .gateway'|head -n1)
-[[ -n $MAIN_IPV4 ]]&&[[ -n $MAIN_IPV4_GW ]]&&break
+[[ -n $MAIN_IPV4 ]]&&[[ -n $MAIN_IPV4_GW ]]&&return 0
 elif command -v ip &>/dev/null;then
 MAIN_IPV4_CIDR=$(ip address show "$CURRENT_INTERFACE" 2>/dev/null|grep global|grep "inet "|awk '{print $2}'|head -n1)
 MAIN_IPV4="${MAIN_IPV4_CIDR%/*}"
 MAIN_IPV4_GW=$(ip route 2>/dev/null|grep default|awk '{print $3}'|head -n1)
-[[ -n $MAIN_IPV4 ]]&&[[ -n $MAIN_IPV4_GW ]]&&break
+[[ -n $MAIN_IPV4 ]]&&[[ -n $MAIN_IPV4_GW ]]&&return 0
 elif command -v ifconfig &>/dev/null;then
 MAIN_IPV4=$(ifconfig "$CURRENT_INTERFACE" 2>/dev/null|awk '/inet / {print $2}'|sed 's/addr://')
 local netmask
@@ -1906,13 +2014,15 @@ fi
 if command -v route &>/dev/null;then
 MAIN_IPV4_GW=$(route -n 2>/dev/null|awk '/^0\.0\.0\.0/ {print $2}'|head -n1)
 fi
-[[ -n $MAIN_IPV4 ]]&&[[ -n $MAIN_IPV4_GW ]]&&break
+[[ -n $MAIN_IPV4 ]]&&[[ -n $MAIN_IPV4_GW ]]&&return 0
 fi
 if [[ $attempt -lt $max_attempts ]];then
-log "Network info attempt $attempt failed, retrying in 2 seconds..."
-sleep 2
+log "Network info attempt $attempt failed, retrying in ${RETRY_DELAY_SECONDS:-2} seconds..."
+sleep "${RETRY_DELAY_SECONDS:-2}"
 fi
 done
+}
+_detect_ipv6_and_mac(){
 if command -v ip &>/dev/null&&command -v jq &>/dev/null;then
 MAC_ADDRESS=$(ip -j link show "$CURRENT_INTERFACE" 2>/dev/null|jq -r '.[0].address // empty')
 IPV6_CIDR=$(ip -j address show "$CURRENT_INTERFACE" 2>/dev/null|jq -r '.[0].addr_info[] | select(.family == "inet6" and .scope == "global") | "\(.local)/\(.prefixlen)"'|head -n1)
@@ -1938,38 +2048,6 @@ if command -v ip &>/dev/null;then
 IPV6_GATEWAY=$(ip -6 route 2>/dev/null|grep default|awk '{print $3}'|head -n1)
 fi
 fi
-_load_wizard_data
-}
-_load_timezones(){
-if command -v timedatectl &>/dev/null;then
-WIZ_TIMEZONES=$(timedatectl list-timezones 2>/dev/null)
-else
-WIZ_TIMEZONES=$(find /usr/share/zoneinfo -type f 2>/dev/null|sed 's|/usr/share/zoneinfo/||'|grep -E '^(Africa|America|Antarctica|Asia|Atlantic|Australia|Europe|Indian|Pacific)/'|sort)
-fi
-WIZ_TIMEZONES+=$'\nUTC'
-}
-_load_countries(){
-local iso_file="/usr/share/iso-codes/json/iso_3166-1.json"
-if [[ -f $iso_file ]];then
-WIZ_COUNTRIES=$(grep -oP '"alpha_2":\s*"\K[^"]+' "$iso_file"|tr '[:upper:]' '[:lower:]'|sort)
-else
-WIZ_COUNTRIES=$(locale -a 2>/dev/null|grep -oP '^[a-z]{2}(?=_)'|sort -u)
-fi
-}
-_build_tz_to_country(){
-declare -gA TZ_TO_COUNTRY
-local zone_tab="/usr/share/zoneinfo/zone.tab"
-[[ -f $zone_tab ]]||return 0
-while IFS=$'\t' read -r country _ tz _;do
-[[ $country == \#* ]]&&continue
-[[ -z $tz ]]&&continue
-TZ_TO_COUNTRY["$tz"]="${country,,}"
-done <"$zone_tab"
-}
-_load_wizard_data(){
-_load_timezones
-_load_countries
-_build_tz_to_country
 }
 detect_drives(){
 mapfile -t DRIVES < <(lsblk -d -n -o NAME,TYPE|grep nvme|grep disk|awk '{print "/dev/"$1}'|sort)
@@ -2031,6 +2109,37 @@ done
 fi
 log "Boot disk: ${BOOT_DISK:-all in pool}"
 log "Pool disks: ${ZFS_POOL_DISKS[*]}"
+}
+_load_timezones(){
+if command -v timedatectl &>/dev/null;then
+WIZ_TIMEZONES=$(timedatectl list-timezones 2>/dev/null)
+else
+WIZ_TIMEZONES=$(find /usr/share/zoneinfo -type f 2>/dev/null|sed 's|/usr/share/zoneinfo/||'|grep -E '^(Africa|America|Antarctica|Asia|Atlantic|Australia|Europe|Indian|Pacific)/'|sort)
+fi
+WIZ_TIMEZONES+=$'\nUTC'
+}
+_load_countries(){
+local iso_file="/usr/share/iso-codes/json/iso_3166-1.json"
+if [[ -f $iso_file ]];then
+WIZ_COUNTRIES=$(grep -oP '"alpha_2":\s*"\K[^"]+' "$iso_file"|tr '[:upper:]' '[:lower:]'|sort)
+else
+WIZ_COUNTRIES=$(locale -a 2>/dev/null|grep -oP '^[a-z]{2}(?=_)'|sort -u)
+fi
+}
+_build_tz_to_country(){
+declare -gA TZ_TO_COUNTRY
+local zone_tab="/usr/share/zoneinfo/zone.tab"
+[[ -f $zone_tab ]]||return 0
+while IFS=$'\t' read -r country _ tz _;do
+[[ $country == \#* ]]&&continue
+[[ -z $tz ]]&&continue
+TZ_TO_COUNTRY["$tz"]="${country,,}"
+done <"$zone_tab"
+}
+_load_wizard_data(){
+_load_timezones
+_load_countries
+_build_tz_to_country
 }
 show_system_status(){
 detect_drives
@@ -2672,11 +2781,26 @@ _wiz_config_complete(){
 [[ $FIREWALL_MODE == "stealth" && $INSTALL_TAILSCALE != "yes" ]]&&return 1
 return 0
 }
-_wiz_build_display_values(){
+_dsp_basic(){
 _DSP_PASS=""
 [[ -n $NEW_ROOT_PASSWORD ]]&&_DSP_PASS="********"
 _DSP_HOSTNAME=""
 [[ -n $PVE_HOSTNAME && -n $DOMAIN_SUFFIX ]]&&_DSP_HOSTNAME="$PVE_HOSTNAME.$DOMAIN_SUFFIX"
+}
+_dsp_proxmox(){
+_DSP_REPO=""
+if [[ -n $PVE_REPO_TYPE ]];then
+case "$PVE_REPO_TYPE" in
+no-subscription)_DSP_REPO="No-subscription (free)";;
+enterprise)_DSP_REPO="Enterprise";;
+test)_DSP_REPO="Test/Development";;
+*)_DSP_REPO="$PVE_REPO_TYPE"
+esac
+fi
+_DSP_ISO=""
+[[ -n $PROXMOX_ISO_VERSION ]]&&_DSP_ISO=$(get_iso_version "$PROXMOX_ISO_VERSION")
+}
+_dsp_network(){
 _DSP_IPV6=""
 if [[ -n $IPV6_MODE ]];then
 case "$IPV6_MODE" in
@@ -2688,27 +2812,6 @@ disabled)_DSP_IPV6="Disabled";;
 *)_DSP_IPV6="$IPV6_MODE"
 esac
 fi
-_DSP_TAILSCALE=""
-if [[ -n $INSTALL_TAILSCALE ]];then
-[[ $INSTALL_TAILSCALE == "yes" ]]&&_DSP_TAILSCALE="Enabled + Stealth"||_DSP_TAILSCALE="Disabled"
-fi
-_DSP_SSL=""
-if [[ -n $SSL_TYPE ]];then
-case "$SSL_TYPE" in
-self-signed)_DSP_SSL="Self-signed";;
-letsencrypt)_DSP_SSL="Let's Encrypt";;
-*)_DSP_SSL="$SSL_TYPE"
-esac
-fi
-_DSP_REPO=""
-if [[ -n $PVE_REPO_TYPE ]];then
-case "$PVE_REPO_TYPE" in
-no-subscription)_DSP_REPO="No-subscription (free)";;
-enterprise)_DSP_REPO="Enterprise";;
-test)_DSP_REPO="Test/Development";;
-*)_DSP_REPO="$PVE_REPO_TYPE"
-esac
-fi
 _DSP_BRIDGE=""
 if [[ -n $BRIDGE_MODE ]];then
 case "$BRIDGE_MODE" in
@@ -2718,6 +2821,23 @@ both)_DSP_BRIDGE="Both";;
 *)_DSP_BRIDGE="$BRIDGE_MODE"
 esac
 fi
+_DSP_FIREWALL=""
+if [[ -n $INSTALL_FIREWALL ]];then
+if [[ $INSTALL_FIREWALL == "yes" ]];then
+case "$FIREWALL_MODE" in
+stealth)_DSP_FIREWALL="Stealth (Tailscale only)";;
+strict)_DSP_FIREWALL="Strict (SSH only)";;
+standard)_DSP_FIREWALL="Standard (SSH + Web UI)";;
+*)_DSP_FIREWALL="$FIREWALL_MODE"
+esac
+else
+_DSP_FIREWALL="Disabled"
+fi
+fi
+_DSP_MTU="${BRIDGE_MTU:-9000}"
+[[ $_DSP_MTU == "9000" ]]&&_DSP_MTU="9000 (jumbo)"
+}
+_dsp_storage(){
 _DSP_ZFS=""
 if [[ -n $ZFS_RAID ]];then
 case "$ZFS_RAID" in
@@ -2737,6 +2857,30 @@ vm-focused)_DSP_ARC="VM-focused (4GB)";;
 balanced)_DSP_ARC="Balanced (25-40%)";;
 storage-focused)_DSP_ARC="Storage-focused (50%)";;
 *)_DSP_ARC="$ZFS_ARC_MODE"
+esac
+fi
+_DSP_BOOT="All in pool"
+if [[ -n $BOOT_DISK ]];then
+for i in "${!DRIVES[@]}";do
+if [[ ${DRIVES[$i]} == "$BOOT_DISK" ]];then
+_DSP_BOOT="${DRIVE_MODELS[$i]}"
+break
+fi
+done
+fi
+_DSP_POOL="${#ZFS_POOL_DISKS[@]} disks"
+}
+_dsp_services(){
+_DSP_TAILSCALE=""
+if [[ -n $INSTALL_TAILSCALE ]];then
+[[ $INSTALL_TAILSCALE == "yes" ]]&&_DSP_TAILSCALE="Enabled + Stealth"||_DSP_TAILSCALE="Disabled"
+fi
+_DSP_SSL=""
+if [[ -n $SSL_TYPE ]];then
+case "$SSL_TYPE" in
+self-signed)_DSP_SSL="Self-signed";;
+letsencrypt)_DSP_SSL="Let's Encrypt";;
+*)_DSP_SSL="$SSL_TYPE"
 esac
 fi
 _DSP_SHELL=""
@@ -2778,6 +2922,14 @@ local tool_items=()
 [[ $INSTALL_NVIM == "yes" ]]&&tool_items+=("nvim")
 [[ $INSTALL_RINGBUFFER == "yes" ]]&&tool_items+=("ringbuffer")
 [[ ${#tool_items[@]} -gt 0 ]]&&_DSP_TOOLS="${tool_items[*]}"
+}
+_dsp_access(){
+_DSP_ADMIN_USER=""
+[[ -n $ADMIN_USERNAME ]]&&_DSP_ADMIN_USER="$ADMIN_USERNAME"
+_DSP_ADMIN_PASS=""
+[[ -n $ADMIN_PASSWORD ]]&&_DSP_ADMIN_PASS="********"
+_DSP_SSH=""
+[[ -n $SSH_PUBLIC_KEY ]]&&_DSP_SSH="${SSH_PUBLIC_KEY:0:20}..."
 _DSP_API=""
 if [[ -n $INSTALL_API_TOKEN ]];then
 case "$INSTALL_API_TOKEN" in
@@ -2785,39 +2937,14 @@ yes)_DSP_API="Yes ($API_TOKEN_NAME)";;
 no)_DSP_API="No"
 esac
 fi
-_DSP_SSH=""
-[[ -n $SSH_PUBLIC_KEY ]]&&_DSP_SSH="${SSH_PUBLIC_KEY:0:20}..."
-_DSP_ADMIN_USER=""
-[[ -n $ADMIN_USERNAME ]]&&_DSP_ADMIN_USER="$ADMIN_USERNAME"
-_DSP_ADMIN_PASS=""
-[[ -n $ADMIN_PASSWORD ]]&&_DSP_ADMIN_PASS="********"
-_DSP_FIREWALL=""
-if [[ -n $INSTALL_FIREWALL ]];then
-if [[ $INSTALL_FIREWALL == "yes" ]];then
-case "$FIREWALL_MODE" in
-stealth)_DSP_FIREWALL="Stealth (Tailscale only)";;
-strict)_DSP_FIREWALL="Strict (SSH only)";;
-standard)_DSP_FIREWALL="Standard (SSH + Web UI)";;
-*)_DSP_FIREWALL="$FIREWALL_MODE"
-esac
-else
-_DSP_FIREWALL="Disabled"
-fi
-fi
-_DSP_ISO=""
-[[ -n $PROXMOX_ISO_VERSION ]]&&_DSP_ISO=$(get_iso_version "$PROXMOX_ISO_VERSION")
-_DSP_MTU="${BRIDGE_MTU:-9000}"
-[[ $_DSP_MTU == "9000" ]]&&_DSP_MTU="9000 (jumbo)"
-_DSP_BOOT="All in pool"
-if [[ -n $BOOT_DISK ]];then
-for i in "${!DRIVES[@]}";do
-if [[ ${DRIVES[$i]} == "$BOOT_DISK" ]];then
-_DSP_BOOT="${DRIVE_MODELS[$i]}"
-break
-fi
-done
-fi
-_DSP_POOL="${#ZFS_POOL_DISKS[@]} disks"
+}
+_wiz_build_display_values(){
+_dsp_basic
+_dsp_proxmox
+_dsp_network
+_dsp_storage
+_dsp_services
+_dsp_access
 }
 _wiz_render_screen_content(){
 local screen="$1"
@@ -3106,7 +3233,7 @@ iso_list=$(get_available_proxmox_isos 5)
 if [[ -z $iso_list ]];then
 _wiz_hide_cursor
 _wiz_error "Failed to fetch ISO list"
-sleep 2
+sleep "${RETRY_DELAY_SECONDS:-2}"
 return
 fi
 _show_input_footer "filter" 6
@@ -3413,38 +3540,23 @@ case "$selected" in
 "Storage-focused (50% of RAM)")ZFS_ARC_MODE="storage-focused"
 esac
 }
-_edit_tailscale(){
-_wiz_start_edit
-_wiz_description \
-"  Tailscale VPN with stealth mode:" \
-"" \
-"  {{cyan:Enabled}}:  Access via Tailscale only (blocks public SSH)" \
-"  {{cyan:Disabled}}: Standard access via public IP" \
-"" \
-"  Stealth mode blocks ALL incoming traffic on public IP." \
-""
-_show_input_footer "filter" 3
-local selected
-if ! selected=$(printf '%s\n' "$WIZ_TOGGLE_OPTIONS"|_wiz_choose --header="Tailscale:");then
-return
-fi
-case "$selected" in
-Enabled)local auth_key=""
+_tailscale_get_auth_key(){
+local auth_key=""
 while true;do
 _wiz_start_edit
 _show_input_footer
 auth_key=$(_wiz_input \
 --placeholder "tskey-auth-..." \
 --prompt "Auth Key: ")
-[[ -z $auth_key ]]&&break
+[[ -z $auth_key ]]&&return
 if validate_tailscale_key "$auth_key";then
-break
+printf '%s' "$auth_key"
+return 0
 fi
 show_validation_error "Invalid key format. Expected: tskey-auth-xxx-xxx"
 done
-if [[ -n $auth_key ]];then
-INSTALL_TAILSCALE="yes"
-TAILSCALE_AUTH_KEY="$auth_key"
+}
+_tailscale_configure_webui(){
 _wiz_start_edit
 _wiz_description \
 "  Expose Proxmox Web UI via Tailscale Serve?" \
@@ -3464,19 +3576,20 @@ esac
 else
 TAILSCALE_WEBUI="no"
 fi
+}
+_tailscale_enable(){
+local auth_key="$1"
+INSTALL_TAILSCALE="yes"
+TAILSCALE_AUTH_KEY="$auth_key"
+_tailscale_configure_webui
 SSL_TYPE="self-signed"
 if [[ -z $INSTALL_FIREWALL ]];then
 INSTALL_FIREWALL="yes"
 FIREWALL_MODE="stealth"
 fi
-else
+}
+_tailscale_disable(){
 INSTALL_TAILSCALE="no"
-TAILSCALE_AUTH_KEY=""
-TAILSCALE_WEBUI=""
-SSL_TYPE=""
-fi
-;;
-Disabled)INSTALL_TAILSCALE="no"
 TAILSCALE_AUTH_KEY=""
 TAILSCALE_WEBUI=""
 SSL_TYPE=""
@@ -3484,27 +3597,35 @@ if [[ -z $INSTALL_FIREWALL ]];then
 INSTALL_FIREWALL="yes"
 FIREWALL_MODE="standard"
 fi
-esac
 }
-_edit_ssl(){
+_edit_tailscale(){
 _wiz_start_edit
 _wiz_description \
-"  SSL certificate for Proxmox web interface:" \
+"  Tailscale VPN with stealth mode:" \
 "" \
-"  {{cyan:Self-signed}}:   Works always, browser shows warning" \
-"  {{cyan:Let's Encrypt}}: Trusted cert, requires public DNS" \
+"  {{cyan:Enabled}}:  Access via Tailscale only (blocks public SSH)" \
+"  {{cyan:Disabled}}: Standard access via public IP" \
+"" \
+"  Stealth mode blocks ALL incoming traffic on public IP." \
 ""
 _show_input_footer "filter" 3
 local selected
-if ! selected=$(printf '%s\n' "$WIZ_SSL_TYPES"|_wiz_choose --header="SSL Certificate:");then
+if ! selected=$(printf '%s\n' "$WIZ_TOGGLE_OPTIONS"|_wiz_choose --header="Tailscale:");then
 return
 fi
-local ssl_type=""
 case "$selected" in
-"Self-signed")ssl_type="self-signed";;
-"Let's Encrypt")ssl_type="letsencrypt"
+Enabled)local auth_key
+auth_key=$(_tailscale_get_auth_key)
+if [[ -n $auth_key ]];then
+_tailscale_enable "$auth_key"
+else
+_tailscale_disable
+fi
+;;
+Disabled)_tailscale_disable
 esac
-if [[ $ssl_type == "letsencrypt" ]];then
+}
+_ssl_validate_fqdn(){
 if [[ -z $FQDN ]];then
 _wiz_start_edit
 _wiz_hide_cursor
@@ -3512,9 +3633,8 @@ _wiz_error "Error: Hostname not configured!"
 _wiz_blank_line
 _wiz_dim "Let's Encrypt requires a fully qualified domain name."
 _wiz_dim "Please configure hostname first."
-sleep 3
-SSL_TYPE="self-signed"
-return
+sleep "${WIZARD_MESSAGE_DELAY:-3}"
+return 1
 fi
 if [[ $FQDN == *.local ]]||! validate_fqdn "$FQDN";then
 _wiz_start_edit
@@ -3524,10 +3644,12 @@ _wiz_blank_line
 _wiz_dim "Current hostname: $CLR_ORANGE$FQDN$CLR_RESET"
 _wiz_dim "Let's Encrypt requires a valid public FQDN (e.g., pve.example.com)."
 _wiz_dim "Domains ending with .local are not supported."
-sleep 3
-SSL_TYPE="self-signed"
-return
+sleep "${WIZARD_MESSAGE_DELAY:-3}"
+return 2
 fi
+return 0
+}
+_ssl_check_dns_animated(){
 _wiz_start_edit
 _wiz_hide_cursor
 _wiz_blank_line
@@ -3554,35 +3676,65 @@ local dns_result
 dns_result=$(cat "$dns_result_file")
 rm -f "$dns_result_file"
 printf "\r%-80s\r" " "
-if [[ $dns_result -eq 1 ]];then
+return "$dns_result"
+}
+_ssl_show_dns_error(){
+local error_type="$1"
 _wiz_hide_cursor
+if [[ $error_type -eq 1 ]];then
 _wiz_error "Domain does not resolve to any IP address"
 _wiz_blank_line
 _wiz_dim "Please configure DNS A record:"
 _wiz_dim "$CLR_ORANGE$FQDN$CLR_RESET → $CLR_ORANGE$MAIN_IPV4$CLR_RESET"
-_wiz_blank_line
-_wiz_dim "Falling back to self-signed certificate."
-sleep 5
-SSL_TYPE="self-signed"
-return
-elif [[ $dns_result -eq 2 ]];then
-_wiz_hide_cursor
+else
 _wiz_error "Domain resolves to wrong IP address"
 _wiz_blank_line
 _wiz_dim "Current DNS: $CLR_ORANGE$FQDN$CLR_RESET → $CLR_RED$DNS_RESOLVED_IP$CLR_RESET"
 _wiz_dim "Expected:    $CLR_ORANGE$FQDN$CLR_RESET → $CLR_ORANGE$MAIN_IPV4$CLR_RESET"
 _wiz_blank_line
 _wiz_dim "Please update DNS A record to point to $CLR_ORANGE$MAIN_IPV4$CLR_RESET"
+fi
 _wiz_blank_line
 _wiz_dim "Falling back to self-signed certificate."
-sleep 5
-SSL_TYPE="self-signed"
-return
-else
+sleep "$((WIZARD_MESSAGE_DELAY+2))"
+}
+_ssl_validate_letsencrypt(){
+_ssl_validate_fqdn||return 1
+local dns_result
+_ssl_check_dns_animated
+dns_result=$?
+if [[ $dns_result -ne 0 ]];then
+_ssl_show_dns_error "$dns_result"
+return 1
+fi
 _wiz_info "DNS resolution successful"
 _wiz_dim "$CLR_ORANGE$FQDN$CLR_RESET → $CLR_CYAN$DNS_RESOLVED_IP$CLR_RESET"
-sleep 3
+sleep "${WIZARD_MESSAGE_DELAY:-3}"
+return 0
+}
+_edit_ssl(){
+_wiz_start_edit
+_wiz_description \
+"  SSL certificate for Proxmox web interface:" \
+"" \
+"  {{cyan:Self-signed}}:   Works always, browser shows warning" \
+"  {{cyan:Let's Encrypt}}: Trusted cert, requires public DNS" \
+""
+_show_input_footer "filter" 3
+local selected
+if ! selected=$(printf '%s\n' "$WIZ_SSL_TYPES"|_wiz_choose --header="SSL Certificate:");then
+return
+fi
+local ssl_type=""
+case "$selected" in
+"Self-signed")ssl_type="self-signed";;
+"Let's Encrypt")ssl_type="letsencrypt"
+esac
+if [[ $ssl_type == "letsencrypt" ]];then
+if _ssl_validate_letsencrypt;then
 SSL_TYPE="$ssl_type"
+else
+SSL_TYPE="self-signed"
 fi
 else
 [[ -n $ssl_type ]]&&SSL_TYPE="$ssl_type"
@@ -4127,14 +4279,14 @@ log "Found processes matching '$pattern': $pids"
 for pid in $pids;do
 _signal_process "$pid" "TERM" "Sending TERM to process $pid"
 done
-sleep 3
+sleep "${WIZARD_MESSAGE_DELAY:-3}"
 for pid in $pids;do
 _signal_process "$pid" "9" "Force killing process $pid"
 done
-sleep 1
+sleep "${PROCESS_KILL_WAIT:-1}"
 fi
 pkill -TERM "$pattern" 2>/dev/null||true
-sleep 1
+sleep "${PROCESS_KILL_WAIT:-1}"
 pkill -9 "$pattern" 2>/dev/null||true
 }
 _stop_mdadm_arrays(){
@@ -4203,7 +4355,7 @@ _kill_processes_by_pattern "qemu-system-x86"
 _stop_mdadm_arrays
 _deactivate_lvm
 _unmount_drive_filesystems
-sleep 2
+sleep "${RETRY_DELAY_SECONDS:-2}"
 _kill_drive_holders
 log "Drives released"
 }
@@ -4249,7 +4401,7 @@ $CPU_OPTS -smp "$QEMU_CORES" -m "$QEMU_RAM" \
 -boot d -cdrom ./pve-autoinstall.iso \
 $DRIVE_ARGS -no-reboot -display none >qemu_install.log 2>&1&
 local qemu_pid=$!
-sleep 2
+sleep "${RETRY_DELAY_SECONDS:-2}"
 if ! kill -0 $qemu_pid 2>/dev/null;then
 log "ERROR: QEMU failed to start"
 log "QEMU install log:"
@@ -4734,22 +4886,13 @@ log "Removing original ISO to save disk space"
 rm -f pve.iso
 }
 _copy_config_files(){
-local -a copy_pids=()
-remote_copy "templates/hosts" "/etc/hosts" >/dev/null 2>&1&
-copy_pids+=($!)
-remote_copy "templates/interfaces" "/etc/network/interfaces" >/dev/null 2>&1&
-copy_pids+=($!)
-remote_copy "templates/99-proxmox.conf" "/etc/sysctl.d/99-proxmox.conf" >/dev/null 2>&1&
-copy_pids+=($!)
-remote_copy "templates/debian.sources" "/etc/apt/sources.list.d/debian.sources" >/dev/null 2>&1&
-copy_pids+=($!)
-remote_copy "templates/proxmox.sources" "/etc/apt/sources.list.d/proxmox.sources" >/dev/null 2>&1&
-copy_pids+=($!)
-remote_copy "templates/resolv.conf" "/etc/resolv.conf" >/dev/null 2>&1&
-copy_pids+=($!)
-for pid in "${copy_pids[@]}";do
-wait "$pid"||return 1
-done
+run_parallel_copies \
+"templates/hosts:/etc/hosts" \
+"templates/interfaces:/etc/network/interfaces" \
+"templates/99-proxmox.conf:/etc/sysctl.d/99-proxmox.conf" \
+"templates/debian.sources:/etc/apt/sources.list.d/debian.sources" \
+"templates/proxmox.sources:/etc/apt/sources.list.d/proxmox.sources" \
+"templates/resolv.conf:/etc/resolv.conf"
 }
 _apply_basic_settings(){
 remote_exec "[ -f /etc/apt/sources.list ] && mv /etc/apt/sources.list /etc/apt/sources.list.bak"||return 1
@@ -5663,8 +5806,8 @@ while ((elapsed<timeout));do
 if ! kill -0 "$QEMU_PID" 2>/dev/null;then
 exit 0
 fi
-sleep 1
-((elapsed+=1))
+sleep "${PROCESS_KILL_WAIT:-1}"
+((elapsed+=PROCESS_KILL_WAIT))
 done
 exit 1) \
 &
@@ -5676,16 +5819,19 @@ log "WARNING: QEMU process did not exit cleanly within 120 seconds"
 kill -9 "$QEMU_PID" 2>/dev/null||true
 fi
 }
-configure_proxmox_via_ssh(){
-log "Starting Proxmox configuration via SSH"
+_phase_base_configuration(){
 make_templates
 configure_admin_user
 configure_base_system
 configure_shell
 configure_system_services
+}
+_phase_storage_configuration(){
 configure_zfs_arc
 configure_zfs_pool
 configure_zfs_scrub
+}
+_phase_security_configuration(){
 batch_install_packages
 configure_tailscale
 configure_firewall
@@ -5701,6 +5847,8 @@ log "ERROR: Security configuration failed - aborting installation"
 print_error "Security hardening failed. Check $LOG_FILE for details."
 return 1
 fi
+}
+_phase_monitoring_tools(){
 (local pids=()
 if [[ $INSTALL_NETDATA == "yes" ]];then
 configure_netdata&
@@ -5719,14 +5867,27 @@ configure_vnstat \
 configure_ringbuffer \
 configure_nvim
 wait $special_pid 2>/dev/null||true
+}
+_phase_ssl_api(){
 configure_ssl_certificate
 if [[ $INSTALL_API_TOKEN == "yes" ]];then
 run_with_progress "Creating API token" "API token created" create_api_token
 fi
+}
+_phase_finalization(){
 deploy_ssh_hardening_config
 validate_installation
 restart_ssh_service
 finalize_vm
+}
+configure_proxmox_via_ssh(){
+log "Starting Proxmox configuration via SSH"
+_phase_base_configuration
+_phase_storage_configuration
+_phase_security_configuration||return 1
+_phase_monitoring_tools
+_phase_ssl_api
+_phase_finalization
 }
 _render_completion_screen(){
 local output=""
