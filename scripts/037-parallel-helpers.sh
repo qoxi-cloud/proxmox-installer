@@ -129,7 +129,7 @@ batch_install_packages() {
 #   $2 - Done message
 #   $@ - Function names to run in parallel
 #
-# Returns: 0 always (failures are non-fatal and logged)
+# Returns: Number of failed functions (0 = success)
 #
 # Side effects: Runs provided functions, shows single progress line
 #
@@ -212,8 +212,8 @@ run_parallel_group() {
   done
 
   if [[ $failures -gt 0 ]]; then
-    log "WARNING: $failures/$count functions failed in group '$group_name'"
-    return 0 # Non-fatal
+    log "ERROR: $failures/$count functions failed in group '$group_name'"
+    return $failures
   fi
 
   return 0

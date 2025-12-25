@@ -189,15 +189,19 @@ configure_proxmox_via_ssh() {
   # Firewall next (depends on tailscale for rule generation)
   configure_firewall
 
-  # Parallel security configuration
-  run_parallel_group "Configuring security" "Security features configured" \
+  # Parallel security configuration - failures are fatal
+  if ! run_parallel_group "Configuring security" "Security features configured" \
     configure_apparmor \
     configure_fail2ban \
     configure_auditd \
     configure_aide \
     configure_chkrootkit \
     configure_lynis \
-    configure_needrestart
+    configure_needrestart; then
+    log "ERROR: Security configuration failed - aborting installation"
+    print_error "Security hardening failed. Check $LOG_FILE for details."
+    return 1
+  fi
 
   # ==========================================================================
   # PHASE 4: Monitoring & Tools (parallel where possible)
