@@ -67,8 +67,8 @@ ringbuffer"
 # Bridge mode mapping
 # shellcheck disable=SC2034
 readonly WIZ_MAP_BRIDGE_MODE=(
-  "External bridge:external"
   "Internal NAT:internal"
+  "External bridge:external"
   "Both:both"
 )
 
