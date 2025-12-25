@@ -34,7 +34,7 @@ _config_yazi() {
 
   # Install flavor and plugins as admin user
   # shellcheck disable=SC2016
-  remote_exec 'su - '"${ADMIN_USER}"' -c "
+  remote_exec 'su - '"${ADMIN_USERNAME}"' -c "
     ya pack -a kalidyasin/yazi-flavors:tokyonight-night
     ya pack -a yazi-rs/plugins:chmod
     ya pack -a yazi-rs/plugins:smart-enter
@@ -46,9 +46,9 @@ _config_yazi() {
   }
 
   deploy_user_configs \
-    "templates/yazi-theme.toml:.config/yazi/theme.toml" \
-    "templates/yazi-init.lua:.config/yazi/init.lua" \
-    "templates/yazi-keymap.toml:.config/yazi/keymap.toml" || {
+    "templates/yazi-theme.toml.tmpl:.config/yazi/theme.toml" \
+    "templates/yazi-init.lua.tmpl:.config/yazi/init.lua" \
+    "templates/yazi-keymap.toml.tmpl:.config/yazi/keymap.toml" || {
     log "ERROR: Failed to deploy yazi configs"
     return 1
   }
