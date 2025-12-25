@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.587-pr.21"
+readonly VERSION="2.0.588-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -123,6 +123,20 @@ promtail"
 readonly WIZ_FEATURES_TOOLS="yazi
 nvim
 ringbuffer"
+readonly WIZ_MAP_BRIDGE_MODE=(
+"External bridge:external"
+"Internal NAT:internal"
+"Both:both")
+readonly WIZ_MAP_BRIDGE_MTU=(
+"9000 (jumbo frames):9000"
+"1500 (standard):1500")
+readonly WIZ_MAP_SHELL=(
+"ZSH:zsh"
+"Bash:bash")
+readonly WIZ_MAP_ZFS_ARC=(
+"VM-focused (4GB fixed):vm-focused"
+"Balanced (25-40% of RAM):balanced"
+"Storage-focused (50% of RAM):storage-focused")
 BOOT_DISK=""
 ZFS_POOL_DISKS=()
 USE_EXISTING_POOL=""
@@ -3506,9 +3520,7 @@ _wiz_description \
 ""
 _show_input_footer "filter" 4
 _wiz_choose_mapped "BRIDGE_MODE" "Bridge mode:" "WIZ_BRIDGE_MODES" \
-"External bridge:external" \
-"Internal NAT:internal" \
-"Both:both"
+"${WIZ_MAP_BRIDGE_MODE[@]}"
 }
 _edit_private_subnet(){
 _wiz_start_edit
@@ -3558,8 +3570,7 @@ _wiz_description \
 ""
 _show_input_footer "filter" 3
 _wiz_choose_mapped "BRIDGE_MTU" "Bridge MTU:" "WIZ_BRIDGE_MTU" \
-"9000 (jumbo frames):9000" \
-"1500 (standard):1500"
+"${WIZ_MAP_BRIDGE_MTU[@]}"
 }
 _edit_ipv6(){
 _wiz_start_edit
@@ -3879,9 +3890,7 @@ _wiz_description \
 ""
 _show_input_footer "filter" 4
 _wiz_choose_mapped "ZFS_ARC_MODE" "ZFS ARC memory strategy:" "WIZ_ZFS_ARC_MODES" \
-"VM-focused (4GB fixed):vm-focused" \
-"Balanced (25-40% of RAM):balanced" \
-"Storage-focused (50% of RAM):storage-focused"
+"${WIZ_MAP_ZFS_ARC[@]}"
 }
 _ssl_validate_fqdn(){
 if [[ -z $FQDN ]];then
@@ -4332,8 +4341,7 @@ _wiz_description \
 ""
 _show_input_footer "filter" 3
 _wiz_choose_mapped "SHELL_TYPE" "Shell:" "WIZ_SHELL_OPTIONS" \
-"ZSH:zsh" \
-"Bash:bash"
+"${WIZ_MAP_SHELL[@]}"
 }
 _edit_power_profile(){
 _wiz_start_edit
