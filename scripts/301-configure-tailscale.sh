@@ -84,7 +84,7 @@ _config_tailscale() {
     else
       TAILSCALE_IP="auth failed"
       TAILSCALE_HOSTNAME=""
-      complete_task "$TASK_INDEX" "${CLR_ORANGE}├─${CLR_RESET} ${CLR_YELLOW}⚠️${CLR_RESET} Tailscale auth failed - check auth key" "error"
+      complete_task "$TASK_INDEX" "${CLR_ORANGE}├─${CLR_RESET} ${CLR_YELLOW}Tailscale auth failed - check auth key${CLR_RESET}" "warning"
       log "WARNING: Tailscale authentication failed. Auth key may be invalid or expired."
 
       # In stealth mode with failed Tailscale auth, warn but DON'T disable SSH
