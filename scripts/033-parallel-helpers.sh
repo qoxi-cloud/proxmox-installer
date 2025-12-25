@@ -137,6 +137,16 @@ _run_parallel_task() {
   local idx="$2"
   local func="$3"
 
+  # Override show_progress to silent waiter to prevent TUI race conditions.
+  # Each subshell has its own copy of LOG_LINES array and live_show_progress
+  # writes to /dev/tty (bypassing >/dev/null). Multiple subshells racing to
+  # redraw causes flickering and corruption. Parent handles group progress.
+  # shellcheck disable=SC2317
+  show_progress() {
+    wait "$1" 2>/dev/null
+    return $?
+  }
+
   # Default to failure marker on ANY exit (handles remote_run's exit 1)
   # shellcheck disable=SC2064
   trap "touch '$result_dir/fail_$idx' 2>/dev/null" EXIT
@@ -147,29 +157,10 @@ _run_parallel_task() {
   fi
 }
 
-# Runs multiple config functions in parallel with a single progress indicator.
-# All functions run silently; only one progress line shown for the group.
-# Skips disabled features (functions return 0 immediately).
-#
-# Parameters:
-#   $1 - Group name for progress display
-#   $2 - Done message
-#   $@ - Function names to run in parallel
-#
+# Runs multiple config functions in parallel with single progress indicator.
+# Parameters: $1=group name, $2=done message, $@=function names
 # Returns: Number of failed functions (0 = success)
-#
-# Side effects: Runs provided functions, shows single progress line
-#
-# Example:
-#
-#   # Run all configs in parallel with single progress indicator
-#   run_parallel_group "Configuring security" "Security configured" \
-#     configure_apparmor \
-#     configure_fail2ban \
-#     configure_auditd
-#
-# Note: Functions must be defined before calling run_parallel_group.
-# Each function should return 0 on success or skip, non-zero on failure.
+# Example: run_parallel_group "Configuring" "Done" configure_foo configure_bar
 run_parallel_group() {
   local group_name="$1"
   local done_msg="$2"
