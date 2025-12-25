@@ -73,6 +73,30 @@ else
   fi
 fi
 
+# Check file line count (max 250 lines)
+MAX_LINES=250
+echo -e "${NC}Checking file sizes...${NC}"
+OVERSIZED=()
+for file in "${STAGED_FILES[@]}"; do
+  if [[ -f "$file" ]]; then
+    LINES=$(wc -l <"$file")
+    if [[ $LINES -gt $MAX_LINES ]]; then
+      OVERSIZED+=("$file ($LINES lines)")
+    fi
+  fi
+done
+
+if [[ ${#OVERSIZED[@]} -gt 0 ]]; then
+  echo -e "${RED}✗ Files exceed $MAX_LINES lines:${NC}"
+  for info in "${OVERSIZED[@]}"; do
+    echo "  $info"
+  done
+  echo -e "${YELLOW}Split large files into smaller modules${NC}"
+  ERRORS=1
+else
+  echo -e "${GREEN}✓ File sizes OK${NC}"
+fi
+
 if [[ $ERRORS -ne 0 ]]; then
   echo -e "\n${RED}Pre-commit checks failed. Fix errors before committing.${NC}"
   exit 1

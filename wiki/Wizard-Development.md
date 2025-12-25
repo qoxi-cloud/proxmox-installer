@@ -9,30 +9,32 @@ Guide for extending and modifying the configuration wizard.
 101-wizard-ui.sh     # UI rendering, gum wrappers
 102-wizard-nav.sh    # Screen switching, navigation state
 103-wizard-menu.sh   # Menu building, field mapping
-110-116-wizard-*.sh  # Screen-specific editors
+104-wizard-display.sh# Display value formatters
+110-121-wizard-*.sh  # Screen-specific editors
 ```
 
 ## Screen Structure
 
-The wizard has 6 screens:
+The wizard has 7 screens:
 
 | Index | Name | Script | Fields |
 |-------|------|--------|--------|
-| 0 | Basic | 110-wizard-basic.sh | hostname, email, password, timezone, keyboard, country |
-| 1 | Proxmox | 111-wizard-proxmox.sh | iso_version, repository |
-| 2 | Network | 112-wizard-network.sh | interface, bridge_mode, private_subnet, ipv6 |
-| 3 | Storage | 113-wizard-storage.sh, 116-wizard-disks.sh | boot_disk, existing_pool, pool_disks, zfs_mode, zfs_arc |
-| 4 | Services | 114-wizard-services.sh | tailscale, ssl, firewall, security, monitoring, tools |
-| 5 | Access | 115-wizard-access.sh | admin_username, admin_password, ssh_key |
+| 0 | Basic | 110-wizard-basic-locale.sh, 111-wizard-basic.sh | hostname, email, password, timezone, keyboard, country |
+| 1 | Proxmox | 112-wizard-proxmox.sh | iso_version, repository |
+| 2 | Network | 113-wizard-network-bridge.sh, 114-wizard-network-ipv6.sh | interface, bridge_mode, private_subnet, ipv6, mtu |
+| 3 | Storage | 115-wizard-storage.sh | boot_disk, existing_pool, pool_disks, zfs_mode, zfs_arc |
+| 4 | Services | 116-wizard-ssl.sh, 117-wizard-tailscale.sh, 121-wizard-features.sh | tailscale, ssl, firewall, security, monitoring, tools |
+| 5 | Access | 118-wizard-access.sh, 119-wizard-ssh.sh | admin_username, admin_password, ssh_key |
+| 6 | Disks | 120-wizard-disks.sh | disk detection and assignment |
 
 ## Adding a New Field
 
 ### 1. Add to Screen Menu
 
-Edit the appropriate `11X-wizard-*.sh` file:
+Edit the appropriate wizard editor file:
 
 ```bash
-# In 114-wizard-services.sh, function _add_services_menu:
+# In 121-wizard-features.sh, function _add_services_menu:
 _add_services_menu() {
   # ... existing fields ...
   
@@ -176,7 +178,7 @@ field_name="${_WIZ_FIELD_MAP[$selection]}"
 ### 1. Create Screen Script
 
 ```bash
-# scripts/117-wizard-myscreen.sh
+# scripts/122-wizard-myscreen.sh
 
 # Screen menu builder
 _add_myscreen_menu() {
@@ -226,7 +228,7 @@ _wiz_build_screen_menu() {
 In `900-main.sh`:
 
 ```bash
-source "$SCRIPT_DIR/117-wizard-myscreen.sh"
+source "$SCRIPT_DIR/122-wizard-myscreen.sh"
 ```
 
 ## Navigation

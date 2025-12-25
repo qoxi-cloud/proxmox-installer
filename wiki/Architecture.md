@@ -19,23 +19,23 @@ This project is a bash automation framework that installs Proxmox VE on dedicate
 
 **Execution Stages:**
 
-1. **Initialization** (000-006) - Load colors, constants, parse CLI args, setup logging
+1. **Initialization** (000-007) - Load colors, constants, parse CLI args, setup logging
 2. **System Check** (050-056) - Verify requirements (root, RAM, disk, KVM), detect hardware
-3. **Wizard** (100-116) - Interactive configuration via TUI
-4. **QEMU Setup** (200-204) - Download ISO, launch VM, wait for SSH
-5. **Installation** (200-204) - Proxmox auto-install via templates
-6. **Configuration** (300-380) - Deploy configs, install packages, harden
-7. **Finalization** (380) - Validate, show credentials, shutdown VM
+3. **Wizard** (100-121) - Interactive configuration via TUI
+4. **QEMU Setup** (200-207) - Download ISO, launch VM, wait for SSH
+5. **Installation** (200-207) - Proxmox auto-install via templates
+6. **Configuration** (300-381) - Deploy configs, install packages, harden
+7. **Finalization** (380-381) - Validate, show credentials, shutdown VM
 
 ## Flow Diagram
 
 ```mermaid
 flowchart TD
-    subgraph INIT["🚀 Initialization (000-006)"]
-        A[Start] --> B[Load core infrastructure<br/>000-colors, 001-constants,<br/>002-wizard-options, 003-init]
-        B --> C[Parse CLI args<br/>004-cli.sh]
-        C --> D[Setup logging & metrics<br/>005-logging.sh]
-        D --> E[Show banner<br/>006-banner.sh]
+    subgraph INIT["🚀 Initialization (000-007)"]
+        A[Start] --> B[Load core infrastructure<br/>000-colors, 001-constants,<br/>002-wizard-options, 003-init, 004-trap]
+        B --> C[Parse CLI args<br/>005-cli.sh]
+        C --> D[Setup logging & metrics<br/>006-logging.sh]
+        D --> E[Show banner<br/>007-banner.sh]
     end
 
     subgraph SYSCHECK["🔍 System Check (050-056)"]
@@ -45,7 +45,7 @@ flowchart TD
         F -->|Pass| G[Detect interfaces<br/>052-system-network.sh<br/>Detect disks<br/>053-system-drives.sh]
     end
 
-    subgraph WIZARD["🧙 Interactive Wizard (100-116)"]
+    subgraph WIZARD["🧙 Interactive Wizard (100-121)"]
         G --> H[Enter alternate screen<br/>tput smcup]
         H --> I[Hide cursor]
         
@@ -87,24 +87,23 @@ flowchart TD
         Y -->|Yes| AA[Exit wizard loop]
     end
 
-    subgraph INSTALL["📦 Installation (200-204)"]
-        AA --> AB[Download ISO<br/>203-iso-download.sh]
-        AB --> AC[Launch QEMU VM<br/>201-qemu.sh]
+    subgraph INSTALL["📦 Installation (200-207)"]
+        AA --> AB[Download ISO<br/>205-iso-download.sh]
+        AB --> AC[Launch QEMU VM<br/>201-qemu-config.sh]
         AC --> AD[Wait for SSH ready<br/>021-ssh.sh]
-        AD --> AE[Deploy answer.toml<br/>204-autoinstall.sh]
+        AD --> AE[Deploy answer.toml<br/>206-autoinstall.sh]
         AE --> AF[Wait for Proxmox install]
     end
 
-    subgraph CONFIG["⚙️ Configuration (300-380)"]
+    subgraph CONFIG["⚙️ Configuration (300-381)"]
         AF --> AG[Enter live logs mode<br/>056-live-logs.sh]
         
         AG --> AH[Base config<br/>300-configure-base.sh]
         
         AH --> AI[run_parallel_group<br/>Security features]
-        AI --> AJ[310-312: Firewall/Fail2ban/AppArmor<br/>320-324: Auditd/AIDE/chkrootkit/Lynis/needrestart]
         
         AJ --> AK[run_parallel_group<br/>Monitoring]
-        AK --> AL[340-342: vnstat/Promtail/Netdata]
+        AK --> AL[340-342: vnstat/promtail/netdata]
         
         AL --> AM[run_parallel_group<br/>Tools]
         AM --> AN[350-351: Yazi/Nvim]
@@ -113,6 +112,7 @@ flowchart TD
         AO --> AP[Admin user<br/>302-configure-admin.sh]
         AP --> AQ[Firewall<br/>310-configure-firewall.sh]
         AQ --> AR[SSL certs<br/>360-configure-ssl.sh]
+        AI --> AJ[310-313: Firewall rules/Firewall/Fail2ban/AppArmor<br/>320-324: Auditd/AIDE/chkrootkit/Lynis/needrestart]
         AR --> AS{USE_EXISTING_POOL?}
         AS -->|Yes| AT1[Import pool<br/>zpool import -f]
         AS -->|No| AT2[Create pool<br/>zpool create]
@@ -120,7 +120,7 @@ flowchart TD
         AT2 --> AU
     end
 
-    subgraph FINALIZE["✅ Finalization (380)"]
+    subgraph FINALIZE["✅ Finalization (380-381)"]
         AU --> AV[Run validation script<br/>380-configure-finalize.sh]
         AV --> AW{All checks pass?}
         AW -->|No| AX[Show failures]
@@ -148,7 +148,7 @@ sequenceDiagram
     participant WizNav as 102-wizard-nav.sh
     participant WizMenu as 103-wizard-menu.sh
     participant WizUI as 101-wizard-ui.sh
-    participant Editors as 110-116 wizard editors
+    participant Editors as 110-121 wizard editors
     participant Gum as gum (TUI)
     participant Terminal
 
@@ -238,22 +238,24 @@ sequenceDiagram
 
 ```mermaid
 graph LR
-    subgraph "000-006 Core"
+    subgraph "000-007 Core"
         A[000-colors]
         B[001-constants]
         C[002-wizard-options]
         D[003-init]
-        E[004-cli]
-        F[005-logging]
-        G[006-banner]
+        D2[004-trap]
+        E[005-cli]
+        F[006-logging]
+        G[007-banner]
     end
 
-    subgraph "010-021 Display & Utils"
+    subgraph "010-022 Display & Utils"
         H[010-display]
         I[011-downloads]
         J[012-utils]
         K[020-templates]
         L[021-ssh]
+        L2[022-ssh-remote]
     end
 
     subgraph "030-043 Helpers & Validation"
@@ -262,7 +264,9 @@ graph LR
         O[032-validation-helpers]
         P[033-parallel-helpers]
         Q[034-deploy-helpers]
-        R[035-network-helpers]
+        Q2[035-deploy-template]
+        R[036-network-generators]
+        R2[037-network-helpers]
         S[040-043 validators]
     end
 
@@ -276,32 +280,36 @@ graph LR
         Z[056-live-logs]
     end
 
-    subgraph "100-116 Wizard"
+    subgraph "100-121 Wizard"
         AA[100-wizard-core]
         AB[101-wizard-ui]
         AC[102-wizard-nav]
         AD[103-wizard-menu]
-        AE[110-116 editors]
+        AD2[104-wizard-display]
+        AE[110-121 editors]
     end
 
-    subgraph "200-204 Installation"
+    subgraph "200-207 Installation"
         AF[200-packages]
-        AG[201-qemu]
-        AH[202-templates]
-        AI[203-iso-download]
-        AJ[204-autoinstall]
+        AG[201-qemu-config]
+        AG2[202-qemu-release]
+        AH[203-templates]
+        AI[204-iso-download-methods]
+        AI2[205-iso-download]
+        AJ[206-autoinstall]
+        AJ2[207-qemu-install]
     end
 
-    subgraph "300-380 Configuration"
-        AK[300-302 base/tailscale/admin]
-        AL[310-312 firewall/fail2ban/apparmor]
+    subgraph "300-381 Configuration"
+        AK[300-303 base/tailscale/admin/services]
+        AL[310-313 firewall-rules/firewall/fail2ban/apparmor]
         AM[320-324 audit/aide/chkrootkit/lynis/needrestart]
         AN[330 ringbuffer]
         AO[340-342 vnstat/promtail/netdata]
         AP[350-351 yazi/nvim]
         AQ[360-361 ssl/api-token]
         AR[370-371 zfs/pool]
-        AS[380 finalize]
+        AS[380-381 finalize/phases]
     end
 
     subgraph "900 Orchestration"
@@ -313,31 +321,35 @@ graph LR
 
 ```
 scripts/
-├── 000-006: Core Infrastructure
+├── 000-007: Core Infrastructure
 │   ├── 000-colors.sh    # Terminal colors (CLR_*, HEX_*), version
 │   ├── 001-constants.sh # DNS servers, timeouts, ports, resource limits
 │   ├── 002-wizard-options.sh # WIZ_* menu option lists
-│   ├── 003-init.sh      # Globals, cleanup trap, runtime variables
-│   ├── 004-cli.sh       # CLI argument parsing
-│   ├── 005-logging.sh   # Log functions, metrics
-│   └── 006-banner.sh    # ASCII art banner
+│   ├── 003-init.sh      # Globals, runtime variables
+│   ├── 004-trap.sh      # Cleanup trap, temp file registry
+│   ├── 005-cli.sh       # CLI argument parsing
+│   ├── 006-logging.sh   # Log functions, metrics
+│   └── 007-banner.sh    # ASCII art banner
 │
 ├── 010-012: Display & Utilities
 │   ├── 010-display.sh   # print_* functions, progress indicator
 │   ├── 011-downloads.sh # File download with retry
 │   └── 012-utils.sh     # Secure file deletion
 │
-├── 020-021: Templates & SSH
+├── 020-022: Templates & SSH
 │   ├── 020-templates.sh # Template variable substitution
-│   └── 021-ssh.sh       # SSH session management, remote_*
+│   ├── 021-ssh.sh       # SSH session management
+│   └── 022-ssh-remote.sh# remote_* execution functions
 │
-├── 030-035: Helpers
+├── 030-037: Helpers
 │   ├── 030-password-utils.sh     # Password generation
 │   ├── 031-zfs-helpers.sh        # ZFS RAID mapping
 │   ├── 032-validation-helpers.sh # Validation UI helpers
 │   ├── 033-parallel-helpers.sh   # Parallel execution
-│   ├── 034-deploy-helpers.sh     # Deployment helpers
-│   └── 035-network-helpers.sh    # Network detection utilities
+│   ├── 034-deploy-helpers.sh     # Parallel copies, feature wrapper
+│   ├── 035-deploy-template.sh    # Template deployment helpers
+│   ├── 036-network-generators.sh # Network interface section generators
+│   └── 037-network-helpers.sh    # Network config file generator
 │
 ├── 040-043: Validation Layer
 │   ├── 040-validation-basic.sh   # Hostname, user, email, password
@@ -354,33 +366,44 @@ scripts/
 │   ├── 055-system-status.sh      # Status display
 │   └── 056-live-logs.sh          # Live log display
 │
-├── 100-116: Wizard Layer
+├── 100-121: Wizard Layer
 │   ├── 100-wizard-core.sh    # Main wizard loop
 │   ├── 101-wizard-ui.sh      # UI rendering, gum wrappers
 │   ├── 102-wizard-nav.sh     # Navigation logic (screen switching)
 │   ├── 103-wizard-menu.sh    # Menu building and field mapping
-│   ├── 110-wizard-basic.sh   # Hostname, email, password, timezone
-│   ├── 111-wizard-proxmox.sh # ISO version, repo type
-│   ├── 112-wizard-network.sh # Interface, bridge, IPv4/IPv6
-│   ├── 113-wizard-storage.sh # Boot disk, pool mode (new/existing), ZFS mode
-│   ├── 114-wizard-services.sh# Features, Tailscale, SSL
-│   ├── 115-wizard-access.sh  # Admin user, SSH key
-│   └── 116-wizard-disks.sh   # Disk detection
+│   ├── 104-wizard-display.sh # Display value formatters
+│   ├── 110-wizard-basic-locale.sh # Country to locale mapping
+│   ├── 111-wizard-basic.sh   # Hostname, email, password, timezone
+│   ├── 112-wizard-proxmox.sh # ISO version, repo type
+│   ├── 113-wizard-network-bridge.sh # Interface, bridge mode, MTU
+│   ├── 114-wizard-network-ipv6.sh   # IPv6, firewall mode
+│   ├── 115-wizard-storage.sh # Boot disk, pool mode, ZFS mode
+│   ├── 116-wizard-ssl.sh     # SSL certificate type
+│   ├── 117-wizard-tailscale.sh # Tailscale VPN
+│   ├── 118-wizard-access.sh  # Admin user, API token
+│   ├── 119-wizard-ssh.sh     # SSH key editor
+│   ├── 120-wizard-disks.sh   # Disk detection
+│   └── 121-wizard-features.sh# Optional features selection
 │
-├── 200-209: Installation Layer
+├── 200-207: Installation Layer
 │   ├── 200-packages.sh    # Repo setup, package installation
-│   ├── 201-qemu.sh        # QEMU launch, options detection
-│   ├── 202-templates.sh   # Template deployment
-│   ├── 203-iso-download.sh# ISO version detection, download
-│   └── 204-autoinstall.sh # Proxmox auto-install answer file
+│   ├── 201-qemu-config.sh # QEMU configuration
+│   ├── 202-qemu-release.sh# Drive release functions
+│   ├── 203-templates.sh   # Template deployment
+│   ├── 204-iso-download-methods.sh # Download methods (aria2c, curl, wget)
+│   ├── 205-iso-download.sh# ISO version detection, download
+│   ├── 206-autoinstall.sh # Proxmox auto-install answer file
+│   └── 207-qemu-install.sh# QEMU installation launcher
 │
-├── 300-389: Configuration Layer
+├── 300-381: Configuration Layer
 │   ├── 300-configure-base.sh      # Base system config
 │   ├── 301-configure-tailscale.sh # VPN setup
 │   ├── 302-configure-admin.sh     # Admin user creation
-│   ├── 310-configure-firewall.sh  # nftables rules
-│   ├── 311-configure-fail2ban.sh  # Intrusion prevention
-│   ├── 312-configure-apparmor.sh  # MAC enforcement
+│   ├── 303-configure-services.sh  # System services
+│   ├── 310-configure-firewall-rules.sh # nftables rule generators
+│   ├── 311-configure-firewall.sh  # nftables main config
+│   ├── 312-configure-fail2ban.sh  # Intrusion prevention
+│   ├── 313-configure-apparmor.sh  # MAC enforcement
 │   ├── 320-configure-auditd.sh    # Kernel audit
 │   ├── 321-configure-aide.sh      # File integrity
 │   ├── 322-configure-chkrootkit.sh# Rootkit scanner
@@ -395,8 +418,9 @@ scripts/
 │   ├── 360-configure-ssl.sh       # Certificates
 │   ├── 361-configure-api-token.sh # Proxmox API
 │   ├── 370-configure-zfs.sh       # ZFS ARC tuning
-│   ├── 371-configure-zfs-pool.sh  # Pool creation or import (existing)
-│   └── 380-configure-finalize.sh  # Validation, completion
+│   ├── 371-configure-zfs-pool.sh  # Pool creation or import
+│   ├── 380-configure-finalize.sh  # Validation, completion
+│   └── 381-configure-phases.sh    # Configuration phases
 │
 └── 900-999: Orchestration
     └── 900-main.sh  # Main entry point
@@ -608,23 +632,23 @@ spec/
 
 | Range     | Purpose                                      |
 |-----------|----------------------------------------------|
-| 000-006   | Core init (colors, constants, wizard opts, init, cli, logging, banner) |
+| 000-007   | Core init (colors, constants, wizard opts, init, trap, cli, logging, banner) |
 | 010-012   | Display & utilities                          |
-| 020-021   | Templates & SSH                              |
-| 030-035   | Helpers (password, zfs, validation, parallel, deploy, network) |
+| 020-022   | Templates & SSH                              |
+| 030-037   | Helpers (password, zfs, validation, parallel, deploy, network) |
 | 040-043   | Validation (basic, network, dns, security)   |
 | 050-056   | System detection (packages, preflight, network, drives, status, live-logs) |
-| 100-103   | Wizard core (main logic, UI, nav, menu)      |
-| 110-116   | Wizard editors (screens)                     |
-| 200-204   | Installation (packages, QEMU, templates, ISO, autoinstall) |
-| 300-302   | Base configuration                           |
-| 310-312   | Security - Firewall & access control         |
+| 100-104   | Wizard core (main logic, UI, nav, menu, display) |
+| 110-121   | Wizard editors (screens)                     |
+| 200-207   | Installation (packages, QEMU, templates, ISO, autoinstall) |
+| 300-303   | Base configuration                           |
+| 310-313   | Security - Firewall & access control         |
 | 320-324   | Security - Auditing & integrity              |
 | 330       | Network & performance (ringbuffer)           |
 | 340-342   | Monitoring                                   |
 | 350-351   | Tools                                        |
 | 360-361   | SSL & API                                    |
 | 370-371   | Storage (ZFS)                                |
-| 380       | Finalization                                 |
+| 380-381   | Finalization                                 |
 | 900       | Main orchestrator                            |
 

@@ -103,7 +103,7 @@ download_template "/tmp/sshd_config" "sshd_config"
 
 ---
 
-## SSH Functions (`021-ssh.sh`)
+## SSH Functions (`021-ssh.sh`, `022-ssh-remote.sh`)
 
 ### remote_exec
 
@@ -186,7 +186,7 @@ SSH_PUBLIC_KEY=$(get_rescue_ssh_key)
 
 ---
 
-## Deployment Helpers (`034-deploy-helpers.sh`)
+## Deployment Helpers (`034-deploy-helpers.sh`, `035-deploy-template.sh`)
 
 ### deploy_template
 
@@ -417,7 +417,7 @@ is_ascii_printable "hello" && echo "valid"
 
 ---
 
-## Logging Functions (`005-logging.sh`)
+## Logging Functions (`006-logging.sh`)
 
 ### log
 

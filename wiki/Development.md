@@ -10,24 +10,24 @@ The project is a modular bash framework. Individual scripts in `scripts/` are co
 
 | Range | Purpose |
 |-------|---------|
-| **000-006** | Core: colors, constants, wizard opts, init, cli, logging, banner |
+| **000-007** | Core: colors, constants, wizard opts, init, trap, cli, logging, banner |
 | **010-012** | Display & utilities |
-| **020-021** | Templates & SSH |
-| **030-035** | Helpers: password, zfs, validation, parallel, deploy, network |
+| **020-022** | Templates & SSH (session, remote) |
+| **030-037** | Helpers: password, zfs, validation, parallel, deploy, network |
 | **040-043** | Validation: basic, network, dns, security |
 | **050-056** | System: packages, preflight, network, drives, wizard-data, status, live-logs |
-| **100-103** | Wizard: core, ui, navigation, menu |
-| **110-116** | Wizard: editors (basic, proxmox, network, storage, services, access, disks) |
-| **200-204** | Installation: packages, QEMU, templates, ISO download, autoinstall |
-| **300-302** | Configuration: base, tailscale, admin user |
-| **310-312** | Security: firewall, fail2ban, apparmor |
+| **100-104** | Wizard: core, ui, navigation, menu, display |
+| **110-121** | Wizard: editors (locale, basic, proxmox, network, storage, ssl, tailscale, access, ssh, disks, features) |
+| **200-207** | Installation: packages, QEMU config/release, templates, ISO download, autoinstall, qemu-install |
+| **300-303** | Configuration: base, tailscale, admin user, services |
+| **310-313** | Security: firewall-rules, firewall, fail2ban, apparmor |
 | **320-324** | Security: auditd, aide, chkrootkit, lynis, needrestart |
 | **330** | Network: ringbuffer tuning |
 | **340-342** | Monitoring: vnstat, promtail, netdata |
 | **350-351** | Tools: yazi, nvim |
 | **360-361** | SSL & API token |
 | **370-371** | Storage: ZFS ARC, pool creation/import |
-| **380** | Finalization: validation, completion |
+| **380-381** | Finalization: validation, completion, phases |
 | **900** | Main orchestrator |
 
 ### Data Flow

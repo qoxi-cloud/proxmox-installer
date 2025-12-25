@@ -1,0 +1,114 @@
+# shellcheck shell=bash
+# =============================================================================
+# Cleanup and error handling
+# =============================================================================
+
+# =============================================================================
+# Temp file registry for cleanup on exit
+# =============================================================================
+# Array to track temp files for cleanup on script exit
+_TEMP_FILES=()
+
+# Register a temp file for automatic cleanup on script exit.
+# Use this for any mktemp files that may not get cleaned up on early exit/SIGTERM.
+# Parameters:
+#   $1 - Path to temp file
+register_temp_file() {
+  _TEMP_FILES+=("$1")
+}
+
+# Cleans up temporary files created during installation.
+# Removes ISO files, password files, logs, and other temporary artifacts.
+# Behavior depends on INSTALL_COMPLETED flag - preserves files if installation succeeded.
+# Uses secure deletion for files containing secrets.
+cleanup_temp_files() {
+  # Clean up registered temp files (from register_temp_file)
+  for f in "${_TEMP_FILES[@]}"; do
+    [[ -f "$f" ]] && rm -f "$f"
+  done
+
+  # Secure delete files containing secrets (API token, root password)
+  # secure_delete_file is defined in 012-utils.sh, check if available
+  if type secure_delete_file &>/dev/null; then
+    secure_delete_file /tmp/pve-install-api-token.env
+    secure_delete_file /root/answer.toml
+    # Secure delete password files from /dev/shm and /tmp
+    # Patterns: pve-ssh-session.* (current), pve-passfile.* (legacy), *passfile* (catch-all)
+    while IFS= read -r -d '' pfile; do
+      secure_delete_file "$pfile"
+    done < <(find /dev/shm /tmp -name "pve-ssh-session.*" -type f -print0 2>/dev/null || true)
+    while IFS= read -r -d '' pfile; do
+      secure_delete_file "$pfile"
+    done < <(find /dev/shm /tmp -name "pve-passfile.*" -type f -print0 2>/dev/null || true)
+    while IFS= read -r -d '' pfile; do
+      secure_delete_file "$pfile"
+    done < <(find /dev/shm /tmp -name "*passfile*" -type f -print0 2>/dev/null || true)
+  else
+    # Fallback if secure_delete_file not yet loaded (early exit)
+    rm -f /tmp/pve-install-api-token.env 2>/dev/null || true
+    rm -f /root/answer.toml 2>/dev/null || true
+    find /dev/shm /tmp -name "pve-ssh-session.*" -type f -delete 2>/dev/null || true
+    find /dev/shm /tmp -name "pve-passfile.*" -type f -delete 2>/dev/null || true
+    find /dev/shm /tmp -name "*passfile*" -type f -delete 2>/dev/null || true
+  fi
+
+  # Clean up standard temporary files (non-sensitive)
+  rm -f /tmp/tailscale_*.txt /tmp/iso_checksum.txt /tmp/*.tmp 2>/dev/null || true
+
+  # Clean up ISO and installation files (only if installation failed)
+  if [[ $INSTALL_COMPLETED != "true" ]]; then
+    rm -f /root/pve.iso /root/pve-autoinstall.iso /root/SHA256SUMS 2>/dev/null || true
+    rm -f /root/qemu_*.log 2>/dev/null || true
+  fi
+}
+
+# Cleanup handler invoked on script exit via trap.
+# Performs graceful shutdown of background processes, drive cleanup, cursor restoration.
+# Displays error message if installation failed (INSTALL_COMPLETED != true).
+# Returns: Exit code from the script
+cleanup_and_error_handler() {
+  local exit_code=$?
+
+  # Stop all background jobs
+  jobs -p | xargs -r kill 2>/dev/null || true
+  sleep "${PROCESS_KILL_WAIT:-1}"
+
+  # Clean up SSH session passfile
+  if type _ssh_session_cleanup &>/dev/null; then
+    _ssh_session_cleanup
+  fi
+
+  # Clean up temporary files
+  cleanup_temp_files
+
+  # Release drives if QEMU is still running
+  if [[ -n ${QEMU_PID:-} ]] && kill -0 "$QEMU_PID" 2>/dev/null; then
+    log "Cleaning up QEMU process $QEMU_PID"
+    # Source release_drives if available (may not be sourced yet)
+    if type release_drives &>/dev/null; then
+      release_drives
+    else
+      # Fallback cleanup
+      pkill -TERM qemu-system-x86 2>/dev/null || true
+      sleep "${RETRY_DELAY_SECONDS:-2}"
+      pkill -9 qemu-system-x86 2>/dev/null || true
+    fi
+  fi
+
+  # Exit alternate screen buffer and restore cursor visibility
+  tput rmcup 2>/dev/null || true
+  tput cnorm 2>/dev/null || true
+
+  # Show error message if installation failed
+  if [[ $INSTALL_COMPLETED != "true" && $exit_code -ne 0 ]]; then
+    printf '%s\n' "${CLR_RED}*** INSTALLATION FAILED ***${CLR_RESET}"
+    printf '\n'
+    printf '%s\n' "${CLR_YELLOW}An error occurred and the installation was aborted.${CLR_RESET}"
+    printf '\n'
+    printf '%s\n' "${CLR_YELLOW}Please check the log file for details:${CLR_RESET}"
+    printf '%s\n' "${CLR_YELLOW}  ${LOG_FILE}${CLR_RESET}"
+    printf '\n'
+  fi
+}
+
+trap cleanup_and_error_handler EXIT
