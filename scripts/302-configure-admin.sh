@@ -16,9 +16,11 @@ _config_admin_user() {
   # shellcheck disable=SC2016
   remote_exec 'useradd -m -s /bin/bash -G sudo '"$ADMIN_USERNAME"'' || return 1
 
-  # Set admin password
-  # shellcheck disable=SC2016
-  remote_exec 'echo '"${ADMIN_USERNAME}:${ADMIN_PASSWORD}"' | chpasswd' || return 1
+  # Set admin password using base64 to safely handle special chars
+  # chpasswd expects "user:password" format - colons/quotes in password would break it
+  local encoded_creds
+  encoded_creds=$(printf '%s:%s' "$ADMIN_USERNAME" "$ADMIN_PASSWORD" | base64)
+  remote_exec "echo '${encoded_creds}' | base64 -d | chpasswd" || return 1
 
   # Set up SSH directory for admin
   remote_exec "mkdir -p /home/${ADMIN_USERNAME}/.ssh && chmod 700 /home/${ADMIN_USERNAME}/.ssh" || return 1
