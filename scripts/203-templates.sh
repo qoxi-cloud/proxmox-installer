@@ -149,6 +149,8 @@ make_templates() {
     "./templates/promtail.service:promtail.service"
     # Tools - Yazi
     "./templates/yazi-theme.toml:yazi-theme.toml"
+    "./templates/yazi-init.lua:yazi-init.lua"
+    "./templates/yazi-keymap.toml:yazi-keymap.toml"
     # Network tuning
     "./templates/network-ringbuffer.service:network-ringbuffer.service"
     # Validation

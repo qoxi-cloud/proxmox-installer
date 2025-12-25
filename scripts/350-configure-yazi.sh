@@ -46,9 +46,9 @@ _config_yazi() {
   }
 
   deploy_user_configs \
-    "templates/yazi-theme.toml.tmpl:.config/yazi/theme.toml" \
-    "templates/yazi-init.lua.tmpl:.config/yazi/init.lua" \
-    "templates/yazi-keymap.toml.tmpl:.config/yazi/keymap.toml" || {
+    "templates/yazi-theme.toml:.config/yazi/theme.toml" \
+    "templates/yazi-init.lua:.config/yazi/init.lua" \
+    "templates/yazi-keymap.toml:.config/yazi/keymap.toml" || {
     log "ERROR: Failed to deploy yazi configs"
     return 1
   }
