@@ -231,6 +231,6 @@ parse_ssh_key() {
 # Returns: First valid SSH public key via stdout, empty if none found
 get_rescue_ssh_key() {
   if [[ -f /root/.ssh/authorized_keys ]]; then
-    grep -E "^ssh-(rsa|ed25519|ecdsa)" /root/.ssh/authorized_keys 2>/dev/null | head -1
+    grep -E "^(ssh-(rsa|ed25519|dss)|ecdsa-sha2-nistp(256|384|521)|sk-(ssh-ed25519|ecdsa-sha2-nistp256)@openssh.com)" /root/.ssh/authorized_keys 2>/dev/null | head -1
   fi
 }
