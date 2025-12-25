@@ -26,6 +26,7 @@ _download_templates_parallel() {
   local -a templates=("$@")
   local input_file
   input_file=$(mktemp)
+  register_temp_file "$input_file"
 
   # Build aria2c input file
   for entry in "${templates[@]}"; do

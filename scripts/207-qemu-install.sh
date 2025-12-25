@@ -10,6 +10,7 @@ install_proxmox() {
   # Run preparation in background to show progress immediately
   local qemu_config_file
   qemu_config_file=$(mktemp)
+  register_temp_file "$qemu_config_file"
 
   (
     # Setup QEMU configuration

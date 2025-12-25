@@ -109,6 +109,7 @@ deploy_systemd_service() {
     log "ERROR: Failed to create temp file for ${service_name} service"
     return 1
   }
+  register_temp_file "$staged"
   cp "$template" "$staged" || {
     log "ERROR: Failed to stage template for ${service_name} service"
     rm -f "$staged"
@@ -175,6 +176,7 @@ deploy_template() {
     log "ERROR: Failed to create temp file for $template"
     return 1
   }
+  register_temp_file "$staged"
   cp "$template" "$staged" || {
     log "ERROR: Failed to stage template $template"
     rm -f "$staged"

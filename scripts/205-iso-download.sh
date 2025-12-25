@@ -80,6 +80,7 @@ download_proxmox_iso() {
   log "Downloading ISO: $ISO_FILENAME"
   local method_file
   method_file=$(mktemp)
+  register_temp_file "$method_file"
 
   _download_iso_with_fallback "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum" "$method_file" &
   show_progress $! "Downloading $ISO_FILENAME" "$ISO_FILENAME downloaded"

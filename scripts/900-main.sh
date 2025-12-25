@@ -167,6 +167,7 @@ show_banner_animated_start 0.1
 
 # Create temporary file for sharing variables between processes
 SYSTEM_INFO_CACHE=$(mktemp)
+register_temp_file "$SYSTEM_INFO_CACHE"
 
 # Run system checks and prefetch Proxmox ISO info in background job
 # All output suppressed to prevent interference with animation

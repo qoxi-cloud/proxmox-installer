@@ -119,6 +119,7 @@ _remote_exec_with_progress() {
 
   local output_file
   output_file=$(mktemp)
+  register_temp_file "$output_file"
 
   local cmd_timeout="${SSH_COMMAND_TIMEOUT:-$SSH_DEFAULT_TIMEOUT}"
 

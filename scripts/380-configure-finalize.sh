@@ -48,6 +48,7 @@ validate_installation() {
     log "ERROR: Failed to create temp file for validation.sh"
     return 1
   }
+  register_temp_file "$staged"
   cp "./templates/validation.sh" "$staged" || {
     log "ERROR: Failed to stage validation.sh"
     rm -f "$staged"
