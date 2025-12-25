@@ -58,6 +58,7 @@ Installed based on wizard selections:
 | Plugins | autosuggestions, syntax-highlighting, git, sudo, history |
 
 **Features:**
+
 - Git status in prompt
 - Command execution time
 - Auto-suggestions from history (gray text)
@@ -96,6 +97,7 @@ Minimal changes - standard Debian bash configuration.
 ### Ring Buffer Tuning (When Enabled)
 
 Maximizes NIC ring buffers for high-throughput networks:
+
 - Automatically detects maximum supported values
 - Sets RX/TX ring buffers to maximum
 - Runs on boot via systemd service
@@ -114,6 +116,7 @@ Available profiles configured during installation:
 ### NTP Configuration
 
 Chrony configured with reliable NTP servers:
+
 - `0.pool.ntp.org`
 - `1.pool.ntp.org`
 - `2.pool.ntp.org`
@@ -207,6 +210,7 @@ vnstat -m
 ### Netdata (When Enabled)
 
 Real-time monitoring dashboard at `http://YOUR-IP:19999`:
+
 - CPU, RAM, disk, network metrics
 - Per-process monitoring
 - Alerts and notifications
@@ -222,6 +226,7 @@ systemctl restart netdata
 ### Promtail (When Enabled)
 
 Log collector for Grafana Loki:
+
 - Collects system logs
 - Ships to configured Loki endpoint
 

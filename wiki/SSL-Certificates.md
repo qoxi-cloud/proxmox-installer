@@ -16,11 +16,13 @@ Configure SSL certificates for the Proxmox Web UI.
 Uses Proxmox's built-in self-signed certificate. Works immediately but browsers show a security warning.
 
 **Pros:**
+
 - No external dependencies
 - Works immediately
 - No domain configuration required
 
 **Cons:**
+
 - Browser security warning on first visit
 - Not suitable for production requiring trusted certificates
 
@@ -45,7 +47,7 @@ The installer validates DNS configuration before proceeding:
 
 **On validation failure:**
 
-```
+```text
 ✗ DNS Error: proxmox.example.com does not resolve
 ℹ Required: DNS A record proxmox.example.com → 88.99.12.34
 ℹ Falling back to self-signed certificate.
@@ -53,7 +55,7 @@ The installer validates DNS configuration before proceeding:
 
 **On success:**
 
-```
+```text
 ✓ SSL: Let's Encrypt (DNS verified: proxmox.example.com → 88.99.12.34)
 ```
 
@@ -111,7 +113,7 @@ certbot renew --dry-run
 
 **Expected output for Let's Encrypt:**
 
-```
+```text
 issuer=C = US, O = Let's Encrypt, CN = R3
 notBefore=Nov 29 12:00:00 2024 GMT
 notAfter=Feb 27 12:00:00 2025 GMT
