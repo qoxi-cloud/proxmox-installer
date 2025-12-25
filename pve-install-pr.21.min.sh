@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.575-pr.21"
+readonly VERSION="2.0.576-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -2089,6 +2089,23 @@ DRIVE_SIZES+=("$size")
 DRIVE_MODELS+=("$model")
 done
 }
+_get_existing_pool_disks(){
+local pool_disks=()
+for pool_info in "${DETECTED_POOLS[@]}";do
+local disks_csv="${pool_info##*|}"
+IFS=',' read -ra disks <<<"$disks_csv"
+pool_disks+=("${disks[@]}")
+done
+printf '%s\n' "${pool_disks[@]}"
+}
+_disk_in_existing_pool(){
+local disk="$1"
+local pool_disk
+while IFS= read -r pool_disk;do
+[[ $pool_disk == "$disk" ]]&&return 0
+done < <(_get_existing_pool_disks)
+return 1
+}
 detect_disk_roles(){
 [[ $DRIVE_COUNT -eq 0 ]]&&return 1
 local size_bytes=()
@@ -2116,16 +2133,33 @@ log "All disks same size, using all for ZFS pool"
 BOOT_DISK=""
 ZFS_POOL_DISKS=("${DRIVES[@]}")
 else
-log "Mixed disk sizes, using smallest for boot"
-local smallest_idx=0
+log "Mixed disk sizes, selecting boot disk"
+local smallest_idx=-1
+local smallest_size=0
 for i in "${!size_bytes[@]}";do
-[[ ${size_bytes[$i]} -lt ${size_bytes[$smallest_idx]} ]]&&smallest_idx=$i
+local drive="${DRIVES[$i]}"
+local drive_size="${size_bytes[$i]}"
+if _disk_in_existing_pool "$drive";then
+log "  $drive: ${DRIVE_SIZES[$i]} (skipped - part of existing pool)"
+continue
+fi
+if [[ $smallest_idx -eq -1 ]]||[[ $drive_size -lt $smallest_size ]];then
+smallest_idx=$i
+smallest_size=$drive_size
+fi
 done
+if [[ $smallest_idx -eq -1 ]];then
+log "WARNING: All disks belong to existing pools, no automatic boot disk selection"
+BOOT_DISK=""
+ZFS_POOL_DISKS=("${DRIVES[@]}")
+else
 BOOT_DISK="${DRIVES[$smallest_idx]}"
+log "Boot disk: $BOOT_DISK (smallest available, ${DRIVE_SIZES[$smallest_idx]})"
 ZFS_POOL_DISKS=()
 for i in "${!DRIVES[@]}";do
 [[ $i -ne $smallest_idx ]]&&ZFS_POOL_DISKS+=("${DRIVES[$i]}")
 done
+fi
 fi
 log "Boot disk: ${BOOT_DISK:-all in pool}"
 log "Pool disks: ${ZFS_POOL_DISKS[*]}"
@@ -3628,11 +3662,35 @@ _wiz_dim "The boot disk will be formatted for Proxmox system files."
 sleep "${WIZARD_MESSAGE_DELAY:-3}"
 return
 fi
-USE_EXISTING_POOL="yes"
-EXISTING_POOL_NAME="${BASH_REMATCH[1]}"
+local pool_name="${BASH_REMATCH[1]}"
 local disks_csv
-disks_csv=$(get_pool_disks "$EXISTING_POOL_NAME")
-IFS=',' read -ra EXISTING_POOL_DISKS <<<"$disks_csv"
+disks_csv=$(get_pool_disks "$pool_name")
+local pool_disks=()
+IFS=',' read -ra pool_disks <<<"$disks_csv"
+local boot_in_pool=false
+for disk in "${pool_disks[@]}";do
+if [[ $disk == "$BOOT_DISK" ]];then
+boot_in_pool=true
+break
+fi
+done
+if [[ $boot_in_pool == true ]];then
+_wiz_start_edit
+_wiz_hide_cursor
+_wiz_error "Boot disk conflict!"
+_wiz_blank_line
+_wiz_dim "Boot disk $BOOT_DISK is part of pool '$pool_name'."
+_wiz_dim "Installing Proxmox on this disk will DESTROY the pool!"
+_wiz_blank_line
+_wiz_dim "Options:"
+_wiz_dim "  1. Select a different boot disk (not in this pool)"
+_wiz_dim "  2. Create a new pool instead of using existing"
+sleep "${WIZARD_MESSAGE_DELAY:-5}"
+return
+fi
+USE_EXISTING_POOL="yes"
+EXISTING_POOL_NAME="$pool_name"
+EXISTING_POOL_DISKS=("${pool_disks[@]}")
 ZFS_POOL_DISKS=()
 ZFS_RAID=""
 log "Selected existing pool: $EXISTING_POOL_NAME with disks: ${EXISTING_POOL_DISKS[*]}"
@@ -4958,8 +5016,8 @@ log "USE_EXISTING_POOL=$USE_EXISTING_POOL, EXISTING_POOL_NAME=$EXISTING_POOL_NAM
 log "EXISTING_POOL_DISKS=(${EXISTING_POOL_DISKS[*]})"
 local virtio_pool_disks=()
 if [[ $USE_EXISTING_POOL == "yes" ]];then
-log "Using existing pool mode - pool disks will NOT be passed to QEMU"
-virtio_pool_disks=()
+log "Using existing pool mode - existing pool disks will be passed to QEMU for import"
+virtio_pool_disks=("${EXISTING_POOL_DISKS[@]}")
 else
 virtio_pool_disks=("${ZFS_POOL_DISKS[@]}")
 fi
