@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.593-pr.21"
+readonly VERSION="2.0.598-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -759,7 +759,7 @@ if [[ -f $passfile_path ]]&&[[ -s $passfile_path ]];then
 _SSH_SESSION_PASSFILE="$passfile_path"
 return 0
 fi
-printf '%s\n' "$NEW_ROOT_PASSWORD" >"$passfile_path"
+printf '%s' "$NEW_ROOT_PASSWORD" >"$passfile_path"
 chmod 600 "$passfile_path"
 _SSH_SESSION_PASSFILE="$passfile_path"
 if [[ $BASHPID == "$$" ]]&&[[ $_SSH_SESSION_LOGGED != true ]];then
@@ -869,15 +869,15 @@ return 0
 }
 get_rescue_ssh_key(){
 if [[ -f /root/.ssh/authorized_keys ]];then
-grep -E "^ssh-(rsa|ed25519|ecdsa)" /root/.ssh/authorized_keys 2>/dev/null|head -1
+grep -E "^(ssh-(rsa|ed25519|dss)|ecdsa-sha2-nistp(256|384|521)|sk-(ssh-ed25519|ecdsa-sha2-nistp256)@openssh.com)" /root/.ssh/authorized_keys 2>/dev/null|head -1
 fi
 }
 readonly SSH_DEFAULT_TIMEOUT=300
 _sanitize_script_for_log(){
 local script="$1"
-script=$(printf '%s\n' "$script"|sed -E 's/(PASSWORD|password|PASSWD|passwd|SECRET|secret|TOKEN|token|KEY|key)=('"'"'[^'"'"']*'"'"'|"[^"]*"|[^[:space:]'"'"'";]+)/\1=[REDACTED]/g')
-script=$(printf '%s\n' "$script"|sed -E 's/(echo[[:space:]]+['\''"]?[^:]+:)[^|'\''"]*/\1[REDACTED]/g')
-script=$(printf '%s\n' "$script"|sed -E 's/(--authkey=)('"'"'[^'"'"']*'"'"'|"[^"]*"|[^[:space:]'"'"'";]+)/\1[REDACTED]/g')
+script=$(printf '%s\n' "$script"|sed -E 's#(PASSWORD|password|PASSWD|passwd|SECRET|secret|TOKEN|token|KEY|key)=('"'"'[^'"'"']*'"'"'|"[^"]*"|[^[:space:]'"'"'";]+)#\1=[REDACTED]#g')
+script=$(printf '%s\n' "$script"|sed -E 's#(echo[[:space:]]+['\''"]?[^:]+:)[^|'\''"]*#\1[REDACTED]#g')
+script=$(printf '%s\n' "$script"|sed -E 's#(--authkey=)('"'"'[^'"'"']*'"'"'|"[^"]*"|[^[:space:]'"'"'";]+)#\1[REDACTED]#g')
 printf '%s\n' "$script"
 }
 remote_exec(){
@@ -916,6 +916,7 @@ local passfile
 passfile=$(_ssh_get_passfile)
 local output_file
 output_file=$(mktemp)
+register_temp_file "$output_file"
 local cmd_timeout="${SSH_COMMAND_TIMEOUT:-$SSH_DEFAULT_TIMEOUT}"
 printf '%s\n' "$script"|timeout "$cmd_timeout" sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'bash -s' >"$output_file" 2>&1&
 local pid=$!
@@ -1346,6 +1347,7 @@ staged=$(mktemp)||{
 log "ERROR: Failed to create temp file for $service_name service"
 return 1
 }
+register_temp_file "$staged"
 cp "$template" "$staged"||{
 log "ERROR: Failed to stage template for $service_name service"
 rm -f "$staged"
@@ -1388,6 +1390,7 @@ staged=$(mktemp)||{
 log "ERROR: Failed to create temp file for $template"
 return 1
 }
+register_temp_file "$staged"
 cp "$template" "$staged"||{
 log "ERROR: Failed to stage template $template"
 rm -f "$staged"
@@ -4616,6 +4619,7 @@ _download_templates_parallel(){
 local -a templates=("$@")
 local input_file
 input_file=$(mktemp)
+register_temp_file "$input_file"
 for entry in "${templates[@]}";do
 local local_path="${entry%%:*}"
 local remote_name="${entry#*:}"
@@ -4843,6 +4847,7 @@ log "Expected checksum: ${expected_checksum:-not available}"
 log "Downloading ISO: $ISO_FILENAME"
 local method_file
 method_file=$(mktemp)
+register_temp_file "$method_file"
 _download_iso_with_fallback "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum" "$method_file"&
 show_progress $! "Downloading $ISO_FILENAME" "$ISO_FILENAME downloaded"
 wait $!
@@ -5049,6 +5054,7 @@ rm -f pve.iso
 install_proxmox(){
 local qemu_config_file
 qemu_config_file=$(mktemp)
+register_temp_file "$qemu_config_file"
 (setup_qemu_config
 cat >"$qemu_config_file" <<EOF
 QEMU_CORES=$QEMU_CORES
@@ -5339,7 +5345,9 @@ _config_tailscale
 }
 _config_admin_user(){
 remote_exec 'useradd -m -s /bin/bash -G sudo '"$ADMIN_USERNAME"''||return 1
-remote_exec 'echo '"$ADMIN_USERNAME:$ADMIN_PASSWORD"' | chpasswd'||return 1
+local encoded_creds
+encoded_creds=$(printf '%s:%s' "$ADMIN_USERNAME" "$ADMIN_PASSWORD"|base64)
+remote_exec "echo '$encoded_creds' | base64 -d | chpasswd"||return 1
 remote_exec "mkdir -p /home/$ADMIN_USERNAME/.ssh && chmod 700 /home/$ADMIN_USERNAME/.ssh"||return 1
 local escaped_key="${SSH_PUBLIC_KEY//\'/\'\\\'\'}"
 remote_exec "echo '$escaped_key' > /home/$ADMIN_USERNAME/.ssh/authorized_keys"||return 1
@@ -6015,6 +6023,7 @@ staged=$(mktemp)||{
 log "ERROR: Failed to create temp file for validation.sh"
 return 1
 }
+register_temp_file "$staged"
 cp "./templates/validation.sh" "$staged"||{
 log "ERROR: Failed to stage validation.sh"
 rm -f "$staged"
@@ -6266,6 +6275,7 @@ metrics_start
 log "Step: collect_system_info"
 show_banner_animated_start 0.1
 SYSTEM_INFO_CACHE=$(mktemp)
+register_temp_file "$SYSTEM_INFO_CACHE"
 {
 collect_system_info
 log "Step: prefetch_proxmox_iso_info"
