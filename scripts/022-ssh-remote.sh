@@ -45,14 +45,15 @@ _sanitize_script_for_log() {
   # Mask common password patterns (variable assignments and chpasswd)
   # Pattern: PASSWORD=something, PASSWORD="quoted", PASSWORD='quoted'
   # Handle unquoted, single-quoted, and double-quoted values
-  script=$(printf '%s\n' "$script" | sed -E 's/(PASSWORD|password|PASSWD|passwd|SECRET|secret|TOKEN|token|KEY|key)=('"'"'[^'"'"']*'"'"'|"[^"]*"|[^[:space:]'"'"'";]+)/\1=[REDACTED]/g')
+  # Use # as delimiter to avoid collision with file paths containing /
+  script=$(printf '%s\n' "$script" | sed -E 's#(PASSWORD|password|PASSWD|passwd|SECRET|secret|TOKEN|token|KEY|key)=('"'"'[^'"'"']*'"'"'|"[^"]*"|[^[:space:]'"'"'";]+)#\1=[REDACTED]#g')
 
   # Pattern: echo "user:password" | chpasswd
-  script=$(printf '%s\n' "$script" | sed -E 's/(echo[[:space:]]+['\''"]?[^:]+:)[^|'\''"]*/\1[REDACTED]/g')
+  script=$(printf '%s\n' "$script" | sed -E 's#(echo[[:space:]]+['\''"]?[^:]+:)[^|'\''"]*#\1[REDACTED]#g')
 
   # Pattern: --authkey='...' or --authkey="..." or --authkey=...
   # Handle unquoted, single-quoted, and double-quoted values
-  script=$(printf '%s\n' "$script" | sed -E 's/(--authkey=)('"'"'[^'"'"']*'"'"'|"[^"]*"|[^[:space:]'"'"'";]+)/\1[REDACTED]/g')
+  script=$(printf '%s\n' "$script" | sed -E 's#(--authkey=)('"'"'[^'"'"']*'"'"'|"[^"]*"|[^[:space:]'"'"'";]+)#\1[REDACTED]#g')
 
   printf '%s\n' "$script"
 }
