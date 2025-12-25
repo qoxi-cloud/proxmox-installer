@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.580-pr.21"
+readonly VERSION="2.0.581-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -373,7 +373,7 @@ printf '%s\n' \
 "$p$CLR_GRAY|_|     |_|    \\___/ $CLR_ORANGE/_/\\_\\$CLR_GRAY |_| |_| |_| \\___/ $CLR_ORANGE/_/\\_\\$CLR_RESET" \
 "" \
 "$p$spaces$tagline"
-} >/dev/tty 2>/dev/null
+}
 _show_banner_frame(){
 local h="${1:--1}"
 local M="$CLR_GRAY"
