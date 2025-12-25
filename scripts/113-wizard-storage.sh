@@ -6,16 +6,12 @@
 
 # Edits existing pool setting (use existing vs create new).
 # Updates USE_EXISTING_POOL and EXISTING_POOL_NAME globals.
+# Uses DETECTED_POOLS array populated during system detection.
 _edit_existing_pool() {
   _wiz_start_edit
 
-  # Detect available pools for import
-  local pools=()
-  while IFS= read -r line; do
-    [[ -n $line ]] && pools+=("$line")
-  done < <(detect_existing_pools)
-
-  if [[ ${#pools[@]} -eq 0 ]]; then
+  # Use pre-detected pools from DETECTED_POOLS (populated by _detect_pools)
+  if [[ ${#DETECTED_POOLS[@]} -eq 0 ]]; then
     _wiz_description \
       "  {{yellow:No importable ZFS pools detected.}}" \
       "" \
@@ -39,7 +35,7 @@ _edit_existing_pool() {
 
   # Build options: "Create new pool" + detected pools
   local options="Create new pool (format disks)"
-  for pool_info in "${pools[@]}"; do
+  for pool_info in "${DETECTED_POOLS[@]}"; do
     local pool_name="${pool_info%%|*}"
     local rest="${pool_info#*|}"
     local pool_state="${rest%%|*}"

@@ -166,22 +166,21 @@ detect_existing_pools() {
 }
 
 # Gets list of disks belonging to a specific pool.
+# Uses DETECTED_POOLS array (populated by _detect_pools during init).
 # Parameters:
 #   $1 - Pool name
 # Returns: Comma-separated disk paths via stdout
 get_pool_disks() {
   local pool_name="$1"
-  local pool_info
 
-  while IFS= read -r line; do
+  for line in "${DETECTED_POOLS[@]}"; do
     local name="${line%%|*}"
     if [[ $name == "$pool_name" ]]; then
-      # Extract disks part (after second |)
       local rest="${line#*|}"
       printf '%s\n' "${rest#*|}"
       return 0
     fi
-  done < <(detect_existing_pools)
+  done
 
   return 1
 }
