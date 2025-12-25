@@ -73,15 +73,20 @@ _config_zfs_scrub() {
     return 1
   }
 
-  # Enable scrub timers for rpool (boot) and tank (data) if they exist
+  # Determine data pool name: existing pool name or "tank"
+  local data_pool="tank"
+  if [[ $USE_EXISTING_POOL == "yes" && -n $EXISTING_POOL_NAME ]]; then
+    data_pool="$EXISTING_POOL_NAME"
+  fi
+
+  log "INFO: Enabling scrub timers for pools: rpool (if exists), $data_pool"
+
+  # Enable scrub timers for all detected pools
   remote_run "Enabling ZFS scrub timers" "
     systemctl daemon-reload
-    if zpool list rpool &>/dev/null; then
-      systemctl enable --now zfs-scrub@rpool.timer
-    fi
-    if zpool list tank &>/dev/null; then
-      systemctl enable --now zfs-scrub@tank.timer
-    fi
+    for pool in \$(zpool list -H -o name 2>/dev/null); do
+      systemctl enable --now zfs-scrub@\$pool.timer 2>/dev/null || true
+    done
   "
 
   log "INFO: ZFS scrub schedule configured (monthly, 1st Sunday at 2:00 AM)"
