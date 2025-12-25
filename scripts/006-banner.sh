@@ -16,7 +16,6 @@ printf -v _BANNER_PAD '%*s' "$_BANNER_PAD_SIZE" ''
 
 # Display main ASCII banner
 # Usage: show_banner
-# IMPORTANT: Output goes to /dev/tty to prevent leaking into log files
 show_banner() {
   local p="$_BANNER_PAD"
   local tagline="${CLR_CYAN}Qoxi ${CLR_GRAY}Automated Installer ${CLR_GOLD}${VERSION}${CLR_RESET}"
@@ -34,7 +33,7 @@ show_banner() {
     "${p}${CLR_GRAY}|_|     |_|    \\___/ ${CLR_ORANGE}/_/\\_\\${CLR_GRAY} |_| |_| |_| \\___/ ${CLR_ORANGE}/_/\\_\\${CLR_RESET}" \
     "" \
     "${p}${spaces}${tagline}"
-} >/dev/tty 2>/dev/null
+}
 
 # Displays animated banner with highlighted letter.
 # Parameters:
