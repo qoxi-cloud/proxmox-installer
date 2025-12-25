@@ -49,13 +49,6 @@ print_info() {
   printf '%s\n' "${CLR_CYAN}ℹ${CLR_RESET} $1"
 }
 
-# Prints section header in cyan.
-# Parameters:
-#   $1 - Section header text
-print_section() {
-  printf '%s\n' "${CLR_CYAN}$1${CLR_RESET}"
-}
-
 # =============================================================================
 # Progress indicators
 # =============================================================================

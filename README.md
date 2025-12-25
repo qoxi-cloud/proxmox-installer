@@ -86,7 +86,9 @@ Automated Proxmox VE installer for dedicated servers **without console access**.
 
 ## Documentation
 
-Full documentation available in the **[Wiki](../../wiki)**:
+### User Guide (Wiki)
+
+Full user documentation available in the **[Wiki](../../wiki)**:
 
 - [Installation Guide](../../wiki/Installation-Guide) - Step-by-step instructions
 - [Configuration Reference](../../wiki/Configuration-Reference) - All options explained
@@ -95,7 +97,17 @@ Full documentation available in the **[Wiki](../../wiki)**:
 - [SSL Certificates](../../wiki/SSL-Certificates) - Let's Encrypt setup
 - [Tailscale Setup](../../wiki/Tailscale-Setup) - VPN configuration
 - [Post-Installation](../../wiki/Post-Installation) - Packages and optimizations
-- [Development](../../wiki/Development) - Contributing guide
+
+### Developer Documentation
+
+Technical documentation for contributors:
+
+- [Architecture](../../wiki/Architecture) - Project structure and execution flow
+- [Function Reference](../../wiki/Function-Reference) - All public functions
+- [Templates Guide](../../wiki/Templates-Guide) - Template syntax and variables
+- [Wizard Development](../../wiki/Wizard-Development) - Extending the wizard
+- [Security Model](../../wiki/Security-Model) - Credential handling and security
+- [Troubleshooting](../../wiki/Troubleshooting) - Common issues and solutions
 
 ## Contributing
 

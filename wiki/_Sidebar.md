@@ -16,6 +16,16 @@
 
 **Reference**
 - [🔧 Post-Installation](Post-Installation)
+- [❓ Troubleshooting](Troubleshooting)
+
+---
+
+**Developer Guide**
+- [🏗️ Architecture](Architecture)
+- [📚 Function Reference](Function-Reference)
+- [📝 Templates Guide](Templates-Guide)
+- [🧙 Wizard Development](Wizard-Development)
+- [🔐 Security Model](Security-Model)
 - [🛠️ Development](Development)
 
 ---

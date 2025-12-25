@@ -26,7 +26,6 @@ readonly HEX_YELLOW="#ffff00"
 readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
-readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
 
 # Version (MAJOR only - MINOR.PATCH added by CI from git tags/commits)
@@ -79,7 +78,6 @@ readonly SSH_CONNECT_TIMEOUT=10
 readonly SSH_PORT_QEMU=5555   # SSH port for QEMU VM (installer-internal)
 readonly PORT_SSH=22          # Standard SSH port for firewall rules
 readonly PORT_PROXMOX_UI=8006 # Proxmox Web UI port
-readonly PORT_NETDATA=19999   # Netdata monitoring dashboard
 
 # Password settings
 readonly DEFAULT_PASSWORD_LENGTH=16
