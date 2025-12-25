@@ -17,7 +17,7 @@ readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_GOLD="#d7af5f"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.550-pr.21"
+readonly VERSION="2.0.551-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1066,7 +1066,7 @@ fi
 [[ $INSTALL_APPARMOR == "yes" ]]&&packages+=(apparmor apparmor-utils)
 [[ $INSTALL_AUDITD == "yes" ]]&&packages+=(auditd audispd-plugins)
 [[ $INSTALL_AIDE == "yes" ]]&&packages+=(aide aide-common)
-[[ $INSTALL_CHKROOTKIT == "yes" ]]&&packages+=(chkrootkit)
+[[ $INSTALL_CHKROOTKIT == "yes" ]]&&packages+=(chkrootkit binutils)
 [[ $INSTALL_LYNIS == "yes" ]]&&packages+=(lynis)
 [[ $INSTALL_NEEDRESTART == "yes" ]]&&packages+=(needrestart)
 [[ $INSTALL_VNSTAT == "yes" ]]&&packages+=(vnstat)
@@ -2136,7 +2136,8 @@ render_logs
 }
 add_subtask_log(){
 local message="$1"
-add_log "$CLR_ORANGE│$CLR_RESET   $CLR_GRAY$message$CLR_RESET"
+local color="${2:-$CLR_GRAY}"
+add_log "$CLR_ORANGE│$CLR_RESET   $color$message$CLR_RESET"
 }
 start_live_installation(){
 show_progress(){
@@ -2203,14 +2204,14 @@ else
 addition=", $item"
 fi
 if [[ $((${#current_line}+${#addition})) -gt $max_width && -n $current_line ]];then
-add_log "$CLR_ORANGE│$CLR_RESET   $CLR_GRAY$current_line,$CLR_RESET"
+add_subtask_log "$current_line,"
 current_line="$item"
 else
 current_line+="$addition"
 fi
 done
 if [[ -n $current_line ]];then
-add_log "$CLR_ORANGE│$CLR_RESET   $CLR_GRAY$current_line$CLR_RESET"
+add_subtask_log "$current_line"
 fi
 }
 _wizard_main(){
@@ -4933,7 +4934,7 @@ else
 TAILSCALE_IP="not authenticated"
 TAILSCALE_HOSTNAME=""
 add_log "$CLR_ORANGE├─$CLR_RESET $CLR_YELLOW⚠️$CLR_RESET Tailscale installed but not authenticated"
-add_log "$CLR_ORANGE│$CLR_RESET   ${CLR_GRAY}After reboot: tailscale up --ssh$CLR_RESET"
+add_subtask_log "After reboot: tailscale up --ssh"
 fi
 }
 configure_tailscale(){
@@ -5609,10 +5610,10 @@ printf '%s\n' "$validation_output" >>"$LOG_FILE"
 local errors=0 warnings=0
 while IFS= read -r line;do
 case "$line" in
-FAIL:*)add_log "$CLR_ORANGE│$CLR_RESET   $CLR_RED$line$CLR_RESET"
+FAIL:*)add_subtask_log "$line" "$CLR_RED"
 ((errors++))
 ;;
-WARN:*)add_log "$CLR_ORANGE│$CLR_RESET   $CLR_YELLOW$line$CLR_RESET"
+WARN:*)add_subtask_log "$line" "$CLR_YELLOW"
 ((warnings++))
 esac
 done <<<"$validation_output"
