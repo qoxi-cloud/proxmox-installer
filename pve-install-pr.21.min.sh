@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.598-pr.21"
+readonly VERSION="2.0.599-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -3319,9 +3319,10 @@ done
 return 0
 }
 _wiz_input_validated(){
-local validate_func="$1"
-local error_msg="$2"
-shift 2
+local var_name="$1"
+local validate_func="$2"
+local error_msg="$3"
+shift 3
 while true;do
 _wiz_start_edit
 _show_input_footer
@@ -3329,7 +3330,7 @@ local value
 value=$(_wiz_input "$@")
 [[ -z $value ]]&&return 1
 if "$validate_func" "$value";then
-printf '%s' "$value"
+declare -g "$var_name=$value"
 return 0
 fi
 show_validation_error "$error_msg"
@@ -3404,12 +3405,10 @@ LOCALE=$(_country_to_locale "$COUNTRY")
 log "Set LOCALE=$LOCALE from COUNTRY=$COUNTRY"
 }
 _edit_hostname(){
-local new_hostname
-new_hostname=$(_wiz_input_validated "validate_hostname" "Invalid hostname format" \
+_wiz_input_validated "PVE_HOSTNAME" "validate_hostname" "Invalid hostname format" \
 --placeholder "e.g., pve, proxmox, node1" \
 --value "$PVE_HOSTNAME" \
---prompt "Hostname: ")||return
-PVE_HOSTNAME="$new_hostname"
+--prompt "Hostname: "||return
 _wiz_start_edit
 _show_input_footer
 local new_domain
@@ -3422,12 +3421,10 @@ DOMAIN_SUFFIX="$new_domain"
 FQDN="$PVE_HOSTNAME.$DOMAIN_SUFFIX"
 }
 _edit_email(){
-local new_email
-new_email=$(_wiz_input_validated "validate_email" "Invalid email format" \
+_wiz_input_validated "EMAIL" "validate_email" "Invalid email format" \
 --placeholder "admin@example.com" \
 --value "$EMAIL" \
---prompt "Email: ")||return
-EMAIL="$new_email"
+--prompt "Email: "
 }
 _edit_password(){
 _wiz_password_editor \
@@ -3997,7 +3994,9 @@ fi
 fi
 }
 _tailscale_get_auth_key(){
-_wiz_input_validated "validate_tailscale_key" "Invalid key format. Expected: tskey-auth-xxx-xxx" \
+_TAILSCALE_TMP_KEY=""
+_wiz_input_validated "_TAILSCALE_TMP_KEY" "validate_tailscale_key" \
+"Invalid key format. Expected: tskey-auth-xxx-xxx" \
 --placeholder "tskey-auth-..." \
 --prompt "Auth Key: "
 }
@@ -4052,10 +4051,8 @@ result=$?
 if [[ $result -eq 1 ]];then
 return
 elif [[ $result -eq 2 ]];then
-local auth_key
-auth_key=$(_tailscale_get_auth_key)
-if [[ -n $auth_key ]];then
-_tailscale_enable "$auth_key"
+if _tailscale_get_auth_key&&[[ -n $_TAILSCALE_TMP_KEY ]];then
+_tailscale_enable "$_TAILSCALE_TMP_KEY"
 else
 _tailscale_disable
 fi
