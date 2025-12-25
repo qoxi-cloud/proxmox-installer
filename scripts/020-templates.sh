@@ -26,9 +26,15 @@ apply_template_vars() {
       local var="${pair%%=*}"
       local value="${pair#*=}"
 
-      # Debug log for empty values (placeholder will be replaced with empty string)
+      # Debug log for empty values (skip IPv6 vars when IPv6 is disabled)
       if [[ -z $value ]] && grep -qF "{{${var}}}" "$file" 2>/dev/null; then
-        log "DEBUG: Template variable $var is empty, {{${var}}} will be replaced with empty string in $file"
+        local skip_log=false
+        case "$var" in
+          MAIN_IPV6 | IPV6_ADDRESS | IPV6_GATEWAY | IPV6_PREFIX)
+            [[ ${IPV6_MODE:-} != "Auto" && ${IPV6_MODE:-} != "Manual" ]] && skip_log=true
+            ;;
+        esac
+        [[ $skip_log == false ]] && log "DEBUG: Template variable $var is empty, {{${var}}} will be replaced with empty string in $file"
       fi
 
       # Escape special characters in value for sed replacement
