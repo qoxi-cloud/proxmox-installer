@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.567-pr.21"
+readonly VERSION="2.0.568-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -2154,15 +2154,14 @@ done
 }
 get_pool_disks(){
 local pool_name="$1"
-local pool_info
-while IFS= read -r line;do
+for line in "${DETECTED_POOLS[@]}";do
 local name="${line%%|*}"
 if [[ $name == "$pool_name" ]];then
 local rest="${line#*|}"
 printf '%s\n' "${rest#*|}"
 return 0
 fi
-done < <(detect_existing_pools)
+done
 return 1
 }
 DETECTED_POOLS=()
@@ -3560,11 +3559,7 @@ esac
 }
 _edit_existing_pool(){
 _wiz_start_edit
-local pools=()
-while IFS= read -r line;do
-[[ -n $line ]]&&pools+=("$line")
-done < <(detect_existing_pools)
-if [[ ${#pools[@]} -eq 0 ]];then
+if [[ ${#DETECTED_POOLS[@]} -eq 0 ]];then
 _wiz_description \
 "  {{yellow:No importable ZFS pools detected.}}" \
 "" \
@@ -3585,7 +3580,7 @@ _wiz_description \
 "  Ensure the pool is healthy before proceeding." \
 ""
 local options="Create new pool (format disks)"
-for pool_info in "${pools[@]}";do
+for pool_info in "${DETECTED_POOLS[@]}";do
 local pool_name="${pool_info%%|*}"
 local rest="${pool_info#*|}"
 local pool_state="${rest%%|*}"
