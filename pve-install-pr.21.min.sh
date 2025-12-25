@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.600-pr.21"
+readonly VERSION="2.0.601-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -5767,7 +5767,7 @@ log "Yazi binary installed"
 }
 _config_yazi(){
 _install_yazi||return 1
-remote_exec 'su - '"$ADMIN_USER"' -c "
+remote_exec 'su - '"$ADMIN_USERNAME"' -c "
     ya pack -a kalidyasin/yazi-flavors:tokyonight-night
     ya pack -a yazi-rs/plugins:chmod
     ya pack -a yazi-rs/plugins:smart-enter
@@ -5778,9 +5778,9 @@ log "ERROR: Failed to install yazi plugins"
 return 1
 }
 deploy_user_configs \
-"templates/yazi-theme.toml:.config/yazi/theme.toml" \
-"templates/yazi-init.lua:.config/yazi/init.lua" \
-"templates/yazi-keymap.toml:.config/yazi/keymap.toml"||{
+"templates/yazi-theme.toml.tmpl:.config/yazi/theme.toml" \
+"templates/yazi-init.lua.tmpl:.config/yazi/init.lua" \
+"templates/yazi-keymap.toml.tmpl:.config/yazi/keymap.toml"||{
 log "ERROR: Failed to deploy yazi configs"
 return 1
 }
