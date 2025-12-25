@@ -5,8 +5,6 @@
   <h3>Automated Proxmox VE Installation for Dedicated Servers</h3>
 
   ![Version](https://img.shields.io/endpoint?url=https://qoxi-cloud.github.io/proxmox-installer/version.json&style=for-the-badge)
-  ![Tests](https://img.shields.io/github/actions/workflow/status/qoxi-cloud/proxmox-installer/test.yml?style=for-the-badge&logo=github&label=tests)
-  [![codecov](https://img.shields.io/codecov/c/github/qoxi-cloud/proxmox-installer?style=for-the-badge&logo=codecov)](https://codecov.io/gh/qoxi-cloud/proxmox-installer)
   ![GitHub Stars](https://img.shields.io/github/stars/qoxi-cloud/proxmox-installer?style=for-the-badge&logo=github)
   ![GitHub License](https://img.shields.io/github/license/qoxi-cloud/proxmox-installer?style=for-the-badge)
 </div>
@@ -75,7 +73,7 @@ Automated Proxmox VE installer for dedicated servers **without console access**.
 
 | Task | Manual | Automated |
 |------|--------|-----------|
-| Proxmox installation | 20-30 min | ~5 min |
+| Proxmox installation | 20-30 min | ~10 min |
 | ZFS RAID configuration | 15-20 min | Included |
 | Network bridge setup | 10-15 min | Included |
 | SSH hardening | 10-15 min | Included |
@@ -84,7 +82,7 @@ Automated Proxmox VE installer for dedicated servers **without console access**.
 | Shell + plugins setup | 10-15 min | Included |
 | Let's Encrypt SSL | 10-15 min | Included |
 | Tailscale + firewall | 15-20 min | Included |
-| **Total** | **~2 hours** | **~5 minutes** |
+| **Total** | **~2 hours** | **~10 minutes** |
 
 ## Documentation
 
