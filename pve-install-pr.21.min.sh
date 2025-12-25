@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.586-pr.21"
+readonly VERSION="2.0.587-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1381,12 +1381,26 @@ rm -f "$staged"
 return 1
 }
 fi
+local dest_dir
+dest_dir=$(dirname "$dest")
+remote_exec "mkdir -p '$dest_dir'"||{
+log "ERROR: Failed to create directory $dest_dir"
+rm -f "$staged"
+return 1
+}
 remote_copy "$staged" "$dest"||{
 log "ERROR: Failed to deploy $template to $dest"
 rm -f "$staged"
 return 1
 }
 rm -f "$staged"
+}
+deploy_user_configs(){
+for pair in "$@";do
+local template="${pair%%:*}"
+local relative="${pair#*:}"
+deploy_user_config "$template" "$relative"||return 1
+done
 }
 _generate_loopback(){
 cat <<'EOF'
@@ -3008,6 +3022,42 @@ output+="$(_wiz_center "$CLR_GRAY$nav_hint$CLR_RESET")"
 _wiz_clear
 printf '%b' "$output"
 }
+declare -gA _DSP_MAP=(
+["repo:no-subscription"]="No-subscription (free)"
+["repo:enterprise"]="Enterprise"
+["repo:test"]="Test/Development"
+["ipv6:auto"]="Auto"
+["ipv6:manual"]="Manual"
+["ipv6:disabled"]="Disabled"
+["bridge:external"]="External bridge"
+["bridge:internal"]="Internal NAT"
+["bridge:both"]="Both"
+["firewall:stealth"]="Stealth (Tailscale only)"
+["firewall:strict"]="Strict (SSH only)"
+["firewall:standard"]="Standard (SSH + Web UI)"
+["zfs:single"]="Single disk"
+["zfs:raid0"]="RAID-0 (striped)"
+["zfs:raid1"]="RAID-1 (mirror)"
+["zfs:raidz1"]="RAID-Z1 (parity)"
+["zfs:raidz2"]="RAID-Z2 (double parity)"
+["zfs:raidz3"]="RAID-Z3 (triple parity)"
+["zfs:raid10"]="RAID-10 (striped mirrors)"
+["arc:vm-focused"]="VM-focused (4GB)"
+["arc:balanced"]="Balanced (25-40%)"
+["arc:storage-focused"]="Storage-focused (50%)"
+["ssl:self-signed"]="Self-signed"
+["ssl:letsencrypt"]="Let's Encrypt"
+["shell:zsh"]="ZSH"
+["shell:bash"]="Bash"
+["power:performance"]="Performance"
+["power:ondemand"]="Balanced"
+["power:powersave"]="Balanced"
+["power:schedutil"]="Adaptive"
+["power:conservative"]="Conservative")
+_dsp_lookup(){
+local key="$1:$2"
+echo "${_DSP_MAP[$key]:-$2}"
+}
 _dsp_basic(){
 _DSP_PASS=""
 [[ -n $NEW_ROOT_PASSWORD ]]&&_DSP_PASS="********"
@@ -3016,47 +3066,22 @@ _DSP_HOSTNAME=""
 }
 _dsp_proxmox(){
 _DSP_REPO=""
-if [[ -n $PVE_REPO_TYPE ]];then
-case "$PVE_REPO_TYPE" in
-no-subscription)_DSP_REPO="No-subscription (free)";;
-enterprise)_DSP_REPO="Enterprise";;
-test)_DSP_REPO="Test/Development";;
-*)_DSP_REPO="$PVE_REPO_TYPE"
-esac
-fi
+[[ -n $PVE_REPO_TYPE ]]&&_DSP_REPO=$(_dsp_lookup "repo" "$PVE_REPO_TYPE")
 _DSP_ISO=""
 [[ -n $PROXMOX_ISO_VERSION ]]&&_DSP_ISO=$(get_iso_version "$PROXMOX_ISO_VERSION")
 }
 _dsp_network(){
 _DSP_IPV6=""
 if [[ -n $IPV6_MODE ]];then
-case "$IPV6_MODE" in
-auto)_DSP_IPV6="Auto";;
-manual)_DSP_IPV6="Manual"
-[[ -n $MAIN_IPV6 ]]&&_DSP_IPV6+=" ($MAIN_IPV6, gw: $IPV6_GATEWAY)"
-;;
-disabled)_DSP_IPV6="Disabled";;
-*)_DSP_IPV6="$IPV6_MODE"
-esac
+_DSP_IPV6=$(_dsp_lookup "ipv6" "$IPV6_MODE")
+[[ $IPV6_MODE == "manual" && -n $MAIN_IPV6 ]]&&_DSP_IPV6+=" ($MAIN_IPV6, gw: $IPV6_GATEWAY)"
 fi
 _DSP_BRIDGE=""
-if [[ -n $BRIDGE_MODE ]];then
-case "$BRIDGE_MODE" in
-external)_DSP_BRIDGE="External bridge";;
-internal)_DSP_BRIDGE="Internal NAT";;
-both)_DSP_BRIDGE="Both";;
-*)_DSP_BRIDGE="$BRIDGE_MODE"
-esac
-fi
+[[ -n $BRIDGE_MODE ]]&&_DSP_BRIDGE=$(_dsp_lookup "bridge" "$BRIDGE_MODE")
 _DSP_FIREWALL=""
 if [[ -n $INSTALL_FIREWALL ]];then
 if [[ $INSTALL_FIREWALL == "yes" ]];then
-case "$FIREWALL_MODE" in
-stealth)_DSP_FIREWALL="Stealth (Tailscale only)";;
-strict)_DSP_FIREWALL="Strict (SSH only)";;
-standard)_DSP_FIREWALL="Standard (SSH + Web UI)";;
-*)_DSP_FIREWALL="$FIREWALL_MODE"
-esac
+_DSP_FIREWALL=$(_dsp_lookup "firewall" "$FIREWALL_MODE")
 else
 _DSP_FIREWALL="Disabled"
 fi
@@ -3073,27 +3098,12 @@ _DSP_EXISTING_POOL="Create new"
 fi
 _DSP_ZFS=""
 if [[ -n $ZFS_RAID ]];then
-case "$ZFS_RAID" in
-single)_DSP_ZFS="Single disk";;
-raid0)_DSP_ZFS="RAID-0 (striped)";;
-raid1)_DSP_ZFS="RAID-1 (mirror)";;
-raidz1)_DSP_ZFS="RAID-Z1 (parity)";;
-raidz2)_DSP_ZFS="RAID-Z2 (double parity)";;
-raid10)_DSP_ZFS="RAID-10 (striped mirrors)";;
-*)_DSP_ZFS="$ZFS_RAID"
-esac
+_DSP_ZFS=$(_dsp_lookup "zfs" "$ZFS_RAID")
 elif [[ $USE_EXISTING_POOL == "yes" ]];then
 _DSP_ZFS="(preserved)"
 fi
 _DSP_ARC=""
-if [[ -n $ZFS_ARC_MODE ]];then
-case "$ZFS_ARC_MODE" in
-vm-focused)_DSP_ARC="VM-focused (4GB)";;
-balanced)_DSP_ARC="Balanced (25-40%)";;
-storage-focused)_DSP_ARC="Storage-focused (50%)";;
-*)_DSP_ARC="$ZFS_ARC_MODE"
-esac
-fi
+[[ -n $ZFS_ARC_MODE ]]&&_DSP_ARC=$(_dsp_lookup "arc" "$ZFS_ARC_MODE")
 _DSP_BOOT="All in pool"
 if [[ -n $BOOT_DISK ]];then
 for i in "${!DRIVES[@]}";do
@@ -3115,31 +3125,11 @@ if [[ -n $INSTALL_TAILSCALE ]];then
 [[ $INSTALL_TAILSCALE == "yes" ]]&&_DSP_TAILSCALE="Enabled + Stealth"||_DSP_TAILSCALE="Disabled"
 fi
 _DSP_SSL=""
-if [[ -n $SSL_TYPE ]];then
-case "$SSL_TYPE" in
-self-signed)_DSP_SSL="Self-signed";;
-letsencrypt)_DSP_SSL="Let's Encrypt";;
-*)_DSP_SSL="$SSL_TYPE"
-esac
-fi
+[[ -n $SSL_TYPE ]]&&_DSP_SSL=$(_dsp_lookup "ssl" "$SSL_TYPE")
 _DSP_SHELL=""
-if [[ -n $SHELL_TYPE ]];then
-case "$SHELL_TYPE" in
-zsh)_DSP_SHELL="ZSH";;
-bash)_DSP_SHELL="Bash";;
-*)_DSP_SHELL="$SHELL_TYPE"
-esac
-fi
+[[ -n $SHELL_TYPE ]]&&_DSP_SHELL=$(_dsp_lookup "shell" "$SHELL_TYPE")
 _DSP_POWER=""
-if [[ -n $CPU_GOVERNOR ]];then
-case "$CPU_GOVERNOR" in
-performance)_DSP_POWER="Performance";;
-ondemand|powersave)_DSP_POWER="Balanced";;
-schedutil)_DSP_POWER="Adaptive";;
-conservative)_DSP_POWER="Conservative";;
-*)_DSP_POWER="$CPU_GOVERNOR"
-esac
-fi
+[[ -n $CPU_GOVERNOR ]]&&_DSP_POWER=$(_dsp_lookup "power" "$CPU_GOVERNOR")
 _DSP_SECURITY="none"
 local sec_items=()
 [[ $INSTALL_APPARMOR == "yes" ]]&&sec_items+=("apparmor")
@@ -3184,6 +3174,108 @@ _dsp_network
 _dsp_storage
 _dsp_services
 _dsp_access
+}
+_wiz_password_editor(){
+local var_name="$1"
+local header="$2"
+local success_msg="$3"
+local display_label="$4"
+local set_generated="${5:-no}"
+while true;do
+_wiz_start_edit
+_show_input_footer "filter" 3
+local choice
+if ! choice=$(printf '%s\n' "$WIZ_PASSWORD_OPTIONS"|_wiz_choose --header="$header");then
+return 1
+fi
+case "$choice" in
+"Generate password")local generated_pass
+generated_pass=$(generate_password "$DEFAULT_PASSWORD_LENGTH")
+declare -g "$var_name=$generated_pass"
+[[ $set_generated == "yes" ]]&&PASSWORD_GENERATED="yes"
+_wiz_start_edit
+_wiz_hide_cursor
+_wiz_warn "Please save this password - $success_msg"
+_wiz_blank_line
+printf '%s\n' "$WIZ_NOTIFY_INDENT$CLR_CYAN$display_label$CLR_RESET $CLR_ORANGE$generated_pass$CLR_RESET"
+_wiz_blank_line
+printf '%s\n' "$WIZ_NOTIFY_INDENT${CLR_GRAY}Press any key to continue...$CLR_RESET"
+read -n 1 -s -r
+return 0
+;;
+"Manual entry")_wiz_start_edit
+_show_input_footer
+local new_password
+new_password=$(_wiz_input \
+--password \
+--placeholder "Enter password" \
+--prompt "$header ")
+if [[ -z $new_password ]];then
+continue
+fi
+local password_error
+password_error=$(get_password_error "$new_password")
+if [[ -n $password_error ]];then
+show_validation_error "$password_error"
+continue
+fi
+declare -g "$var_name=$new_password"
+[[ $set_generated == "yes" ]]&&PASSWORD_GENERATED="no"
+return 0
+esac
+done
+}
+_wiz_choose_mapped(){
+local var_name="$1"
+local header="$2"
+local options_var="$3"
+shift 3
+local -A mapping=()
+for pair in "$@";do
+local display="${pair%%:*}"
+local internal="${pair#*:}"
+mapping["$display"]="$internal"
+done
+local selected
+if ! selected=$(printf '%s\n' "${!options_var}"|_wiz_choose --header="$header");then
+return 1
+fi
+local internal_value="${mapping[$selected]:-}"
+if [[ -n $internal_value ]];then
+declare -g "$var_name=$internal_value"
+fi
+return 0
+}
+_wiz_feature_checkbox(){
+local header="$1"
+local footer_size="$2"
+local options_var="$3"
+shift 3
+_show_input_footer "checkbox" "$footer_size"
+local gum_args=(--header="$header")
+local feature_map=()
+for pair in "$@";do
+local feature="${pair%%:*}"
+local var_name="${pair#*:}"
+feature_map+=("$feature:$var_name")
+local current_value
+current_value="${!var_name}"
+[[ $current_value == "yes" ]]&&gum_args+=(--selected "$feature")
+done
+local selected
+if ! selected=$(printf '%s\n' "${!options_var}"|_wiz_choose_multi "${gum_args[@]}");then
+return 1
+fi
+for pair in "${feature_map[@]}";do
+local feature="${pair%%:*}"
+local var_name="${pair#*:}"
+if [[ $selected == *"$feature"* ]];then
+declare -g "$var_name=yes"
+else
+declare -g "$var_name=no"
+fi
+done
+return 0
 }
 _country_to_locale(){
 local country="${1:-us}"
@@ -3296,47 +3388,12 @@ fi
 done
 }
 _edit_password(){
-while true;do
-_wiz_start_edit
-_show_input_footer "filter" 3
-local choice
-if ! choice=$(printf '%s\n' "$WIZ_PASSWORD_OPTIONS"|_wiz_choose --header="Password:");then
-return
-fi
-case "$choice" in
-"Generate password")NEW_ROOT_PASSWORD=$(generate_password "$DEFAULT_PASSWORD_LENGTH")
-PASSWORD_GENERATED="yes"
-_wiz_start_edit
-_wiz_hide_cursor
-_wiz_warn "Please save this password - it will be required for login"
-_wiz_blank_line
-printf '%s\n' "$WIZ_NOTIFY_INDENT${CLR_CYAN}Generated password:$CLR_RESET $CLR_ORANGE$NEW_ROOT_PASSWORD$CLR_RESET"
-_wiz_blank_line
-printf '%s\n' "$WIZ_NOTIFY_INDENT${CLR_GRAY}Press any key to continue...$CLR_RESET"
-read -n 1 -s -r
-break
-;;
-"Manual entry")_wiz_start_edit
-_show_input_footer
-local new_password
-new_password=$(_wiz_input \
---password \
---placeholder "Enter password" \
---prompt "Password: ")
-if [[ -z $new_password ]];then
-continue
-fi
-local password_error
-password_error=$(get_password_error "$new_password")
-if [[ -n $password_error ]];then
-show_validation_error "$password_error"
-continue
-fi
-NEW_ROOT_PASSWORD="$new_password"
-PASSWORD_GENERATED="no"
-break
-esac
-done
+_wiz_password_editor \
+"NEW_ROOT_PASSWORD" \
+"Root Password:" \
+"it will be required for login" \
+"Generated root password:" \
+"yes"
 }
 _edit_timezone(){
 _wiz_start_edit
@@ -3448,15 +3505,10 @@ _wiz_description \
 "  {{cyan:Both}}:     Internal + External bridges" \
 ""
 _show_input_footer "filter" 4
-local selected
-if ! selected=$(printf '%s\n' "$WIZ_BRIDGE_MODES"|_wiz_choose --header="Bridge mode:");then
-return
-fi
-case "$selected" in
-"External bridge")BRIDGE_MODE="external";;
-"Internal NAT")BRIDGE_MODE="internal";;
-"Both")BRIDGE_MODE="both"
-esac
+_wiz_choose_mapped "BRIDGE_MODE" "Bridge mode:" "WIZ_BRIDGE_MODES" \
+"External bridge:external" \
+"Internal NAT:internal" \
+"Both:both"
 }
 _edit_private_subnet(){
 _wiz_start_edit
@@ -3505,14 +3557,9 @@ _wiz_description \
 "  {{cyan:1500}}:  Standard MTU (safe default)" \
 ""
 _show_input_footer "filter" 3
-local selected
-if ! selected=$(printf '%s\n' "$WIZ_BRIDGE_MTU"|_wiz_choose --header="Bridge MTU:");then
-return
-fi
-case "$selected" in
-"9000 (jumbo frames)")BRIDGE_MTU="9000";;
-"1500 (standard)")BRIDGE_MTU="1500"
-esac
+_wiz_choose_mapped "BRIDGE_MTU" "Bridge MTU:" "WIZ_BRIDGE_MTU" \
+"9000 (jumbo frames):9000" \
+"1500 (standard):1500"
 }
 _edit_ipv6(){
 _wiz_start_edit
@@ -3645,47 +3692,11 @@ fi
 done
 }
 _edit_admin_password(){
-while true;do
-_wiz_start_edit
-_show_input_footer "filter" 3
-local choice
-choice=$(printf '%s\n' "$WIZ_PASSWORD_OPTIONS"|_wiz_choose \
---header="Admin Password:")
-if [[ -z $choice ]];then
-return
-fi
-case "$choice" in
-"Generate password")ADMIN_PASSWORD=$(generate_password "$DEFAULT_PASSWORD_LENGTH")
-_wiz_start_edit
-_wiz_hide_cursor
-_wiz_warn "Please save this password - it will be required for sudo and Proxmox UI"
-_wiz_blank_line
-printf '%s\n' "$WIZ_NOTIFY_INDENT${CLR_CYAN}Generated admin password:$CLR_RESET $CLR_ORANGE$ADMIN_PASSWORD$CLR_RESET"
-_wiz_blank_line
-printf '%s\n' "$WIZ_NOTIFY_INDENT${CLR_GRAY}Press any key to continue...$CLR_RESET"
-read -n 1 -s -r
-break
-;;
-"Manual entry")_wiz_start_edit
-_show_input_footer
-local new_password
-new_password=$(_wiz_input \
---password \
---placeholder "Enter admin password" \
---prompt "Admin Password: ")
-if [[ -z $new_password ]];then
-continue
-fi
-local password_error
-password_error=$(get_password_error "$new_password")
-if [[ -n $password_error ]];then
-show_validation_error "$password_error"
-continue
-fi
-ADMIN_PASSWORD="$new_password"
-break
-esac
-done
+_wiz_password_editor \
+"ADMIN_PASSWORD" \
+"Admin Password:" \
+"it will be required for sudo and Proxmox UI" \
+"Generated admin password:"
 }
 _edit_api_token(){
 _wiz_start_edit
@@ -3867,15 +3878,10 @@ _wiz_description \
 "  {{cyan:Storage-focused}}: 50% of RAM (maximize ZFS caching)" \
 ""
 _show_input_footer "filter" 4
-local selected
-if ! selected=$(printf '%s\n' "$WIZ_ZFS_ARC_MODES"|_wiz_choose --header="ZFS ARC memory strategy:");then
-return
-fi
-case "$selected" in
-"VM-focused (4GB fixed)")ZFS_ARC_MODE="vm-focused";;
-"Balanced (25-40% of RAM)")ZFS_ARC_MODE="balanced";;
-"Storage-focused (50% of RAM)")ZFS_ARC_MODE="storage-focused"
-esac
+_wiz_choose_mapped "ZFS_ARC_MODE" "ZFS ARC memory strategy:" "WIZ_ZFS_ARC_MODES" \
+"VM-focused (4GB fixed):vm-focused" \
+"Balanced (25-40% of RAM):balanced" \
+"Storage-focused (50% of RAM):storage-focused"
 }
 _ssl_validate_fqdn(){
 if [[ -z $FQDN ]];then
@@ -4105,47 +4111,11 @@ fi
 done
 }
 _edit_admin_password(){
-while true;do
-_wiz_start_edit
-_show_input_footer "filter" 3
-local choice
-choice=$(printf '%s\n' "$WIZ_PASSWORD_OPTIONS"|_wiz_choose \
---header="Admin Password:")
-if [[ -z $choice ]];then
-return
-fi
-case "$choice" in
-"Generate password")ADMIN_PASSWORD=$(generate_password "$DEFAULT_PASSWORD_LENGTH")
-_wiz_start_edit
-_wiz_hide_cursor
-_wiz_warn "Please save this password - it will be required for sudo and Proxmox UI"
-_wiz_blank_line
-printf '%s\n' "$WIZ_NOTIFY_INDENT${CLR_CYAN}Generated admin password:$CLR_RESET $CLR_ORANGE$ADMIN_PASSWORD$CLR_RESET"
-_wiz_blank_line
-printf '%s\n' "$WIZ_NOTIFY_INDENT${CLR_GRAY}Press any key to continue...$CLR_RESET"
-read -n 1 -s -r
-break
-;;
-"Manual entry")_wiz_start_edit
-_show_input_footer
-local new_password
-new_password=$(_wiz_input \
---password \
---placeholder "Enter admin password" \
---prompt "Admin Password: ")
-if [[ -z $new_password ]];then
-continue
-fi
-local password_error
-password_error=$(get_password_error "$new_password")
-if [[ -n $password_error ]];then
-show_validation_error "$password_error"
-continue
-fi
-ADMIN_PASSWORD="$new_password"
-break
-esac
-done
+_wiz_password_editor \
+"ADMIN_PASSWORD" \
+"Admin Password:" \
+"it will be required for sudo and Proxmox UI" \
+"Generated admin password:"
 }
 _edit_api_token(){
 _wiz_start_edit
@@ -4361,14 +4331,9 @@ _wiz_description \
 "  {{cyan:Bash}}: Standard shell (minimal changes)" \
 ""
 _show_input_footer "filter" 3
-local selected
-if ! selected=$(printf '%s\n' "$WIZ_SHELL_OPTIONS"|_wiz_choose --header="Shell:");then
-return
-fi
-case "$selected" in
-"ZSH")SHELL_TYPE="zsh";;
-"Bash")SHELL_TYPE="bash"
-esac
+_wiz_choose_mapped "SHELL_TYPE" "Shell:" "WIZ_SHELL_OPTIONS" \
+"ZSH:zsh" \
+"Bash:bash"
 }
 _edit_power_profile(){
 _wiz_start_edit
@@ -4441,24 +4406,13 @@ _wiz_description \
 "  {{cyan:lynis}}:       Security auditing (weekly)" \
 "  {{cyan:needrestart}}: Auto-restart services after updates" \
 ""
-_show_input_footer "checkbox" 7
-local gum_args=(--header="Security:")
-[[ $INSTALL_APPARMOR == "yes" ]]&&gum_args+=(--selected "apparmor")
-[[ $INSTALL_AUDITD == "yes" ]]&&gum_args+=(--selected "auditd")
-[[ $INSTALL_AIDE == "yes" ]]&&gum_args+=(--selected "aide")
-[[ $INSTALL_CHKROOTKIT == "yes" ]]&&gum_args+=(--selected "chkrootkit")
-[[ $INSTALL_LYNIS == "yes" ]]&&gum_args+=(--selected "lynis")
-[[ $INSTALL_NEEDRESTART == "yes" ]]&&gum_args+=(--selected "needrestart")
-local selected
-if ! selected=$(printf '%s\n' "$WIZ_FEATURES_SECURITY"|_wiz_choose_multi "${gum_args[@]}");then
-return
-fi
-INSTALL_APPARMOR=$([[ $selected == *apparmor* ]]&&echo "yes"||echo "no")
-INSTALL_AUDITD=$([[ $selected == *auditd* ]]&&echo "yes"||echo "no")
-INSTALL_AIDE=$([[ $selected == *aide* ]]&&echo "yes"||echo "no")
-INSTALL_CHKROOTKIT=$([[ $selected == *chkrootkit* ]]&&echo "yes"||echo "no")
-INSTALL_LYNIS=$([[ $selected == *lynis* ]]&&echo "yes"||echo "no")
-INSTALL_NEEDRESTART=$([[ $selected == *needrestart* ]]&&echo "yes"||echo "no")
+_wiz_feature_checkbox "Security:" 7 "WIZ_FEATURES_SECURITY" \
+"apparmor:INSTALL_APPARMOR" \
+"auditd:INSTALL_AUDITD" \
+"aide:INSTALL_AIDE" \
+"chkrootkit:INSTALL_CHKROOTKIT" \
+"lynis:INSTALL_LYNIS" \
+"needrestart:INSTALL_NEEDRESTART"
 }
 _edit_features_monitoring(){
 _wiz_start_edit
@@ -4469,18 +4423,10 @@ _wiz_description \
 "  {{cyan:netdata}}:  Real-time monitoring (port 19999)" \
 "  {{cyan:promtail}}: Log collector for Loki" \
 ""
-_show_input_footer "checkbox" 4
-local gum_args=(--header="Monitoring:")
-[[ $INSTALL_VNSTAT == "yes" ]]&&gum_args+=(--selected "vnstat")
-[[ $INSTALL_NETDATA == "yes" ]]&&gum_args+=(--selected "netdata")
-[[ $INSTALL_PROMTAIL == "yes" ]]&&gum_args+=(--selected "promtail")
-local selected
-if ! selected=$(printf '%s\n' "$WIZ_FEATURES_MONITORING"|_wiz_choose_multi "${gum_args[@]}");then
-return
-fi
-INSTALL_VNSTAT=$([[ $selected == *vnstat* ]]&&echo "yes"||echo "no")
-INSTALL_NETDATA=$([[ $selected == *netdata* ]]&&echo "yes"||echo "no")
-INSTALL_PROMTAIL=$([[ $selected == *promtail* ]]&&echo "yes"||echo "no")
+_wiz_feature_checkbox "Monitoring:" 4 "WIZ_FEATURES_MONITORING" \
+"vnstat:INSTALL_VNSTAT" \
+"netdata:INSTALL_NETDATA" \
+"promtail:INSTALL_PROMTAIL"
 }
 _edit_features_tools(){
 _wiz_start_edit
@@ -4491,18 +4437,10 @@ _wiz_description \
 "  {{cyan:nvim}}:       Neovim as default editor" \
 "  {{cyan:ringbuffer}}: Network ring buffer tuning" \
 ""
-_show_input_footer "checkbox" 4
-local gum_args=(--header="Tools:")
-[[ $INSTALL_YAZI == "yes" ]]&&gum_args+=(--selected "yazi")
-[[ $INSTALL_NVIM == "yes" ]]&&gum_args+=(--selected "nvim")
-[[ $INSTALL_RINGBUFFER == "yes" ]]&&gum_args+=(--selected "ringbuffer")
-local selected
-if ! selected=$(printf '%s\n' "$WIZ_FEATURES_TOOLS"|_wiz_choose_multi "${gum_args[@]}");then
-return
-fi
-INSTALL_YAZI=$([[ $selected == *yazi* ]]&&echo "yes"||echo "no")
-INSTALL_NVIM=$([[ $selected == *nvim* ]]&&echo "yes"||echo "no")
-INSTALL_RINGBUFFER=$([[ $selected == *ringbuffer* ]]&&echo "yes"||echo "no")
+_wiz_feature_checkbox "Tools:" 4 "WIZ_FEATURES_TOOLS" \
+"yazi:INSTALL_YAZI" \
+"nvim:INSTALL_NVIM" \
+"ringbuffer:INSTALL_RINGBUFFER"
 }
 prepare_packages(){
 log "Starting package preparation"
@@ -5734,8 +5672,7 @@ configure_fail2ban(){
 _config_fail2ban
 }
 _config_apparmor(){
-remote_exec 'mkdir -p /etc/default/grub.d'
-remote_copy "templates/apparmor-grub.cfg" "/etc/default/grub.d/apparmor.cfg"
+deploy_template "templates/apparmor-grub.cfg" "/etc/default/grub.d/apparmor.cfg"
 remote_exec '
     update-grub
     systemctl enable apparmor.service
@@ -5747,8 +5684,7 @@ parallel_mark_configured "apparmor"
 }
 make_feature_wrapper "apparmor" "INSTALL_APPARMOR"
 _config_auditd(){
-remote_exec 'mkdir -p /etc/audit/rules.d'
-remote_copy "templates/auditd-rules" "/etc/audit/rules.d/proxmox.rules"||{
+deploy_template "templates/auditd-rules" "/etc/audit/rules.d/proxmox.rules"||{
 log "ERROR: Failed to deploy auditd rules"
 return 1
 }
@@ -5797,8 +5733,7 @@ parallel_mark_configured "lynis"
 }
 make_feature_wrapper "lynis" "INSTALL_LYNIS"
 _config_needrestart(){
-remote_exec 'mkdir -p /etc/needrestart/conf.d'
-remote_copy "templates/needrestart.conf" "/etc/needrestart/conf.d/50-autorestart.conf"||{
+deploy_template "templates/needrestart.conf" "/etc/needrestart/conf.d/50-autorestart.conf"||{
 log "ERROR: Failed to deploy needrestart config"
 return 1
 }
@@ -5829,7 +5764,6 @@ parallel_mark_configured "vnstat"
 }
 make_feature_wrapper "vnstat" "INSTALL_VNSTAT"
 _config_promtail(){
-remote_exec 'mkdir -p /etc/promtail'||return 1
 deploy_template "templates/promtail.yml" "/etc/promtail/promtail.yml" \
 "HOSTNAME=$PVE_HOSTNAME"||return 1
 deploy_template "templates/promtail.service" "/etc/systemd/system/promtail.service"||return 1
@@ -5875,16 +5809,11 @@ remote_exec 'su - '"$ADMIN_USER"' -c "
 log "ERROR: Failed to install yazi plugins"
 return 1
 }
-deploy_user_config "templates/yazi-theme.toml" ".config/yazi/theme.toml"||{
-log "ERROR: Failed to deploy yazi theme"
-return 1
-}
-deploy_user_config "templates/yazi-init.lua" ".config/yazi/init.lua"||{
-log "ERROR: Failed to deploy yazi init.lua"
-return 1
-}
-deploy_user_config "templates/yazi-keymap.toml" ".config/yazi/keymap.toml"||{
-log "ERROR: Failed to deploy yazi keymap"
+deploy_user_configs \
+"templates/yazi-theme.toml:.config/yazi/theme.toml" \
+"templates/yazi-init.lua:.config/yazi/init.lua" \
+"templates/yazi-keymap.toml:.config/yazi/keymap.toml"||{
+log "ERROR: Failed to deploy yazi configs"
 return 1
 }
 }
