@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.588-pr.21"
+readonly VERSION="2.0.589-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -80,11 +80,6 @@ tr"
 readonly WIZ_REPO_TYPES="No-subscription (free)
 Enterprise
 Test/Development"
-readonly WIZ_BRIDGE_MODES="Internal NAT
-External bridge
-Both"
-readonly WIZ_BRIDGE_MTU="9000 (jumbo frames)
-1500 (standard)"
 readonly WIZ_IPV6_MODES="Auto
 Manual
 Disabled"
@@ -94,13 +89,8 @@ readonly WIZ_PRIVATE_SUBNETS="10.0.0.0/24
 Custom"
 readonly WIZ_ZFS_MODES="Single disk
 RAID-1 (mirror)"
-readonly WIZ_ZFS_ARC_MODES="VM-focused (4GB fixed)
-Balanced (25-40% of RAM)
-Storage-focused (50% of RAM)"
 readonly WIZ_SSL_TYPES="Self-signed
 Let's Encrypt"
-readonly WIZ_SHELL_OPTIONS="ZSH
-Bash"
 readonly WIZ_FIREWALL_MODES="Stealth (Tailscale only)
 Strict (SSH only)
 Standard (SSH + Web UI)
@@ -3242,16 +3232,18 @@ done
 _wiz_choose_mapped(){
 local var_name="$1"
 local header="$2"
-local options_var="$3"
-shift 3
+shift 2
 local -A mapping=()
+local options=""
 for pair in "$@";do
 local display="${pair%%:*}"
 local internal="${pair#*:}"
 mapping["$display"]="$internal"
+[[ -n $options ]]&&options+=$'\n'
+options+="$display"
 done
 local selected
-if ! selected=$(printf '%s\n' "${!options_var}"|_wiz_choose --header="$header");then
+if ! selected=$(printf '%s\n' "$options"|_wiz_choose --header="$header");then
 return 1
 fi
 local internal_value="${mapping[$selected]:-}"
@@ -3519,7 +3511,7 @@ _wiz_description \
 "  {{cyan:Both}}:     Internal + External bridges" \
 ""
 _show_input_footer "filter" 4
-_wiz_choose_mapped "BRIDGE_MODE" "Bridge mode:" "WIZ_BRIDGE_MODES" \
+_wiz_choose_mapped "BRIDGE_MODE" "Bridge mode:" \
 "${WIZ_MAP_BRIDGE_MODE[@]}"
 }
 _edit_private_subnet(){
@@ -3569,7 +3561,7 @@ _wiz_description \
 "  {{cyan:1500}}:  Standard MTU (safe default)" \
 ""
 _show_input_footer "filter" 3
-_wiz_choose_mapped "BRIDGE_MTU" "Bridge MTU:" "WIZ_BRIDGE_MTU" \
+_wiz_choose_mapped "BRIDGE_MTU" "Bridge MTU:" \
 "${WIZ_MAP_BRIDGE_MTU[@]}"
 }
 _edit_ipv6(){
@@ -3889,7 +3881,7 @@ _wiz_description \
 "  {{cyan:Storage-focused}}: 50% of RAM (maximize ZFS caching)" \
 ""
 _show_input_footer "filter" 4
-_wiz_choose_mapped "ZFS_ARC_MODE" "ZFS ARC memory strategy:" "WIZ_ZFS_ARC_MODES" \
+_wiz_choose_mapped "ZFS_ARC_MODE" "ZFS ARC memory strategy:" \
 "${WIZ_MAP_ZFS_ARC[@]}"
 }
 _ssl_validate_fqdn(){
@@ -4340,7 +4332,7 @@ _wiz_description \
 "  {{cyan:Bash}}: Standard shell (minimal changes)" \
 ""
 _show_input_footer "filter" 3
-_wiz_choose_mapped "SHELL_TYPE" "Shell:" "WIZ_SHELL_OPTIONS" \
+_wiz_choose_mapped "SHELL_TYPE" "Shell:" \
 "${WIZ_MAP_SHELL[@]}"
 }
 _edit_power_profile(){
