@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.572-pr.21"
+readonly VERSION="2.0.573-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -5835,15 +5835,17 @@ remote_copy "templates/zfs-scrub.timer" "/etc/systemd/system/zfs-scrub@.timer"||
 log "ERROR: Failed to deploy ZFS scrub timer"
 return 1
 }
-remote_run "Enabling ZFS scrub timers" "
+local data_pool="tank"
+if [[ $USE_EXISTING_POOL == "yes" && -n $EXISTING_POOL_NAME ]];then
+data_pool="$EXISTING_POOL_NAME"
+fi
+log "INFO: Enabling scrub timers for pools: rpool (if exists), $data_pool"
+remote_run "Enabling ZFS scrub timers" '
     systemctl daemon-reload
-    if zpool list rpool &>/dev/null; then
-      systemctl enable --now zfs-scrub@rpool.timer
-    fi
-    if zpool list tank &>/dev/null; then
-      systemctl enable --now zfs-scrub@tank.timer
-    fi
-  "
+    for pool in $(zpool list -H -o name 2>/dev/null); do
+      systemctl enable --now zfs-scrub@$pool.timer 2>/dev/null || true
+    done
+  '
 log "INFO: ZFS scrub schedule configured (monthly, 1st Sunday at 2:00 AM)"
 }
 configure_zfs_arc(){
