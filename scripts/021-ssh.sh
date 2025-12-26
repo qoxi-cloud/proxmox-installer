@@ -142,6 +142,7 @@ wait_for_ssh_ready() {
   # Port check - wait for VM to boot and open SSH port
   # Allow up to 75% of timeout for port check, but track actual elapsed time
   local port_timeout=$((timeout * 3 / 4))
+  local retry_delay="${RETRY_DELAY_SECONDS:-2}"
   local port_check=0
   local elapsed=0
   while ((elapsed < port_timeout)); do
@@ -149,8 +150,8 @@ wait_for_ssh_ready() {
       port_check=1
       break
     fi
-    sleep "${RETRY_DELAY_SECONDS:-2}"
-    ((elapsed += RETRY_DELAY_SECONDS))
+    sleep "$retry_delay"
+    ((elapsed += retry_delay))
   done
 
   if [[ $port_check -eq 0 ]]; then
