@@ -29,6 +29,8 @@ _install_locale_files() {
   remote_exec "chmod +x /etc/profile.d/locale.sh" || return 1
   remote_copy "templates/default-locale" "/etc/default/locale" || return 1
   remote_copy "templates/environment" "/etc/environment" || return 1
+  # Also source locale from bash.bashrc for non-login interactive shells
+  remote_exec "grep -q 'profile.d/locale.sh' /etc/bash.bashrc || echo '[ -f /etc/profile.d/locale.sh ] && . /etc/profile.d/locale.sh' >> /etc/bash.bashrc" || return 1
 }
 
 # Configure fastfetch shell integration
@@ -47,7 +49,7 @@ _configure_bat() {
 
 # Configure ZSH with .zshrc and p10k
 _configure_zsh_files() {
-  deploy_user_config "templates/zshrc" ".zshrc" || return 1
+  deploy_user_config "templates/zshrc" ".zshrc" "LOCALE=${LOCALE}" || return 1
   deploy_user_config "templates/p10k.zsh" ".p10k.zsh" || return 1
   # shellcheck disable=SC2016
   remote_exec 'chsh -s /bin/zsh '"$ADMIN_USERNAME"'' || return 1
