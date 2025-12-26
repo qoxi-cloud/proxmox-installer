@@ -37,8 +37,6 @@ _install_locale_files() {
 _configure_fastfetch() {
   remote_copy "templates/fastfetch.sh" "/etc/profile.d/fastfetch.sh" || return 1
   remote_exec "chmod +x /etc/profile.d/fastfetch.sh" || return 1
-  # Also source from bash.bashrc for non-login interactive shells
-  remote_exec "grep -q 'profile.d/fastfetch.sh' /etc/bash.bashrc || echo '[ -f /etc/profile.d/fastfetch.sh ] && . /etc/profile.d/fastfetch.sh' >> /etc/bash.bashrc" || return 1
 }
 
 # Configure bat with theme and symlink
