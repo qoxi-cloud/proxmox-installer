@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.612-pr.21"
+readonly VERSION="2.0.617-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -187,27 +187,22 @@ for f in "${_TEMP_FILES[@]}";do
 [[ -f $f ]]&&rm -f "$f"
 done
 local install_dir="${INSTALL_DIR:-${HOME:-/root}}"
+local pid="$$"
 if type secure_delete_file &>/dev/null;then
 secure_delete_file /tmp/pve-install-api-token.env
 secure_delete_file "$install_dir/answer.toml"
-while IFS= read -r -d '' pfile;do
-secure_delete_file "$pfile"
-done < <(find /dev/shm /tmp -name "pve-ssh-session.*" -type f -print0 2>/dev/null||true)
-while IFS= read -r -d '' pfile;do
-secure_delete_file "$pfile"
-done < <(find /dev/shm /tmp -name "pve-passfile.*" -type f -print0 2>/dev/null||true)
-while IFS= read -r -d '' pfile;do
-secure_delete_file "$pfile"
-done < <(find /dev/shm /tmp -name "*passfile*" -type f -print0 2>/dev/null||true)
+secure_delete_file "/dev/shm/pve-ssh-session.$pid"
+secure_delete_file "/tmp/pve-ssh-session.$pid"
+secure_delete_file "/dev/shm/pve-passfile.$pid"
+secure_delete_file "/tmp/pve-passfile.$pid"
 else
 rm -f /tmp/pve-install-api-token.env 2>/dev/null||true
 rm -f "$install_dir/answer.toml" 2>/dev/null||true
-find /dev/shm /tmp -name "pve-ssh-session.*" -type f -delete 2>/dev/null||true
-find /dev/shm /tmp -name "pve-passfile.*" -type f -delete 2>/dev/null||true
-find /dev/shm /tmp -name "*passfile*" -type f -delete 2>/dev/null||true
+rm -f "/dev/shm/pve-ssh-session.$pid" "/tmp/pve-ssh-session.$pid" 2>/dev/null||true
+rm -f "/dev/shm/pve-passfile.$pid" "/tmp/pve-passfile.$pid" 2>/dev/null||true
 fi
 rm -f /tmp/tailscale_*.txt /tmp/iso_checksum.txt /tmp/*.tmp 2>/dev/null||true
-rm -f /tmp/ssh-pve-control.* 2>/dev/null||true
+rm -f "/tmp/ssh-pve-control.$pid" 2>/dev/null||true
 if [[ $INSTALL_COMPLETED != "true" ]];then
 rm -f "$install_dir/pve.iso" "$install_dir/pve-autoinstall.iso" "$install_dir/SHA256SUMS" 2>/dev/null||true
 rm -f "$install_dir"/qemu_*.log 2>/dev/null||true
@@ -1003,7 +998,7 @@ create_virtio_mapping(){
 local boot_disk="$1"
 shift
 local pool_disks=("$@")
-declare -A VIRTIO_MAP
+declare -gA VIRTIO_MAP
 local virtio_idx=0
 if [[ -n $boot_disk ]];then
 local vdev
@@ -1333,13 +1328,30 @@ eval "configure_$feature() { [[ \${$var_name:-} != \"$expected_value\" ]] && ret
 deploy_user_config(){
 local template="$1"
 local relative_path="$2"
+shift 2
 local home_dir="/home/$ADMIN_USERNAME"
 local dest="$home_dir/$relative_path"
-local dest_dir
+local dest_dir staged
 dest_dir="$(dirname "$dest")"
+staged=$(mktemp)||{
+log "ERROR: Failed to create temp file for $template"
+return 1
+}
+register_temp_file "$staged"
+cp "$template" "$staged"||{
+log "ERROR: Failed to stage template $template"
+rm -f "$staged"
+return 1
+}
+apply_template_vars "$staged" "$@"||{
+log "ERROR: Template substitution failed for $template"
+rm -f "$staged"
+return 1
+}
 if [[ $dest_dir != "$home_dir" ]];then
 remote_exec "mkdir -p '$dest_dir'"||{
 log "ERROR: Failed to create directory $dest_dir"
+rm -f "$staged"
 return 1
 }
 local dirs_to_chown=""
@@ -1350,13 +1362,16 @@ dir="$(dirname "$dir")"
 done
 remote_exec "chown $ADMIN_USERNAME:$ADMIN_USERNAME $dirs_to_chown"||{
 log "ERROR: Failed to set ownership on $dirs_to_chown"
+rm -f "$staged"
 return 1
 }
 fi
-remote_copy "$template" "$dest"||{
+remote_copy "$staged" "$dest"||{
 log "ERROR: Failed to copy $template to $dest"
+rm -f "$staged"
 return 1
 }
+rm -f "$staged"
 remote_exec "chown $ADMIN_USERNAME:$ADMIN_USERNAME '$dest'"||{
 log "ERROR: Failed to set ownership on $dest"
 return 1
@@ -1404,13 +1419,11 @@ log "ERROR: Failed to stage template for $service_name service"
 rm -f "$staged"
 return 1
 }
-if [[ $# -gt 0 ]];then
 apply_template_vars "$staged" "$@"||{
 log "ERROR: Template substitution failed for $service_name service"
 rm -f "$staged"
 return 1
 }
-fi
 remote_copy "$staged" "$dest"||{
 log "ERROR: Failed to deploy $service_name service"
 rm -f "$staged"
@@ -1447,13 +1460,11 @@ log "ERROR: Failed to stage template $template"
 rm -f "$staged"
 return 1
 }
-if [[ $# -gt 0 ]];then
 apply_template_vars "$staged" "$@"||{
 log "ERROR: Template substitution failed for $template"
 rm -f "$staged"
 return 1
 }
-fi
 local dest_dir
 dest_dir=$(dirname "$dest")
 remote_exec "mkdir -p '$dest_dir'"||{
@@ -1510,7 +1521,7 @@ cat <<EOF
     gateway $MAIN_IPV4_GW
     up sysctl --system
 EOF
-if [[ -n ${MAIN_IPV6:-} && ${IPV6_MODE:-} != "disabled" ]];then
+if [[ ${IPV6_MODE:-} != "disabled" ]]&&[[ -n ${MAIN_IPV6:-} || -n ${IPV6_ADDRESS:-} ]];then
 local ipv6_gw="${IPV6_GATEWAY:-fe80::1}"
 [[ $ipv6_gw == "auto" ]]&&ipv6_gw="fe80::1"
 cat <<EOF
@@ -1553,7 +1564,7 @@ cat <<EOF
     bridge-fd 0
     up sysctl --system
 EOF
-if [[ -n ${MAIN_IPV6:-} && ${IPV6_MODE:-} != "disabled" ]];then
+if [[ ${IPV6_MODE:-} != "disabled" ]]&&[[ -n ${MAIN_IPV6:-} || -n ${IPV6_ADDRESS:-} ]];then
 local ipv6_gw="${IPV6_GATEWAY:-fe80::1}"
 [[ $ipv6_gw == "auto" ]]&&ipv6_gw="fe80::1"
 cat <<EOF
