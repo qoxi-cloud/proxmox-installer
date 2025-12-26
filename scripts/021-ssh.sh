@@ -1,15 +1,17 @@
 # shellcheck shell=bash
 # =============================================================================
 # SSH helper functions - Session management and connection
+# ControlMaster multiplexes all connections over single TCP socket
 # =============================================================================
 
-# SSH options for QEMU VM on localhost - host key checking disabled since VM is local/ephemeral
-# NOT suitable for production remote servers
-SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=${SSH_CONNECT_TIMEOUT:-10}"
+# Control socket path (uses $$ so subshells share master connection)
+_SSH_CONTROL_PATH="/tmp/ssh-pve-control.$$"
+
+# SSH options for QEMU VM - host key checking disabled (local/ephemeral)
+SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=${SSH_CONNECT_TIMEOUT:-10} -o ControlMaster=auto -o ControlPath=${_SSH_CONTROL_PATH} -o ControlPersist=300"
 SSH_PORT="${SSH_PORT_QEMU:-5555}"
 
-# Session passfile - created once, reused for all SSH operations
-# Uses predictable path with $$ (top-level PID) so subshells share same file
+# Session passfile (created once, path uses $$ for subshell sharing)
 _SSH_SESSION_PASSFILE=""
 _SSH_SESSION_LOGGED=false
 
@@ -17,9 +19,7 @@ _SSH_SESSION_LOGGED=false
 # Session management
 # =============================================================================
 
-# Gets the predictable passfile path based on top-level shell PID.
-# $$ is inherited by subshells, so all invocations see the same path.
-# Returns: Path via stdout
+# Gets passfile path based on top-level PID ($$ inherited by subshells)
 _ssh_passfile_path() {
   local passfile_dir="/dev/shm"
   if [[ ! -d /dev/shm ]] || [[ ! -w /dev/shm ]]; then
@@ -28,10 +28,7 @@ _ssh_passfile_path() {
   printf '%s\n' "${passfile_dir}/pve-ssh-session.$$"
 }
 
-# Initializes SSH session with persistent passfile.
-# Creates passfile once for reuse across all remote operations.
-# Uses predictable path with $$ so subshells find existing file.
-# Side effects: Sets _SSH_SESSION_PASSFILE, registers cleanup trap
+# Initializes SSH session with persistent passfile (creates once, reuses across operations)
 _ssh_session_init() {
   local passfile_path
   passfile_path=$(_ssh_passfile_path)
@@ -54,10 +51,22 @@ _ssh_session_init() {
   fi
 }
 
-# Cleans up SSH session passfile securely.
-# Uses secure_delete_file if available, otherwise shred/dd fallback.
-# Uses predictable path so cleanup works even if variable is empty.
+# Cleans up SSH control master socket (graceful close)
+_ssh_control_cleanup() {
+  local control_path="/tmp/ssh-pve-control.$$"
+  if [[ -S "$control_path" ]]; then
+    # Gracefully close master connection
+    ssh -o ControlPath="$control_path" -O exit root@localhost 2>/dev/null || true
+    rm -f "$control_path" 2>/dev/null || true
+    log "SSH control socket cleaned up: $control_path"
+  fi
+}
+
+# Cleans up SSH session (control socket + passfile with secure deletion)
 _ssh_session_cleanup() {
+  # Clean up control socket first
+  _ssh_control_cleanup
+
   local passfile_path
   passfile_path=$(_ssh_passfile_path)
 
@@ -80,8 +89,7 @@ _ssh_session_cleanup() {
   log "SSH session cleaned up: $passfile_path"
 }
 
-# Gets session passfile, initializing if needed.
-# Returns: Path to passfile via stdout
+# Gets session passfile (initializes if needed)
 _ssh_get_passfile() {
   _ssh_session_init
   printf '%s\n' "$_SSH_SESSION_PASSFILE"
@@ -91,12 +99,7 @@ _ssh_get_passfile() {
 # SSH command construction
 # =============================================================================
 
-# Builds base SSH command with options and authentication.
-# Use this helper to avoid repeating SSH options across functions.
-# Parameters:
-#   $1 - Optional timeout (default: SSH_DEFAULT_TIMEOUT)
-# Returns: Prints command prefix to stdout (use with eval or as array)
-# Example: eval "$(_ssh_base_cmd) 'remote command'"
+# Builds base SSH command with options and auth. $1=timeout (optional)
 _ssh_base_cmd() {
   local passfile
   passfile=$(_ssh_get_passfile)
@@ -106,10 +109,7 @@ _ssh_base_cmd() {
     "$cmd_timeout" "$passfile" "$SSH_PORT" "$SSH_OPTS"
 }
 
-# Builds SCP command with options and authentication.
-# Parameters: None
-# Returns: Prints command prefix to stdout
-# Example: eval "$(_scp_base_cmd) /local/file root@localhost:/remote/path"
+# Builds SCP command with options and auth
 _scp_base_cmd() {
   local passfile
   passfile=$(_ssh_get_passfile)
@@ -121,10 +121,7 @@ _scp_base_cmd() {
 # Port and connection checks
 # =============================================================================
 
-# Checks if specified port is available (not in use).
-# Parameters:
-#   $1 - Port number to check
-# Returns: 0 if available, 1 if in use
+# Checks if port is available. Returns 0 if available, 1 if in use
 check_port_available() {
   local port="$1"
   if command -v ss &>/dev/null; then
@@ -139,11 +136,7 @@ check_port_available() {
   return 0
 }
 
-# Waits for SSH service to be fully ready on localhost:SSH_PORT.
-# Performs port check followed by SSH connection test.
-# Parameters:
-#   $1 - Timeout in seconds (default: 120)
-# Returns: 0 if SSH ready, 1 on timeout or failure
+# Waits for SSH to be ready on localhost:SSH_PORT. $1=timeout (default 120)
 wait_for_ssh_ready() {
   local timeout="${1:-120}"
   local start_time
@@ -206,11 +199,7 @@ wait_for_ssh_ready() {
 # SSH key utilities
 # =============================================================================
 
-# Parses SSH public key into components.
-# Parameters:
-#   $1 - SSH public key string
-# Returns: 0 on success, 1 if key is empty
-# Side effects: Sets SSH_KEY_TYPE, SSH_KEY_DATA, SSH_KEY_COMMENT, SSH_KEY_SHORT globals
+# Parses SSH key into SSH_KEY_TYPE, SSH_KEY_DATA, SSH_KEY_COMMENT, SSH_KEY_SHORT
 parse_ssh_key() {
   local key="$1"
 
@@ -234,8 +223,7 @@ parse_ssh_key() {
   return 0
 }
 
-# Retrieves SSH public key from rescue system's authorized_keys.
-# Returns: First valid SSH public key via stdout, empty if none found
+# Gets SSH public key from rescue system's authorized_keys (first valid key)
 get_rescue_ssh_key() {
   if [[ -f /root/.ssh/authorized_keys ]]; then
     grep -E "^(ssh-(rsa|ed25519|dss)|ecdsa-sha2-nistp(256|384|521)|sk-(ssh-ed25519|ecdsa-sha2-nistp256)@openssh.com)" /root/.ssh/authorized_keys 2>/dev/null | head -1

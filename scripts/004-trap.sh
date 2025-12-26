@@ -55,6 +55,9 @@ cleanup_temp_files() {
   # Clean up standard temporary files (non-sensitive)
   rm -f /tmp/tailscale_*.txt /tmp/iso_checksum.txt /tmp/*.tmp 2>/dev/null || true
 
+  # Clean up SSH control sockets
+  rm -f /tmp/ssh-pve-control.* 2>/dev/null || true
+
   # Clean up ISO and installation files (only if installation failed)
   if [[ $INSTALL_COMPLETED != "true" ]]; then
     rm -f /root/pve.iso /root/pve-autoinstall.iso /root/SHA256SUMS 2>/dev/null || true
