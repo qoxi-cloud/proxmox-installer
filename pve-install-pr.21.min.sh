@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.650-pr.21"
+readonly VERSION="2.0.651-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -950,10 +950,11 @@ local base_delay="${RETRY_DELAY_SECONDS:-2}"
 local attempt=0
 while [[ $attempt -lt $max_attempts ]];do
 attempt=$((attempt+1))
-if timeout "$cmd_timeout" sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost "$@";then
+timeout "$cmd_timeout" sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost "$@"
+local exit_code=$?
+if [[ $exit_code -eq 0 ]];then
 return 0
 fi
-local exit_code=$?
 if [[ $exit_code -eq 124 ]];then
 log "ERROR: SSH command timed out after ${cmd_timeout}s: $*"
 return 124
