@@ -44,6 +44,7 @@ _config_yazi() {
   }
 
   deploy_user_configs \
+    "templates/yazi.toml:.config/yazi/yazi.toml" \
     "templates/yazi-theme.toml:.config/yazi/theme.toml" \
     "templates/yazi-init.lua:.config/yazi/init.lua" \
     "templates/yazi-keymap.toml:.config/yazi/keymap.toml" || {

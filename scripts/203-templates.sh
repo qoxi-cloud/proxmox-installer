@@ -140,6 +140,7 @@ make_templates() {
     "./templates/promtail.yml:promtail.yml"
     "./templates/promtail.service:promtail.service"
     # Tools - Yazi
+    "./templates/yazi.toml:yazi.toml"
     "./templates/yazi-theme.toml:yazi-theme.toml"
     "./templates/yazi-init.lua:yazi-init.lua"
     "./templates/yazi-keymap.toml:yazi-keymap.toml"
