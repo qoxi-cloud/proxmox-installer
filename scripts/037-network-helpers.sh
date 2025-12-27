@@ -47,6 +47,13 @@ EOF
       echo ""
       _generate_vmbr1_nat
       ;;
+    *)
+      # Fallback to static config if invalid mode - ensures network connectivity
+      log "WARNING: Unknown BRIDGE_MODE '${mode}', falling back to static config"
+      _generate_iface_static
+      echo ""
+      _generate_vmbr0_nat
+      ;;
   esac
 }
 
