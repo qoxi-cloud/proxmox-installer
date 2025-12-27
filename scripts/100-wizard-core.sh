@@ -57,6 +57,7 @@ _wizard_main() {
           ipv6) _edit_ipv6 ;;
           firewall) _edit_firewall ;;
           boot_disk) _edit_boot_disk ;;
+          wipe_disks) _edit_wipe_disks ;;
           existing_pool) _edit_existing_pool ;;
           pool_disks) _edit_pool_disks ;;
           zfs_mode) _edit_zfs_mode ;;
