@@ -47,15 +47,37 @@ apply_template_vars() {
   fi
 
   if [[ ${#sed_args[@]} -gt 0 ]]; then
-    if ! sed -i "${sed_args[@]}" "$file"; then
+    # Debug: log file size and substitution count
+    local size_before
+    size_before=$(wc -c <"$file" 2>/dev/null || echo "?")
+    log "DEBUG: Processing $file (${size_before} bytes, ${#sed_args[@]} substitutions)"
+
+    # Use temp file approach - more portable than sed -i (busybox compatibility)
+    local tmpfile="${file}.tmp.$$"
+    if ! sed "${sed_args[@]}" "$file" >"$tmpfile" 2>>"$LOG_FILE"; then
       log "ERROR: sed substitution failed for $file"
+      rm -f "$tmpfile"
       return 1
     fi
-    # Verify file wasn't corrupted (null bytes check)
-    if [[ ! -s $file ]] || grep -q $'\x00' "$file" 2>/dev/null; then
-      log "ERROR: Template file $file corrupted after sed (empty or contains null bytes)"
+
+    # Verify temp file exists and has content
+    if [[ ! -s $tmpfile ]]; then
+      log "ERROR: sed produced empty output for $file"
+      log "DEBUG: Original file exists: $([[ -f $file ]] && echo yes || echo no), size: $(wc -c <"$file" 2>/dev/null || echo 0)"
+      rm -f "$tmpfile"
       return 1
     fi
+
+    # Replace original with processed file
+    if ! mv "$tmpfile" "$file"; then
+      log "ERROR: Failed to replace $file with processed template"
+      rm -f "$tmpfile"
+      return 1
+    fi
+
+    local size_after
+    size_after=$(wc -c <"$file" 2>/dev/null || echo "?")
+    log "DEBUG: Finished $file (${size_after} bytes)"
   fi
 
   # Verify no unsubstituted placeholders remain (these were never passed to this function)

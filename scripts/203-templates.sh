@@ -5,14 +5,16 @@
 # Handles hosts, resolv.conf, cpupower, locale templates.
 # Interfaces is generated via heredoc (039-network-helpers.sh).
 _modify_template_files() {
-  apply_common_template_vars "./templates/hosts"
-  generate_interfaces_file "./templates/interfaces"
-  apply_common_template_vars "./templates/resolv.conf"
-  apply_template_vars "./templates/cpupower.service" "CPU_GOVERNOR=${CPU_GOVERNOR:-performance}"
+  log "Starting template modification"
+  apply_common_template_vars "./templates/hosts" || return 1
+  generate_interfaces_file "./templates/interfaces" || return 1
+  apply_common_template_vars "./templates/resolv.conf" || return 1
+  apply_template_vars "./templates/cpupower.service" "CPU_GOVERNOR=${CPU_GOVERNOR:-performance}" || return 1
   # Locale templates - substitute {{LOCALE}} with actual locale value
-  apply_common_template_vars "./templates/locale.sh"
-  apply_common_template_vars "./templates/default-locale"
-  apply_common_template_vars "./templates/environment"
+  apply_common_template_vars "./templates/locale.sh" || return 1
+  apply_common_template_vars "./templates/default-locale" || return 1
+  apply_common_template_vars "./templates/environment" || return 1
+  log "Template modification complete"
 }
 
 # Download templates in parallel (aria2c→wget fallback). $@="path:name" pairs
@@ -173,5 +175,8 @@ make_templates() {
   fi
 
   # Modify template files in background with progress
-  run_with_progress "Modifying template files" "Template files modified" _modify_template_files
+  if ! run_with_progress "Modifying template files" "Template files modified" _modify_template_files; then
+    log "ERROR: Template modification failed"
+    return 1
+  fi
 }
