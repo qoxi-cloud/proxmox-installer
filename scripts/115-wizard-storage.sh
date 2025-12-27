@@ -43,15 +43,16 @@ _edit_existing_pool() {
   # Use pre-detected pools from DETECTED_POOLS (populated by _detect_pools)
   if [[ ${#DETECTED_POOLS[@]} -eq 0 ]]; then
     _wiz_hide_cursor
-    _wiz_warn "No importable ZFS pools detected"
-    _wiz_blank_line
-    _wiz_dim "Possible causes:"
-    _wiz_dim "  • ZFS not installed (check log for errors)"
-    _wiz_dim "  • Pool not exported before reboot"
-    _wiz_dim "  • Pool already imported (zpool list)"
-    _wiz_dim "  • Pool metadata corrupted"
-    _wiz_blank_line
-    _wiz_dim "Try manually: zpool import -d /dev"
+    _wiz_description \
+      "  {{yellow:⚠ No importable ZFS pools detected}}" \
+      "" \
+      "  Possible causes:" \
+      "    • ZFS not installed (check log for errors)" \
+      "    • Pool not exported before reboot" \
+      "    • Pool already imported (zpool list)" \
+      "    • Pool metadata corrupted" \
+      "" \
+      "  Try manually: {{cyan:zpool import -d /dev}}"
     sleep "${WIZARD_MESSAGE_DELAY:-4}"
     return
   fi
