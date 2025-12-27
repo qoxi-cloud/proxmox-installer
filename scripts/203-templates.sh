@@ -46,6 +46,14 @@ _download_templates_parallel() {
       -i "$input_file" \
       >>"$LOG_FILE" 2>&1; then
       rm -f "$input_file"
+      # Validate all downloaded templates (aria2c doesn't validate content)
+      for entry in "${templates[@]}"; do
+        local local_path="${entry%%:*}"
+        if [[ ! -s $local_path ]]; then
+          log "ERROR: Template $local_path is empty after aria2c download"
+          return 1
+        fi
+      done
       return 0
     fi
     log "WARNING: aria2c failed, falling back to sequential download"

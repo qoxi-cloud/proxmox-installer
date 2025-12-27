@@ -103,66 +103,15 @@ deploy_systemd_timer() {
   }
 }
 
-# Deploy .service with optional template vars and enable. $1=service_name, $@=VAR=value
-deploy_systemd_service() {
-  local service_name="$1"
-  shift
-  local template="templates/${service_name}.service"
-  local dest="/etc/systemd/system/${service_name}.service"
-  local staged
-
-  # Stage template to temp location to preserve original
-  staged=$(mktemp) || {
-    log "ERROR: Failed to create temp file for ${service_name} service"
-    return 1
-  }
-  register_temp_file "$staged"
-  cp "$template" "$staged" || {
-    log "ERROR: Failed to stage template for ${service_name} service"
-    rm -f "$staged"
-    return 1
-  }
-
-  # Apply template vars (also validates no unsubstituted placeholders remain)
-  apply_template_vars "$staged" "$@" || {
-    log "ERROR: Template substitution failed for ${service_name} service"
-    rm -f "$staged"
-    return 1
-  }
-
-  remote_copy "$staged" "$dest" || {
-    log "ERROR: Failed to deploy ${service_name} service"
-    rm -f "$staged"
-    return 1
-  }
-  rm -f "$staged"
-
-  remote_exec "systemctl daemon-reload && systemctl enable ${service_name}.service" || {
-    log "ERROR: Failed to enable ${service_name} service"
-    return 1
-  }
-}
-
-# Enable multiple systemd services. $@=service names
-remote_enable_services() {
-  local services=("$@")
-
-  if [[ ${#services[@]} -eq 0 ]]; then
-    return 0
-  fi
-
-  remote_exec "systemctl enable ${services[*]}" || {
-    log "ERROR: Failed to enable services: ${services[*]}"
-    return 1
-  }
-}
-
 # Deploy template with variable substitution. $1=template, $2=dest, $@=VAR=value
+# For .service files: validates ExecStart exists and verifies remote copy
 deploy_template() {
   local template="$1"
   local dest="$2"
   shift 2
   local staged
+  local is_service=false
+  [[ $dest == *.service ]] && is_service=true
 
   # Stage template to temp location to preserve original
   staged=$(mktemp) || {
@@ -183,6 +132,13 @@ deploy_template() {
     return 1
   }
 
+  # For .service files, verify ExecStart exists after substitution
+  if [[ $is_service == true ]] && ! grep -q "ExecStart=" "$staged" 2>/dev/null; then
+    log "ERROR: Service file $dest missing ExecStart after template substitution"
+    rm -f "$staged"
+    return 1
+  fi
+
   # Create parent directory on remote if needed
   local dest_dir
   dest_dir=$(dirname "$dest")
@@ -198,6 +154,46 @@ deploy_template() {
     return 1
   }
   rm -f "$staged"
+
+  # For .service files, verify remote copy wasn't corrupted
+  if [[ $is_service == true ]]; then
+    remote_exec "grep -q 'ExecStart=' '$dest'" || {
+      log "ERROR: Remote service file $dest appears corrupted (missing ExecStart)"
+      return 1
+    }
+  fi
+}
+
+# Deploy .service with template vars and enable. $1=service_name, $@=VAR=value
+# Wrapper around deploy_template that also enables the service
+deploy_systemd_service() {
+  local service_name="$1"
+  shift
+  local template="templates/${service_name}.service"
+  local dest="/etc/systemd/system/${service_name}.service"
+
+  # Deploy using common function
+  deploy_template "$template" "$dest" "$@" || return 1
+
+  # Enable the service
+  remote_exec "systemctl daemon-reload && systemctl enable ${service_name}.service" || {
+    log "ERROR: Failed to enable ${service_name} service"
+    return 1
+  }
+}
+
+# Enable multiple systemd services (with daemon-reload). $@=service names
+remote_enable_services() {
+  local services=("$@")
+
+  if [[ ${#services[@]} -eq 0 ]]; then
+    return 0
+  fi
+
+  remote_exec "systemctl daemon-reload && systemctl enable ${services[*]}" || {
+    log "ERROR: Failed to enable services: ${services[*]}"
+    return 1
+  }
 }
 
 # Batch deploy configs to admin home. $@="template:relative_dest" pairs

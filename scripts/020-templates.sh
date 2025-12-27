@@ -47,7 +47,15 @@ apply_template_vars() {
   fi
 
   if [[ ${#sed_args[@]} -gt 0 ]]; then
-    sed -i "${sed_args[@]}" "$file"
+    if ! sed -i "${sed_args[@]}" "$file"; then
+      log "ERROR: sed substitution failed for $file"
+      return 1
+    fi
+    # Verify file wasn't corrupted (null bytes check)
+    if [[ ! -s $file ]] || grep -q $'\x00' "$file" 2>/dev/null; then
+      log "ERROR: Template file $file corrupted after sed (empty or contains null bytes)"
+      return 1
+    fi
   fi
 
   # Verify no unsubstituted placeholders remain (these were never passed to this function)
@@ -165,7 +173,20 @@ download_template() {
         return 1
       fi
       ;;
-    *.conf | *.sources | *.service | *.timer)
+    *.service)
+      # Systemd service files must have [Service] section with ExecStart or Type=oneshot
+      if ! grep -q "\[Service\]" "$local_path" 2>/dev/null; then
+        print_error "Template $remote_file appears corrupted (missing [Service] section)"
+        log "ERROR: Template $remote_file corrupted - missing [Service] section"
+        return 1
+      fi
+      if ! grep -qE "^ExecStart=" "$local_path" 2>/dev/null; then
+        print_error "Template $remote_file appears corrupted (missing ExecStart)"
+        log "ERROR: Template $remote_file corrupted - missing ExecStart"
+        return 1
+      fi
+      ;;
+    *.conf | *.sources | *.timer)
       # Config files should have some content
       if [[ $(wc -l <"$local_path" 2>/dev/null || echo 0) -lt 2 ]]; then
         print_error "Template $remote_file appears corrupted (too short)"

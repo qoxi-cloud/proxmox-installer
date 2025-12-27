@@ -45,8 +45,8 @@ cleanup_temp_files() {
   # Clean up standard temporary files (non-sensitive, PID-scoped where applicable)
   rm -f /tmp/tailscale_*.txt /tmp/iso_checksum.txt /tmp/*.tmp 2>/dev/null || true
 
-  # Clean up SSH control socket (current session only)
-  rm -f "/tmp/ssh-pve-control.${pid}" 2>/dev/null || true
+  # Clean up SSH control socket and SCP lock file (current session only)
+  rm -f "/tmp/ssh-pve-control.${pid}" "/tmp/pve-scp-lock.${pid}" 2>/dev/null || true
 
   # Clean up ISO and installation files (only if installation failed)
   if [[ $INSTALL_COMPLETED != "true" ]]; then

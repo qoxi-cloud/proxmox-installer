@@ -123,7 +123,11 @@ remote_run() {
   fi
 }
 
-# Copy file to remote via SCP. $1=src, $2=dst
+# Lock file for serializing SCP operations (prevents ControlMaster race conditions)
+_SCP_LOCK_FILE="/tmp/pve-scp-lock.$$"
+
+# Copy file to remote via SCP with lock. $1=src, $2=dst
+# Uses flock to serialize parallel scp calls through ControlMaster socket
 remote_copy() {
   local src="$1"
   local dst="$2"
@@ -131,9 +135,17 @@ remote_copy() {
   local passfile
   passfile=$(_ssh_get_passfile)
 
-  # shellcheck disable=SC2086
-  if ! sshpass -f "$passfile" scp -P "$SSH_PORT" $SSH_OPTS "$src" "root@localhost:$dst"; then
-    log "ERROR: Failed to copy $src to $dst"
-    return 1
-  fi
+  # Use flock to serialize scp operations (prevents ControlMaster data corruption)
+  # FD 200 is arbitrary high number to avoid conflicts
+  (
+    flock -x 200 || {
+      log "ERROR: Failed to acquire SCP lock for $src"
+      exit 1
+    }
+    # shellcheck disable=SC2086
+    if ! sshpass -f "$passfile" scp -P "$SSH_PORT" $SSH_OPTS "$src" "root@localhost:$dst"; then
+      log "ERROR: Failed to copy $src to $dst"
+      exit 1
+    fi
+  ) 200>"$_SCP_LOCK_FILE"
 }
