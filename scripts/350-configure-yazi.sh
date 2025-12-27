@@ -47,16 +47,17 @@ _config_yazi() {
   _install_yazi || return 1
 
   # Install flavor and plugins as admin user
+  # Note: ya pack may fail if network is unavailable - log warning but don't fail
+  # Yazi still works without plugins, user can install later
   # shellcheck disable=SC2016
   remote_exec 'su - '"${ADMIN_USERNAME}"' -c "
-    ya pack -a kalidyasin/yazi-flavors:tokyonight-night
-    ya pack -a yazi-rs/plugins:chmod
-    ya pack -a yazi-rs/plugins:smart-enter
-    ya pack -a yazi-rs/plugins:smart-filter
-    ya pack -a yazi-rs/plugins:full-border
+    ya pack -a kalidyasin/yazi-flavors:tokyonight-night || echo \"WARNING: Failed to install yazi flavor\" >&2
+    ya pack -a yazi-rs/plugins:chmod || echo \"WARNING: Failed to install chmod plugin\" >&2
+    ya pack -a yazi-rs/plugins:smart-enter || echo \"WARNING: Failed to install smart-enter plugin\" >&2
+    ya pack -a yazi-rs/plugins:smart-filter || echo \"WARNING: Failed to install smart-filter plugin\" >&2
+    ya pack -a yazi-rs/plugins:full-border || echo \"WARNING: Failed to install full-border plugin\" >&2
   "' || {
-    log "ERROR: Failed to install yazi plugins"
-    return 1
+    log "WARNING: Failed to install some yazi plugins (yazi will still work)"
   }
 
   deploy_user_configs \

@@ -157,7 +157,22 @@ _config_shell() {
             pid2=$!
             git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting /home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting &
             pid3=$!
-            wait $pid1 $pid2 $pid3
+            # Wait and check exit codes (set -e doesnt catch background failures)
+            failed=0
+            wait $pid1 || failed=1
+            wait $pid2 || failed=1
+            wait $pid3 || failed=1
+            if [ $failed -eq 1 ]; then
+              echo "ERROR: Failed to clone ZSH plugins" >&2
+              exit 1
+            fi
+            # Validate directories exist
+            for dir in themes/powerlevel10k plugins/zsh-autosuggestions plugins/zsh-syntax-highlighting; do
+              if [ ! -d "/home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/$dir" ]; then
+                echo "ERROR: ZSH plugin directory missing: $dir" >&2
+                exit 1
+              fi
+            done
             chown -R '"$ADMIN_USERNAME"':'"$ADMIN_USERNAME"' /home/'"$ADMIN_USERNAME"'/.oh-my-zsh
         ' "ZSH theme and plugins installed"
 
