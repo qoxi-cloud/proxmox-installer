@@ -22,7 +22,7 @@ _wipe_zfs_on_disk() {
   local disk_name
   disk_name=$(basename "$disk")
 
-  command -v zpool &>/dev/null || return 0
+  cmd_exists zpool || return 0
 
   # Find pools using this disk (check both imported and importable)
   local pools_to_destroy=()
@@ -88,7 +88,7 @@ _wipe_zfs_on_disk() {
 _wipe_lvm_on_disk() {
   local disk="$1"
 
-  command -v pvs &>/dev/null || return 0
+  cmd_exists pvs || return 0
 
   # Find PVs on this disk (including partitions)
   local pvs_on_disk=()
@@ -122,7 +122,7 @@ _wipe_mdadm_on_disk() {
   local disk_name
   disk_name=$(basename "$disk")
 
-  command -v mdadm &>/dev/null || return 0
+  cmd_exists mdadm || return 0
 
   # Find arrays using this disk
   while IFS= read -r md; do
@@ -147,12 +147,12 @@ _wipe_partition_table() {
   log "Wiping partition table: $disk"
 
   # wipefs removes all filesystem/raid/partition signatures
-  if command -v wipefs &>/dev/null; then
+  if cmd_exists wipefs; then
     wipefs -a -f "$disk" 2>/dev/null || true
   fi
 
   # sgdisk --zap-all destroys GPT and MBR structures
-  if command -v sgdisk &>/dev/null; then
+  if cmd_exists sgdisk; then
     sgdisk --zap-all "$disk" 2>/dev/null || true
   fi
 

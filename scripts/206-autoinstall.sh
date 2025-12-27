@@ -21,7 +21,7 @@ validate_answer_toml() {
   fi
 
   # Validate using Proxmox auto-install assistant if available
-  if command -v proxmox-auto-install-assistant &>/dev/null; then
+  if cmd_exists proxmox-auto-install-assistant; then
     log "Validating answer.toml with proxmox-auto-install-assistant"
     if ! proxmox-auto-install-assistant validate-answer "$file" >>"$LOG_FILE" 2>&1; then
       log "ERROR: answer.toml validation failed"

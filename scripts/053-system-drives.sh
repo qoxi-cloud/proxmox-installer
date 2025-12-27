@@ -137,17 +137,28 @@ detect_disk_roles() {
 # Detect existing ZFS pools → stdout "name|status|disks" per line
 detect_existing_pools() {
   # Check if zpool command exists
-  command -v zpool &>/dev/null || return 0
+  if ! cmd_exists zpool; then
+    log "WARNING: zpool not found - ZFS not installed in rescue"
+    return 0
+  fi
 
   local pools=()
 
-  # Get importable pools (not currently imported)
-  # zpool import without args lists all pools available for import
+  # Get importable pools - try multiple methods
+  # Method 1: scan all devices explicitly (catches more pools)
   local import_output
-  import_output=$(zpool import 2>&1) || true
+  import_output=$(zpool import -d /dev 2>&1) || true
+
+  # Fallback: try without -d flag
+  if [[ -z $import_output ]] || [[ $import_output == *"no pools available"* ]]; then
+    import_output=$(zpool import 2>&1) || true
+  fi
+
+  log "DEBUG: zpool import output: ${import_output:-(empty)}"
 
   # Check if output contains pool info (not just "no pools available")
   if [[ -z $import_output ]] || [[ $import_output == *"no pools available"* ]]; then
+    log "DEBUG: No importable pools found"
     return 0
   fi
 

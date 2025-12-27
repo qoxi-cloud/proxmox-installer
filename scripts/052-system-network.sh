@@ -3,20 +3,20 @@
 
 # Detect default network interface. Sets CURRENT_INTERFACE.
 _detect_default_interface() {
-  if command -v ip &>/dev/null && command -v jq &>/dev/null; then
+  if cmd_exists ip && cmd_exists jq; then
     CURRENT_INTERFACE=$(ip -j route 2>/dev/null | jq -r '.[] | select(.dst == "default") | .dev' | head -n1)
-  elif command -v ip &>/dev/null; then
+  elif cmd_exists ip; then
     CURRENT_INTERFACE=$(ip route | grep default | awk '{print $5}' | head -n1)
-  elif command -v route &>/dev/null; then
+  elif cmd_exists route; then
     CURRENT_INTERFACE=$(route -n | awk '/^0\.0\.0\.0/ {print $8}' | head -n1)
   fi
 
   if [[ -z $CURRENT_INTERFACE ]]; then
-    if command -v ip &>/dev/null && command -v jq &>/dev/null; then
+    if cmd_exists ip && cmd_exists jq; then
       CURRENT_INTERFACE=$(ip -j link show 2>/dev/null | jq -r '.[] | select(.ifname != "lo" and .operstate == "UP") | .ifname' | head -n1)
-    elif command -v ip &>/dev/null; then
+    elif cmd_exists ip; then
       CURRENT_INTERFACE=$(ip link show | awk -F': ' '/^[0-9]+:/ && !/lo:/ {print $2; exit}')
-    elif command -v ifconfig &>/dev/null; then
+    elif cmd_exists ifconfig; then
       CURRENT_INTERFACE=$(ifconfig -a | awk '/^[a-z]/ && !/^lo/ {print $1; exit}' | tr -d ':')
     fi
   fi
@@ -57,9 +57,9 @@ _detect_predictable_name() {
 _detect_available_interfaces() {
   AVAILABLE_ALTNAMES=$(ip -d link show | grep -v "lo:" | grep -E '(^[0-9]+:|altname)' | awk '/^[0-9]+:/ {interface=$2; gsub(/:/, "", interface); printf "%s", interface} /altname/ {printf ", %s", $2} END {print ""}' | sed 's/, $//')
 
-  if command -v ip &>/dev/null && command -v jq &>/dev/null; then
+  if cmd_exists ip && cmd_exists jq; then
     AVAILABLE_INTERFACES=$(ip -j link show 2>/dev/null | jq -r '.[] | select(.ifname != "lo") | .ifname' | sort)
-  elif command -v ip &>/dev/null; then
+  elif cmd_exists ip; then
     AVAILABLE_INTERFACES=$(ip link show | awk -F': ' '/^[0-9]+:/ && !/lo:/ {print $2}' | sort)
   else
     AVAILABLE_INTERFACES="$CURRENT_INTERFACE"
@@ -82,17 +82,17 @@ _detect_ipv4() {
   while [[ $attempt -lt $max_attempts ]]; do
     attempt=$((attempt + 1))
 
-    if command -v ip &>/dev/null && command -v jq &>/dev/null; then
+    if cmd_exists ip && cmd_exists jq; then
       MAIN_IPV4_CIDR=$(ip -j address show "$CURRENT_INTERFACE" 2>/dev/null | jq -r '.[0].addr_info[] | select(.family == "inet" and .scope == "global") | "\(.local)/\(.prefixlen)"' | head -n1)
       MAIN_IPV4="${MAIN_IPV4_CIDR%/*}"
       MAIN_IPV4_GW=$(ip -j route 2>/dev/null | jq -r '.[] | select(.dst == "default") | .gateway' | head -n1)
       [[ -n $MAIN_IPV4 ]] && [[ -n $MAIN_IPV4_GW ]] && return 0
-    elif command -v ip &>/dev/null; then
+    elif cmd_exists ip; then
       MAIN_IPV4_CIDR=$(ip address show "$CURRENT_INTERFACE" 2>/dev/null | grep global | grep "inet " | awk '{print $2}' | head -n1)
       MAIN_IPV4="${MAIN_IPV4_CIDR%/*}"
       MAIN_IPV4_GW=$(ip route 2>/dev/null | grep default | awk '{print $3}' | head -n1)
       [[ -n $MAIN_IPV4 ]] && [[ -n $MAIN_IPV4_GW ]] && return 0
-    elif command -v ifconfig &>/dev/null; then
+    elif cmd_exists ifconfig; then
       MAIN_IPV4=$(ifconfig "$CURRENT_INTERFACE" 2>/dev/null | awk '/inet / {print $2}' | sed 's/addr://')
       local netmask
       netmask=$(ifconfig "$CURRENT_INTERFACE" 2>/dev/null | awk '/inet / {print $4}' | sed 's/Mask://')
@@ -109,7 +109,7 @@ _detect_ipv4() {
           *) MAIN_IPV4_CIDR="${MAIN_IPV4}/24" ;;
         esac
       fi
-      if command -v route &>/dev/null; then
+      if cmd_exists route; then
         MAIN_IPV4_GW=$(route -n 2>/dev/null | awk '/^0\.0\.0\.0/ {print $2}' | head -n1)
       fi
       [[ -n $MAIN_IPV4 ]] && [[ -n $MAIN_IPV4_GW ]] && return 0
@@ -124,13 +124,13 @@ _detect_ipv4() {
 
 # Detect MAC and IPv6 info. Sets MAC_ADDRESS, IPV6_*, MAIN_IPV6.
 _detect_ipv6_and_mac() {
-  if command -v ip &>/dev/null && command -v jq &>/dev/null; then
+  if cmd_exists ip && cmd_exists jq; then
     MAC_ADDRESS=$(ip -j link show "$CURRENT_INTERFACE" 2>/dev/null | jq -r '.[0].address // empty')
     IPV6_CIDR=$(ip -j address show "$CURRENT_INTERFACE" 2>/dev/null | jq -r '.[0].addr_info[] | select(.family == "inet6" and .scope == "global") | "\(.local)/\(.prefixlen)"' | head -n1)
-  elif command -v ip &>/dev/null; then
+  elif cmd_exists ip; then
     MAC_ADDRESS=$(ip link show "$CURRENT_INTERFACE" 2>/dev/null | awk '/ether/ {print $2}')
     IPV6_CIDR=$(ip address show "$CURRENT_INTERFACE" 2>/dev/null | grep global | grep "inet6 " | awk '{print $2}' | head -n1)
-  elif command -v ifconfig &>/dev/null; then
+  elif cmd_exists ifconfig; then
     MAC_ADDRESS=$(ifconfig "$CURRENT_INTERFACE" 2>/dev/null | awk '/ether/ {print $2}')
     IPV6_CIDR=$(ifconfig "$CURRENT_INTERFACE" 2>/dev/null | awk '/inet6/ && /global/ {print $2}')
   fi
@@ -147,7 +147,7 @@ _detect_ipv6_and_mac() {
   fi
 
   if [[ -n $MAIN_IPV6 ]]; then
-    if command -v ip &>/dev/null; then
+    if cmd_exists ip; then
       IPV6_GATEWAY=$(ip -6 route 2>/dev/null | grep default | awk '{print $3}' | head -n1)
     fi
   fi

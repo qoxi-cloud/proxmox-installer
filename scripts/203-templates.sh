@@ -34,7 +34,7 @@ _download_templates_parallel() {
   log "Downloading ${#templates[@]} templates in parallel"
 
   # Use aria2c for parallel download if available
-  if command -v aria2c &>/dev/null; then
+  if cmd_exists aria2c; then
     if aria2c -q \
       -j 16 \
       --max-connection-per-server=4 \

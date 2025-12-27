@@ -3,7 +3,12 @@
 
 # Install ZFS if needed (rescue scripts or apt fallback)
 _install_zfs_if_needed() {
-  command -v zpool &>/dev/null && return 0
+  if cmd_exists zpool; then
+    log "ZFS already installed: $(command -v zpool)"
+    return 0
+  fi
+
+  log "ZFS not found, attempting installation..."
 
   # Common rescue system ZFS install scripts (auto-accept prompts)
   local install_dir="${INSTALL_DIR:-${HOME:-/root}}"
@@ -15,15 +20,26 @@ _install_zfs_if_needed() {
 
   for script in "${zfs_scripts[@]}"; do
     if [[ -x $script ]]; then
+      log "Running ZFS install script: $script"
       echo "y" | "$script" >/dev/null 2>&1 || true
-      command -v zpool &>/dev/null && return 0
+      if cmd_exists zpool; then
+        log "ZFS installed successfully via $script"
+        return 0
+      fi
     fi
   done
 
   # Fallback: try apt on Debian-based systems
   if [[ -f /etc/debian_version ]]; then
+    log "Trying apt install zfsutils-linux..."
     apt-get install -qq -y zfsutils-linux >/dev/null 2>&1 || true
+    if cmd_exists zpool; then
+      log "ZFS installed via apt"
+      return 0
+    fi
   fi
+
+  log "WARNING: Failed to install ZFS - existing pool detection unavailable"
 }
 
 # Install required packages (aria2c, jq, gum, etc.)
@@ -45,7 +61,7 @@ _install_required_packages() {
   local need_charm_repo=false
 
   for cmd in "${!required_commands[@]}"; do
-    if ! command -v "$cmd" &>/dev/null; then
+    if ! cmd_exists "$cmd"; then
       packages_to_install+=" ${required_commands[$cmd]}"
       [[ $cmd == "gum" ]] && need_charm_repo=true
     fi

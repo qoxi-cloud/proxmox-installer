@@ -12,11 +12,11 @@ validate_dns_resolution() {
 
   # Determine which DNS tool to use (check once, not in loop)
   local dns_tool=""
-  if command -v dig &>/dev/null; then
+  if cmd_exists dig; then
     dns_tool="dig"
-  elif command -v host &>/dev/null; then
+  elif cmd_exists host; then
     dns_tool="host"
-  elif command -v nslookup &>/dev/null; then
+  elif cmd_exists nslookup; then
     dns_tool="nslookup"
   fi
 
@@ -61,7 +61,7 @@ validate_dns_resolution() {
           resolved_ip=$(timeout "$dns_timeout" dig +short +time=3 +tries=1 A "$fqdn" 2>/dev/null | grep -E '^[0-9]+\.' | head -1)
           ;;
         *)
-          if command -v getent &>/dev/null; then
+          if cmd_exists getent; then
             resolved_ip=$(timeout "$dns_timeout" getent ahosts "$fqdn" 2>/dev/null | grep STREAM | head -1 | awk '{print $1}')
           fi
           ;;

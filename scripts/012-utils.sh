@@ -6,6 +6,9 @@
 # - generate_password → 034-password-utils.sh
 # - show_progress → 010-display.sh
 
+# Check if command exists. $1=command → 0 if available
+cmd_exists() { command -v "$1" &>/dev/null; }
+
 # Get file size in bytes (cross-platform: GNU and BSD stat). $1=file → size
 _get_file_size() {
   local file="$1"
@@ -20,7 +23,7 @@ secure_delete_file() {
   [[ -z $file ]] && return 0
   [[ ! -f $file ]] && return 0
 
-  if command -v shred &>/dev/null; then
+  if cmd_exists shred; then
     shred -u -z "$file" 2>/dev/null || rm -f "$file"
   else
     # Fallback: overwrite with zeros before deletion

@@ -45,9 +45,14 @@ _edit_existing_pool() {
     _wiz_hide_cursor
     _wiz_warn "No importable ZFS pools detected"
     _wiz_blank_line
-    _wiz_dim "If you have an existing pool, ensure the disks are connected"
-    _wiz_dim "and the pool was properly exported before reinstall."
-    sleep "${WIZARD_MESSAGE_DELAY:-3}"
+    _wiz_dim "Possible causes:"
+    _wiz_dim "  • ZFS not installed (check log for errors)"
+    _wiz_dim "  • Pool not exported before reboot"
+    _wiz_dim "  • Pool already imported (zpool list)"
+    _wiz_dim "  • Pool metadata corrupted"
+    _wiz_blank_line
+    _wiz_dim "Try manually: zpool import -d /dev"
+    sleep "${WIZARD_MESSAGE_DELAY:-4}"
     return
   fi
 

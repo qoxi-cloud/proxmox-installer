@@ -44,7 +44,7 @@ _kill_processes_by_pattern() {
 # Stops all mdadm RAID arrays to release drive locks.
 # Iterates over /dev/md* devices if mdadm is available.
 _stop_mdadm_arrays() {
-  if ! command -v mdadm &>/dev/null; then
+  if ! cmd_exists mdadm; then
     return 0
   fi
 
@@ -62,7 +62,7 @@ _stop_mdadm_arrays() {
 # Deactivates all LVM volume groups to release drive locks.
 # Uses vgchange -an to deactivate all VGs.
 _deactivate_lvm() {
-  if ! command -v vgchange &>/dev/null; then
+  if ! cmd_exists pvs; then
     return 0
   fi
 
@@ -70,7 +70,7 @@ _deactivate_lvm() {
   vgchange -an &>/dev/null || true
 
   # Deactivate specific VGs by name if vgs is available
-  if command -v vgs &>/dev/null; then
+  if cmd_exists vgs; then
     while IFS= read -r vg; do
       if [[ -n $vg ]]; then vgchange -an "$vg" &>/dev/null || true; fi
     done < <(vgs --noheadings -o vg_name 2>/dev/null)
@@ -85,7 +85,7 @@ _unmount_drive_filesystems() {
   log "Unmounting filesystems on target drives..."
   for drive in "${DRIVES[@]}"; do
     # Use findmnt for efficient mount point detection (faster and more reliable)
-    if command -v findmnt &>/dev/null; then
+    if cmd_exists findmnt; then
       while IFS= read -r mountpoint; do
         [[ -z $mountpoint ]] && continue
         log "Unmounting $mountpoint"
@@ -112,7 +112,7 @@ _kill_drive_holders() {
   log "Checking for processes using drives..."
   for drive in "${DRIVES[@]}"; do
     # Use lsof if available
-    if command -v lsof &>/dev/null; then
+    if cmd_exists lsof; then
       while IFS= read -r pid; do
         [[ -z $pid ]] && continue
         _signal_process "$pid" "9" "Killing process $pid using $drive"
@@ -120,7 +120,7 @@ _kill_drive_holders() {
     fi
 
     # Use fuser as alternative
-    if command -v fuser &>/dev/null; then
+    if cmd_exists fuser; then
       fuser -k "$drive" 2>/dev/null || true
     fi
   done

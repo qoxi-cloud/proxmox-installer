@@ -76,7 +76,7 @@ _download_iso_with_fallback() {
   local method_file="${4:-}"
 
   # Try aria2c first (fastest - uses parallel connections)
-  if command -v aria2c &>/dev/null; then
+  if cmd_exists aria2c; then
     log "Trying aria2c (parallel download)..."
     if _download_iso_aria2c "$url" "$output" "$checksum" && [[ -s "$output" ]]; then
       [[ -n $method_file ]] && printf '%s\n' "aria2c" >"$method_file"
@@ -96,7 +96,7 @@ _download_iso_with_fallback() {
   rm -f "$output" 2>/dev/null
 
   # Fallback to wget
-  if command -v wget &>/dev/null; then
+  if cmd_exists wget; then
     log "Trying wget..."
     if _download_iso_wget "$url" "$output" && [[ -s "$output" ]]; then
       [[ -n $method_file ]] && printf '%s\n' "wget" >"$method_file"

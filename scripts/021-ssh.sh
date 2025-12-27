@@ -72,7 +72,7 @@ _ssh_session_cleanup() {
   # Use secure_delete_file if available (defined in 012-utils.sh)
   if type secure_delete_file &>/dev/null; then
     secure_delete_file "$passfile_path"
-  elif command -v shred &>/dev/null; then
+  elif cmd_exists shred; then
     shred -u -z "$passfile_path" 2>/dev/null || rm -f "$passfile_path"
   else
     # Fallback: overwrite with zeros (cross-platform stat: GNU -c%s, BSD -f%z)
@@ -117,11 +117,11 @@ _scp_base_cmd() {
 # Checks if port is available. Returns 0 if available, 1 if in use
 check_port_available() {
   local port="$1"
-  if command -v ss &>/dev/null; then
+  if cmd_exists ss; then
     if ss -tuln 2>/dev/null | grep -q ":$port "; then
       return 1
     fi
-  elif command -v netstat &>/dev/null; then
+  elif cmd_exists netstat; then
     if netstat -tuln 2>/dev/null | grep -q ":$port "; then
       return 1
     fi

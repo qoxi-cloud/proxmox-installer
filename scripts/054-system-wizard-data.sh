@@ -3,7 +3,7 @@
 
 # Load timezones list. Sets WIZ_TIMEZONES.
 _load_timezones() {
-  if command -v timedatectl &>/dev/null; then
+  if cmd_exists timedatectl; then
     WIZ_TIMEZONES=$(timedatectl list-timezones 2>/dev/null)
   else
     # Fallback: parse zoneinfo directory
@@ -45,15 +45,23 @@ _build_tz_to_country() {
 # Detect existing ZFS pools. Sets DETECTED_POOLS.
 _detect_pools() {
   DETECTED_POOLS=()
+
+  # Capture both stdout and any errors
+  local pool_output
+  pool_output=$(detect_existing_pools 2>&1)
+
   while IFS= read -r line; do
-    [[ -n $line ]] && DETECTED_POOLS+=("$line")
-  done < <(detect_existing_pools 2>/dev/null)
+    # Skip debug/log lines, only keep pool data (contains |)
+    [[ $line == *"|"* ]] && DETECTED_POOLS+=("$line")
+  done <<<"$pool_output"
 
   if [[ ${#DETECTED_POOLS[@]} -gt 0 ]]; then
     log "Detected ${#DETECTED_POOLS[@]} existing ZFS pool(s):"
     for pool in "${DETECTED_POOLS[@]}"; do
       log "  - $pool"
     done
+  else
+    log "No existing ZFS pools detected"
   fi
 }
 
