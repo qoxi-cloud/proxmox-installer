@@ -97,7 +97,7 @@ deploy_systemd_timer() {
     return 1
   }
 
-  remote_exec "systemctl daemon-reload && systemctl enable ${timer_name}.timer" || {
+  remote_exec "systemctl daemon-reload && systemctl enable --now ${timer_name}.timer" || {
     log "ERROR: Failed to enable ${timer_name} timer"
     return 1
   }
@@ -176,7 +176,7 @@ deploy_systemd_service() {
   deploy_template "$template" "$dest" "$@" || return 1
 
   # Enable the service
-  remote_exec "systemctl daemon-reload && systemctl enable ${service_name}.service" || {
+  remote_exec "systemctl daemon-reload && systemctl enable --now ${service_name}.service" || {
     log "ERROR: Failed to enable ${service_name} service"
     return 1
   }
@@ -190,7 +190,7 @@ remote_enable_services() {
     return 0
   fi
 
-  remote_exec "systemctl daemon-reload && systemctl enable ${services[*]}" || {
+  remote_exec "systemctl daemon-reload && systemctl enable --now ${services[*]}" || {
     log "ERROR: Failed to enable services: ${services[*]}"
     return 1
   }

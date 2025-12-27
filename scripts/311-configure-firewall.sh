@@ -101,7 +101,7 @@ _config_nftables() {
   }
 
   # Enable service
-  remote_exec "systemctl enable nftables" || {
+  remote_exec "systemctl enable --now nftables" || {
     log "ERROR: Failed to enable nftables"
     rm -f "$config_file"
     return 1

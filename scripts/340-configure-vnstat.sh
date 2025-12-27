@@ -17,7 +17,7 @@ _config_vnstat() {
     for bridge in vmbr0 vmbr1; do
       ip link show \"\$bridge\" &>/dev/null && vnstat --add -i \"\$bridge\"
     done
-    systemctl enable vnstat
+    systemctl enable --now vnstat
   " || {
     log "ERROR: Failed to configure vnstat"
     return 1

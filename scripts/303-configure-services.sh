@@ -7,14 +7,14 @@
 _configure_chrony() {
   remote_exec "systemctl stop chrony" || true
   remote_copy "templates/chrony" "/etc/chrony/chrony.conf" || return 1
-  remote_exec "systemctl enable chrony" || return 1
+  remote_exec "systemctl enable --now chrony" || return 1
 }
 
 # Configure unattended-upgrades for automatic security updates
 _configure_unattended_upgrades() {
   remote_copy "templates/50unattended-upgrades" "/etc/apt/apt.conf.d/50unattended-upgrades" || return 1
   remote_copy "templates/20auto-upgrades" "/etc/apt/apt.conf.d/20auto-upgrades" || return 1
-  remote_exec "systemctl enable unattended-upgrades" || return 1
+  remote_exec "systemctl enable --now unattended-upgrades" || return 1
 }
 
 # Configure CPU governor via systemd (uses CPU_GOVERNOR global)
@@ -23,7 +23,7 @@ _configure_cpu_governor() {
   remote_copy "templates/cpupower.service" "/etc/systemd/system/cpupower.service" || return 1
   remote_exec "
     systemctl daemon-reload
-    systemctl enable cpupower.service
+    systemctl enable --now cpupower.service
     cpupower frequency-set -g '$governor' 2>/dev/null || true
   " || return 1
 }

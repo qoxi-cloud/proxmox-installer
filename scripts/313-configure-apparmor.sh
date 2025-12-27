@@ -12,7 +12,7 @@ _config_apparmor() {
   # Update GRUB and enable AppArmor service (activates after reboot)
   remote_exec '
     update-grub
-    systemctl enable apparmor.service
+    systemctl enable --now apparmor.service
   ' || {
     log "ERROR: Failed to configure AppArmor"
     return 1

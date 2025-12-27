@@ -8,7 +8,7 @@ _config_tailscale() {
   # Start tailscaled and wait for socket (up to 3s)
   remote_run "Starting Tailscale" '
         set -e
-        systemctl enable tailscaled
+        systemctl enable --now tailscaled
         systemctl start tailscaled
         for i in {1..3}; do tailscale status &>/dev/null && break; sleep 1; done
         true
