@@ -26,7 +26,7 @@ _wiz_config_complete() {
   [[ -z $PVE_REPO_TYPE ]] && return 1
   [[ -z $INTERFACE_NAME ]] && return 1
   [[ -z $BRIDGE_MODE ]] && return 1
-  [[ -z $PRIVATE_SUBNET ]] && return 1
+  [[ $BRIDGE_MODE != "external" && -z $PRIVATE_SUBNET ]] && return 1
   [[ -z $IPV6_MODE ]] && return 1
   # ZFS validation: require raid/disks only when NOT using existing pool
   if [[ $USE_EXISTING_POOL == "yes" ]]; then
