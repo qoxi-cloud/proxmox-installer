@@ -155,12 +155,17 @@ _validate_config() {
   [[ -z $BRIDGE_MODE ]] && missing_fields+=("Bridge mode")
   [[ $BRIDGE_MODE != "external" && -z $PRIVATE_SUBNET ]] && missing_fields+=("Private subnet")
   [[ -z $IPV6_MODE ]] && missing_fields+=("IPv6")
-  [[ -z $ZFS_RAID ]] && missing_fields+=("ZFS mode")
+  # ZFS validation: require raid/disks only when NOT using existing pool
+  if [[ $USE_EXISTING_POOL == "yes" ]]; then
+    [[ -z $EXISTING_POOL_NAME ]] && missing_fields+=("Existing pool name")
+  else
+    [[ -z $ZFS_RAID ]] && missing_fields+=("ZFS mode")
+    [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]] && missing_fields+=("Pool disks")
+  fi
   [[ -z $ZFS_ARC_MODE ]] && missing_fields+=("ZFS ARC")
   [[ -z $SHELL_TYPE ]] && missing_fields+=("Shell")
   [[ -z $CPU_GOVERNOR ]] && missing_fields+=("Power profile")
   [[ -z $SSH_PUBLIC_KEY ]] && missing_fields+=("SSH Key")
-  [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]] && missing_fields+=("Pool disks")
   [[ $INSTALL_TAILSCALE != "yes" && -z $SSL_TYPE ]] && missing_fields+=("SSL Certificate")
   [[ $FIREWALL_MODE == "stealth" && $INSTALL_TAILSCALE != "yes" ]] && missing_fields+=("Tailscale (required for Stealth firewall)")
 
