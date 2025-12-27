@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.641-pr.21"
+readonly VERSION="2.0.642-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -586,6 +586,7 @@ done
 log "ERROR: Failed to download $url after $max_retries attempts"
 return 1
 }
+cmd_exists(){ command -v "$1" &>/dev/null;}
 _get_file_size(){
 local file="$1"
 stat -c%s "$file" 2>/dev/null||stat -f%z "$file" 2>/dev/null||echo 1024
@@ -594,7 +595,7 @@ secure_delete_file(){
 local file="$1"
 [[ -z $file ]]&&return 0
 [[ ! -f $file ]]&&return 0
-if command -v shred &>/dev/null;then
+if cmd_exists shred;then
 shred -u -z "$file" 2>/dev/null||rm -f "$file"
 else
 local file_size
@@ -808,7 +809,7 @@ passfile_path=$(_ssh_passfile_path)
 [[ ! -f $passfile_path ]]&&return 0
 if type secure_delete_file &>/dev/null;then
 secure_delete_file "$passfile_path"
-elif command -v shred &>/dev/null;then
+elif cmd_exists shred;then
 shred -u -z "$passfile_path" 2>/dev/null||rm -f "$passfile_path"
 else
 local file_size
@@ -837,11 +838,11 @@ printf 'sshpass -f "%s" scp -P "%s" %s' "$passfile" "$SSH_PORT" "$SSH_OPTS"
 }
 check_port_available(){
 local port="$1"
-if command -v ss &>/dev/null;then
+if cmd_exists ss;then
 if ss -tuln 2>/dev/null|grep -q ":$port ";then
 return 1
 fi
-elif command -v netstat &>/dev/null;then
+elif cmd_exists netstat;then
 if netstat -tuln 2>/dev/null|grep -q ":$port ";then
 return 1
 fi
@@ -1806,11 +1807,11 @@ local dns_timeout="${DNS_LOOKUP_TIMEOUT:-5}"
 local retry_delay="${DNS_RETRY_DELAY:-10}"
 local max_attempts=3
 local dns_tool=""
-if command -v dig &>/dev/null;then
+if cmd_exists dig;then
 dns_tool="dig"
-elif command -v host &>/dev/null;then
+elif cmd_exists host;then
 dns_tool="host"
-elif command -v nslookup &>/dev/null;then
+elif cmd_exists nslookup;then
 dns_tool="nslookup"
 fi
 if [[ -z $dns_tool ]];then
@@ -1837,7 +1838,7 @@ case "$dns_tool" in
 dig)resolved_ip=$(timeout "$dns_timeout" dig +short +time=3 +tries=1 A "$fqdn" 2>/dev/null|grep -E '^[0-9]+\.'|head -1)
 ;;
 *)if
-command -v getent &>/dev/null
+cmd_exists getent
 then
 resolved_ip=$(timeout "$dns_timeout" getent ahosts "$fqdn" 2>/dev/null|grep STREAM|head -1|awk '{print $1}')
 fi
@@ -1920,7 +1921,11 @@ fi
 return 1
 }
 _install_zfs_if_needed(){
-command -v zpool &>/dev/null&&return 0
+if cmd_exists zpool;then
+log "ZFS already installed: $(command -v zpool)"
+return 0
+fi
+log "ZFS not found, attempting installation..."
 local install_dir="${INSTALL_DIR:-${HOME:-/root}}"
 local zfs_scripts=(
 "$install_dir/.oldroot/nfs/install/zfs.sh"
@@ -1928,13 +1933,23 @@ local zfs_scripts=(
 "/usr/local/bin/install-zfs")
 for script in "${zfs_scripts[@]}";do
 if [[ -x $script ]];then
+log "Running ZFS install script: $script"
 echo "y"|"$script" >/dev/null 2>&1||true
-command -v zpool &>/dev/null&&return 0
+if cmd_exists zpool;then
+log "ZFS installed successfully via $script"
+return 0
+fi
 fi
 done
 if [[ -f /etc/debian_version ]];then
+log "Trying apt install zfsutils-linux..."
 apt-get install -qq -y zfsutils-linux >/dev/null 2>&1||true
+if cmd_exists zpool;then
+log "ZFS installed via apt"
+return 0
 fi
+fi
+log "WARNING: Failed to install ZFS - existing pool detection unavailable"
 }
 _install_required_packages(){
 local -A required_commands=(
@@ -1951,7 +1966,7 @@ local -A required_commands=(
 local packages_to_install=""
 local need_charm_repo=false
 for cmd in "${!required_commands[@]}";do
-if ! command -v "$cmd" &>/dev/null;then
+if ! cmd_exists "$cmd";then
 packages_to_install+=" ${required_commands[$cmd]}"
 [[ $cmd == "gum" ]]&&need_charm_repo=true
 fi
@@ -2067,19 +2082,19 @@ _detect_ipv6_and_mac
 _load_wizard_data
 }
 _detect_default_interface(){
-if command -v ip &>/dev/null&&command -v jq &>/dev/null;then
+if cmd_exists ip&&cmd_exists jq;then
 CURRENT_INTERFACE=$(ip -j route 2>/dev/null|jq -r '.[] | select(.dst == "default") | .dev'|head -n1)
-elif command -v ip &>/dev/null;then
+elif cmd_exists ip;then
 CURRENT_INTERFACE=$(ip route|grep default|awk '{print $5}'|head -n1)
-elif command -v route &>/dev/null;then
+elif cmd_exists route;then
 CURRENT_INTERFACE=$(route -n|awk '/^0\.0\.0\.0/ {print $8}'|head -n1)
 fi
 if [[ -z $CURRENT_INTERFACE ]];then
-if command -v ip &>/dev/null&&command -v jq &>/dev/null;then
+if cmd_exists ip&&cmd_exists jq;then
 CURRENT_INTERFACE=$(ip -j link show 2>/dev/null|jq -r '.[] | select(.ifname != "lo" and .operstate == "UP") | .ifname'|head -n1)
-elif command -v ip &>/dev/null;then
+elif cmd_exists ip;then
 CURRENT_INTERFACE=$(ip link show|awk -F': ' '/^[0-9]+:/ && !/lo:/ {print $2; exit}')
-elif command -v ifconfig &>/dev/null;then
+elif cmd_exists ifconfig;then
 CURRENT_INTERFACE=$(ifconfig -a|awk '/^[a-z]/ && !/^lo/ {print $1; exit}'|tr -d ':')
 fi
 fi
@@ -2109,9 +2124,9 @@ fi
 }
 _detect_available_interfaces(){
 AVAILABLE_ALTNAMES=$(ip -d link show|grep -v "lo:"|grep -E '(^[0-9]+:|altname)'|awk '/^[0-9]+:/ {interface=$2; gsub(/:/, "", interface); printf "%s", interface} /altname/ {printf ", %s", $2} END {print ""}'|sed 's/, $//')
-if command -v ip &>/dev/null&&command -v jq &>/dev/null;then
+if cmd_exists ip&&cmd_exists jq;then
 AVAILABLE_INTERFACES=$(ip -j link show 2>/dev/null|jq -r '.[] | select(.ifname != "lo") | .ifname'|sort)
-elif command -v ip &>/dev/null;then
+elif cmd_exists ip;then
 AVAILABLE_INTERFACES=$(ip link show|awk -F': ' '/^[0-9]+:/ && !/lo:/ {print $2}'|sort)
 else
 AVAILABLE_INTERFACES="$CURRENT_INTERFACE"
@@ -2126,17 +2141,17 @@ local max_attempts="${SSH_RETRY_ATTEMPTS:-3}"
 local attempt=0
 while [[ $attempt -lt $max_attempts ]];do
 attempt=$((attempt+1))
-if command -v ip &>/dev/null&&command -v jq &>/dev/null;then
+if cmd_exists ip&&cmd_exists jq;then
 MAIN_IPV4_CIDR=$(ip -j address show "$CURRENT_INTERFACE" 2>/dev/null|jq -r '.[0].addr_info[] | select(.family == "inet" and .scope == "global") | "\(.local)/\(.prefixlen)"'|head -n1)
 MAIN_IPV4="${MAIN_IPV4_CIDR%/*}"
 MAIN_IPV4_GW=$(ip -j route 2>/dev/null|jq -r '.[] | select(.dst == "default") | .gateway'|head -n1)
 [[ -n $MAIN_IPV4 ]]&&[[ -n $MAIN_IPV4_GW ]]&&return 0
-elif command -v ip &>/dev/null;then
+elif cmd_exists ip;then
 MAIN_IPV4_CIDR=$(ip address show "$CURRENT_INTERFACE" 2>/dev/null|grep global|grep "inet "|awk '{print $2}'|head -n1)
 MAIN_IPV4="${MAIN_IPV4_CIDR%/*}"
 MAIN_IPV4_GW=$(ip route 2>/dev/null|grep default|awk '{print $3}'|head -n1)
 [[ -n $MAIN_IPV4 ]]&&[[ -n $MAIN_IPV4_GW ]]&&return 0
-elif command -v ifconfig &>/dev/null;then
+elif cmd_exists ifconfig;then
 MAIN_IPV4=$(ifconfig "$CURRENT_INTERFACE" 2>/dev/null|awk '/inet / {print $2}'|sed 's/addr://')
 local netmask
 netmask=$(ifconfig "$CURRENT_INTERFACE" 2>/dev/null|awk '/inet / {print $4}'|sed 's/Mask://')
@@ -2153,7 +2168,7 @@ case "$netmask" in
 *)MAIN_IPV4_CIDR="$MAIN_IPV4/24"
 esac
 fi
-if command -v route &>/dev/null;then
+if cmd_exists route;then
 MAIN_IPV4_GW=$(route -n 2>/dev/null|awk '/^0\.0\.0\.0/ {print $2}'|head -n1)
 fi
 [[ -n $MAIN_IPV4 ]]&&[[ -n $MAIN_IPV4_GW ]]&&return 0
@@ -2165,13 +2180,13 @@ fi
 done
 }
 _detect_ipv6_and_mac(){
-if command -v ip &>/dev/null&&command -v jq &>/dev/null;then
+if cmd_exists ip&&cmd_exists jq;then
 MAC_ADDRESS=$(ip -j link show "$CURRENT_INTERFACE" 2>/dev/null|jq -r '.[0].address // empty')
 IPV6_CIDR=$(ip -j address show "$CURRENT_INTERFACE" 2>/dev/null|jq -r '.[0].addr_info[] | select(.family == "inet6" and .scope == "global") | "\(.local)/\(.prefixlen)"'|head -n1)
-elif command -v ip &>/dev/null;then
+elif cmd_exists ip;then
 MAC_ADDRESS=$(ip link show "$CURRENT_INTERFACE" 2>/dev/null|awk '/ether/ {print $2}')
 IPV6_CIDR=$(ip address show "$CURRENT_INTERFACE" 2>/dev/null|grep global|grep "inet6 "|awk '{print $2}'|head -n1)
-elif command -v ifconfig &>/dev/null;then
+elif cmd_exists ifconfig;then
 MAC_ADDRESS=$(ifconfig "$CURRENT_INTERFACE" 2>/dev/null|awk '/ether/ {print $2}')
 IPV6_CIDR=$(ifconfig "$CURRENT_INTERFACE" 2>/dev/null|awk '/inet6/ && /global/ {print $2}')
 fi
@@ -2186,7 +2201,7 @@ else
 FIRST_IPV6_CIDR=""
 fi
 if [[ -n $MAIN_IPV6 ]];then
-if command -v ip &>/dev/null;then
+if cmd_exists ip;then
 IPV6_GATEWAY=$(ip -6 route 2>/dev/null|grep default|awk '{print $3}'|head -n1)
 fi
 fi
@@ -2287,11 +2302,19 @@ log "Boot disk: ${BOOT_DISK:-all in pool}"
 log "Pool disks: ${ZFS_POOL_DISKS[*]}"
 }
 detect_existing_pools(){
-command -v zpool &>/dev/null||return 0
+if ! cmd_exists zpool;then
+log "WARNING: zpool not found - ZFS not installed in rescue"
+return 0
+fi
 local pools=()
 local import_output
-import_output=$(zpool import 2>&1)||true
+import_output=$(zpool import -d /dev 2>&1)||true
 if [[ -z $import_output ]]||[[ $import_output == *"no pools available"* ]];then
+import_output=$(zpool import 2>&1)||true
+fi
+log "DEBUG: zpool import output: ${import_output:-(empty)}"
+if [[ -z $import_output ]]||[[ $import_output == *"no pools available"* ]];then
+log "DEBUG: No importable pools found"
 return 0
 fi
 local current_pool=""
@@ -2343,7 +2366,7 @@ return 1
 }
 DETECTED_POOLS=()
 _load_timezones(){
-if command -v timedatectl &>/dev/null;then
+if cmd_exists timedatectl;then
 WIZ_TIMEZONES=$(timedatectl list-timezones 2>/dev/null)
 else
 WIZ_TIMEZONES=$(find /usr/share/zoneinfo -type f 2>/dev/null|sed 's|/usr/share/zoneinfo/||'|grep -E '^(Africa|America|Antarctica|Asia|Atlantic|Australia|Europe|Indian|Pacific)/'|sort)
@@ -2370,14 +2393,18 @@ done <"$zone_tab"
 }
 _detect_pools(){
 DETECTED_POOLS=()
+local pool_output
+pool_output=$(detect_existing_pools 2>&1)
 while IFS= read -r line;do
-[[ -n $line ]]&&DETECTED_POOLS+=("$line")
-done < <(detect_existing_pools 2>/dev/null)
+[[ $line == *"|"* ]]&&DETECTED_POOLS+=("$line")
+done <<<"$pool_output"
 if [[ ${#DETECTED_POOLS[@]} -gt 0 ]];then
 log "Detected ${#DETECTED_POOLS[@]} existing ZFS pool(s):"
 for pool in "${DETECTED_POOLS[@]}";do
 log "  - $pool"
 done
+else
+log "No existing ZFS pools detected"
 fi
 }
 _load_wizard_data(){
@@ -3860,9 +3887,14 @@ if [[ ${#DETECTED_POOLS[@]} -eq 0 ]];then
 _wiz_hide_cursor
 _wiz_warn "No importable ZFS pools detected"
 _wiz_blank_line
-_wiz_dim "If you have an existing pool, ensure the disks are connected"
-_wiz_dim "and the pool was properly exported before reinstall."
-sleep "${WIZARD_MESSAGE_DELAY:-3}"
+_wiz_dim "Possible causes:"
+_wiz_dim "  • ZFS not installed (check log for errors)"
+_wiz_dim "  • Pool not exported before reboot"
+_wiz_dim "  • Pool already imported (zpool list)"
+_wiz_dim "  • Pool metadata corrupted"
+_wiz_blank_line
+_wiz_dim "Try manually: zpool import -d /dev"
+sleep "${WIZARD_MESSAGE_DELAY:-4}"
 return
 fi
 _wiz_description \
@@ -4675,7 +4707,7 @@ sleep "${PROCESS_KILL_WAIT:-1}"
 pkill -9 "$pattern" 2>/dev/null||true
 }
 _stop_mdadm_arrays(){
-if ! command -v mdadm &>/dev/null;then
+if ! cmd_exists mdadm;then
 return 0
 fi
 log "Stopping mdadm arrays..."
@@ -4687,12 +4719,12 @@ fi
 done
 }
 _deactivate_lvm(){
-if ! command -v vgchange &>/dev/null;then
+if ! cmd_exists pvs;then
 return 0
 fi
 log "Deactivating LVM volume groups..."
 vgchange -an &>/dev/null||true
-if command -v vgs &>/dev/null;then
+if cmd_exists vgs;then
 while IFS= read -r vg;do
 if [[ -n $vg ]];then vgchange -an "$vg" &>/dev/null||true;fi
 done < <(vgs --noheadings -o vg_name 2>/dev/null)
@@ -4702,7 +4734,7 @@ _unmount_drive_filesystems(){
 [[ -z ${DRIVES[*]} ]]&&return 0
 log "Unmounting filesystems on target drives..."
 for drive in "${DRIVES[@]}";do
-if command -v findmnt &>/dev/null;then
+if cmd_exists findmnt;then
 while IFS= read -r mountpoint;do
 [[ -z $mountpoint ]]&&continue
 log "Unmounting $mountpoint"
@@ -4723,13 +4755,13 @@ _kill_drive_holders(){
 [[ -z ${DRIVES[*]} ]]&&return 0
 log "Checking for processes using drives..."
 for drive in "${DRIVES[@]}";do
-if command -v lsof &>/dev/null;then
+if cmd_exists lsof;then
 while IFS= read -r pid;do
 [[ -z $pid ]]&&continue
 _signal_process "$pid" "9" "Killing process $pid using $drive"
 done < <(lsof "$drive" 2>/dev/null|awk 'NR>1 {print $2}'|sort -u)
 fi
-if command -v fuser &>/dev/null;then
+if cmd_exists fuser;then
 fuser -k "$drive" 2>/dev/null||true
 fi
 done
@@ -4766,7 +4798,7 @@ printf '%s\n' "$url"
 printf '%s\n' "  out=$local_path"
 done >"$input_file"
 log "Downloading ${#templates[@]} templates in parallel"
-if command -v aria2c &>/dev/null;then
+if cmd_exists aria2c;then
 if aria2c -q \
 -j 16 \
 --max-connection-per-server=4 \
@@ -4927,7 +4959,7 @@ local url="$1"
 local output="$2"
 local checksum="$3"
 local method_file="${4:-}"
-if command -v aria2c &>/dev/null;then
+if cmd_exists aria2c;then
 log "Trying aria2c (parallel download)..."
 if _download_iso_aria2c "$url" "$output" "$checksum"&&[[ -s $output ]];then
 [[ -n $method_file ]]&&printf '%s\n' "aria2c" >"$method_file"
@@ -4943,7 +4975,7 @@ return 0
 fi
 log "curl failed, trying fallback..."
 rm -f "$output" 2>/dev/null
-if command -v wget &>/dev/null;then
+if cmd_exists wget;then
 log "Trying wget..."
 if _download_iso_wget "$url" "$output"&&[[ -s $output ]];then
 [[ -n $method_file ]]&&printf '%s\n' "wget" >"$method_file"
@@ -5063,7 +5095,7 @@ if ! grep -q "\[global\]" "$file" 2>/dev/null;then
 log "ERROR: Missing [global] section in answer.toml"
 return 1
 fi
-if command -v proxmox-auto-install-assistant &>/dev/null;then
+if cmd_exists proxmox-auto-install-assistant;then
 log "Validating answer.toml with proxmox-auto-install-assistant"
 if ! proxmox-auto-install-assistant validate-answer "$file" >>"$LOG_FILE" 2>&1;then
 log "ERROR: answer.toml validation failed"
@@ -5331,7 +5363,7 @@ _wipe_zfs_on_disk(){
 local disk="$1"
 local disk_name
 disk_name=$(basename "$disk")
-command -v zpool &>/dev/null||return 0
+cmd_exists zpool||return 0
 local pools_to_destroy=()
 while IFS= read -r pool;do
 [[ -z $pool ]]&&continue
@@ -5378,7 +5410,7 @@ done
 }
 _wipe_lvm_on_disk(){
 local disk="$1"
-command -v pvs &>/dev/null||return 0
+cmd_exists pvs||return 0
 local pvs_on_disk=()
 while IFS= read -r pv;do
 [[ -z $pv ]]&&continue
@@ -5400,7 +5432,7 @@ _wipe_mdadm_on_disk(){
 local disk="$1"
 local disk_name
 disk_name=$(basename "$disk")
-command -v mdadm &>/dev/null||return 0
+cmd_exists mdadm||return 0
 while IFS= read -r md;do
 [[ -z $md ]]&&continue
 if mdadm --detail "$md" 2>/dev/null|grep -q "$disk_name";then
@@ -5415,10 +5447,10 @@ done
 _wipe_partition_table(){
 local disk="$1"
 log "Wiping partition table: $disk"
-if command -v wipefs &>/dev/null;then
+if cmd_exists wipefs;then
 wipefs -a -f "$disk" 2>/dev/null||true
 fi
-if command -v sgdisk &>/dev/null;then
+if cmd_exists sgdisk;then
 sgdisk --zap-all "$disk" 2>/dev/null||true
 fi
 dd if=/dev/zero of="$disk" bs=1M count=1 conv=notrunc 2>/dev/null||true
