@@ -11,14 +11,30 @@
 # shellcheck disable=SC2016
 _install_yazi() {
   # Download latest yazi release, extract, and install to /usr/local/bin
+  # Includes validation to catch download failures (empty files)
   remote_exec '
     set -e
     YAZI_VERSION=$(curl -s https://api.github.com/repos/sxyazi/yazi/releases/latest | grep "tag_name" | cut -d "\"" -f 4 | sed "s/^v//")
+    if [ -z "$YAZI_VERSION" ]; then
+      echo "ERROR: Failed to get yazi version from GitHub API" >&2
+      exit 1
+    fi
     curl -sL "https://github.com/sxyazi/yazi/releases/download/v${YAZI_VERSION}/yazi-x86_64-unknown-linux-gnu.zip" -o /tmp/yazi.zip
+    # Validate download (zip should be > 1MB)
+    if [ ! -s /tmp/yazi.zip ] || [ "$(stat -c%s /tmp/yazi.zip 2>/dev/null || echo 0)" -lt 1000000 ]; then
+      echo "ERROR: Yazi download failed or file too small" >&2
+      rm -f /tmp/yazi.zip
+      exit 1
+    fi
     unzip -q /tmp/yazi.zip -d /tmp/
     chmod +x /tmp/yazi-x86_64-unknown-linux-gnu/yazi /tmp/yazi-x86_64-unknown-linux-gnu/ya
     mv /tmp/yazi-x86_64-unknown-linux-gnu/yazi /tmp/yazi-x86_64-unknown-linux-gnu/ya /usr/local/bin/
     rm -rf /tmp/yazi.zip /tmp/yazi-x86_64-unknown-linux-gnu
+    # Verify installation
+    if [ ! -x /usr/local/bin/yazi ] || [ "$(stat -c%s /usr/local/bin/yazi 2>/dev/null || echo 0)" -lt 1000000 ]; then
+      echo "ERROR: Yazi binary installation failed" >&2
+      exit 1
+    fi
   ' || {
     log "ERROR: Failed to install yazi"
     return 1
