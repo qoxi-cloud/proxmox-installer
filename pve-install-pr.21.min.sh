@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.642-pr.21"
+readonly VERSION="2.0.644-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1920,12 +1920,23 @@ return 0
 fi
 return 1
 }
+_zfs_functional(){
+zpool version &>/dev/null
+}
 _install_zfs_if_needed(){
-if cmd_exists zpool;then
-log "ZFS already installed: $(command -v zpool)"
+if _zfs_functional;then
+log "ZFS already installed and functional"
 return 0
 fi
-log "ZFS not found, attempting installation..."
+log "ZFS not functional, attempting installation..."
+if cmd_exists zpool;then
+log "Found zpool wrapper, triggering ZFS compilation..."
+echo "y"|zpool version &>/dev/null||true
+if _zfs_functional;then
+log "ZFS compiled successfully via wrapper"
+return 0
+fi
+fi
 local install_dir="${INSTALL_DIR:-${HOME:-/root}}"
 local zfs_scripts=(
 "$install_dir/.oldroot/nfs/install/zfs.sh"
@@ -1935,7 +1946,7 @@ for script in "${zfs_scripts[@]}";do
 if [[ -x $script ]];then
 log "Running ZFS install script: $script"
 echo "y"|"$script" >/dev/null 2>&1||true
-if cmd_exists zpool;then
+if _zfs_functional;then
 log "ZFS installed successfully via $script"
 return 0
 fi
@@ -1944,7 +1955,7 @@ done
 if [[ -f /etc/debian_version ]];then
 log "Trying apt install zfsutils-linux..."
 apt-get install -qq -y zfsutils-linux >/dev/null 2>&1||true
-if cmd_exists zpool;then
+if _zfs_functional;then
 log "ZFS installed via apt"
 return 0
 fi
@@ -3885,15 +3896,16 @@ _edit_existing_pool(){
 _wiz_start_edit
 if [[ ${#DETECTED_POOLS[@]} -eq 0 ]];then
 _wiz_hide_cursor
-_wiz_warn "No importable ZFS pools detected"
-_wiz_blank_line
-_wiz_dim "Possible causes:"
-_wiz_dim "  • ZFS not installed (check log for errors)"
-_wiz_dim "  • Pool not exported before reboot"
-_wiz_dim "  • Pool already imported (zpool list)"
-_wiz_dim "  • Pool metadata corrupted"
-_wiz_blank_line
-_wiz_dim "Try manually: zpool import -d /dev"
+_wiz_description \
+"  {{yellow:⚠ No importable ZFS pools detected}}" \
+"" \
+"  Possible causes:" \
+"    • ZFS not installed (check log for errors)" \
+"    • Pool not exported before reboot" \
+"    • Pool already imported (zpool list)" \
+"    • Pool metadata corrupted" \
+"" \
+"  Try manually: {{cyan:zpool import -d /dev}}"
 sleep "${WIZARD_MESSAGE_DELAY:-4}"
 return
 fi
