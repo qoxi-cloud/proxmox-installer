@@ -22,6 +22,9 @@ _sanitize_script_for_log() {
   # Pattern: --authkey='...' or --authkey="..." or --authkey=...
   script=$(printf '%s\n' "$script" | sed -E "s${d}(--authkey=)('[^']*'|\"[^\"]*\"|[^[:space:]'\";]+)${d}\\1[REDACTED]${d}g")
 
+  # Pattern: echo 'base64string' | base64 -d | chpasswd (encoded credentials)
+  script=$(printf '%s\n' "$script" | sed -E "s${d}(echo[[:space:]]+['\"]?)[A-Za-z0-9+/=]+(['\"]?[[:space:]]*\\|[[:space:]]*base64[[:space:]]+-d)${d}\\1[REDACTED]\\2${d}g")
+
   printf '%s\n' "$script"
 }
 
@@ -47,7 +50,7 @@ remote_exec() {
     fi
 
     if [[ $exit_code -eq 124 ]]; then
-      log "ERROR: SSH command timed out after ${cmd_timeout}s: $*"
+      log "ERROR: SSH command timed out after ${cmd_timeout}s: $(_sanitize_script_for_log "$*")"
       return 124
     fi
 
@@ -60,7 +63,7 @@ remote_exec() {
     fi
   done
 
-  log "ERROR: SSH command failed after $max_attempts attempts: $*"
+  log "ERROR: SSH command failed after $max_attempts attempts: $(_sanitize_script_for_log "$*")"
   return 1
 }
 

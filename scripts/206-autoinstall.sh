@@ -190,7 +190,8 @@ EOF
   fi
 
   log "answer.toml created and validated:"
-  cat answer.toml >>"$LOG_FILE"
+  # Redact password before logging to prevent credential exposure
+  sed 's/^\([[:space:]]*root-password[[:space:]]*=[[:space:]]*\).*/\1"[REDACTED]"/' answer.toml >>"$LOG_FILE"
 
   # Add subtasks for live log display
   if type live_log_subtask &>/dev/null 2>&1; then
