@@ -107,7 +107,6 @@ _config_ensure_rpool_storage() {
   if ! remote_run "Configuring rpool storage" '
     if zpool list rpool &>/dev/null; then
       if ! pvesm status local-zfs &>/dev/null; then
-        # Create data dataset if missing
         zfs list rpool/data &>/dev/null || zfs create rpool/data
         pvesm add zfspool local-zfs --pool rpool/data --content images,rootdir
         pvesm set local --content iso,vztmpl,backup,snippets
@@ -132,6 +131,12 @@ _config_zfs_pool() {
   if [[ -z $BOOT_DISK ]]; then
     log "INFO: BOOT_DISK not set, all-ZFS mode - ensuring rpool storage"
     _config_ensure_rpool_storage
+    return 0
+  fi
+
+  # If no pool disks defined, we're done (LVM already expanded by configure_lvm_storage)
+  if [[ ${#ZFS_POOL_DISKS[@]} -eq 0 && $USE_EXISTING_POOL != "yes" ]]; then
+    log "INFO: No ZFS pool disks - using expanded local storage only"
     return 0
   fi
 

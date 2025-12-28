@@ -95,12 +95,12 @@ make_answer_toml() {
       fi
       log "Boot disk mode: ext4 on boot disk, existing pool '$EXISTING_POOL_NAME' will be imported"
     else
-      # Validate we have pool disks for post-install ZFS creation
+      # Pool disks are optional - if empty, local storage uses all boot disk space
       if [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]]; then
-        log "ERROR: BOOT_DISK set but no pool disks for ZFS tank creation"
-        exit 1
+        log "Boot disk mode: ext4 on boot disk only, no separate ZFS pool"
+      else
+        log "Boot disk mode: ext4 on boot disk, ZFS 'tank' pool will be created from ${#ZFS_POOL_DISKS[@]} pool disk(s)"
       fi
-      log "Boot disk mode: ext4 on boot disk, ZFS 'tank' pool will be created from ${#ZFS_POOL_DISKS[@]} pool disk(s)"
     fi
   else
     # All-ZFS mode: all disks in ZFS rpool

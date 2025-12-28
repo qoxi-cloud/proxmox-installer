@@ -23,6 +23,7 @@ _phase_base_configuration() {
 
 # PHASE 2: Storage Configuration (sequential - ZFS dependencies)
 _phase_storage_configuration() {
+  configure_lvm_storage || { log "WARNING: configure_lvm_storage failed"; }
   configure_zfs_arc || { log "WARNING: configure_zfs_arc failed"; }
   configure_zfs_pool || {
     log "ERROR: configure_zfs_pool failed"
