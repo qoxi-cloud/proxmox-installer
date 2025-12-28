@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.664-pr.21"
+readonly VERSION="2.0.665-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1305,10 +1305,13 @@ _run_parallel_task "$result_dir" "$i" "$func"&
 pids+=($!)
 ((i++))
 ((running++))
-if ((running>=max_jobs));then
-wait -n 2>/dev/null||true
-((running--))
-fi
+while ((running>=max_jobs));do
+local completed=0
+for ((j=0; j<i; j++));do
+[[ -f "$result_dir/success_$j" || -f "$result_dir/fail_$j" ]]&&((completed++))
+done
+running=$((i-completed))&&((running>=max_jobs))&&sleep 0.1
+done
 done
 local count=$i
 (while
