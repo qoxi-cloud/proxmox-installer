@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.658-pr.21"
+readonly VERSION="2.0.659-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1287,7 +1287,10 @@ fi
 local max_jobs="${PARALLEL_MAX_JOBS:-8}"
 log "Running parallel group '$group_name' with functions: ${funcs[*]} (max $max_jobs concurrent)"
 local result_dir
-result_dir=$(mktemp -d)
+result_dir=$(mktemp -d)||{
+log "ERROR: Failed to create temp dir for parallel group '$group_name'"
+return 1
+}
 export PARALLEL_RESULT_DIR="$result_dir"
 local i=0
 local running=0
