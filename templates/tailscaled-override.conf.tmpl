@@ -1,6 +1,0 @@
-# Wait for network to be fully online before starting Tailscale
-# Prevents "network unreachable" errors during early boot
-
-[Unit]
-After=network-online.target
-Wants=network-online.target
