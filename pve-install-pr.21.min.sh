@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.659-pr.21"
+readonly VERSION="2.0.660-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -450,8 +450,8 @@ local frame_delay="${1:-0.1}"
 show_banner_animated_stop 2>/dev/null
 _wiz_hide_cursor
 clear
-(local direction=1
-local current_letter=0
+(direction=1
+current_letter=0
 trap 'exit 0' TERM INT
 trap 'clear' WINCH
 exec 3>&1
@@ -894,8 +894,8 @@ ssh_timeout=10
 fi
 local passfile
 passfile=$(_ssh_get_passfile)
-(local elapsed=0
-local retry_delay="${RETRY_DELAY_SECONDS:-2}"
+(elapsed=0
+retry_delay="${RETRY_DELAY_SECONDS:-2}"
 while ((elapsed<ssh_timeout));do
 if sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' >/dev/null 2>&1;then
 exit 0
@@ -1309,7 +1309,7 @@ local count=$i
 (while
 true
 do
-local done_count=0
+done_count=0
 for j in $(seq 0 $((count-1)));do
 [[ -f "$result_dir/success_$j" || -f "$result_dir/fail_$j" ]]&&((done_count++))
 done
@@ -5314,7 +5314,7 @@ qemu_output.log 2>&1&
 QEMU_PID=$!
 local timeout="${QEMU_BOOT_TIMEOUT:-300}"
 local check_interval="${QEMU_PORT_CHECK_INTERVAL:-3}"
-(local elapsed=0
+(elapsed=0
 while ((elapsed<timeout));do
 if exec 3<>/dev/tcp/localhost/"$SSH_PORT_QEMU" 2>/dev/null;then
 exec 3<&-
@@ -6557,9 +6557,9 @@ kill -TERM "$QEMU_PID" 2>/dev/null||true
 fi) \
 &
 show_progress $! "Powering off the VM"
-(local timeout="${VM_SHUTDOWN_TIMEOUT:-120}"
-local wait_interval="${PROCESS_KILL_WAIT:-1}"
-local elapsed=0
+(timeout="${VM_SHUTDOWN_TIMEOUT:-120}"
+wait_interval="${PROCESS_KILL_WAIT:-1}"
+elapsed=0
 while ((elapsed<timeout));do
 if ! kill -0 "$QEMU_PID" 2>/dev/null;then
 exit 0
@@ -6645,7 +6645,7 @@ return 1
 fi
 }
 _phase_monitoring_tools(){
-(local pids=()
+(pids=()
 if [[ $INSTALL_NETDATA == "yes" ]];then
 configure_netdata&
 pids+=($!)
