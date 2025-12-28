@@ -99,6 +99,7 @@ make_templates() {
     "./templates/proxmox.sources:${proxmox_sources_template}"
     "./templates/sshd_config:sshd_config"
     "./templates/resolv.conf:resolv.conf"
+    "./templates/journald.conf:journald.conf"
     # Locale
     "./templates/locale.sh:locale.sh"
     "./templates/default-locale:default-locale"
@@ -124,6 +125,7 @@ make_templates() {
     "./templates/letsencrypt-firstboot.service:letsencrypt-firstboot.service"
     # Tailscale
     "./templates/disable-openssh.service:disable-openssh.service"
+    "./templates/tailscaled-override.conf:tailscaled-override.conf"
     # Security - Fail2Ban
     "./templates/fail2ban-jail.local:fail2ban-jail.local"
     "./templates/fail2ban-proxmox.conf:fail2ban-proxmox.conf"
@@ -156,6 +158,7 @@ make_templates() {
     "./templates/yazi-keymap.toml:yazi-keymap.toml"
     # Network tuning
     "./templates/network-ringbuffer.service:network-ringbuffer.service"
+    "./templates/network-ringbuffer.sh:network-ringbuffer.sh"
     # Validation
     "./templates/validation.sh:validation.sh"
   )

@@ -3,15 +3,19 @@
 
 # Helper functions for run_with_progress
 
-# Copy config files to remote (hosts, interfaces, sysctl, sources, resolv)
+# Copy config files to remote (hosts, interfaces, sysctl, sources, resolv, journald)
 _copy_config_files() {
+  # Create journald config directory if it doesn't exist
+  remote_exec "mkdir -p /etc/systemd/journald.conf.d" || return 1
+
   run_parallel_copies \
     "templates/hosts:/etc/hosts" \
     "templates/interfaces:/etc/network/interfaces" \
     "templates/99-proxmox.conf:/etc/sysctl.d/99-proxmox.conf" \
     "templates/debian.sources:/etc/apt/sources.list.d/debian.sources" \
     "templates/proxmox.sources:/etc/apt/sources.list.d/proxmox.sources" \
-    "templates/resolv.conf:/etc/resolv.conf"
+    "templates/resolv.conf:/etc/resolv.conf" \
+    "templates/journald.conf:/etc/systemd/journald.conf.d/00-proxmox.conf"
 }
 
 # Apply basic system settings (backup sources, set hostname, disable unused services)

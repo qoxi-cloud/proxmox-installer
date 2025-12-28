@@ -5,9 +5,20 @@
 # Called by configure_tailscale() public wrapper
 _config_tailscale() {
 
+  # Deploy systemd override to wait for network before starting tailscaled
+  # This prevents "network unreachable" errors during early boot
+  # Enable network-online.target wait service (required for After=network-online.target)
+  remote_exec '
+    mkdir -p /etc/systemd/system/tailscaled.service.d
+    systemctl enable systemd-networkd-wait-online.service 2>/dev/null || true
+  ' || return 1
+  remote_copy "templates/tailscaled-override.conf" \
+    "/etc/systemd/system/tailscaled.service.d/10-wait-network.conf" || return 1
+
   # Start tailscaled and wait for socket (up to 3s)
   remote_run "Starting Tailscale" '
         set -e
+        systemctl daemon-reload
         systemctl enable --now tailscaled
         systemctl start tailscaled
         for i in {1..3}; do tailscale status &>/dev/null && break; sleep 1; done
