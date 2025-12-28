@@ -18,10 +18,21 @@ _config_tailscale() {
   # If auth key is provided, authenticate Tailscale
   if [[ -n $TAILSCALE_AUTH_KEY ]]; then
     # Use unique temporary files to avoid race conditions
-    local tmp_ip tmp_hostname tmp_result
-    tmp_ip=$(mktemp)
-    tmp_hostname=$(mktemp)
-    tmp_result=$(mktemp)
+    local tmp_ip="" tmp_hostname="" tmp_result=""
+    tmp_ip=$(mktemp) || {
+      log "ERROR: mktemp failed for tmp_ip"
+      return 1
+    }
+    tmp_hostname=$(mktemp) || {
+      rm -f "$tmp_ip"
+      log "ERROR: mktemp failed for tmp_hostname"
+      return 1
+    }
+    tmp_result=$(mktemp) || {
+      rm -f "$tmp_ip" "$tmp_hostname"
+      log "ERROR: mktemp failed for tmp_result"
+      return 1
+    }
 
     # Ensure cleanup on function exit (handles errors too)
     # shellcheck disable=SC2064

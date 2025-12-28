@@ -139,30 +139,22 @@ reboot_to_main_os() {
 }
 
 # Main execution flow
+log "==================== Qoxi Automated Installer v${VERSION} ===================="
+log "QEMU_RAM_OVERRIDE=$QEMU_RAM_OVERRIDE QEMU_CORES_OVERRIDE=$QEMU_CORES_OVERRIDE"
+log "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription} SSL_TYPE=${SSL_TYPE:-self-signed}"
 
-log "=========================================="
-log "Qoxi Automated Installer v${VERSION}"
-log "=========================================="
-log "QEMU_RAM_OVERRIDE=$QEMU_RAM_OVERRIDE"
-log "QEMU_CORES_OVERRIDE=$QEMU_CORES_OVERRIDE"
-log "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
-log "SSL_TYPE=${SSL_TYPE:-self-signed}"
-
-# Start installation metrics
 metrics_start
-
-# Collect system info with animated banner
 log "Step: collect_system_info"
-
-# Start animated banner in background
 show_banner_animated_start 0.1
 
 # Create temporary file for sharing variables between processes
-SYSTEM_INFO_CACHE=$(mktemp)
+SYSTEM_INFO_CACHE=$(mktemp) || {
+  log "ERROR: Failed to create temp file"
+  exit 1
+}
 register_temp_file "$SYSTEM_INFO_CACHE"
 
 # Run system checks and prefetch Proxmox ISO info in background job
-# All output suppressed to prevent interference with animation
 {
   collect_system_info
   log "Step: prefetch_proxmox_iso_info"

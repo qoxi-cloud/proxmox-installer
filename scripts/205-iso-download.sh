@@ -62,8 +62,11 @@ download_proxmox_iso() {
 
   # Download with fallback chain: aria2c → curl → wget
   log "Downloading ISO: $ISO_FILENAME"
-  local method_file
-  method_file=$(mktemp)
+  local method_file=""
+  method_file=$(mktemp) || {
+    log "ERROR: mktemp failed for method_file"
+    exit 1
+  }
   register_temp_file "$method_file"
 
   _download_iso_with_fallback "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum" "$method_file" &

@@ -202,8 +202,8 @@ run_parallel_group() {
   # Wait for all with single progress
   (
     while true; do
-      done_count=0
-      for j in $(seq 0 $((count - 1))); do
+      local done_count=0
+      for ((j = 0; j < count; j++)); do
         [[ -f "$result_dir/success_$j" || -f "$result_dir/fail_$j" ]] && ((done_count++))
       done
       [[ $done_count -eq $count ]] && break
@@ -225,7 +225,7 @@ run_parallel_group() {
 
   # Check for failures
   local failures=0
-  for j in $(seq 0 $((count - 1))); do
+  for ((j = 0; j < count; j++)); do
     [[ -f "$result_dir/fail_$j" ]] && ((failures++))
   done
 

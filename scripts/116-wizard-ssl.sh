@@ -40,8 +40,11 @@ _ssl_check_dns_animated() {
   _wiz_dim "Expected IP: ${CLR_ORANGE}${MAIN_IPV4}${CLR_RESET}"
   _wiz_blank_line
 
-  local dns_result_file
-  dns_result_file=$(mktemp)
+  local dns_result_file=""
+  dns_result_file=$(mktemp) || {
+    log "ERROR: mktemp failed for dns_result_file"
+    return 1
+  }
   register_temp_file "$dns_result_file"
 
   (
@@ -55,8 +58,8 @@ _ssl_check_dns_animated() {
   while kill -0 "$dns_pid" 2>/dev/null; do
     sleep 0.3
     local dots_count=$((($(date +%s) % 3) + 1))
-    local dots
-    dots=$(printf '.%.0s' $(seq 1 $dots_count))
+    local dots=""
+    for ((d = 0; d < dots_count; d++)); do dots+="."; done
     printf "\r%sValidating DNS resolution%s%-3s%s" "${CLR_CYAN}" "${CLR_ORANGE}" "$dots" "${CLR_RESET}"
   done
 

@@ -68,7 +68,17 @@ apply_template_vars() {
       return 1
     fi
 
-    # Replace original with processed file
+    # Check for unsubstituted placeholders BEFORE replacing the original file
+    # This prevents deploying broken configs if caller ignores return code
+    if grep -qE '\{\{[A-Z0-9_]+\}\}' "$tmpfile" 2>/dev/null; then
+      local remaining
+      remaining=$(grep -oE '\{\{[A-Z0-9_]+\}\}' "$tmpfile" 2>/dev/null | sort -u | tr '\n' ' ')
+      log "WARNING: Unsubstituted placeholders remain in $file: $remaining"
+      rm -f "$tmpfile"
+      return 1
+    fi
+
+    # Replace original with processed file (only after validation passed)
     if ! mv "$tmpfile" "$file"; then
       log "ERROR: Failed to replace $file with processed template"
       rm -f "$tmpfile"
@@ -78,14 +88,6 @@ apply_template_vars() {
     local size_after
     size_after=$(wc -c <"$file" 2>/dev/null || echo "?")
     log "DEBUG: Finished $file (${size_after} bytes)"
-  fi
-
-  # Verify no unsubstituted placeholders remain (these were never passed to this function)
-  if grep -qE '\{\{[A-Z0-9_]+\}\}' "$file" 2>/dev/null; then
-    local remaining
-    remaining=$(grep -oE '\{\{[A-Z0-9_]+\}\}' "$file" 2>/dev/null | sort -u | tr '\n' ' ')
-    log "WARNING: Unsubstituted placeholders remain in $file: $remaining"
-    return 1
   fi
 
   return 0

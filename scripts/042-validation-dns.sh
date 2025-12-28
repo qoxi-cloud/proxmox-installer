@@ -28,7 +28,7 @@ validate_dns_resolution() {
   fi
 
   # Retry loop for DNS resolution
-  for attempt in $(seq 1 "$max_attempts"); do
+  for ((attempt = 1; attempt <= max_attempts; attempt++)); do
     resolved_ip=""
 
     # Try each public DNS server until we get a result (use global DNS_SERVERS)

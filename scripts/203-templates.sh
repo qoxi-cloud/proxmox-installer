@@ -20,8 +20,11 @@ _modify_template_files() {
 # Download templates in parallel (aria2c→wget fallback). $@="path:name" pairs
 _download_templates_parallel() {
   local -a templates=("$@")
-  local input_file
-  input_file=$(mktemp)
+  local input_file=""
+  input_file=$(mktemp) || {
+    log "ERROR: mktemp failed for aria2c input file"
+    return 1
+  }
   register_temp_file "$input_file"
 
   # Build aria2c input file

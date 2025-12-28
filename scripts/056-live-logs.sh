@@ -140,8 +140,8 @@ live_show_progress() {
     sleep 0.3 # Animation timing, kept at 0.3 for visual smoothness
     # Update the task line with animated dots (orange)
     local dots_count=$((($(date +%s) % 3) + 1))
-    local dots
-    dots=$(printf '.%.0s' $(seq 1 $dots_count))
+    local dots=""
+    for ((d = 0; d < dots_count; d++)); do dots+="."; done
     LOG_LINES[task_idx]="${CLR_ORANGE}├─${CLR_RESET} ${message}${CLR_ORANGE}${dots}${CLR_RESET}"
     render_logs
   done

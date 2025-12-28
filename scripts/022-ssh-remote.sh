@@ -82,8 +82,11 @@ _remote_exec_with_progress() {
   local passfile
   passfile=$(_ssh_get_passfile)
 
-  local output_file
-  output_file=$(mktemp)
+  local output_file=""
+  output_file=$(mktemp) || {
+    log "ERROR: mktemp failed for output_file in _remote_exec_with_progress"
+    return 1
+  }
   register_temp_file "$output_file"
 
   local cmd_timeout="${SSH_COMMAND_TIMEOUT:-$SSH_DEFAULT_TIMEOUT}"
@@ -131,7 +134,7 @@ remote_run() {
 # Lock file for serializing SCP operations (prevents ControlMaster race conditions)
 _SCP_LOCK_FILE="/tmp/pve-scp-lock.$$"
 
-# Copy file to remote via SCP with lock. $1=src, $2=dst
+# Copy file to remote via SCP with lock. $1=src, $2=dst. Returns 0=success, 1=failure
 # Uses flock to serialize parallel scp calls through ControlMaster socket
 remote_copy() {
   local src="$1"
@@ -142,6 +145,7 @@ remote_copy() {
 
   # Use flock to serialize scp operations (prevents ControlMaster data corruption)
   # FD 200 is arbitrary high number to avoid conflicts
+  # Note: subshell exit code is captured and returned properly
   (
     flock -x 200 || {
       log "ERROR: Failed to acquire SCP lock for $src"
@@ -153,4 +157,6 @@ remote_copy() {
       exit 1
     fi
   ) 200>"$_SCP_LOCK_FILE"
+  # Capture and return subshell exit code (fixes silent failure bug)
+  return $?
 }
