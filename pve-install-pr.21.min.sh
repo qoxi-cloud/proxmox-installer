@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.652-pr.21"
+readonly VERSION="2.0.653-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -939,6 +939,7 @@ local d=$'\x01'
 script=$(printf '%s\n' "$script"|sed -E "s$d(PASSWORD|password|PASSWD|passwd|SECRET|secret|TOKEN|token|KEY|key)=('[^']*'|\"[^\"]*\"|[^[:space:]'\";]+)$d\\1=[REDACTED]${d}g")
 script=$(printf '%s\n' "$script"|sed -E "s$d(echo[[:space:]]+['\"]?[^:]+:)[^|'\"]*$d\\1[REDACTED]${d}g")
 script=$(printf '%s\n' "$script"|sed -E "s$d(--authkey=)('[^']*'|\"[^\"]*\"|[^[:space:]'\";]+)$d\\1[REDACTED]${d}g")
+script=$(printf '%s\n' "$script"|sed -E "s$d(echo[[:space:]]+['\"]?)[A-Za-z0-9+/=]+(['\"]?[[:space:]]*\\|[[:space:]]*base64[[:space:]]+-d)$d\\1[REDACTED]\\2${d}g")
 printf '%s\n' "$script"
 }
 remote_exec(){
@@ -956,7 +957,7 @@ if [[ $exit_code -eq 0 ]];then
 return 0
 fi
 if [[ $exit_code -eq 124 ]];then
-log "ERROR: SSH command timed out after ${cmd_timeout}s: $*"
+log "ERROR: SSH command timed out after ${cmd_timeout}s: $(_sanitize_script_for_log "$*")"
 return 124
 fi
 if [[ $attempt -lt $max_attempts ]];then
@@ -966,7 +967,7 @@ log "SSH attempt $attempt failed, retrying in $delay seconds..."
 sleep "$delay"
 fi
 done
-log "ERROR: SSH command failed after $max_attempts attempts: $*"
+log "ERROR: SSH command failed after $max_attempts attempts: $(_sanitize_script_for_log "$*")"
 return 1
 }
 _remote_exec_with_progress(){
@@ -5256,7 +5257,7 @@ log "ERROR: answer.toml validation failed"
 exit 1
 fi
 log "answer.toml created and validated:"
-cat answer.toml >>"$LOG_FILE"
+sed 's/^\([[:space:]]*root-password[[:space:]]*=[[:space:]]*\).*/\1"[REDACTED]"/' answer.toml >>"$LOG_FILE"
 if type live_log_subtask &>/dev/null 2>&1;then
 local total_disks=${#ZFS_POOL_DISKS[@]}
 [[ -n $BOOT_DISK ]]&&((total_disks++))
