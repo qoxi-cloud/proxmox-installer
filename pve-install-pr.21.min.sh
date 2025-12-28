@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.657-pr.21"
+readonly VERSION="2.0.658-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -3828,69 +3828,6 @@ FIREWALL_MODE="standard"
 FIREWALL_MODE=""
 esac
 }
-_edit_admin_username(){
-while true;do
-_wiz_start_edit
-_wiz_description \
-"  Non-root admin username for SSH and Proxmox access:" \
-"" \
-"  Root SSH login will be {{cyan:completely disabled}}." \
-"  All SSH access must use this admin account." \
-"  The admin user will have sudo privileges." \
-""
-_show_input_footer
-local new_username
-new_username=$(_wiz_input \
---placeholder "e.g., sysadmin, deploy, operator" \
---value "$ADMIN_USERNAME" \
---prompt "Admin username: ")
-if [[ -z $new_username ]];then
-return
-fi
-if validate_admin_username "$new_username";then
-ADMIN_USERNAME="$new_username"
-break
-else
-show_validation_error "Invalid username. Use lowercase letters/numbers, 1-32 chars. Reserved names (root, admin) not allowed."
-fi
-done
-}
-_edit_admin_password(){
-_wiz_password_editor \
-"ADMIN_PASSWORD" \
-"Admin Password:" \
-"it will be required for sudo and Proxmox UI" \
-"Generated admin password:"
-}
-_edit_api_token(){
-_wiz_start_edit
-_wiz_description \
-"  Proxmox API token for automation:" \
-"" \
-"  {{cyan:Enabled}}:  Create privileged token (Terraform, Ansible)" \
-"  {{cyan:Disabled}}: No API token" \
-"" \
-"  Token has full Administrator permissions, no expiration." \
-""
-_show_input_footer "filter" 3
-local result
-_wiz_toggle "INSTALL_API_TOKEN" "API Token (privileged, no expiration):"
-result=$?
-[[ $result -eq 1 ]]&&return
-[[ $result -ne 2 ]]&&return
-_wiz_input_screen "Enter API token name (default: automation)"
-local token_name
-token_name=$(_wiz_input \
---placeholder "automation" \
---prompt "Token name: " \
---no-show-help \
---value="${API_TOKEN_NAME:-automation}")
-if [[ -n $token_name && $token_name =~ ^[a-zA-Z0-9_-]+$ ]];then
-API_TOKEN_NAME="$token_name"
-else
-API_TOKEN_NAME="automation"
-fi
-}
 _edit_wipe_disks(){
 _wiz_start_edit
 if [[ $USE_EXISTING_POOL == "yes" ]];then
@@ -3930,7 +3867,7 @@ _wiz_description \
 "    • Pool metadata corrupted" \
 "" \
 "  Try manually: {{cyan:zpool import -d /dev}}"
-sleep "${WIZARD_MESSAGE_DELAY:-4}"
+sleep "${WIZARD_MESSAGE_DELAY:-3}"
 return
 fi
 _wiz_description \
@@ -3996,7 +3933,7 @@ _wiz_description \
 "  Options:" \
 "    1. Select a different boot disk (not in this pool)" \
 "    2. Create a new pool instead of using existing"
-sleep "${WIZARD_MESSAGE_DELAY:-5}"
+sleep "${WIZARD_MESSAGE_DELAY:-3}"
 return
 fi
 USE_EXISTING_POOL="yes"
@@ -4150,7 +4087,7 @@ _wiz_description \
 "" \
 "  Falling back to self-signed certificate."
 fi
-sleep "$((WIZARD_MESSAGE_DELAY+2))"
+sleep "$((${WIZARD_MESSAGE_DELAY:-3}+2))"
 }
 _ssl_validate_letsencrypt(){
 _ssl_validate_fqdn||return 1
@@ -4482,7 +4419,7 @@ local pool_count=${#ZFS_POOL_DISKS[@]}
 case "$ZFS_RAID" in
 single)[[ $pool_count -ne 1 ]]&&ZFS_RAID="";;
 raid1|raid0)[[ $pool_count -lt 2 ]]&&ZFS_RAID="";;
-raid5|raidz1)[[ $pool_count -lt 3 ]]&&ZFS_RAID="";;
+raidz1)[[ $pool_count -lt 3 ]]&&ZFS_RAID="";;
 raid10|raidz2)[[ $pool_count -lt 4 ]]&&ZFS_RAID="";;
 raidz3)[[ $pool_count -lt 5 ]]&&ZFS_RAID=""
 esac
@@ -4613,7 +4550,7 @@ printf '%s\n' "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscr
 log "Downloading Proxmox GPG key"
 curl -fsSL -o /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg >>"$LOG_FILE" 2>&1&
 show_progress $! "Adding Proxmox repository" "Proxmox repository added"
-wait $!
+wait "$!"
 local exit_code=$?
 if [[ $exit_code -ne 0 ]];then
 log "ERROR: Failed to download Proxmox GPG key"
@@ -4628,7 +4565,7 @@ log "Updating package lists"
 apt-get clean >>"$LOG_FILE" 2>&1
 apt-get update >>"$LOG_FILE" 2>&1&
 show_progress $! "Updating package lists" "Package lists updated"
-wait $!
+wait "$!"
 exit_code=$?
 if [[ $exit_code -ne 0 ]];then
 log "ERROR: Failed to update package lists"
@@ -4641,7 +4578,7 @@ fi
 log "Installing required packages: proxmox-auto-install-assistant xorriso ovmf wget sshpass"
 apt-get install -yq proxmox-auto-install-assistant xorriso ovmf wget sshpass >>"$LOG_FILE" 2>&1&
 show_progress $! "Installing required packages" "Required packages installed"
-wait $!
+wait "$!"
 exit_code=$?
 if [[ $exit_code -ne 0 ]];then
 log "ERROR: Failed to install required packages"
@@ -5083,7 +5020,7 @@ method_file=$(mktemp)
 register_temp_file "$method_file"
 _download_iso_with_fallback "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum" "$method_file"&
 show_progress $! "Downloading $ISO_FILENAME" "$ISO_FILENAME downloaded"
-wait $!
+wait "$!"
 local exit_code=$?
 DOWNLOAD_METHOD=$(cat "$method_file" 2>/dev/null)
 rm -f "$method_file"
@@ -5110,7 +5047,7 @@ local checksum_pid=$!
 if type show_progress &>/dev/null 2>&1;then
 show_progress $checksum_pid "Verifying checksum" "Checksum verified"
 else
-wait $checksum_pid
+wait "$checksum_pid"
 fi
 actual_checksum=$(cat /tmp/checksum_result 2>/dev/null)
 rm -f /tmp/checksum_result
@@ -6722,7 +6659,7 @@ configure_promtail \
 configure_vnstat \
 configure_ringbuffer \
 configure_nvim
-wait $special_pid 2>/dev/null||true
+wait "$special_pid" 2>/dev/null||true
 }
 _phase_ssl_api(){
 configure_ssl_certificate
@@ -6848,7 +6785,7 @@ log "Step: prefetch_proxmox_iso_info"
 prefetch_proxmox_iso_info
 declare -p|grep -E "^declare -[^ ]* (PREFLIGHT_|DRIVE_|INTERFACE_|CURRENT_INTERFACE|PREDICTABLE_NAME|DEFAULT_INTERFACE|AVAILABLE_|MAC_ADDRESS|MAIN_IPV|IPV6_|FIRST_IPV6_|_ISO_|_CHECKSUM_|WIZ_TIMEZONES|WIZ_COUNTRIES|TZ_TO_COUNTRY|DETECTED_POOLS)" >"$SYSTEM_INFO_CACHE.tmp"&&mv "$SYSTEM_INFO_CACHE.tmp" "$SYSTEM_INFO_CACHE"
 } >/dev/null 2>&1&
-wait $!
+wait "$!"
 show_banner_animated_stop
 if [[ -s $SYSTEM_INFO_CACHE ]];then
 source "$SYSTEM_INFO_CACHE"
