@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.665-pr.21"
+readonly VERSION="2.0.666-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -5982,10 +5982,11 @@ $(_generate_nat_rules)
 EOF
 }
 _config_nftables(){
+log "INFO: Setting up iptables-nft compatibility layer"
 remote_exec '
     update-alternatives --set iptables /usr/sbin/iptables-nft
     update-alternatives --set ip6tables /usr/sbin/ip6tables-nft
-  '||log "WARNING: Could not set iptables-nft alternatives"
+  ' >>"$LOG_FILE" 2>&1||log "WARNING: Could not set iptables-nft alternatives"
 local config_file="./templates/nftables.conf.generated"
 _generate_nftables_conf >"$config_file"
 log "Generated nftables config (mode: $FIREWALL_MODE, bridge: $BRIDGE_MODE)"
@@ -6040,10 +6041,11 @@ _config_fail2ban
 }
 _config_apparmor(){
 deploy_template "templates/apparmor-grub.cfg" "/etc/default/grub.d/apparmor.cfg"
+log "INFO: Updating GRUB and enabling AppArmor"
 remote_exec '
     update-grub
     systemctl enable --now apparmor.service
-  '||{
+  ' >>"$LOG_FILE" 2>&1||{
 log "ERROR: Failed to configure AppArmor"
 return 1
 }
@@ -6655,7 +6657,8 @@ log "ERROR: configure_zfs_pool failed"
 return 1
 }
 configure_zfs_scrub||{ log "WARNING: configure_zfs_scrub failed";}
-remote_exec "update-initramfs -u -k all"||log "WARNING: update-initramfs failed"
+log "INFO: Updating initramfs to include ZFS cachefile changes"
+remote_exec "update-initramfs -u -k all" >>"$LOG_FILE" 2>&1||log "WARNING: update-initramfs failed"
 }
 _phase_security_configuration(){
 batch_install_packages
