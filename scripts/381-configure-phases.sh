@@ -62,7 +62,7 @@ _phase_security_configuration() {
 _phase_monitoring_tools() {
   # Special installers (non-apt) - run in parallel
   (
-    local pids=()
+    pids=()
     if [[ $INSTALL_NETDATA == "yes" ]]; then
       configure_netdata &
       pids+=($!)

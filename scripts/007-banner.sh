@@ -140,8 +140,8 @@ show_banner_animated_start() {
 
   # Start animation in background subshell
   (
-    local direction=1
-    local current_letter=0
+    direction=1
+    current_letter=0
 
     # Trap to ensure clean exit and handle window resize
     trap 'exit 0' TERM INT

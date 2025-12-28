@@ -125,7 +125,7 @@ boot_proxmox_with_port_forwarding() {
   local timeout="${QEMU_BOOT_TIMEOUT:-300}"
   local check_interval="${QEMU_PORT_CHECK_INTERVAL:-3}"
   (
-    local elapsed=0
+    elapsed=0
     while ((elapsed < timeout)); do
       # Suppress all connection errors by redirecting to /dev/null
       if exec 3<>/dev/tcp/localhost/"${SSH_PORT_QEMU}" 2>/dev/null; then

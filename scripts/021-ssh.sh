@@ -172,8 +172,8 @@ wait_for_ssh_ready() {
 
   # Wait for SSH to be ready with background process
   (
-    local elapsed=0
-    local retry_delay="${RETRY_DELAY_SECONDS:-2}"
+    elapsed=0
+    retry_delay="${RETRY_DELAY_SECONDS:-2}"
     while ((elapsed < ssh_timeout)); do
       # shellcheck disable=SC2086
       if sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' >/dev/null 2>&1; then

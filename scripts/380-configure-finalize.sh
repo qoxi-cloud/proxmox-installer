@@ -170,9 +170,9 @@ finalize_vm() {
 
   # Wait for QEMU to exit
   (
-    local timeout="${VM_SHUTDOWN_TIMEOUT:-120}"
-    local wait_interval="${PROCESS_KILL_WAIT:-1}"
-    local elapsed=0
+    timeout="${VM_SHUTDOWN_TIMEOUT:-120}"
+    wait_interval="${PROCESS_KILL_WAIT:-1}"
+    elapsed=0
     while ((elapsed < timeout)); do
       if ! kill -0 "$QEMU_PID" 2>/dev/null; then
         exit 0
