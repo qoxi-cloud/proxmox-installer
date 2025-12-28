@@ -16,8 +16,11 @@ _config_auditd() {
   # Stop auditd before modifying rules to prevent conflicts
   remote_exec '
     mkdir -p /var/log/audit
-    # Stop auditd to prevent rule conflicts during cleanup
+    # Fully stop auditd to prevent rule conflicts during cleanup
     systemctl stop auditd 2>/dev/null || true
+    sleep 1
+    # Clear rules from kernel memory (fails silently if immutable from previous boot)
+    auditctl -D 2>/dev/null || true
     # Remove ALL default/conflicting rules before our rules
     find /etc/audit/rules.d -name "*.rules" ! -name "proxmox.rules" -delete 2>/dev/null || true
     rm -f /etc/audit/audit.rules 2>/dev/null || true
