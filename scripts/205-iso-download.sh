@@ -68,7 +68,7 @@ download_proxmox_iso() {
 
   _download_iso_with_fallback "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum" "$method_file" &
   show_progress $! "Downloading $ISO_FILENAME" "$ISO_FILENAME downloaded"
-  wait $!
+  wait "$!"
   local exit_code=$?
   DOWNLOAD_METHOD=$(cat "$method_file" 2>/dev/null)
   rm -f "$method_file"
@@ -102,7 +102,7 @@ download_proxmox_iso() {
       if type show_progress &>/dev/null 2>&1; then
         show_progress $checksum_pid "Verifying checksum" "Checksum verified"
       else
-        wait $checksum_pid
+        wait "$checksum_pid"
       fi
       actual_checksum=$(cat /tmp/checksum_result 2>/dev/null)
       rm -f /tmp/checksum_result

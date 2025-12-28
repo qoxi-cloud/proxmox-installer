@@ -201,7 +201,7 @@ parse_ssh_key() {
   SSH_KEY_COMMENT=""
   SSH_KEY_SHORT=""
 
-  [[ -z $key ]] && return 1
+  [[ -z "$key" ]] && return 1
 
   SSH_KEY_TYPE=$(printf '%s\n' "$key" | awk '{print $1}')
   SSH_KEY_DATA=$(printf '%s\n' "$key" | awk '{print $2}')

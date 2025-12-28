@@ -157,7 +157,7 @@ _update_zfs_mode_options() {
   case "$ZFS_RAID" in
     single) [[ $pool_count -ne 1 ]] && ZFS_RAID="" ;;
     raid1 | raid0) [[ $pool_count -lt 2 ]] && ZFS_RAID="" ;;
-    raid5 | raidz1) [[ $pool_count -lt 3 ]] && ZFS_RAID="" ;;
+    raidz1) [[ $pool_count -lt 3 ]] && ZFS_RAID="" ;;
     raid10 | raidz2) [[ $pool_count -lt 4 ]] && ZFS_RAID="" ;;
     raidz3) [[ $pool_count -lt 5 ]] && ZFS_RAID="" ;;
   esac

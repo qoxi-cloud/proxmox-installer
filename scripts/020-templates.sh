@@ -6,7 +6,7 @@ apply_template_vars() {
   local file="$1"
   shift
 
-  if [[ ! -f $file ]]; then
+  if [[ ! -f "$file" ]]; then
     log "ERROR: Template file not found: $file"
     return 1
   fi
@@ -21,7 +21,7 @@ apply_template_vars() {
       local value="${pair#*=}"
 
       # Debug log for empty values (skip IPv6 vars when IPv6 is disabled)
-      if [[ -z $value ]] && grep -qF "{{${var}}}" "$file" 2>/dev/null; then
+      if [[ -z "$value" ]] && grep -qF "{{${var}}}" "$file" 2>/dev/null; then
         local skip_log=false
         case "$var" in
           MAIN_IPV6 | IPV6_ADDRESS | IPV6_GATEWAY | IPV6_PREFIX)
@@ -61,9 +61,9 @@ apply_template_vars() {
     fi
 
     # Verify temp file exists and has content
-    if [[ ! -s $tmpfile ]]; then
+    if [[ ! -s "$tmpfile" ]]; then
       log "ERROR: sed produced empty output for $file"
-      log "DEBUG: Original file exists: $([[ -f $file ]] && echo yes || echo no), size: $(wc -c <"$file" 2>/dev/null || echo 0)"
+      log "DEBUG: Original file exists: $([[ -f "$file" ]] && echo yes || echo no), size: $(wc -c <"$file" 2>/dev/null || echo 0)"
       rm -f "$tmpfile"
       return 1
     fi

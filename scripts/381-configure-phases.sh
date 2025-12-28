@@ -83,7 +83,7 @@ _phase_monitoring_tools() {
     configure_nvim
 
   # Wait for special installers
-  wait $special_pid 2>/dev/null || true
+  wait "$special_pid" 2>/dev/null || true
 }
 
 # PHASE 5: SSL & API Configuration

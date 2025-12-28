@@ -12,7 +12,7 @@ prepare_packages() {
   log "Downloading Proxmox GPG key"
   curl -fsSL -o /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg >>"$LOG_FILE" 2>&1 &
   show_progress $! "Adding Proxmox repository" "Proxmox repository added"
-  wait $!
+  wait "$!"
   local exit_code=$?
   if [[ $exit_code -ne 0 ]]; then
     log "ERROR: Failed to download Proxmox GPG key"
@@ -31,7 +31,7 @@ prepare_packages() {
   apt-get clean >>"$LOG_FILE" 2>&1
   apt-get update >>"$LOG_FILE" 2>&1 &
   show_progress $! "Updating package lists" "Package lists updated"
-  wait $!
+  wait "$!"
   exit_code=$?
   if [[ $exit_code -ne 0 ]]; then
     log "ERROR: Failed to update package lists"
@@ -48,7 +48,7 @@ prepare_packages() {
   log "Installing required packages: proxmox-auto-install-assistant xorriso ovmf wget sshpass"
   apt-get install -yq proxmox-auto-install-assistant xorriso ovmf wget sshpass >>"$LOG_FILE" 2>&1 &
   show_progress $! "Installing required packages" "Required packages installed"
-  wait $!
+  wait "$!"
   exit_code=$?
   if [[ $exit_code -ne 0 ]]; then
     log "ERROR: Failed to install required packages"

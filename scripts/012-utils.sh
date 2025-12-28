@@ -20,8 +20,8 @@ _get_file_size() {
 secure_delete_file() {
   local file="$1"
 
-  [[ -z $file ]] && return 0
-  [[ ! -f $file ]] && return 0
+  [[ -z "$file" ]] && return 0
+  [[ ! -f "$file" ]] && return 0
 
   if cmd_exists shred; then
     shred -u -z "$file" 2>/dev/null || rm -f "$file"

@@ -93,7 +93,7 @@ _ssl_show_dns_error() {
       "" \
       "  Falling back to self-signed certificate."
   fi
-  sleep "$((WIZARD_MESSAGE_DELAY + 2))"
+  sleep "$((${WIZARD_MESSAGE_DELAY:-3} + 2))"
 }
 
 # Validate Let's Encrypt requirements. Returns 0=valid, 1=fallback to self-signed

@@ -27,7 +27,7 @@ create_virtio_mapping() {
   local virtio_idx=0
 
   # Add boot disk first (if separate)
-  if [[ -n $boot_disk ]]; then
+  if [[ -n "$boot_disk" ]]; then
     local vdev
     vdev="$(_virtio_name_for_index "$virtio_idx")"
     VIRTIO_MAP["$boot_disk"]="$vdev"
@@ -79,7 +79,7 @@ map_disks_to_virtio() {
   local vdevs=()
   for disk in "${disks[@]}"; do
     local vdev="${VIRTIO_MAP[$disk]}"
-    if [[ -z $vdev ]]; then
+    if [[ -z "$vdev" ]]; then
       log "ERROR: No virtio mapping for disk $disk"
       return 1
     fi
@@ -121,7 +121,7 @@ build_zpool_command() {
   shift 2
   local vdevs=("$@")
 
-  if [[ -z $pool_name ]]; then
+  if [[ -z "$pool_name" ]]; then
     log "ERROR: Pool name not provided"
     return 1
   fi

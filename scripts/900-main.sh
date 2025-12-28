@@ -179,7 +179,7 @@ register_temp_file "$SYSTEM_INFO_CACHE"
 } >/dev/null 2>&1 &
 
 # Wait for background tasks to complete
-wait $!
+wait "$!"
 
 # Stop animation and show static banner with system info
 show_banner_animated_stop

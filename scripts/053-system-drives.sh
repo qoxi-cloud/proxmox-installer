@@ -150,14 +150,14 @@ detect_existing_pools() {
   import_output=$(zpool import -d /dev 2>&1) || true
 
   # Fallback: try without -d flag
-  if [[ -z $import_output ]] || [[ $import_output == *"no pools available"* ]]; then
+  if [[ -z "$import_output" ]] || [[ $import_output == *"no pools available"* ]]; then
     import_output=$(zpool import 2>&1) || true
   fi
 
   log "DEBUG: zpool import output: ${import_output:-(empty)}"
 
   # Check if output contains pool info (not just "no pools available")
-  if [[ -z $import_output ]] || [[ $import_output == *"no pools available"* ]]; then
+  if [[ -z "$import_output" ]] || [[ $import_output == *"no pools available"* ]]; then
     log "DEBUG: No importable pools found"
     return 0
   fi

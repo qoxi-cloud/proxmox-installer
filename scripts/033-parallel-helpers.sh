@@ -212,7 +212,7 @@ run_parallel_group() {
   # Collect configured features for display
   local configured=()
   for f in "$result_dir"/ran_*; do
-    [[ -f $f ]] && configured+=("$(cat "$f")")
+    [[ -f "$f" ]] && configured+=("$(cat "$f")")
   done
 
   # Show configured features as subtasks

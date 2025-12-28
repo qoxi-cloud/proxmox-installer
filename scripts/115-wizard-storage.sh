@@ -54,7 +54,7 @@ _edit_existing_pool() {
       "    • Pool metadata corrupted" \
       "" \
       "  Try manually: {{cyan:zpool import -d /dev}}"
-    sleep "${WIZARD_MESSAGE_DELAY:-4}"
+    sleep "${WIZARD_MESSAGE_DELAY:-3}"
     return
   fi
 
@@ -133,7 +133,7 @@ _edit_existing_pool() {
         "  Options:" \
         "    1. Select a different boot disk (not in this pool)" \
         "    2. Create a new pool instead of using existing"
-      sleep "${WIZARD_MESSAGE_DELAY:-5}"
+      sleep "${WIZARD_MESSAGE_DELAY:-3}"
       return
     fi
 
