@@ -16,6 +16,9 @@ _config_import_existing_pool() {
     return 1
   fi
 
+  # Set cachefile to prevent "cachefile import failed" errors on boot
+  remote_exec "zpool set cachefile=/etc/zfs/zpool.cache '$pool_name'" || true
+
   # Configure Proxmox storage - find or create vm-disks dataset
   # shellcheck disable=SC2016
   if ! remote_run "Configuring Proxmox storage for '$pool_name'" '
@@ -86,6 +89,7 @@ _config_create_new_pool() {
     zfs set atime=off tank
     zfs set xattr=sa tank
     zfs set dnodesize=auto tank
+    zpool set cachefile=/etc/zfs/zpool.cache tank
     zfs create tank/vm-disks
     pvesm add zfspool tank --pool tank/vm-disks --content images,rootdir
     pvesm set local --content iso,vztmpl,backup,snippets
