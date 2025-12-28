@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.653-pr.21"
+readonly VERSION="2.0.655-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -2760,7 +2760,7 @@ local missing_fields=()
 [[ -z $PVE_HOSTNAME ]]&&missing_fields+=("Hostname")
 [[ -z $DOMAIN_SUFFIX ]]&&missing_fields+=("Domain")
 [[ -z $EMAIL ]]&&missing_fields+=("Email")
-[[ -z $NEW_ROOT_PASSWORD ]]&&missing_fields+=("Password")
+[[ -z $NEW_ROOT_PASSWORD ]]&&missing_fields+=("Root Password")
 [[ -z $ADMIN_USERNAME ]]&&missing_fields+=("Admin Username")
 [[ -z $ADMIN_PASSWORD ]]&&missing_fields+=("Admin Password")
 [[ -z $TIMEZONE ]]&&missing_fields+=("Timezone")
@@ -3104,7 +3104,7 @@ local selection="$2"
 case $screen in
 0)_add_field "Hostname         " "$(_wiz_fmt "$_DSP_HOSTNAME")" "hostname"
 _add_field "Email            " "$(_wiz_fmt "$EMAIL")" "email"
-_add_field "Password         " "$(_wiz_fmt "$_DSP_PASS")" "password"
+_add_field "Root Password    " "$(_wiz_fmt "$_DSP_PASS")" "password"
 _add_field "Timezone         " "$(_wiz_fmt "$TIMEZONE")" "timezone"
 _add_field "Keyboard         " "$(_wiz_fmt "$KEYBOARD")" "keyboard"
 _add_field "Country          " "$(_wiz_fmt "$COUNTRY")" "country"
@@ -4896,6 +4896,7 @@ local -a template_list=(
 "./templates/proxmox.sources:$proxmox_sources_template"
 "./templates/sshd_config:sshd_config"
 "./templates/resolv.conf:resolv.conf"
+"./templates/journald.conf:journald.conf"
 "./templates/locale.sh:locale.sh"
 "./templates/default-locale:default-locale"
 "./templates/environment:environment"
@@ -4915,6 +4916,7 @@ local -a template_list=(
 "./templates/letsencrypt-firstboot.sh:letsencrypt-firstboot.sh"
 "./templates/letsencrypt-firstboot.service:letsencrypt-firstboot.service"
 "./templates/disable-openssh.service:disable-openssh.service"
+"./templates/tailscaled-override.conf:tailscaled-override.conf"
 "./templates/fail2ban-jail.local:fail2ban-jail.local"
 "./templates/fail2ban-proxmox.conf:fail2ban-proxmox.conf"
 "./templates/apparmor-grub.cfg:apparmor-grub.cfg"
@@ -4935,6 +4937,7 @@ local -a template_list=(
 "./templates/yazi-init.lua:yazi-init.lua"
 "./templates/yazi-keymap.toml:yazi-keymap.toml"
 "./templates/network-ringbuffer.service:network-ringbuffer.service"
+"./templates/network-ringbuffer.sh:network-ringbuffer.sh"
 "./templates/validation.sh:validation.sh")
 if ! run_with_progress "Downloading template files" "Template files downloaded" \
 _download_templates_parallel "${template_list[@]}";then
@@ -5553,13 +5556,15 @@ sleep 1
 log "Disk wipe complete"
 }
 _copy_config_files(){
+remote_exec "mkdir -p /etc/systemd/journald.conf.d"||return 1
 run_parallel_copies \
 "templates/hosts:/etc/hosts" \
 "templates/interfaces:/etc/network/interfaces" \
 "templates/99-proxmox.conf:/etc/sysctl.d/99-proxmox.conf" \
 "templates/debian.sources:/etc/apt/sources.list.d/debian.sources" \
 "templates/proxmox.sources:/etc/apt/sources.list.d/proxmox.sources" \
-"templates/resolv.conf:/etc/resolv.conf"
+"templates/resolv.conf:/etc/resolv.conf" \
+"templates/journald.conf:/etc/systemd/journald.conf.d/00-proxmox.conf"
 }
 _apply_basic_settings(){
 remote_exec "[ -f /etc/apt/sources.list ] && mv /etc/apt/sources.list /etc/apt/sources.list.bak"||return 1
@@ -5685,8 +5690,15 @@ configure_shell(){
 _config_shell
 }
 _config_tailscale(){
+remote_exec '
+    mkdir -p /etc/systemd/system/tailscaled.service.d
+    systemctl enable systemd-networkd-wait-online.service 2>/dev/null || true
+  '||return 1
+remote_copy "templates/tailscaled-override.conf" \
+"/etc/systemd/system/tailscaled.service.d/10-wait-network.conf"||return 1
 remote_run "Starting Tailscale" '
         set -e
+        systemctl daemon-reload
         systemctl enable --now tailscaled
         systemctl start tailscaled
         for i in {1..3}; do tailscale status &>/dev/null && break; sleep 1; done
@@ -6081,13 +6093,17 @@ return 1
 }
 remote_exec '
     mkdir -p /var/log/audit
+    # Stop auditd to prevent rule conflicts during cleanup
+    systemctl stop auditd 2>/dev/null || true
+    # Remove ALL default/conflicting rules before our rules
+    find /etc/audit/rules.d -name "*.rules" ! -name "proxmox.rules" -delete 2>/dev/null || true
+    rm -f /etc/audit/audit.rules 2>/dev/null || true
+    # Configure auditd settings
     sed -i "s/^max_log_file = .*/max_log_file = 50/" /etc/audit/auditd.conf
     sed -i "s/^num_logs = .*/num_logs = 10/" /etc/audit/auditd.conf
     sed -i "s/^max_log_file_action = .*/max_log_file_action = ROTATE/" /etc/audit/auditd.conf
-    # Remove default/conflicting rules before loading our rules
-    find /etc/audit/rules.d -name "*.rules" ! -name "proxmox.rules" -delete 2>/dev/null || true
-    rm -f /etc/audit/audit.rules 2>/dev/null || true
-    augenrules --load 2>/dev/null
+    # Regenerate rules from clean state
+    augenrules --load 2>/dev/null || true
   '||{
 log "ERROR: Failed to configure auditd"
 return 1
@@ -6128,7 +6144,10 @@ parallel_mark_configured "needrestart"
 make_feature_wrapper "needrestart" "INSTALL_NEEDRESTART"
 _config_ringbuffer(){
 local ringbuffer_interface="${DEFAULT_INTERFACE:-eth0}"
-deploy_systemd_service "network-ringbuffer" "RINGBUFFER_INTERFACE=$ringbuffer_interface"||return 1
+deploy_template "templates/network-ringbuffer.sh" "/usr/local/bin/network-ringbuffer.sh" \
+"RINGBUFFER_INTERFACE=$ringbuffer_interface"||return 1
+remote_exec "chmod +x /usr/local/bin/network-ringbuffer.sh"||return 1
+deploy_systemd_service "network-ringbuffer"||return 1
 parallel_mark_configured "ringbuffer"
 }
 make_feature_wrapper "ringbuffer" "INSTALL_RINGBUFFER"
