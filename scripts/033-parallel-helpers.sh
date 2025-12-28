@@ -190,11 +190,14 @@ run_parallel_group() {
     ((i++))
     ((running++))
 
-    # If we've hit the limit, wait for any job to complete before starting more
-    if ((running >= max_jobs)); then
-      wait -n 2>/dev/null || true
-      ((running--))
-    fi
+    # Poll for job completion (wait -n requires bash 4.3+, we support 4.0+)
+    while ((running >= max_jobs)); do
+      local completed=0
+      for ((j = 0; j < i; j++)); do
+        [[ -f "$result_dir/success_$j" || -f "$result_dir/fail_$j" ]] && ((completed++))
+      done
+      running=$((i - completed)) && ((running >= max_jobs)) && sleep 0.1
+    done
   done
 
   local count=$i
