@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.661-pr.21"
+readonly VERSION="2.0.662-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -6026,8 +6026,11 @@ return 1
 }
 remote_exec '
     mkdir -p /var/log/audit
-    # Stop auditd to prevent rule conflicts during cleanup
+    # Fully stop auditd to prevent rule conflicts during cleanup
     systemctl stop auditd 2>/dev/null || true
+    sleep 1
+    # Clear rules from kernel memory (fails silently if immutable from previous boot)
+    auditctl -D 2>/dev/null || true
     # Remove ALL default/conflicting rules before our rules
     find /etc/audit/rules.d -name "*.rules" ! -name "proxmox.rules" -delete 2>/dev/null || true
     rm -f /etc/audit/audit.rules 2>/dev/null || true
