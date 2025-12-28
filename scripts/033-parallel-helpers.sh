@@ -172,7 +172,10 @@ run_parallel_group() {
 
   # Track results via temp files (avoid subshell variable issues)
   local result_dir
-  result_dir=$(mktemp -d)
+  result_dir=$(mktemp -d) || {
+    log "ERROR: Failed to create temp dir for parallel group '$group_name'"
+    return 1
+  }
   export PARALLEL_RESULT_DIR="$result_dir"
 
   # Start functions in background with concurrency limit
