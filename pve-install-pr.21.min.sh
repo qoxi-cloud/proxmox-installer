@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.660-pr.21"
+readonly VERSION="2.0.661-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -4856,7 +4856,6 @@ local -a template_list=(
 "./templates/letsencrypt-firstboot.sh:letsencrypt-firstboot.sh"
 "./templates/letsencrypt-firstboot.service:letsencrypt-firstboot.service"
 "./templates/disable-openssh.service:disable-openssh.service"
-"./templates/tailscaled-override.conf:tailscaled-override.conf"
 "./templates/fail2ban-jail.local:fail2ban-jail.local"
 "./templates/fail2ban-proxmox.conf:fail2ban-proxmox.conf"
 "./templates/apparmor-grub.cfg:apparmor-grub.cfg"
@@ -5630,12 +5629,6 @@ configure_shell(){
 _config_shell
 }
 _config_tailscale(){
-remote_exec '
-    mkdir -p /etc/systemd/system/tailscaled.service.d
-    systemctl enable systemd-networkd-wait-online.service 2>/dev/null || true
-  '||return 1
-remote_copy "templates/tailscaled-override.conf" \
-"/etc/systemd/system/tailscaled.service.d/10-wait-network.conf"||return 1
 remote_run "Starting Tailscale" '
         set -e
         systemctl daemon-reload
