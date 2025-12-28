@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.655-pr.21"
+readonly VERSION="2.0.657-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -5199,10 +5199,10 @@ fi
 log "Boot disk mode: ext4 on boot disk, existing pool '$EXISTING_POOL_NAME' will be imported"
 else
 if [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]];then
-log "ERROR: BOOT_DISK set but no pool disks for ZFS tank creation"
-exit 1
-fi
+log "Boot disk mode: ext4 on boot disk only, no separate ZFS pool"
+else
 log "Boot disk mode: ext4 on boot disk, ZFS 'tank' pool will be created from ${#ZFS_POOL_DISKS[@]} pool disk(s)"
+fi
 fi
 else
 FILESYSTEM="zfs"
@@ -6423,7 +6423,6 @@ log "INFO: Ensuring rpool storage is configured for Proxmox"
 if ! remote_run "Configuring rpool storage" '
     if zpool list rpool &>/dev/null; then
       if ! pvesm status local-zfs &>/dev/null; then
-        # Create data dataset if missing
         zfs list rpool/data &>/dev/null || zfs create rpool/data
         pvesm add zfspool local-zfs --pool rpool/data --content images,rootdir
         pvesm set local --content iso,vztmpl,backup,snippets
@@ -6445,6 +6444,10 @@ log "INFO: BOOT_DISK not set, all-ZFS mode - ensuring rpool storage"
 _config_ensure_rpool_storage
 return 0
 fi
+if [[ ${#ZFS_POOL_DISKS[@]} -eq 0 && $USE_EXISTING_POOL != "yes" ]];then
+log "INFO: No ZFS pool disks - using expanded local storage only"
+return 0
+fi
 if [[ $USE_EXISTING_POOL == "yes" ]];then
 _config_import_existing_pool
 else
@@ -6453,6 +6456,40 @@ fi
 }
 configure_zfs_pool(){
 _config_zfs_pool
+}
+_config_expand_lvm_root(){
+log "INFO: Expanding LVM root to use all disk space"
+if ! remote_run "Expanding LVM root filesystem" '
+    set -e
+    if ! vgs pve &>/dev/null; then
+      echo "No pve VG found - not LVM install"
+      exit 0
+    fi
+    if pvesm status local-lvm &>/dev/null; then
+      pvesm remove local-lvm || true
+      echo "Removed local-lvm storage"
+    fi
+    if lvs pve/data &>/dev/null; then
+      lvremove -f /dev/pve/data
+      echo "Removed data LV"
+    fi
+    free_extents=$(vgs --noheadings -o vg_free_count pve 2>/dev/null | tr -d " ")
+    if [ "$free_extents" -gt 0 ]; then
+      lvextend -l +100%FREE /dev/pve/root
+      resize2fs /dev/mapper/pve-root
+      echo "Extended root LV to use all disk space"
+    else
+      echo "No free space in VG - root already uses all space"
+    fi
+    pvesm set local --content iso,vztmpl,backup,snippets,images,rootdir 2>/dev/null || true
+  ' "LVM root filesystem expanded";then
+log "WARNING: LVM expansion had issues, continuing"
+fi
+return 0
+}
+configure_lvm_storage(){
+[[ -z $BOOT_DISK ]]&&return 0
+_config_expand_lvm_root
 }
 _deploy_ssh_config(){
 deploy_template "templates/sshd_config" "/etc/ssh/sshd_config" \
@@ -6642,6 +6679,7 @@ configure_shell||{ log "WARNING: configure_shell failed";}
 configure_system_services||{ log "WARNING: configure_system_services failed";}
 }
 _phase_storage_configuration(){
+configure_lvm_storage||{ log "WARNING: configure_lvm_storage failed";}
 configure_zfs_arc||{ log "WARNING: configure_zfs_arc failed";}
 configure_zfs_pool||{
 log "ERROR: configure_zfs_pool failed"
