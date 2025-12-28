@@ -144,7 +144,7 @@ _validate_config() {
   [[ -z $PVE_HOSTNAME ]] && missing_fields+=("Hostname")
   [[ -z $DOMAIN_SUFFIX ]] && missing_fields+=("Domain")
   [[ -z $EMAIL ]] && missing_fields+=("Email")
-  [[ -z $NEW_ROOT_PASSWORD ]] && missing_fields+=("Password")
+  [[ -z $NEW_ROOT_PASSWORD ]] && missing_fields+=("Root Password")
   [[ -z $ADMIN_USERNAME ]] && missing_fields+=("Admin Username")
   [[ -z $ADMIN_PASSWORD ]] && missing_fields+=("Admin Password")
   [[ -z $TIMEZONE ]] && missing_fields+=("Timezone")

@@ -57,7 +57,7 @@ _wiz_render_screen_content() {
     0) # Basic
       _add_field "Hostname         " "$(_wiz_fmt "$_DSP_HOSTNAME")" "hostname"
       _add_field "Email            " "$(_wiz_fmt "$EMAIL")" "email"
-      _add_field "Password         " "$(_wiz_fmt "$_DSP_PASS")" "password"
+      _add_field "Root Password    " "$(_wiz_fmt "$_DSP_PASS")" "password"
       _add_field "Timezone         " "$(_wiz_fmt "$TIMEZONE")" "timezone"
       _add_field "Keyboard         " "$(_wiz_fmt "$KEYBOARD")" "keyboard"
       _add_field "Country          " "$(_wiz_fmt "$COUNTRY")" "country"
