@@ -75,10 +75,11 @@ EOF
 # Main implementation for nftables configuration
 _config_nftables() {
   # Set up iptables-nft compatibility layer
+  log "INFO: Setting up iptables-nft compatibility layer"
   remote_exec '
     update-alternatives --set iptables /usr/sbin/iptables-nft
     update-alternatives --set ip6tables /usr/sbin/ip6tables-nft
-  ' || log "WARNING: Could not set iptables-nft alternatives"
+  ' >>"$LOG_FILE" 2>&1 || log "WARNING: Could not set iptables-nft alternatives"
 
   # Generate complete config
   local config_file="./templates/nftables.conf.generated"

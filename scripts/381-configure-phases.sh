@@ -32,7 +32,8 @@ _phase_storage_configuration() {
   configure_zfs_scrub || { log "WARNING: configure_zfs_scrub failed"; }
 
   # Update initramfs to include ZFS cachefile changes (prevents "cachefile import failed" on boot)
-  remote_exec "update-initramfs -u -k all" || log "WARNING: update-initramfs failed"
+  log "INFO: Updating initramfs to include ZFS cachefile changes"
+  remote_exec "update-initramfs -u -k all" >>"$LOG_FILE" 2>&1 || log "WARNING: update-initramfs failed"
 }
 
 # PHASE 3: Security Configuration (parallel after batch install)

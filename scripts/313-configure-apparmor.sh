@@ -10,10 +10,11 @@ _config_apparmor() {
   deploy_template "templates/apparmor-grub.cfg" "/etc/default/grub.d/apparmor.cfg"
 
   # Update GRUB and enable AppArmor service (activates after reboot)
+  log "INFO: Updating GRUB and enabling AppArmor"
   remote_exec '
     update-grub
     systemctl enable --now apparmor.service
-  ' || {
+  ' >>"$LOG_FILE" 2>&1 || {
     log "ERROR: Failed to configure AppArmor"
     return 1
   }
