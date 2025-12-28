@@ -18,7 +18,7 @@ The project is a modular bash framework. Individual scripts in `scripts/` are co
 | **050-056** | System: packages, preflight, network, drives, wizard-data, status, live-logs |
 | **100-104** | Wizard: core, ui, navigation, menu, display |
 | **110-121** | Wizard: editors (locale, basic, proxmox, network, storage, ssl, tailscale, access, ssh, disks, features) |
-| **200-207** | Installation: packages, QEMU config/release, templates, ISO download, autoinstall, qemu-install |
+| **200-208** | Installation: packages, QEMU config/release, templates, ISO download, autoinstall, qemu-install, disk-wipe |
 | **300-303** | Configuration: base, tailscale, admin user, services |
 | **310-313** | Security: firewall-rules, firewall, fail2ban, apparmor |
 | **320-324** | Security: auditd, aide, chkrootkit, lynis, needrestart |
@@ -26,7 +26,7 @@ The project is a modular bash framework. Individual scripts in `scripts/` are co
 | **340-342** | Monitoring: vnstat, promtail, netdata |
 | **350-351** | Tools: yazi, nvim |
 | **360-361** | SSL & API token |
-| **370-371** | Storage: ZFS ARC, pool creation/import |
+| **370-372** | Storage: ZFS ARC, pool creation/import, LVM |
 | **380-381** | Finalization: validation, completion, phases |
 | **900** | Main orchestrator |
 

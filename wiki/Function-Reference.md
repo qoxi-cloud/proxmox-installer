@@ -569,6 +569,39 @@ log_subtasks "nginx" "php-fpm" "redis"
 
 ---
 
+## LVM Functions (`372-configure-lvm.sh`)
+
+### configure_lvm_storage
+
+Expands LVM root to use all disk space. Only runs in ext4 boot mode (when BOOT_DISK is set).
+
+```bash
+configure_lvm_storage
+```
+
+**Side effects:** Removes local-lvm storage, deletes data LV, extends root LV to 100% free space.
+
+---
+
+## Disk Wipe Functions (`208-disk-wipe.sh`)
+
+### wipe_installation_disks
+
+Wipes disks before installation based on installation mode.
+
+```bash
+wipe_installation_disks
+```
+
+**Behavior:**
+- If `WIPE_DISKS != "yes"`: skips
+- If `USE_EXISTING_POOL == "yes"`: wipes only boot disk
+- Otherwise: wipes boot disk + pool disks
+
+**Side effects:** Destroys ZFS pools, removes LVM, stops mdadm arrays, wipes partition tables.
+
+---
+
 ## ZFS Functions (`031-zfs-helpers.sh`, `053-system-drives.sh`)
 
 ### detect_existing_pools

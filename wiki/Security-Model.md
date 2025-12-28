@@ -25,7 +25,7 @@ Generation → Storage → Usage → Cleanup
 
 ### Root Password
 
-Generated in `034-password-utils.sh`:
+Generated in `030-password-utils.sh`:
 
 ```bash
 generate_password() {
@@ -112,7 +112,7 @@ _ssh_session_cleanup() {
 Global cleanup handler ensures credentials are deleted on any exit:
 
 ```bash
-# In 003-init.sh
+# In 004-trap.sh
 trap 'cleanup_and_error_handler' EXIT
 
 cleanup_and_error_handler() {

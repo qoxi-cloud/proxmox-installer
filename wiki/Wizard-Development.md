@@ -15,17 +15,16 @@ Guide for extending and modifying the configuration wizard.
 
 ## Screen Structure
 
-The wizard has 7 screens:
+The wizard has 6 screens:
 
 | Index | Name | Script | Fields |
 |-------|------|--------|--------|
 | 0 | Basic | 110-wizard-basic-locale.sh, 111-wizard-basic.sh | hostname, email, password, timezone, keyboard, country |
 | 1 | Proxmox | 112-wizard-proxmox.sh | iso_version, repository |
-| 2 | Network | 113-wizard-network-bridge.sh, 114-wizard-network-ipv6.sh | interface, bridge_mode, private_subnet, ipv6, mtu |
-| 3 | Storage | 115-wizard-storage.sh | boot_disk, existing_pool, pool_disks, zfs_mode, zfs_arc |
-| 4 | Services | 116-wizard-ssl.sh, 117-wizard-tailscale.sh, 121-wizard-features.sh | tailscale, ssl, firewall, security, monitoring, tools |
-| 5 | Access | 118-wizard-access.sh, 119-wizard-ssh.sh | admin_username, admin_password, ssh_key |
-| 6 | Disks | 120-wizard-disks.sh | disk detection and assignment |
+| 2 | Network | 113-wizard-network-bridge.sh, 114-wizard-network-ipv6.sh | interface, bridge_mode, private_subnet, ipv6, mtu, firewall |
+| 3 | Storage | 115-wizard-storage.sh, 120-wizard-disks.sh | wipe_disks, boot_disk, existing_pool, pool_disks, zfs_mode, zfs_arc |
+| 4 | Services | 116-wizard-ssl.sh, 117-wizard-tailscale.sh, 121-wizard-features.sh | tailscale, ssl, shell, power_profile, security, monitoring, tools |
+| 5 | Access | 118-wizard-access.sh, 119-wizard-ssh.sh | admin_username, admin_password, ssh_key, api_token |
 
 ## Adding a New Field
 

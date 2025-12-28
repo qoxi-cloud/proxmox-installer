@@ -310,7 +310,7 @@ graph LR
         AO[340-342 vnstat/promtail/netdata]
         AP[350-351 yazi/nvim]
         AQ[360-361 ssl/api-token]
-        AR[370-371 zfs/pool]
+        AR[370-372 zfs/pool/lvm]
         AS[380-381 finalize/phases]
     end
 
@@ -424,6 +424,7 @@ scripts/
 │   ├── 361-configure-api-token.sh # Proxmox API
 │   ├── 370-configure-zfs.sh       # ZFS ARC tuning
 │   ├── 371-configure-zfs-pool.sh  # Pool creation or import
+│   ├── 372-configure-lvm.sh       # LVM storage configuration
 │   ├── 380-configure-finalize.sh  # Validation, completion
 │   └── 381-configure-phases.sh    # Configuration phases
 │
@@ -653,7 +654,7 @@ spec/
 | 340-342   | Monitoring                                   |
 | 350-351   | Tools                                        |
 | 360-361   | SSL & API                                    |
-| 370-371   | Storage (ZFS)                                |
+| 370-372   | Storage (ZFS, LVM)                           |
 | 380-381   | Finalization                                 |
 | 900       | Main orchestrator                            |
 
