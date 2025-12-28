@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.662-pr.21"
+readonly VERSION="2.0.664-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -647,6 +647,13 @@ log "DEBUG: Original file exists: $([[ -f $file ]]&&echo yes||echo no), size: $(
 rm -f "$tmpfile"
 return 1
 fi
+if grep -qE '\{\{[A-Z0-9_]+\}\}' "$tmpfile" 2>/dev/null;then
+local remaining
+remaining=$(grep -oE '\{\{[A-Z0-9_]+\}\}' "$tmpfile" 2>/dev/null|sort -u|tr '\n' ' ')
+log "WARNING: Unsubstituted placeholders remain in $file: $remaining"
+rm -f "$tmpfile"
+return 1
+fi
 if ! mv "$tmpfile" "$file";then
 log "ERROR: Failed to replace $file with processed template"
 rm -f "$tmpfile"
@@ -655,12 +662,6 @@ fi
 local size_after
 size_after=$(wc -c <"$file" 2>/dev/null||echo "?")
 log "DEBUG: Finished $file ($size_after bytes)"
-fi
-if grep -qE '\{\{[A-Z0-9_]+\}\}' "$file" 2>/dev/null;then
-local remaining
-remaining=$(grep -oE '\{\{[A-Z0-9_]+\}\}' "$file" 2>/dev/null|sort -u|tr '\n' ' ')
-log "WARNING: Unsubstituted placeholders remain in $file: $remaining"
-return 1
 fi
 return 0
 }
@@ -980,8 +981,11 @@ _sanitize_script_for_log "$script" >>"$LOG_FILE"
 log "--- Script end ---"
 local passfile
 passfile=$(_ssh_get_passfile)
-local output_file
-output_file=$(mktemp)
+local output_file=""
+output_file=$(mktemp)||{
+log "ERROR: mktemp failed for output_file in _remote_exec_with_progress"
+return 1
+}
 register_temp_file "$output_file"
 local cmd_timeout="${SSH_COMMAND_TIMEOUT:-$SSH_DEFAULT_TIMEOUT}"
 printf '%s\n' "$script"|timeout "$cmd_timeout" sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'bash -s' >"$output_file" 2>&1&
@@ -1025,6 +1029,7 @@ log "ERROR: Failed to copy $src to $dst"
 exit 1
 fi) 200> \
 "$_SCP_LOCK_FILE"
+return $?
 }
 generate_password(){
 local length="${1:-16}"
@@ -1309,8 +1314,8 @@ local count=$i
 (while
 true
 do
-done_count=0
-for j in $(seq 0 $((count-1)));do
+local done_count=0
+for ((j=0; j<count; j++));do
 [[ -f "$result_dir/success_$j" || -f "$result_dir/fail_$j" ]]&&((done_count++))
 done
 [[ $done_count -eq $count ]]&&break
@@ -1326,7 +1331,7 @@ if [[ ${#configured[@]} -gt 0 ]];then
 log_subtasks "${configured[@]}"
 fi
 local failures=0
-for j in $(seq 0 $((count-1)));do
+for ((j=0; j<count; j++));do
 [[ -f "$result_dir/fail_$j" ]]&&((failures++))
 done
 rm -rf "$result_dir"
@@ -1845,7 +1850,7 @@ log "WARNING: No DNS lookup tool available (dig, host, or nslookup)"
 DNS_RESOLVED_IP=""
 return 1
 fi
-for attempt in $(seq 1 "$max_attempts");do
+for ((attempt=1; attempt<=max_attempts; attempt++));do
 resolved_ip=""
 for dns_server in "${DNS_SERVERS[@]}";do
 case "$dns_tool" in
@@ -2607,8 +2612,8 @@ local task_idx=$TASK_INDEX
 while kill -0 "$pid" 2>/dev/null;do
 sleep 0.3
 local dots_count=$((($(date +%s)%3)+1))
-local dots
-dots=$(printf '.%.0s' $(seq 1 $dots_count))
+local dots=""
+for ((d=0; d<dots_count; d++));do dots+=".";done
 LOG_LINES[task_idx]="$CLR_ORANGE├─$CLR_RESET $message$CLR_ORANGE$dots$CLR_RESET"
 render_logs
 done
@@ -4046,8 +4051,11 @@ _wiz_blank_line
 _wiz_dim "Domain: $CLR_ORANGE$FQDN$CLR_RESET"
 _wiz_dim "Expected IP: $CLR_ORANGE$MAIN_IPV4$CLR_RESET"
 _wiz_blank_line
-local dns_result_file
-dns_result_file=$(mktemp)
+local dns_result_file=""
+dns_result_file=$(mktemp)||{
+log "ERROR: mktemp failed for dns_result_file"
+return 1
+}
 register_temp_file "$dns_result_file"
 (validate_dns_resolution "$FQDN" "$MAIN_IPV4"
 printf '%s\n' "$?" >"$dns_result_file") > \
@@ -4057,8 +4065,8 @@ printf "%s" "${CLR_CYAN}Validating DNS resolution$CLR_RESET"
 while kill -0 "$dns_pid" 2>/dev/null;do
 sleep 0.3
 local dots_count=$((($(date +%s)%3)+1))
-local dots
-dots=$(printf '.%.0s' $(seq 1 $dots_count))
+local dots=""
+for ((d=0; d<dots_count; d++));do dots+=".";done
 printf "\r%sValidating DNS resolution%s%-3s%s" "$CLR_CYAN" "$CLR_ORANGE" "$dots" "$CLR_RESET"
 done
 wait "$dns_pid" 2>/dev/null
@@ -4774,8 +4782,11 @@ log "Template modification complete"
 }
 _download_templates_parallel(){
 local -a templates=("$@")
-local input_file
-input_file=$(mktemp)
+local input_file=""
+input_file=$(mktemp)||{
+log "ERROR: mktemp failed for aria2c input file"
+return 1
+}
 register_temp_file "$input_file"
 for entry in "${templates[@]}";do
 local local_path="${entry%%:*}"
@@ -5017,8 +5028,11 @@ expected_checksum=$(printf '%s\n' "$_CHECKSUM_CACHE"|grep "$ISO_FILENAME"|awk '{
 fi
 log "Expected checksum: ${expected_checksum:-not available}"
 log "Downloading ISO: $ISO_FILENAME"
-local method_file
-method_file=$(mktemp)
+local method_file=""
+method_file=$(mktemp)||{
+log "ERROR: mktemp failed for method_file"
+exit 1
+}
 register_temp_file "$method_file"
 _download_iso_with_fallback "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum" "$method_file"&
 show_progress $! "Downloading $ISO_FILENAME" "$ISO_FILENAME downloaded"
@@ -5231,7 +5245,10 @@ rm -f pve.iso
 }
 install_proxmox(){
 local qemu_config_file
-qemu_config_file=$(mktemp)
+qemu_config_file=$(mktemp)||{
+log "ERROR: Failed to create temp file for QEMU config"
+exit 1
+}
 register_temp_file "$qemu_config_file"
 (if
 ! setup_qemu_config
@@ -5638,10 +5655,21 @@ remote_run "Starting Tailscale" '
         true
     ' "Tailscale started"
 if [[ -n $TAILSCALE_AUTH_KEY ]];then
-local tmp_ip tmp_hostname tmp_result
-tmp_ip=$(mktemp)
-tmp_hostname=$(mktemp)
-tmp_result=$(mktemp)
+local tmp_ip="" tmp_hostname="" tmp_result=""
+tmp_ip=$(mktemp)||{
+log "ERROR: mktemp failed for tmp_ip"
+return 1
+}
+tmp_hostname=$(mktemp)||{
+rm -f "$tmp_ip"
+log "ERROR: mktemp failed for tmp_hostname"
+return 1
+}
+tmp_result=$(mktemp)||{
+rm -f "$tmp_ip" "$tmp_hostname"
+log "ERROR: mktemp failed for tmp_result"
+return 1
+}
 trap "rm -f '$tmp_ip' '$tmp_hostname' '$tmp_result'" RETURN
 (if
 remote_exec "tailscale up --authkey='$TAILSCALE_AUTH_KEY' --ssh"
@@ -6292,6 +6320,7 @@ if ! remote_run "Importing ZFS pool '$pool_name'" \
 log "ERROR: Failed to import ZFS pool '$pool_name'"
 return 1
 fi
+remote_exec "zpool set cachefile=/etc/zfs/zpool.cache '$pool_name'"||true
 if ! remote_run "Configuring Proxmox storage for '$pool_name'" '
     if zfs list "'"$pool_name"'/vm-disks" >/dev/null 2>&1; then ds="'"$pool_name"'/vm-disks"
     else ds=$(zfs list -H -o name -r "'"$pool_name"'" 2>/dev/null | grep -v "^'"$pool_name"'\$" | head -1)
@@ -6344,6 +6373,7 @@ if ! remote_run "Creating ZFS pool 'tank'" "
     zfs set atime=off tank
     zfs set xattr=sa tank
     zfs set dnodesize=auto tank
+    zpool set cachefile=/etc/zfs/zpool.cache tank
     zfs create tank/vm-disks
     pvesm add zfspool tank --pool tank/vm-disks --content images,rootdir
     pvesm set local --content iso,vztmpl,backup,snippets
@@ -6622,6 +6652,7 @@ log "ERROR: configure_zfs_pool failed"
 return 1
 }
 configure_zfs_scrub||{ log "WARNING: configure_zfs_scrub failed";}
+remote_exec "update-initramfs -u -k all"||log "WARNING: update-initramfs failed"
 }
 _phase_security_configuration(){
 batch_install_packages
@@ -6766,17 +6797,16 @@ reboot_to_main_os(){
 finish_live_installation
 _completion_screen_input
 }
-log "=========================================="
-log "Qoxi Automated Installer v$VERSION"
-log "=========================================="
-log "QEMU_RAM_OVERRIDE=$QEMU_RAM_OVERRIDE"
-log "QEMU_CORES_OVERRIDE=$QEMU_CORES_OVERRIDE"
-log "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
-log "SSL_TYPE=${SSL_TYPE:-self-signed}"
+log "==================== Qoxi Automated Installer v$VERSION ===================="
+log "QEMU_RAM_OVERRIDE=$QEMU_RAM_OVERRIDE QEMU_CORES_OVERRIDE=$QEMU_CORES_OVERRIDE"
+log "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription} SSL_TYPE=${SSL_TYPE:-self-signed}"
 metrics_start
 log "Step: collect_system_info"
 show_banner_animated_start 0.1
-SYSTEM_INFO_CACHE=$(mktemp)
+SYSTEM_INFO_CACHE=$(mktemp)||{
+log "ERROR: Failed to create temp file"
+exit 1
+}
 register_temp_file "$SYSTEM_INFO_CACHE"
 {
 collect_system_info
