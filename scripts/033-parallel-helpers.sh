@@ -55,7 +55,7 @@ batch_install_packages() {
   # Tools packages
   [[ $INSTALL_NVIM == "yes" ]] && packages+=(neovim)
   [[ $INSTALL_RINGBUFFER == "yes" ]] && packages+=(ethtool)
-  [[ $INSTALL_YAZI == "yes" ]] && packages+=(file unzip)
+  [[ $INSTALL_YAZI == "yes" ]] && packages+=(yazi ffmpeg 7zip jq poppler-utils fd-find ripgrep fzf zoxide imagemagick)
 
   # Tailscale (needs custom repo)
   [[ $INSTALL_TAILSCALE == "yes" ]] && packages+=(tailscale)
@@ -97,6 +97,14 @@ batch_install_packages() {
     repo_setup+='
       curl -fsSL https://apt.grafana.com/gpg.key | gpg --dearmor -o /usr/share/keyrings/grafana-archive-keyring.gpg
       echo "deb [signed-by=/usr/share/keyrings/grafana-archive-keyring.gpg] https://apt.grafana.com stable main" > /etc/apt/sources.list.d/grafana.list
+    '
+  fi
+
+  if [[ $INSTALL_YAZI == "yes" ]]; then
+    # shellcheck disable=SC2016
+    repo_setup+='
+      curl -fsSL https://debian.griffo.io/EA0F721D231FDD3A0A17B9AC7808B4DD62C41256.asc | gpg --dearmor --yes -o /etc/apt/trusted.gpg.d/debian.griffo.io.gpg
+      echo "deb https://debian.griffo.io/apt ${DEBIAN_CODENAME} main" > /etc/apt/sources.list.d/debian.griffo.io.list
     '
   fi
 
