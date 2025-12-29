@@ -5,17 +5,18 @@
 install_base_packages() {
   # shellcheck disable=SC2086
   local packages="${SYSTEM_UTILITIES} ${OPTIONAL_PACKAGES} locales chrony unattended-upgrades apt-listchanges linux-cpupower"
-
   # Add ZSH packages if needed
-  if [[ ${SHELL_TYPE:-bash} == "zsh" ]]; then
-    packages="$packages zsh git"
-  fi
-
+  [[ ${SHELL_TYPE:-bash} == "zsh" ]] && packages="$packages zsh git"
   log "Installing base packages: $packages"
-
   remote_run "Installing system packages" "
     set -e
     export DEBIAN_FRONTEND=noninteractive
+    # Wait for apt locks (max 5 min)
+    waited=0
+    while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock >/dev/null 2>&1; do
+      [ \$waited -ge 300 ] && { echo 'ERROR: Timeout waiting for apt lock' >&2; exit 1; }
+      sleep 2; waited=\$((waited + 2))
+    done
     apt-get update -qq
     apt-get dist-upgrade -yqq
     apt-get install -yqq $packages
@@ -25,7 +26,6 @@ install_base_packages() {
     pveupgrade 2>/dev/null || echo 'pveupgrade check skipped' >&2
     pveam update 2>/dev/null || echo 'pveam update skipped' >&2
   " "System packages installed"
-
   # Show installed packages as subtasks
   # shellcheck disable=SC2086
   log_subtasks $packages
@@ -34,7 +34,6 @@ install_base_packages() {
 # Collect and install all feature packages in one batch
 batch_install_packages() {
   local packages=()
-
   # Security packages
   [[ $INSTALL_FIREWALL == "yes" ]] && packages+=(nftables)
   if [[ $INSTALL_FIREWALL == "yes" && ${FIREWALL_MODE:-standard} != "stealth" ]]; then
@@ -46,23 +45,18 @@ batch_install_packages() {
   [[ $INSTALL_CHKROOTKIT == "yes" ]] && packages+=(chkrootkit binutils)
   [[ $INSTALL_LYNIS == "yes" ]] && packages+=(lynis)
   [[ $INSTALL_NEEDRESTART == "yes" ]] && packages+=(needrestart)
-
   # Monitoring packages
   [[ $INSTALL_VNSTAT == "yes" ]] && packages+=(vnstat)
   [[ $INSTALL_PROMTAIL == "yes" ]] && packages+=(promtail)
   [[ $INSTALL_NETDATA == "yes" ]] && packages+=(netdata)
-
   # Tools packages
   [[ $INSTALL_NVIM == "yes" ]] && packages+=(neovim)
   [[ $INSTALL_RINGBUFFER == "yes" ]] && packages+=(ethtool)
   [[ $INSTALL_YAZI == "yes" ]] && packages+=(yazi ffmpeg 7zip jq poppler-utils fd-find ripgrep fzf zoxide imagemagick)
-
   # Tailscale (needs custom repo)
   [[ $INSTALL_TAILSCALE == "yes" ]] && packages+=(tailscale)
-
   # SSL packages
   [[ ${SSL_TYPE:-self-signed} == "letsencrypt" ]] && packages+=(certbot)
-
   if [[ ${#packages[@]} -eq 0 ]]; then
     log "No optional packages to install"
     return 0
@@ -110,10 +104,16 @@ batch_install_packages() {
 
   # Use remote_run for reliable execution (pipes script to bash -s, better for long scripts)
   # remote_run exits on failure, so no need for error handling here
-  # shellcheck disable=SC2086
+  # shellcheck disable=SC2086,SC2016
   remote_run "Installing packages (${#packages[@]})" '
       set -e
       export DEBIAN_FRONTEND=noninteractive
+      # Wait for apt locks (max 5 min)
+      waited=0
+      while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock >/dev/null 2>&1; do
+        [ $waited -ge 300 ] && { echo "ERROR: Timeout waiting for apt lock" >&2; exit 1; }
+        sleep 2; waited=$((waited + 2))
+      done
       '"$repo_setup"'
       apt-get update -qq
       apt-get install -yqq '"${packages[*]}"'
