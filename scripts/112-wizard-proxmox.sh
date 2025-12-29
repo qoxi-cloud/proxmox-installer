@@ -57,9 +57,9 @@ _edit_repository() {
     return
   fi
 
-  # If enterprise selected, optionally ask for subscription key
+  # If enterprise selected, require subscription key
   if [[ $PVE_REPO_TYPE == "enterprise" ]]; then
-    _wiz_input_screen "Enter Proxmox subscription key (optional)"
+    _wiz_input_screen "Enter Proxmox subscription key"
 
     local sub_key
     sub_key=$(
@@ -70,6 +70,11 @@ _edit_repository() {
     )
 
     PVE_SUBSCRIPTION_KEY="$sub_key"
+
+    # If no key provided, fallback to no-subscription
+    if [[ -z $PVE_SUBSCRIPTION_KEY ]]; then
+      PVE_REPO_TYPE="no-subscription"
+    fi
   else
     # Clear subscription key if not enterprise
     PVE_SUBSCRIPTION_KEY=""
