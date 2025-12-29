@@ -77,7 +77,7 @@ _edit_repository() {
       _wiz_hide_cursor
       _wiz_warn "Enterprise repository requires subscription key"
       _wiz_warn "Switched to No-subscription repository"
-      sleep 2
+      sleep "${RETRY_DELAY_SECONDS:-2}"
     fi
   else
     # Clear subscription key if not enterprise
