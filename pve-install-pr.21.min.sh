@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.670-pr.21"
+readonly VERSION="2.0.671-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1185,13 +1185,17 @@ sleep "${WIZARD_MESSAGE_DELAY:-3}"
 }
 install_base_packages(){
 local packages="$SYSTEM_UTILITIES $OPTIONAL_PACKAGES locales chrony unattended-upgrades apt-listchanges linux-cpupower"
-if [[ ${SHELL_TYPE:-bash} == "zsh" ]];then
-packages="$packages zsh git"
-fi
+[[ ${SHELL_TYPE:-bash} == "zsh" ]]&&packages="$packages zsh git"
 log "Installing base packages: $packages"
 remote_run "Installing system packages" "
     set -e
     export DEBIAN_FRONTEND=noninteractive
+    # Wait for apt locks (max 5 min)
+    waited=0
+    while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock >/dev/null 2>&1; do
+      [ \$waited -ge 300 ] && { echo 'ERROR: Timeout waiting for apt lock' >&2; exit 1; }
+      sleep 2; waited=\$((waited + 2))
+    done
     apt-get update -qq
     apt-get dist-upgrade -yqq
     apt-get install -yqq $packages
@@ -1258,6 +1262,12 @@ fi
 remote_run "Installing packages (${#packages[@]})" '
       set -e
       export DEBIAN_FRONTEND=noninteractive
+      # Wait for apt locks (max 5 min)
+      waited=0
+      while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock >/dev/null 2>&1; do
+        [ $waited -ge 300 ] && { echo "ERROR: Timeout waiting for apt lock" >&2; exit 1; }
+        sleep 2; waited=$((waited + 2))
+      done
       '"$repo_setup"'
       apt-get update -qq
       apt-get install -yqq '"${packages[*]}"'
