@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.666-pr.21"
+readonly VERSION="2.0.667-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -5557,6 +5557,10 @@ _config_base_system(){
 run_with_progress "Copying configuration files" "Configuration files copied" _copy_config_files
 run_with_progress "Applying sysctl settings" "Sysctl settings applied" remote_exec "sysctl --system"
 run_with_progress "Applying basic system settings" "Basic system settings applied" _apply_basic_settings
+if [[ ${PVE_REPO_TYPE:-no-subscription} == "enterprise" ]]&&[[ -z $PVE_SUBSCRIPTION_KEY ]];then
+log "WARNING: Enterprise repository selected but no subscription key provided - falling back to no-subscription (safeguard)"
+PVE_REPO_TYPE="no-subscription"
+fi
 log "configure_base_system: PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
 if [[ ${PVE_REPO_TYPE:-no-subscription} == "enterprise" ]];then
 log "configure_base_system: configuring enterprise repository"
@@ -6832,6 +6836,12 @@ log_metric "system_info"
 log "Step: show_gum_config_editor"
 show_gum_config_editor
 log_metric "config_wizard"
+if [[ ${PVE_REPO_TYPE:-no-subscription} == "enterprise" ]]&&[[ -z $PVE_SUBSCRIPTION_KEY ]];then
+log "WARNING: Enterprise repository selected but no subscription key provided - falling back to no-subscription"
+print_warning "Enterprise repository requires subscription key" "Switching to no-subscription repository"
+PVE_REPO_TYPE="no-subscription"
+sleep 2
+fi
 start_live_installation
 log "Step: prepare_packages"
 prepare_packages
