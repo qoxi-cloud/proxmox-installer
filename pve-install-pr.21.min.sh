@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.669-pr.21"
+readonly VERSION="2.0.670-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -3625,6 +3625,7 @@ iso_list=$(get_available_proxmox_isos 5)
 if [[ -z $iso_list ]];then
 _wiz_hide_cursor
 _wiz_error "Failed to fetch ISO list"
+_wiz_blank_line
 sleep "${RETRY_DELAY_SECONDS:-2}"
 return
 fi
@@ -3662,6 +3663,7 @@ PVE_REPO_TYPE="no-subscription"
 _wiz_hide_cursor
 _wiz_warn "Enterprise repository requires subscription key"
 _wiz_warn "Switched to No-subscription repository"
+_wiz_blank_line
 sleep "${RETRY_DELAY_SECONDS:-2}"
 fi
 else
