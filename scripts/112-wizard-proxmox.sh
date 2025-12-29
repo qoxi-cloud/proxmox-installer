@@ -20,6 +20,7 @@ _edit_iso_version() {
   if [[ -z $iso_list ]]; then
     _wiz_hide_cursor
     _wiz_error "Failed to fetch ISO list"
+    _wiz_blank_line
     sleep "${RETRY_DELAY_SECONDS:-2}"
     return
   fi
@@ -77,6 +78,7 @@ _edit_repository() {
       _wiz_hide_cursor
       _wiz_warn "Enterprise repository requires subscription key"
       _wiz_warn "Switched to No-subscription repository"
+      _wiz_blank_line
       sleep "${RETRY_DELAY_SECONDS:-2}"
     fi
   else
