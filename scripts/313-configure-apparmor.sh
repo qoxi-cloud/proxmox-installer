@@ -9,10 +9,10 @@ _config_apparmor() {
   # Copy GRUB config (deploy_template creates parent dirs automatically)
   deploy_template "templates/apparmor-grub.cfg" "/etc/default/grub.d/apparmor.cfg"
 
-  # Update GRUB and enable AppArmor service (activates after reboot)
-  log "INFO: Updating GRUB and enabling AppArmor"
+  # Update boot config and enable AppArmor service (activates after reboot)
+  log "INFO: Updating boot configuration and enabling AppArmor"
   remote_exec '
-    update-grub
+    proxmox-boot-tool refresh
     systemctl enable --now apparmor.service
   ' >>"$LOG_FILE" 2>&1 || {
     log "ERROR: Failed to configure AppArmor"
