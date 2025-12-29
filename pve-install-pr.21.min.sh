@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.666-pr.21"
+readonly VERSION="2.0.668-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -3650,13 +3650,20 @@ if ! _wiz_choose_mapped "PVE_REPO_TYPE" "Repository:" \
 return
 fi
 if [[ $PVE_REPO_TYPE == "enterprise" ]];then
-_wiz_input_screen "Enter Proxmox subscription key (optional)"
+_wiz_input_screen "Enter Proxmox subscription key"
 local sub_key
 sub_key=$(_wiz_input \
 --placeholder "pve2c-..." \
 --value "$PVE_SUBSCRIPTION_KEY" \
 --prompt "Subscription Key: ")
 PVE_SUBSCRIPTION_KEY="$sub_key"
+if [[ -z $PVE_SUBSCRIPTION_KEY ]];then
+PVE_REPO_TYPE="no-subscription"
+_wiz_hide_cursor
+_wiz_warn "Enterprise repository requires subscription key"
+_wiz_warn "Switched to No-subscription repository"
+sleep 2
+fi
 else
 PVE_SUBSCRIPTION_KEY=""
 fi
