@@ -12,7 +12,11 @@ _config_apparmor() {
   # Update boot config and enable AppArmor service (activates after reboot)
   log "INFO: Updating boot configuration and enabling AppArmor"
   remote_exec '
-    proxmox-boot-tool refresh
+    if proxmox-boot-tool status &>/dev/null; then
+      proxmox-boot-tool refresh
+    else
+      update-grub
+    fi
     systemctl enable --now apparmor.service
   ' >>"$LOG_FILE" 2>&1 || {
     log "ERROR: Failed to configure AppArmor"
