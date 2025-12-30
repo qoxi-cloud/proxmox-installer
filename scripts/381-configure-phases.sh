@@ -29,6 +29,7 @@ _phase_storage_configuration() {
     log "ERROR: configure_zfs_pool failed"
     return 1
   }
+  configure_zfs_cachefile || { log "WARNING: configure_zfs_cachefile failed"; }
   configure_zfs_scrub || { log "WARNING: configure_zfs_scrub failed"; }
 
   # Update initramfs to include ZFS cachefile changes (prevents "cachefile import failed" on boot)

@@ -53,6 +53,40 @@ _config_zfs_arc() {
   log "INFO: ZFS ARC memory limit configured: ${arc_max_mb}MB"
 }
 
+# Fix ZFS cachefile import issues during boot
+
+# Private implementation - fixes cachefile import failures
+_config_zfs_cachefile() {
+  log "INFO: Configuring ZFS cachefile import fixes"
+
+  # 1. Create systemd drop-in to ensure devices are ready before import
+  remote_run "Creating systemd drop-in for zfs-import-cache.service" "
+    mkdir -p /etc/systemd/system/zfs-import-cache.service.d
+  " || return 1
+
+  deploy_template "templates/zfs-import-cache.service.d-override.conf" \
+    "/etc/systemd/system/zfs-import-cache.service.d/override.conf" || return 1
+
+  # 2. Install initramfs hook to include cachefile in initramfs
+  deploy_template "templates/zfs-cachefile-initramfs-hook" \
+    "/etc/initramfs-tools/hooks/zfs-cachefile" || return 1
+
+  remote_exec "chmod +x /etc/initramfs-tools/hooks/zfs-cachefile" || {
+    log "ERROR: Failed to make initramfs hook executable"
+    return 1
+  }
+
+  # 3. Regenerate cachefile for all existing pools
+  remote_run "Regenerating ZFS cachefile" "
+    rm -f /etc/zfs/zpool.cache
+    for pool in \$(zpool list -H -o name 2>/dev/null); do
+      zpool set cachefile=/etc/zfs/zpool.cache \"\$pool\"
+    done
+  " "ZFS cachefile regenerated"
+
+  log "INFO: ZFS cachefile import fixes configured"
+}
+
 # Configure ZFS scrub scheduling
 
 # Private implementation - configures ZFS scrub timers
@@ -93,6 +127,11 @@ _config_zfs_scrub() {
 # Public wrapper for ZFS ARC configuration
 configure_zfs_arc() {
   _config_zfs_arc
+}
+
+# Public wrapper for ZFS cachefile import fixes
+configure_zfs_cachefile() {
+  _config_zfs_cachefile
 }
 
 # Public wrapper for ZFS scrub scheduling

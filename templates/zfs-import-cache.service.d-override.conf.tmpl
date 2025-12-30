@@ -1,0 +1,15 @@
+# Override for zfs-import-cache.service to ensure devices are ready
+# Prevents "cachefile import failed, retrying" errors during boot
+
+[Unit]
+# Wait for all block devices to be ready before attempting import
+After=systemd-udev-settle.service
+Wants=systemd-udev-settle.service
+
+# Add dependency on local filesystem prep
+After=local-fs-pre.target
+Before=local-fs.target
+
+[Service]
+# Increase timeout to allow slow devices to become available
+TimeoutStartSec=180
