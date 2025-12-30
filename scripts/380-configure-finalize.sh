@@ -70,7 +70,9 @@ cleanup_installation_logs() {
     # Commented out - may cause issues with some services
     # : > /etc/machine-id
 
-    # Sync to ensure all writes are flushed
+    # Sync filesystems and unmount EFI partition to prevent dirty bit on next boot
+    sync
+    umount /boot/efi 2>/dev/null || true
     sync
   ' "Installation logs cleaned"
 }

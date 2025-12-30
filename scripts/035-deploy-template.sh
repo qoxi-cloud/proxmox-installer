@@ -99,6 +99,11 @@ deploy_systemd_timer() {
     return 1
   }
 
+  # Set proper permissions to avoid systemd warnings
+  remote_exec "chmod 644 /etc/systemd/system/${timer_name}.service /etc/systemd/system/${timer_name}.timer" || {
+    log "WARNING: Failed to set permissions on ${timer_name} unit files"
+  }
+
   remote_exec "systemctl daemon-reload && systemctl enable --now ${timer_name}.timer" || {
     log "ERROR: Failed to enable ${timer_name} timer"
     return 1
@@ -176,6 +181,11 @@ deploy_systemd_service() {
 
   # Deploy using common function
   deploy_template "$template" "$dest" "$@" || return 1
+
+  # Set proper permissions to avoid systemd warnings
+  remote_exec "chmod 644 '$dest'" || {
+    log "WARNING: Failed to set permissions on $dest"
+  }
 
   remote_enable_services "${service_name}.service"
 }
