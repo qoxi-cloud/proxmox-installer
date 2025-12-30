@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.674-pr.21"
+readonly VERSION="2.0.675-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -6069,7 +6069,11 @@ _config_apparmor(){
 deploy_template "templates/apparmor-grub.cfg" "/etc/default/grub.d/apparmor.cfg"
 log "INFO: Updating boot configuration and enabling AppArmor"
 remote_exec '
-    proxmox-boot-tool refresh
+    if proxmox-boot-tool status &>/dev/null; then
+      proxmox-boot-tool refresh
+    else
+      update-grub
+    fi
     systemctl enable --now apparmor.service
   ' >>"$LOG_FILE" 2>&1||{
 log "ERROR: Failed to configure AppArmor"
