@@ -1,6 +1,14 @@
 # shellcheck shell=bash
 # Parallel file operations and feature wrapper factory
 
+# Guard for functions that require ADMIN_USERNAME. $1=context (optional)
+require_admin_username() {
+  if [[ -z ${ADMIN_USERNAME:-} ]]; then
+    log "ERROR: ADMIN_USERNAME is empty${1:+, cannot $1}"
+    return 1
+  fi
+}
+
 # Copy multiple files to remote in parallel. $@="src:dst" pairs
 run_parallel_copies() {
   local -a pids=()

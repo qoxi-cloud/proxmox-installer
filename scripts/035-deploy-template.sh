@@ -4,6 +4,8 @@
 # Deploy config to admin home. Creates dirs, sets ownership, applies template vars.
 # $1=template, $2=relative_path (e.g. ".config/bat/config"), $@=VAR=value (optional)
 deploy_user_config() {
+  require_admin_username "deploy user config" || return 1
+
   local template="$1"
   local relative_path="$2"
   shift 2

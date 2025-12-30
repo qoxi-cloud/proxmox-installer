@@ -146,6 +146,7 @@ _config_base_system() {
 _config_shell() {
   # Configure default shell for admin user (root login is disabled)
   if [[ $SHELL_TYPE == "zsh" ]]; then
+    require_admin_username "configure shell" || return 1
     # Install Oh-My-Zsh for admin user
     # shellcheck disable=SC2016 # Single quotes intentional - executed on remote system
     remote_run "Installing Oh-My-Zsh" '

@@ -10,6 +10,8 @@
 # Disables root@pam in Proxmox UI for security.
 # Uses globals: ADMIN_USERNAME, ADMIN_PASSWORD, SSH_PUBLIC_KEY
 _config_admin_user() {
+  require_admin_username "create admin user" || return 1
+
   # Create user with home directory and bash shell, add to sudo group
   # shellcheck disable=SC2016
   remote_exec 'useradd -m -s /bin/bash -G sudo '"$ADMIN_USERNAME"'' || return 1
