@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.675-pr.21"
+readonly VERSION="2.0.678-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1479,6 +1479,9 @@ remote_copy "templates/$template_dir$timer_name.timer" \
 log "ERROR: Failed to deploy $timer_name timer"
 return 1
 }
+remote_exec "chmod 644 /etc/systemd/system/$timer_name.service /etc/systemd/system/$timer_name.timer"||{
+log "WARNING: Failed to set permissions on $timer_name unit files"
+}
 remote_exec "systemctl daemon-reload && systemctl enable --now $timer_name.timer"||{
 log "ERROR: Failed to enable $timer_name timer"
 return 1
@@ -1537,6 +1540,9 @@ shift
 local template="templates/$service_name.service"
 local dest="/etc/systemd/system/$service_name.service"
 deploy_template "$template" "$dest" "$@"||return 1
+remote_exec "chmod 644 '$dest'"||{
+log "WARNING: Failed to set permissions on $dest"
+}
 remote_enable_services "$service_name.service"
 }
 remote_enable_services(){
@@ -6317,6 +6323,27 @@ remote_run "Configuring ZFS ARC memory" "
   "
 log "INFO: ZFS ARC memory limit configured: ${arc_max_mb}MB"
 }
+_config_zfs_cachefile(){
+log "INFO: Configuring ZFS cachefile import fixes"
+remote_run "Creating systemd drop-in for zfs-import-cache.service" "
+    mkdir -p /etc/systemd/system/zfs-import-cache.service.d
+  "||return 1
+deploy_template "templates/zfs-import-cache.service.d-override.conf" \
+"/etc/systemd/system/zfs-import-cache.service.d/override.conf"||return 1
+deploy_template "templates/zfs-cachefile-initramfs-hook" \
+"/etc/initramfs-tools/hooks/zfs-cachefile"||return 1
+remote_exec "chmod +x /etc/initramfs-tools/hooks/zfs-cachefile"||{
+log "ERROR: Failed to make initramfs hook executable"
+return 1
+}
+remote_run "Regenerating ZFS cachefile" '
+    rm -f /etc/zfs/zpool.cache
+    for pool in $(zpool list -H -o name 2>/dev/null); do
+      zpool set cachefile=/etc/zfs/zpool.cache "$pool"
+    done
+  ' "ZFS cachefile regenerated"
+log "INFO: ZFS cachefile import fixes configured"
+}
 _config_zfs_scrub(){
 log "INFO: Configuring ZFS scrub schedule"
 remote_copy "templates/zfs-scrub.service" "/etc/systemd/system/zfs-scrub@.service"||{
@@ -6343,6 +6370,9 @@ log "INFO: ZFS scrub schedule configured (monthly, 1st Sunday at 2:00 AM)"
 configure_zfs_arc(){
 _config_zfs_arc
 }
+configure_zfs_cachefile(){
+_config_zfs_cachefile
+}
 configure_zfs_scrub(){
 _config_zfs_scrub
 }
@@ -6355,7 +6385,6 @@ if ! remote_run "Importing ZFS pool '$pool_name'" \
 log "ERROR: Failed to import ZFS pool '$pool_name'"
 return 1
 fi
-remote_exec "zpool set cachefile=/etc/zfs/zpool.cache '$pool_name'"||true
 if ! remote_run "Configuring Proxmox storage for '$pool_name'" '
     if zfs list "'"$pool_name"'/vm-disks" >/dev/null 2>&1; then ds="'"$pool_name"'/vm-disks"
     else ds=$(zfs list -H -o name -r "'"$pool_name"'" 2>/dev/null | grep -v "^'"$pool_name"'\$" | head -1)
@@ -6408,7 +6437,6 @@ if ! remote_run "Creating ZFS pool 'tank'" "
     zfs set atime=off tank
     zfs set xattr=sa tank
     zfs set dnodesize=auto tank
-    zpool set cachefile=/etc/zfs/zpool.cache tank
     zfs create tank/vm-disks
     pvesm add zfspool tank --pool tank/vm-disks --content images,rootdir
     pvesm set local --content iso,vztmpl,backup,snippets
@@ -6545,7 +6573,9 @@ remote_run "Cleaning up installation logs" '
     # Commented out - may cause issues with some services
     # : > /etc/machine-id
 
-    # Sync to ensure all writes are flushed
+    # Sync filesystems and unmount EFI partition to prevent dirty bit on next boot
+    sync
+    umount /boot/efi 2>/dev/null || true
     sync
   ' "Installation logs cleaned"
 }
@@ -6686,6 +6716,7 @@ configure_zfs_pool||{
 log "ERROR: configure_zfs_pool failed"
 return 1
 }
+configure_zfs_cachefile||{ log "WARNING: configure_zfs_cachefile failed";}
 configure_zfs_scrub||{ log "WARNING: configure_zfs_scrub failed";}
 log "INFO: Updating initramfs to include ZFS cachefile changes"
 remote_exec "update-initramfs -u -k all" >>"$LOG_FILE" 2>&1||log "WARNING: update-initramfs failed"
