@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.673-pr.21"
+readonly VERSION="2.0.674-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1358,6 +1358,12 @@ parallel_mark_configured(){
 local feature="$1"
 [[ -n ${PARALLEL_RESULT_DIR:-} ]]&&printf '%s' "$feature" >"$PARALLEL_RESULT_DIR/ran_$BASHPID"
 }
+require_admin_username(){
+if [[ -z ${ADMIN_USERNAME:-} ]];then
+log "ERROR: ADMIN_USERNAME is empty${1:+, cannot $1}"
+return 1
+fi
+}
 run_parallel_copies(){
 local -a pids=()
 local -a pairs=("$@")
@@ -1400,6 +1406,7 @@ local expected_value="$3"
 eval "configure_$feature() { [[ \${$var_name:-} != \"$expected_value\" ]] && return 0; _config_$feature; }"
 }
 deploy_user_config(){
+require_admin_username "deploy user config"||return 1
 local template="$1"
 local relative_path="$2"
 shift 2
@@ -5621,6 +5628,7 @@ run_with_progress "Configuring bat" "Bat configured" _configure_bat
 }
 _config_shell(){
 if [[ $SHELL_TYPE == "zsh" ]];then
+require_admin_username "configure shell"||return 1
 remote_run "Installing Oh-My-Zsh" '
             set -e
             export RUNZSH=no
@@ -5751,6 +5759,7 @@ configure_tailscale(){
 _config_tailscale
 }
 _config_admin_user(){
+require_admin_username "create admin user"||return 1
 remote_exec 'useradd -m -s /bin/bash -G sudo '"$ADMIN_USERNAME"''||return 1
 local encoded_creds
 encoded_creds=$(printf '%s:%s' "$ADMIN_USERNAME" "$ADMIN_PASSWORD"|base64)
