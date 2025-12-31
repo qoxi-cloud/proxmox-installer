@@ -54,7 +54,8 @@ validate_smtp_host() {
   [[ -z $host ]] && return 1
   # Accept: hostname, FQDN, IPv4, or IPv6
   # Relaxed: alphanumeric, dots, hyphens, colons (IPv6), brackets
-  [[ $host =~ ^[a-zA-Z0-9.\[\]:-]+$ ]] && [[ ${#host} -le 253 ]]
+  # Note: ] must be first in class, - must be last for literal matching
+  [[ $host =~ ^[][a-zA-Z0-9.:-]+$ ]] && [[ ${#host} -le 253 ]]
 }
 
 # Validate SMTP port (1-65535). $1=port
