@@ -80,7 +80,13 @@ _check_kvm() {
     else
       modprobe kvm_intel 2>/dev/null || modprobe kvm_amd 2>/dev/null || true
     fi
-    sleep 0.5
+
+    # Wait for /dev/kvm to appear (up to 3 seconds)
+    local retries=6
+    while [[ ! -e /dev/kvm && $retries -gt 0 ]]; do
+      sleep 0.5
+      ((retries--))
+    done
   fi
 
   if [[ -e /dev/kvm ]]; then
