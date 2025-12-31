@@ -8,7 +8,7 @@ _copy_config_files() {
   # Create journald config directory if it doesn't exist
   remote_exec "mkdir -p /etc/systemd/journald.conf.d" || return 1
 
-  run_parallel_copies \
+  run_batch_copies \
     "templates/hosts:/etc/hosts" \
     "templates/interfaces:/etc/network/interfaces" \
     "templates/99-proxmox.conf:/etc/sysctl.d/99-proxmox.conf" \

@@ -9,8 +9,9 @@ require_admin_username() {
   fi
 }
 
-# Copy multiple files to remote in parallel. $@="src:dst" pairs
-run_parallel_copies() {
+# Copy multiple files to remote with error aggregation. $@="src:dst" pairs
+# Note: Copies are serialized due to ControlMaster socket locking
+run_batch_copies() {
   local -a pids=()
   local -a pairs=("$@")
 
