@@ -74,14 +74,14 @@ _render_completion_screen() {
       ;;
   esac
 
-  # API Token (if created)
-  if [[ -f /tmp/pve-install-api-token.env ]]; then
+  # API Token (if created) - uses centralized path constant from 003-init.sh
+  if [[ -f "$_TEMP_API_TOKEN_FILE" ]]; then
     # Validate file contains only expected API token variables (defense in depth)
-    if grep -qvE '^API_TOKEN_(VALUE|ID|NAME)=' /tmp/pve-install-api-token.env; then
+    if grep -qvE '^API_TOKEN_(VALUE|ID|NAME)=' "$_TEMP_API_TOKEN_FILE"; then
       log "ERROR: API token file contains unexpected content"
     else
-      # shellcheck disable=SC1091
-      source /tmp/pve-install-api-token.env
+      # shellcheck disable=SC1090,SC1091
+      source "$_TEMP_API_TOKEN_FILE"
     fi
 
     if [[ -n $API_TOKEN_VALUE ]]; then

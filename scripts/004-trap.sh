@@ -12,41 +12,34 @@ register_temp_file() {
 
 # Clean up temp files, secure delete secrets
 cleanup_temp_files() {
-  # Clean up registered temp files (from register_temp_file)
-  for f in "${_TEMP_FILES[@]}"; do
-    [[ -f "$f" ]] && rm -f "$f"
-  done
-
   # Use INSTALL_DIR with fallback for early cleanup calls
   local install_dir="${INSTALL_DIR:-${HOME:-/root}}"
 
-  # Current session PID for scoped cleanup (only delete our own files)
-  local pid="$$"
-
   # Secure delete files containing secrets (API token, root password)
+  # These are handled specially before registered files to ensure secure deletion
   # secure_delete_file is defined in 012-utils.sh, check if available
   if type secure_delete_file &>/dev/null; then
-    secure_delete_file /tmp/pve-install-api-token.env
+    # API token file (uses centralized constant from 003-init.sh)
+    [[ -n "${_TEMP_API_TOKEN_FILE:-}" ]] && secure_delete_file "$_TEMP_API_TOKEN_FILE"
     secure_delete_file "${install_dir}/answer.toml"
-    # Secure delete password files - only current session (PID-scoped)
-    secure_delete_file "/dev/shm/pve-ssh-session.${pid}"
-    secure_delete_file "/tmp/pve-ssh-session.${pid}"
-    # Legacy passfile patterns (also PID-scoped)
-    secure_delete_file "/dev/shm/pve-passfile.${pid}"
-    secure_delete_file "/tmp/pve-passfile.${pid}"
   else
     # Fallback if secure_delete_file not yet loaded (early exit)
-    rm -f /tmp/pve-install-api-token.env 2>/dev/null || true
+    [[ -n "${_TEMP_API_TOKEN_FILE:-}" ]] && rm -f "$_TEMP_API_TOKEN_FILE" 2>/dev/null || true
     rm -f "${install_dir}/answer.toml" 2>/dev/null || true
-    rm -f "/dev/shm/pve-ssh-session.${pid}" "/tmp/pve-ssh-session.${pid}" 2>/dev/null || true
-    rm -f "/dev/shm/pve-passfile.${pid}" "/tmp/pve-passfile.${pid}" 2>/dev/null || true
   fi
 
-  # Clean up standard temporary files (non-sensitive, PID-scoped where applicable)
-  rm -f /tmp/tailscale_*.txt /tmp/iso_checksum.txt /tmp/*.tmp 2>/dev/null || true
-
-  # Clean up SSH control socket and SCP lock file (current session only)
-  rm -f "/tmp/ssh-pve-control.${pid}" "/tmp/pve-scp-lock.${pid}" 2>/dev/null || true
+  # Clean up registered temp files (from register_temp_file)
+  # This handles: SSH passfile, SSH control socket, SCP lock file, and any mktemp files
+  for f in "${_TEMP_FILES[@]}"; do
+    if [[ -f "$f" ]] || [[ -S "$f" ]]; then
+      # Use secure delete for passfile (contains password)
+      if [[ "$f" == *"pve-ssh-session"* ]] && type secure_delete_file &>/dev/null; then
+        secure_delete_file "$f"
+      else
+        rm -f "$f" 2>/dev/null || true
+      fi
+    fi
+  done
 
   # Clean up ISO and installation files (only if installation failed)
   if [[ $INSTALL_COMPLETED != "true" ]]; then

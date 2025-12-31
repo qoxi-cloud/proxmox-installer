@@ -155,3 +155,20 @@ ADMIN_PASSWORD="" # Admin password for sudo/Proxmox UI (required)
 #   standard - SSH + Proxmox Web UI (ports 22, 8006)
 INSTALL_FIREWALL="" # Enable nftables firewall (yes/no)
 FIREWALL_MODE=""    # stealth, strict, standard
+
+# --- Temp File Paths ---
+# Centralized temp file path constants (PID-scoped for session isolation)
+# All paths use $$ to ensure subshells share parent session's files
+# Files are registered with register_temp_file() at creation time
+#
+# Pattern: Use _TEMP_* for internal paths, register at creation
+#   _TEMP_API_TOKEN_FILE - API token credentials (secure delete)
+#   _TEMP_SSH_CONTROL_PATH - SSH ControlMaster socket
+#   _TEMP_SCP_LOCK_FILE - SCP serialization lock
+#   _TEMP_SSH_PASSFILE_DIR - SSH password file directory (/dev/shm or /tmp)
+#
+# Note: SSH passfile uses dynamic path via _ssh_passfile_path() in 021-ssh.sh
+
+_TEMP_API_TOKEN_FILE="/tmp/pve-install-api-token.$$.env"
+_TEMP_SSH_CONTROL_PATH="/tmp/ssh-pve-control.$$"
+_TEMP_SCP_LOCK_FILE="/tmp/pve-scp-lock.$$"

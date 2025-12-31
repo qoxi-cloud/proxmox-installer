@@ -47,14 +47,16 @@ create_api_token() {
   API_TOKEN_ID="${ADMIN_USERNAME}@pam!${API_TOKEN_NAME}"
 
   # Save to temp file for display after installation (restricted permissions)
+  # Uses centralized path constant from 003-init.sh, registered for cleanup
   (
     umask 0077
-    cat >/tmp/pve-install-api-token.env <<EOF
+    cat >"$_TEMP_API_TOKEN_FILE" <<EOF
 API_TOKEN_VALUE=$token_value
 API_TOKEN_ID=$API_TOKEN_ID
 API_TOKEN_NAME=$API_TOKEN_NAME
 EOF
   )
+  register_temp_file "$_TEMP_API_TOKEN_FILE"
 
   log "INFO: API token created successfully: ${API_TOKEN_ID}"
   return 0

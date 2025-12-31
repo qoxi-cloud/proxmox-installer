@@ -2,12 +2,12 @@
 # SSH helper functions - Session management and connection
 # ControlMaster multiplexes all connections over single TCP socket
 
-# Control socket path (uses $$ so subshells share master connection)
-_SSH_CONTROL_PATH="/tmp/ssh-pve-control.$$"
+# Control socket path - uses centralized constant from 003-init.sh
+# $_TEMP_SSH_CONTROL_PATH is PID-scoped so subshells share master connection
 
 # SSH options for QEMU VM - host key checking disabled (local/ephemeral)
 # Includes keepalive settings: ServerAliveInterval=30s, ServerAliveCountMax=3 (90s before disconnect)
-SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=${SSH_CONNECT_TIMEOUT:-10} -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ControlMaster=auto -o ControlPath=${_SSH_CONTROL_PATH} -o ControlPersist=300"
+SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=${SSH_CONNECT_TIMEOUT:-10} -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ControlMaster=auto -o ControlPath=${_TEMP_SSH_CONTROL_PATH} -o ControlPersist=300"
 SSH_PORT="${SSH_PORT_QEMU:-5555}"
 
 # Session passfile (created once, path uses $$ for subshell sharing)
@@ -41,8 +41,10 @@ _ssh_session_init() {
   chmod 600 "$passfile_path"
   _SSH_SESSION_PASSFILE="$passfile_path"
 
-  # Log once from main shell (cleanup handled by cleanup_and_error_handler in 000-init.sh)
+  # Register temp files for cleanup (once from main shell)
   if [[ $BASHPID == "$$" ]] && [[ $_SSH_SESSION_LOGGED != true ]]; then
+    register_temp_file "$passfile_path"
+    register_temp_file "$_TEMP_SSH_CONTROL_PATH"
     log "SSH session initialized: $passfile_path"
     _SSH_SESSION_LOGGED=true
   fi
@@ -50,12 +52,11 @@ _ssh_session_init() {
 
 # Cleans up SSH control master socket (graceful close)
 _ssh_control_cleanup() {
-  local control_path="/tmp/ssh-pve-control.$$"
-  if [[ -S "$control_path" ]]; then
+  if [[ -S "$_TEMP_SSH_CONTROL_PATH" ]]; then
     # Gracefully close master connection
-    ssh -o ControlPath="$control_path" -O exit root@localhost 2>/dev/null || true
-    rm -f "$control_path" 2>/dev/null || true
-    log "SSH control socket cleaned up: $control_path"
+    ssh -o ControlPath="$_TEMP_SSH_CONTROL_PATH" -O exit root@localhost 2>/dev/null || true
+    rm -f "$_TEMP_SSH_CONTROL_PATH" 2>/dev/null || true
+    log "SSH control socket cleaned up: $_TEMP_SSH_CONTROL_PATH"
   fi
 }
 
