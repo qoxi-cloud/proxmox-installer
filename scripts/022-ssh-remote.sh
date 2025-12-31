@@ -99,12 +99,14 @@ _remote_exec_with_progress() {
   local exit_code=$?
 
   # Check output for critical errors (exclude package names like liberror-perl)
-  # Use word boundaries and exclude common false positives from apt output
+  # Use word boundaries and exclude common false positives from apt/installer output
+  # Known harmless: grub-probe ZFS warnings, USB device detection in QEMU VM
+  local exclude_pattern='(lib.*error|error-perl|\.deb|Unpacking|Setting up|Selecting|grub-probe|/sys/bus/usb|bInterface)'
   if grep -iE '\b(error|failed|cannot|unable|fatal)\b' "$output_file" 2>/dev/null \
-    | grep -qivE '(lib.*error|error-perl|\.deb|Unpacking|Setting up|Selecting)'; then
+    | grep -qivE "$exclude_pattern"; then
     log "WARNING: Potential errors in remote command output:"
     grep -iE '\b(error|failed|cannot|unable|fatal)\b' "$output_file" 2>/dev/null \
-      | grep -ivE '(lib.*error|error-perl|\.deb|Unpacking|Setting up|Selecting)' >>"$LOG_FILE" || true
+      | grep -ivE "$exclude_pattern" >>"$LOG_FILE" || true
   fi
 
   cat "$output_file" >>"$LOG_FILE"
