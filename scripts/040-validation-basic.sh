@@ -71,7 +71,8 @@ validate_not_empty() {
 
 # Check if string is ASCII printable. $1=string
 is_ascii_printable() {
-  LC_ALL=C bash -c '[[ "$1" =~ ^[[:print:]]+$ ]]' _ "$1"
+  local LC_ALL=C
+  [[ $1 =~ ^[[:print:]]+$ ]]
 }
 
 # Get password error message (empty if valid). $1=password → error_msg
