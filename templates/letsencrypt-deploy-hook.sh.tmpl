@@ -1,7 +1,9 @@
 #!/bin/bash
 # Deploy renewed certificate to Proxmox
 # Find first certificate directory (excluding README)
+CERT_FOUND=false
 for dir in /etc/letsencrypt/live/*/; do
+    [[ -d "$dir" ]] || continue
     DOMAIN=$(basename "$dir")
     if [[ "$DOMAIN" != "README" ]]; then
         FULLCHAIN="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
@@ -22,6 +24,12 @@ for dir in /etc/letsencrypt/live/*/; do
         chmod 640 /etc/pve/local/pveproxy-ssl.pem
         chmod 600 /etc/pve/local/pveproxy-ssl.key
         systemctl restart pveproxy
+        CERT_FOUND=true
         break
     fi
 done
+
+if [[ "$CERT_FOUND" != "true" ]]; then
+    echo "ERROR: No valid certificate directories found in /etc/letsencrypt/live/"
+    exit 1
+fi
