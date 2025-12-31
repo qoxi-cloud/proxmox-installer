@@ -13,6 +13,11 @@ _modify_template_files() {
   fi
   generate_interfaces_file "./templates/interfaces" || return 1
   apply_common_template_vars "./templates/resolv.conf" || return 1
+  # Add IPv6 DNS entries only if IPv6 is configured (prevents invalid nameserver lines)
+  if [[ ${IPV6_MODE:-} != "disabled" ]]; then
+    printf 'nameserver %s\n' "${DNS6_PRIMARY:-2606:4700:4700::1111}" >>"./templates/resolv.conf"
+    printf 'nameserver %s\n' "${DNS6_SECONDARY:-2606:4700:4700::1001}" >>"./templates/resolv.conf"
+  fi
   apply_template_vars "./templates/cpupower.service" "CPU_GOVERNOR=${CPU_GOVERNOR:-performance}" || return 1
   # Locale templates - substitute {{LOCALE}} with actual locale value
   apply_common_template_vars "./templates/locale.sh" || return 1
