@@ -70,9 +70,9 @@ apply_template_vars() {
 
     # Check for unsubstituted placeholders BEFORE replacing the original file
     # This prevents deploying broken configs if caller ignores return code
-    if grep -qE '\{\{[A-Z0-9_]+\}\}' "$tmpfile" 2>/dev/null; then
+    if grep -qE '\{\{[A-Za-z0-9_]+\}\}' "$tmpfile" 2>/dev/null; then
       local remaining
-      remaining=$(grep -oE '\{\{[A-Z0-9_]+\}\}' "$tmpfile" 2>/dev/null | sort -u | tr '\n' ' ')
+      remaining=$(grep -oE '\{\{[A-Za-z0-9_]+\}\}' "$tmpfile" 2>/dev/null | sort -u | tr '\n' ' ')
       log "WARNING: Unsubstituted placeholders remain in $file: $remaining"
       rm -f "$tmpfile"
       return 1
