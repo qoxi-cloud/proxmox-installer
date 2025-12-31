@@ -24,7 +24,9 @@ cleanup_temp_files() {
     secure_delete_file "${install_dir}/answer.toml"
   else
     # Fallback if secure_delete_file not yet loaded (early exit)
-    [[ -n "${_TEMP_API_TOKEN_FILE:-}" ]] && rm -f "$_TEMP_API_TOKEN_FILE" 2>/dev/null || true
+    if [[ -n "${_TEMP_API_TOKEN_FILE:-}" ]]; then
+      rm -f "$_TEMP_API_TOKEN_FILE" 2>/dev/null || true
+    fi
     rm -f "${install_dir}/answer.toml" 2>/dev/null || true
   fi
 
