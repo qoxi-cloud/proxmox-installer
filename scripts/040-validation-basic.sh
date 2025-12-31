@@ -48,6 +48,26 @@ validate_email() {
   [[ $email =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]
 }
 
+# Validate SMTP host (hostname, FQDN, or IP). $1=host
+validate_smtp_host() {
+  local host="$1"
+  [[ -z $host ]] && return 1
+  # Accept: hostname, FQDN, IPv4, or IPv6
+  # Relaxed: alphanumeric, dots, hyphens, colons (IPv6), brackets
+  [[ $host =~ ^[a-zA-Z0-9.\[\]:-]+$ ]] && [[ ${#host} -le 253 ]]
+}
+
+# Validate SMTP port (1-65535). $1=port
+validate_smtp_port() {
+  local port="$1"
+  [[ $port =~ ^[0-9]+$ ]] && ((port >= 1 && port <= 65535))
+}
+
+# Validate non-empty string. $1=string
+validate_not_empty() {
+  [[ -n $1 ]]
+}
+
 # Check if string is ASCII printable. $1=string
 is_ascii_printable() {
   LC_ALL=C bash -c '[[ "$1" =~ ^[[:print:]]+$ ]]' _ "$1"

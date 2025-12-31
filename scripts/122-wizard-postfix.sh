@@ -12,44 +12,34 @@ _postfix_configure_relay() {
     "  Common providers: Gmail, Mailgun, SendGrid, AWS SES" \
     ""
 
-  _show_input_footer
-
   # SMTP Host
-  local host
-  host=$(_wiz_input \
+  _wiz_input_validated "SMTP_RELAY_HOST" "validate_smtp_host" \
+    "Invalid host. Enter hostname, FQDN, or IP address." \
     --placeholder "smtp.example.com" \
     --value "${SMTP_RELAY_HOST:-smtp.gmail.com}" \
-    --prompt "SMTP Host: ")
-  [[ -z $host ]] && return 1
-  SMTP_RELAY_HOST="$host"
+    --prompt "SMTP Host: " || return 1
 
   # SMTP Port
-  local port
-  port=$(_wiz_input \
+  _wiz_input_validated "SMTP_RELAY_PORT" "validate_smtp_port" \
+    "Invalid port. Enter a number between 1 and 65535." \
     --placeholder "587" \
     --value "${SMTP_RELAY_PORT:-587}" \
-    --prompt "SMTP Port: ")
-  [[ -z $port ]] && return 1
-  SMTP_RELAY_PORT="$port"
+    --prompt "SMTP Port: " || return 1
 
-  # Username
-  local user
-  user=$(_wiz_input \
+  # Username (email format)
+  _wiz_input_validated "SMTP_RELAY_USER" "validate_email" \
+    "Invalid email format." \
     --placeholder "user@example.com" \
     --value "${SMTP_RELAY_USER}" \
-    --prompt "Username: ")
-  [[ -z $user ]] && return 1
-  SMTP_RELAY_USER="$user"
+    --prompt "Username: " || return 1
 
-  # Password
-  local pass
-  pass=$(_wiz_input \
+  # Password (non-empty)
+  _wiz_input_validated "SMTP_RELAY_PASSWORD" "validate_not_empty" \
+    "Password cannot be empty." \
     --password \
     --placeholder "App password or API key" \
     --value "${SMTP_RELAY_PASSWORD}" \
-    --prompt "Password: ")
-  [[ -z $pass ]] && return 1
-  SMTP_RELAY_PASSWORD="$pass"
+    --prompt "Password: " || return 1
 
   return 0
 }
