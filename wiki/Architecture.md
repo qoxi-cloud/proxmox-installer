@@ -21,7 +21,7 @@ This project is a bash automation framework that installs Proxmox VE on dedicate
 
 1. **Initialization** (000-007) - Load colors, constants, parse CLI args, setup logging
 2. **System Check** (050-056) - Verify requirements (root, RAM, disk, KVM), detect hardware
-3. **Wizard** (100-121) - Interactive configuration via TUI
+3. **Wizard** (100-122) - Interactive configuration via TUI
 4. **QEMU Setup** (200-208) - Download ISO, launch VM, wait for SSH
 5. **Installation** (200-208) - Proxmox auto-install via templates
 6. **Configuration** (300-381) - Deploy configs, install packages, harden
@@ -103,7 +103,7 @@ flowchart TD
         AH --> AI[run_parallel_group<br/>Security features]
         
         AJ --> AK[run_parallel_group<br/>Monitoring]
-        AK --> AL[340-342: vnstat/promtail/netdata]
+        AK --> AL[340-343: vnstat/promtail/netdata/postfix]
         
         AL --> AM[run_parallel_group<br/>Tools]
         AM --> AN[350-351: Yazi/Nvim]
@@ -148,7 +148,7 @@ sequenceDiagram
     participant WizNav as 102-wizard-nav.sh
     participant WizMenu as 103-wizard-menu.sh
     participant WizUI as 101-wizard-ui.sh
-    participant Editors as 110-121 wizard editors
+    participant Editors as 110-122 wizard editors
     participant Gum as gum (TUI)
     participant Terminal
 
@@ -287,7 +287,7 @@ graph LR
         AD[103-wizard-menu]
         AD2[104-wizard-display]
         AD3[105-106-wizard-helpers]
-        AE[110-121 editors]
+        AE[110-122 editors]
     end
 
     subgraph "200-208 Installation"
@@ -307,7 +307,7 @@ graph LR
         AL[310-313 firewall-rules/firewall/fail2ban/apparmor]
         AM[320-324 audit/aide/chkrootkit/lynis/needrestart]
         AN[330 ringbuffer]
-        AO[340-342 vnstat/promtail/netdata]
+        AO[340-343 vnstat/promtail/netdata/postfix]
         AP[350-351 yazi/nvim]
         AQ[360-361 ssl/api-token]
         AR[370-372 zfs/pool/lvm]
@@ -387,7 +387,8 @@ scripts/
 │   ├── 118-wizard-access.sh  # Admin user, API token
 │   ├── 119-wizard-ssh.sh     # SSH key editor
 │   ├── 120-wizard-disks.sh   # Disk detection
-│   └── 121-wizard-features.sh# Optional features selection
+│   ├── 121-wizard-features.sh# Optional features selection
+│   └── 122-wizard-postfix.sh # Postfix mail relay
 │
 ├── 200-208: Installation Layer
 │   ├── 200-packages.sh    # Repo setup, package installation
@@ -418,6 +419,7 @@ scripts/
 │   ├── 340-configure-vnstat.sh    # Bandwidth monitoring
 │   ├── 341-configure-promtail.sh  # Log collector
 │   ├── 342-configure-netdata.sh   # Real-time monitoring
+│   ├── 343-configure-postfix.sh   # Mail relay
 │   ├── 350-configure-yazi.sh      # File manager
 │   ├── 351-configure-nvim.sh      # Editor
 │   ├── 360-configure-ssl.sh       # Certificates
@@ -645,13 +647,13 @@ spec/
 | 040-043   | Validation (basic, network, dns, security)   |
 | 050-056   | System detection (packages, preflight, network, drives, status, live-logs) |
 | 100-106   | Wizard core (main logic, UI, nav, menu, display, helpers) |
-| 110-121   | Wizard editors (screens)                     |
+| 110-122   | Wizard editors (screens, postfix)            |
 | 200-208   | Installation (packages, QEMU, templates, ISO, autoinstall, disk wipe) |
 | 300-303   | Base configuration                           |
 | 310-313   | Security - Firewall & access control         |
 | 320-324   | Security - Auditing & integrity              |
 | 330       | Network & performance (ringbuffer)           |
-| 340-342   | Monitoring                                   |
+| 340-343   | Monitoring & Mail (postfix)                  |
 | 350-351   | Tools                                        |
 | 360-361   | SSL & API                                    |
 | 370-372   | Storage (ZFS, LVM)                           |

@@ -17,13 +17,13 @@ The project is a modular bash framework. Individual scripts in `scripts/` are co
 | **040-043** | Validation: basic, network, dns, security |
 | **050-056** | System: packages, preflight, network, drives, wizard-data, status, live-logs |
 | **100-104** | Wizard: core, ui, navigation, menu, display |
-| **110-121** | Wizard: editors (locale, basic, proxmox, network, storage, ssl, tailscale, access, ssh, disks, features) |
+| **110-122** | Wizard: editors (locale, basic, proxmox, network, storage, ssl, tailscale, access, ssh, disks, features, postfix) |
 | **200-208** | Installation: packages, QEMU config/release, templates, ISO download, autoinstall, qemu-install, disk-wipe |
 | **300-303** | Configuration: base, tailscale, admin user, services |
 | **310-313** | Security: firewall-rules, firewall, fail2ban, apparmor |
 | **320-324** | Security: auditd, aide, chkrootkit, lynis, needrestart |
 | **330** | Network: ringbuffer tuning |
-| **340-342** | Monitoring: vnstat, promtail, netdata |
+| **340-343** | Monitoring & Mail: vnstat, promtail, netdata, postfix |
 | **350-351** | Tools: yazi, nvim |
 | **360-361** | SSL & API token |
 | **370-372** | Storage: ZFS ARC, pool creation/import, LVM |

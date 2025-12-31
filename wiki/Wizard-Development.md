@@ -10,7 +10,7 @@ Guide for extending and modifying the configuration wizard.
 102-wizard-nav.sh    # Screen switching, navigation state
 103-wizard-menu.sh   # Menu building, field mapping
 104-wizard-display.sh# Display value formatters
-110-121-wizard-*.sh  # Screen-specific editors
+110-122-wizard-*.sh  # Screen-specific editors
 ```
 
 ## Screen Structure

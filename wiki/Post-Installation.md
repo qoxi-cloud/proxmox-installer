@@ -44,6 +44,7 @@ Installed based on wizard selections:
 | `needrestart` | Security feature selected |
 | `vnstat` | Monitoring feature selected |
 | `promtail` | Monitoring feature selected |
+| `postfix` | Postfix mail relay enabled |
 | `yazi` | Tool selected |
 | `neovim` | Tool selected |
 
@@ -279,6 +280,42 @@ systemctl status promtail
 
 # View logs
 journalctl -u promtail -f
+```
+
+### Postfix Mail Relay (When Enabled)
+
+Outgoing mail via external SMTP relay:
+
+- Configured for port 587 (submission) with TLS
+- SASL authentication with provided credentials
+- Listens only on localhost (loopback-only)
+
+```bash
+# Check status
+systemctl status postfix
+
+# Test sending mail
+echo "Test message" | mail -s "Test" user@example.com
+
+# View mail queue
+mailq
+
+# View logs
+journalctl -u postfix -f
+tail -f /var/log/mail.log
+```
+
+**Troubleshooting:**
+
+```bash
+# Check relay configuration
+postconf relayhost
+
+# Test SMTP connection
+openssl s_client -connect smtp.gmail.com:587 -starttls smtp
+
+# Flush stuck mail queue
+postqueue -f
 ```
 
 ---

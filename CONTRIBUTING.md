@@ -63,7 +63,7 @@ proxmox-installer/
 | 040-043 | Validation (basic, network, dns, security)        |
 | 050-056 | System detection (packages, preflight, network, drives, wizard-data, status, live-logs) |
 | 100-106 | Wizard core (main loop, UI, nav, menu, display, helpers) |
-| 110-121 | Wizard editors (screens)                          |
+| 110-122 | Wizard editors (screens, postfix)                 |
 | 200-208 | Installation (packages, QEMU, templates, ISO, autoinstall, disk-wipe) |
 | 300-381 | Configuration (base, security, monitoring, finalize, phases) |
 | 900     | Main orchestrator                                 |
@@ -215,7 +215,7 @@ Changes:
 | Prefix | Location | Purpose |
 |--------|----------|---------|
 | `_wiz_` | 101-wizard-ui.sh | Wizard UI helpers |
-| `_edit_` | 110-121 wizard editors | Field editors |
+| `_edit_` | 110-122 wizard editors | Field editors |
 | `print_` | 010-display.sh | User messages |
 | `validate_` | 040-043-validation-*.sh | Input validation |
 | `remote_` | 022-ssh-remote.sh | Remote execution |

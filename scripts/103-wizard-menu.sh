@@ -43,6 +43,10 @@ _wiz_config_complete() {
   [[ $INSTALL_TAILSCALE != "yes" && -z $SSL_TYPE ]] && return 1
   # Stealth firewall requires Tailscale
   [[ $FIREWALL_MODE == "stealth" && $INSTALL_TAILSCALE != "yes" ]] && return 1
+  # Postfix requires SMTP relay settings when enabled
+  if [[ $INSTALL_POSTFIX == "yes" ]]; then
+    [[ -z $SMTP_RELAY_HOST || -z $SMTP_RELAY_USER || -z $SMTP_RELAY_PASSWORD ]] && return 1
+  fi
   return 0
 }
 
@@ -99,6 +103,7 @@ _wiz_render_screen_content() {
       if [[ $INSTALL_TAILSCALE != "yes" ]]; then
         _add_field "SSL Certificate  " "$(_wiz_fmt "$_DSP_SSL")" "ssl"
       fi
+      _add_field "Postfix          " "$(_wiz_fmt "$_DSP_POSTFIX")" "postfix"
       _add_field "Shell            " "$(_wiz_fmt "$_DSP_SHELL")" "shell"
       _add_field "Power profile    " "$(_wiz_fmt "$_DSP_POWER")" "power_profile"
       _add_field "Security         " "$(_wiz_fmt "$_DSP_SECURITY")" "security"

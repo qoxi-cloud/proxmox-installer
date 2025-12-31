@@ -64,6 +64,7 @@ _wizard_main() {
           zfs_arc) _edit_zfs_arc ;;
           tailscale) _edit_tailscale ;;
           ssl) _edit_ssl ;;
+          postfix) _edit_postfix ;;
           shell) _edit_shell ;;
           power_profile) _edit_power_profile ;;
           security) _edit_features_security ;;
@@ -169,6 +170,10 @@ _validate_config() {
   [[ -z $SSH_PUBLIC_KEY ]] && missing_fields+=("SSH Key")
   [[ $INSTALL_TAILSCALE != "yes" && -z $SSL_TYPE ]] && missing_fields+=("SSL Certificate")
   [[ $FIREWALL_MODE == "stealth" && $INSTALL_TAILSCALE != "yes" ]] && missing_fields+=("Tailscale (required for Stealth firewall)")
+  # Postfix requires SMTP relay settings when enabled
+  if [[ $INSTALL_POSTFIX == "yes" ]]; then
+    [[ -z $SMTP_RELAY_HOST || -z $SMTP_RELAY_USER || -z $SMTP_RELAY_PASSWORD ]] && missing_fields+=("Postfix SMTP relay settings")
+  fi
 
   # Show error with missing fields
   if [[ ${#missing_fields[@]} -gt 0 ]]; then

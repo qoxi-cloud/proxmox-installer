@@ -583,6 +583,29 @@ configure_lvm_storage
 
 ---
 
+## Postfix Functions (`343-configure-postfix.sh`)
+
+### configure_postfix
+
+Configures Postfix mail relay or disables the service based on `INSTALL_POSTFIX` flag.
+
+```bash
+configure_postfix
+```
+
+**Behavior:**
+- If `INSTALL_POSTFIX == "yes"` and relay configured: deploys main.cf, creates SASL password file, restarts Postfix
+- If `INSTALL_POSTFIX == "no"`: stops and disables Postfix service
+- If `INSTALL_POSTFIX` empty: leaves Postfix unchanged (default state)
+
+**Required variables (when enabled):**
+- `SMTP_RELAY_HOST` - SMTP server (e.g., smtp.gmail.com)
+- `SMTP_RELAY_PORT` - Port (default: 587)
+- `SMTP_RELAY_USER` - Authentication username
+- `SMTP_RELAY_PASSWORD` - App password or API key
+
+---
+
 ## Disk Wipe Functions (`208-disk-wipe.sh`)
 
 ### wipe_installation_disks

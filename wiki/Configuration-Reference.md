@@ -151,6 +151,18 @@ All settings are configured through the interactive wizard. This reference docum
 
 > **Note:** SSL selection only shown when Tailscale is disabled. Tailscale provides its own HTTPS.
 
+#### Postfix Mail Relay
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| Postfix | Enable/disable Postfix mail relay | Disabled |
+| SMTP Host | Relay server (e.g., smtp.gmail.com) | Required if enabled |
+| SMTP Port | Relay port | 587 |
+| Username | SMTP authentication username | Required if enabled |
+| Password | SMTP app password or API key | Required if enabled |
+
+> **Note:** Most hosting providers block port 25. Use port 587 (submission) with SMTP relay for outgoing mail. Common providers: Gmail, Mailgun, SendGrid, AWS SES.
+
 #### Shell
 
 | Option | Description |

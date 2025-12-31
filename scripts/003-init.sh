@@ -115,6 +115,14 @@ INSTALL_TAILSCALE=""  # Enable Tailscale VPN
 TAILSCALE_AUTH_KEY="" # Pre-auth key for automatic login
 TAILSCALE_WEBUI=""    # Expose Proxmox UI via Tailscale Serve (yes/no)
 
+# --- Postfix Mail ---
+# Set: Wizard (121-wizard-features.sh)
+INSTALL_POSTFIX=""     # Enable Postfix mail relay (yes/no)
+SMTP_RELAY_HOST=""     # SMTP relay server (e.g., smtp.gmail.com)
+SMTP_RELAY_PORT=""     # SMTP relay port (default: 587)
+SMTP_RELAY_USER=""     # SMTP authentication username
+SMTP_RELAY_PASSWORD="" # SMTP authentication password
+
 # --- Network Settings ---
 # Set: Wizard (112-wizard-network.sh)
 BRIDGE_MTU="" # Bridge MTU: 9000 (jumbo) or 1500 (standard)

@@ -85,7 +85,8 @@ _phase_monitoring_tools() {
     configure_promtail \
     configure_vnstat \
     configure_ringbuffer \
-    configure_nvim
+    configure_nvim \
+    configure_postfix
 
   # Wait for special installers
   wait "$special_pid" 2>/dev/null || true

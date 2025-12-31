@@ -161,6 +161,17 @@ _dsp_services() {
   _DSP_SSL=""
   [[ -n $SSL_TYPE ]] && _DSP_SSL=$(_dsp_lookup "ssl" "$SSL_TYPE")
 
+  _DSP_POSTFIX=""
+  if [[ -n $INSTALL_POSTFIX ]]; then
+    if [[ $INSTALL_POSTFIX == "yes" && -n $SMTP_RELAY_HOST ]]; then
+      _DSP_POSTFIX="Relay: ${SMTP_RELAY_HOST}:${SMTP_RELAY_PORT:-587}"
+    elif [[ $INSTALL_POSTFIX == "yes" ]]; then
+      _DSP_POSTFIX="Enabled (no relay)"
+    else
+      _DSP_POSTFIX="Disabled"
+    fi
+  fi
+
   _DSP_SHELL=""
   [[ -n $SHELL_TYPE ]] && _DSP_SHELL=$(_dsp_lookup "shell" "$SHELL_TYPE")
 
