@@ -149,7 +149,7 @@ show_banner_animated_start() {
 
     # Redirect any stray output to /dev/null
     exec 3>&1
-    exec 1>/dev/tty
+    [[ -c /dev/tty ]] && exec 1>/dev/tty
     exec 2>/dev/null
 
     while true; do
