@@ -1,6 +1,12 @@
 # shellcheck shell=bash
 # Disk wipe functions - clean disks before installation
 
+# Escape string for use in regex patterns. $1=string
+_escape_regex() {
+  # shellcheck disable=SC2016 # \& is literal sed replacement, not expansion
+  printf '%s' "$1" | sed 's/[[\.*^$(){}?+|]/\\&/g'
+}
+
 # Get disks to wipe based on installation mode.
 # - USE_EXISTING_POOL=yes: only boot disk (preserve pool)
 # - BOOT_DISK set + new pool: boot + pool disks
@@ -30,8 +36,9 @@ _get_disks_to_wipe() {
 # Destroy ZFS pools on disk. $1=disk
 _wipe_zfs_on_disk() {
   local disk="$1"
-  local disk_name
+  local disk_name escaped_disk_name
   disk_name=$(basename "$disk")
+  escaped_disk_name=$(_escape_regex "$disk_name")
 
   cmd_exists zpool || return 0
 
@@ -42,7 +49,7 @@ _wipe_zfs_on_disk() {
   while IFS= read -r pool; do
     [[ -z $pool ]] && continue
     # Check if pool uses this disk
-    if zpool status "$pool" 2>/dev/null | grep -qE "(^|[[:space:]])${disk_name}([p0-9]*)?([[:space:]]|$)"; then
+    if zpool status "$pool" 2>/dev/null | grep -qE "(^|[[:space:]])${escaped_disk_name}([p0-9]*)?([[:space:]]|$)"; then
       pools_to_destroy+=("$pool")
     fi
   done < <(zpool list -H -o name 2>/dev/null)
@@ -66,7 +73,7 @@ _wipe_zfs_on_disk() {
         fi
         current_pool="${BASH_REMATCH[1]}"
         pool_has_disk=false
-      elif [[ $line =~ $disk_name ]]; then
+      elif [[ $line =~ $escaped_disk_name ]]; then
         pool_has_disk=true
       fi
     done <<<"$import_output"
@@ -130,15 +137,16 @@ _wipe_lvm_on_disk() {
 # Stop mdadm arrays on disk. $1=disk
 _wipe_mdadm_on_disk() {
   local disk="$1"
-  local disk_name
+  local disk_name escaped_disk_name
   disk_name=$(basename "$disk")
+  escaped_disk_name=$(_escape_regex "$disk_name")
 
   cmd_exists mdadm || return 0
 
   # Find arrays using this disk
   while IFS= read -r md; do
     [[ -z $md ]] && continue
-    if mdadm --detail "$md" 2>/dev/null | grep -q "$disk_name"; then
+    if mdadm --detail "$md" 2>/dev/null | grep -q "$escaped_disk_name"; then
       log "Stopping mdadm array: $md (contains $disk)"
       mdadm --stop "$md" 2>/dev/null || true
     fi
