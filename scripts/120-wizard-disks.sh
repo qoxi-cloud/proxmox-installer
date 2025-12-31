@@ -77,6 +77,13 @@ _edit_pool_disks() {
     # Build options (exclude boot if set) and preselected items
     local options=""
     local preselected=()
+
+    # Build lookup set from current pool disks for O(1) membership check
+    local -A pool_disk_set=()
+    for pool_disk in "${ZFS_POOL_DISKS[@]}"; do
+      pool_disk_set["$pool_disk"]=1
+    done
+
     for i in "${!DRIVES[@]}"; do
       if [[ -z $BOOT_DISK || ${DRIVES[$i]} != "$BOOT_DISK" ]]; then
         local disk_name="${DRIVE_NAMES[$i]}"
@@ -86,13 +93,8 @@ _edit_pool_disks() {
         [[ -n $options ]] && options+=$'\n'
         options+="${disk_label}"
 
-        # Check if this disk is already in pool
-        for pool_disk in "${ZFS_POOL_DISKS[@]}"; do
-          if [[ $pool_disk == "/dev/${disk_name}" ]]; then
-            preselected+=("$disk_label")
-            break
-          fi
-        done
+        # O(1) lookup instead of O(n) inner loop
+        [[ -v pool_disk_set["/dev/${disk_name}"] ]] && preselected+=("$disk_label")
       fi
     done
 
