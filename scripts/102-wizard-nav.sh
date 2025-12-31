@@ -148,7 +148,7 @@ _wiz_read_key() {
 
   # Handle escape sequences (arrow keys)
   if [[ $key == $'\x1b' ]]; then
-    read -rsn2 -t 0.1 key
+    read -rsn2 -t 0.5 key
     case "$key" in
       '[A') WIZ_KEY="up" ;;
       '[B') WIZ_KEY="down" ;;
