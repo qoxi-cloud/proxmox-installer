@@ -76,12 +76,12 @@ _install_required_packages() {
     [gum]="gum"
   )
 
-  local packages_to_install=""
+  local packages_to_install=()
   local need_charm_repo=false
 
   for cmd in "${!required_commands[@]}"; do
     if ! cmd_exists "$cmd"; then
-      packages_to_install+=" ${required_commands[$cmd]}"
+      packages_to_install+=("${required_commands[$cmd]}")
       [[ $cmd == "gum" ]] && need_charm_repo=true
     fi
   done
@@ -92,10 +92,9 @@ _install_required_packages() {
     printf '%s\n' "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" >/etc/apt/sources.list.d/charm.list 2>/dev/null
   fi
 
-  if [[ -n $packages_to_install ]]; then
+  if [[ ${#packages_to_install[@]} -gt 0 ]]; then
     apt-get update -qq >/dev/null 2>&1
-    # shellcheck disable=SC2086
-    DEBIAN_FRONTEND=noninteractive apt-get install -qq -y $packages_to_install >/dev/null 2>&1
+    DEBIAN_FRONTEND=noninteractive apt-get install -qq -y "${packages_to_install[@]}" >/dev/null 2>&1
   fi
 
   # Install ZFS for pool detection (needed for existing pool feature)

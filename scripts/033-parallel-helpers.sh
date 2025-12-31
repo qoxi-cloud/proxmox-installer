@@ -3,11 +3,11 @@
 
 # Install all base system packages in one batch
 install_base_packages() {
-  # shellcheck disable=SC2086
-  local packages="${SYSTEM_UTILITIES} ${OPTIONAL_PACKAGES} locales chrony unattended-upgrades apt-listchanges linux-cpupower"
+  # shellcheck disable=SC2206
+  local packages=(${SYSTEM_UTILITIES} ${OPTIONAL_PACKAGES} locales chrony unattended-upgrades apt-listchanges linux-cpupower)
   # Add ZSH packages if needed
-  [[ ${SHELL_TYPE:-bash} == "zsh" ]] && packages="$packages zsh git"
-  log "Installing base packages: $packages"
+  [[ ${SHELL_TYPE:-bash} == "zsh" ]] && packages+=(zsh git)
+  log "Installing base packages: ${packages[*]}"
   remote_run "Installing system packages" "
     set -e
     export DEBIAN_FRONTEND=noninteractive
@@ -19,7 +19,7 @@ install_base_packages() {
     done
     apt-get update -qq
     apt-get dist-upgrade -yqq
-    apt-get install -yqq $packages
+    apt-get install -yqq ${packages[*]}
     apt-get autoremove -yqq
     apt-get clean
     set +e
@@ -27,8 +27,7 @@ install_base_packages() {
     pveam update 2>/dev/null || echo 'pveam update skipped' >&2
   " "System packages installed"
   # Show installed packages as subtasks
-  # shellcheck disable=SC2086
-  log_subtasks $packages
+  log_subtasks "${packages[@]}"
 }
 
 # Collect and install all feature packages in one batch
