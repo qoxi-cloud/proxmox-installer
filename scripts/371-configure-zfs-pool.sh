@@ -77,11 +77,17 @@ _config_create_new_pool() {
   fi
   log "INFO: ZFS pool command: $pool_cmd"
 
+  # Validate command format before execution (defensive check)
+  if [[ $pool_cmd != zpool\ create* ]]; then
+    log "ERROR: Invalid pool command format: $pool_cmd"
+    return 1
+  fi
+
   # Create pool, set properties, configure Proxmox storage
   # Use set -e to fail on ANY error (prevents silent failures)
   if ! remote_run "Creating ZFS pool 'tank'" "
     set -e
-    $pool_cmd
+    ${pool_cmd}
     zfs set compression=lz4 tank
     zfs set atime=off tank
     zfs set xattr=sa tank
