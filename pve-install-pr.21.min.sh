@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.754-pr.21"
+readonly VERSION="2.0.755-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -3276,9 +3276,9 @@ fi
 _add_field "Postfix          " "$(_wiz_fmt "$_DSP_POSTFIX")" "postfix"
 _add_field "Shell            " "$(_wiz_fmt "$_DSP_SHELL")" "shell"
 _add_field "Power profile    " "$(_wiz_fmt "$_DSP_POWER")" "power_profile"
-_add_field "Security         " "$(_wiz_fmt "$_DSP_SECURITY")" "security"
-_add_field "Monitoring       " "$(_wiz_fmt "$_DSP_MONITORING")" "monitoring"
-_add_field "Tools            " "$(_wiz_fmt "$_DSP_TOOLS")" "tools"
+_add_field "Security         " "$(_wiz_fmt "$_DSP_SECURITY")" "features_security"
+_add_field "Monitoring       " "$(_wiz_fmt "$_DSP_MONITORING")" "features_monitoring"
+_add_field "Tools            " "$(_wiz_fmt "$_DSP_TOOLS")" "features_tools"
 ;;
 5)_add_field "Admin User       " "$(_wiz_fmt "$_DSP_ADMIN_USER")" "admin_username"
 _add_field "Admin Password   " "$(_wiz_fmt "$_DSP_ADMIN_PASS")" "admin_password"
