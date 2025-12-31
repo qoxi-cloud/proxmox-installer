@@ -63,13 +63,21 @@ _dsp_lookup() {
 
 # Display value formatters (grouped by screen)
 
+# Escape backslashes for safe printf %b display. $1=value
+_dsp_escape() {
+  printf '%s' "${1//\\/\\\\}"
+}
+
 # Formats Basic screen values: hostname, password
 _dsp_basic() {
   _DSP_PASS=""
   [[ -n $NEW_ROOT_PASSWORD ]] && _DSP_PASS="********"
 
   _DSP_HOSTNAME=""
-  [[ -n $PVE_HOSTNAME && -n $DOMAIN_SUFFIX ]] && _DSP_HOSTNAME="${PVE_HOSTNAME}.${DOMAIN_SUFFIX}"
+  if [[ -n $PVE_HOSTNAME && -n $DOMAIN_SUFFIX ]]; then
+    # Escape user values to prevent printf %b interpretation
+    _DSP_HOSTNAME="$(_dsp_escape "$PVE_HOSTNAME").$(_dsp_escape "$DOMAIN_SUFFIX")"
+  fi
 }
 
 # Formats Proxmox screen values: repository, ISO version
@@ -87,7 +95,9 @@ _dsp_network() {
   if [[ -n $IPV6_MODE ]]; then
     _DSP_IPV6=$(_dsp_lookup "ipv6" "$IPV6_MODE")
     # Special case: manual mode shows address details
-    [[ $IPV6_MODE == "manual" && -n $MAIN_IPV6 ]] && _DSP_IPV6+=" (${MAIN_IPV6}, gw: ${IPV6_GATEWAY})"
+    if [[ $IPV6_MODE == "manual" && -n $MAIN_IPV6 ]]; then
+      _DSP_IPV6+=" ($(_dsp_escape "$MAIN_IPV6"), gw: $(_dsp_escape "$IPV6_GATEWAY"))"
+    fi
   fi
 
   _DSP_BRIDGE=""
@@ -111,7 +121,7 @@ _dsp_storage() {
   # Existing pool mode
   _DSP_EXISTING_POOL=""
   if [[ $USE_EXISTING_POOL == "yes" && -n $EXISTING_POOL_NAME ]]; then
-    _DSP_EXISTING_POOL="Use: ${EXISTING_POOL_NAME} (${#EXISTING_POOL_DISKS[@]} disks)"
+    _DSP_EXISTING_POOL="Use: $(_dsp_escape "$EXISTING_POOL_NAME") (${#EXISTING_POOL_DISKS[@]} disks)"
   else
     _DSP_EXISTING_POOL="Create new"
   fi
@@ -164,7 +174,7 @@ _dsp_services() {
   _DSP_POSTFIX=""
   if [[ -n $INSTALL_POSTFIX ]]; then
     if [[ $INSTALL_POSTFIX == "yes" && -n $SMTP_RELAY_HOST ]]; then
-      _DSP_POSTFIX="Relay: ${SMTP_RELAY_HOST}:${SMTP_RELAY_PORT:-587}"
+      _DSP_POSTFIX="Relay: $(_dsp_escape "$SMTP_RELAY_HOST"):$(_dsp_escape "${SMTP_RELAY_PORT:-587}")"
     elif [[ $INSTALL_POSTFIX == "yes" ]]; then
       _DSP_POSTFIX="Enabled (no relay)"
     else
@@ -207,18 +217,18 @@ _dsp_services() {
 # Formats Access screen values: admin user, SSH key, API token
 _dsp_access() {
   _DSP_ADMIN_USER=""
-  [[ -n $ADMIN_USERNAME ]] && _DSP_ADMIN_USER="$ADMIN_USERNAME"
+  [[ -n $ADMIN_USERNAME ]] && _DSP_ADMIN_USER="$(_dsp_escape "$ADMIN_USERNAME")"
 
   _DSP_ADMIN_PASS=""
   [[ -n $ADMIN_PASSWORD ]] && _DSP_ADMIN_PASS="********"
 
   _DSP_SSH=""
-  [[ -n $SSH_PUBLIC_KEY ]] && _DSP_SSH="${SSH_PUBLIC_KEY:0:20}..."
+  [[ -n $SSH_PUBLIC_KEY ]] && _DSP_SSH="$(_dsp_escape "${SSH_PUBLIC_KEY:0:20}")..."
 
   _DSP_API=""
   if [[ -n $INSTALL_API_TOKEN ]]; then
     case "$INSTALL_API_TOKEN" in
-      yes) _DSP_API="Yes (${API_TOKEN_NAME})" ;;
+      yes) _DSP_API="Yes ($(_dsp_escape "$API_TOKEN_NAME"))" ;;
       no) _DSP_API="No" ;;
     esac
   fi
