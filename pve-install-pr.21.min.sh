@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.753-pr.21"
+readonly VERSION="2.0.754-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1369,7 +1369,7 @@ log "ERROR: ADMIN_USERNAME is empty${1:+, cannot $1}"
 return 1
 fi
 }
-run_parallel_copies(){
+run_batch_copies(){
 local -a pids=()
 local -a pairs=("$@")
 for pair in "${pairs[@]}";do
@@ -5799,7 +5799,7 @@ log "Disk wipe complete"
 }
 _copy_config_files(){
 remote_exec "mkdir -p /etc/systemd/journald.conf.d"||return 1
-run_parallel_copies \
+run_batch_copies \
 "templates/hosts:/etc/hosts" \
 "templates/interfaces:/etc/network/interfaces" \
 "templates/99-proxmox.conf:/etc/sysctl.d/99-proxmox.conf" \
