@@ -115,6 +115,7 @@ _wizard_main() {
 _show_input_footer() {
   local type="${1:-input}"
   local component_lines="${2:-1}"
+  local -r footer_fixed_lines=2 # 1 blank line + 1 footer line
 
   # Print empty lines for component space
   local i
@@ -138,8 +139,8 @@ _show_input_footer() {
   esac
   printf '%s\n' "$(_wiz_center "$footer_text")"
 
-  # Move cursor back up: component_lines + 1 blank + 1 footer
-  tput cuu $((component_lines + 2))
+  # Move cursor back up: component_lines + fixed footer lines
+  tput cuu $((component_lines + footer_fixed_lines))
 }
 
 # Configuration validation
