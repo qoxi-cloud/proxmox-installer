@@ -45,13 +45,17 @@ deploy_user_config() {
     local dirs_to_chown=""
     local dir="$dest_dir"
     while [[ "$dir" != "$home_dir" && "$dir" != "/" ]]; do
-      dirs_to_chown+="'$dir' "
+      # Escape single quotes in path for safe shell quoting
+      local escaped_dir="${dir//\'/\'\\\'\'}"
+      dirs_to_chown+="'$escaped_dir' "
       dir="$(dirname "$dir")"
     done
-    remote_exec "chown ${ADMIN_USERNAME}:${ADMIN_USERNAME} ${dirs_to_chown}" || {
-      log "ERROR: Failed to set ownership on ${dirs_to_chown}"
-      rm -f "$staged"
-      return 1
+    [[ -n $dirs_to_chown ]] && {
+      remote_exec "chown ${ADMIN_USERNAME}:${ADMIN_USERNAME} $dirs_to_chown" || {
+        log "ERROR: Failed to set ownership on $dirs_to_chown"
+        rm -f "$staged"
+        return 1
+      }
     }
   fi
 
