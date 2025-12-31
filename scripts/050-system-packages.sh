@@ -72,6 +72,7 @@ _install_required_packages() {
     [aria2c]="aria2"
     [findmnt]="util-linux"
     [gpg]="gnupg"
+    [xargs]="findutils"
     [gum]="gum"
   )
 
