@@ -2801,11 +2801,8 @@ fi
 ;;
 enter)_wiz_show_cursor
 local field_name="${_WIZ_FIELD_MAP[$selection]:-}"
-local editor_func="_edit_$field_name"
 if [[ -z $field_name ]];then
 log "WARNING: No field mapped for selection $selection"
-elif ! declare -F "$editor_func" >/dev/null 2>&1;then
-log "WARNING: Editor function $editor_func not found for field $field_name"
 else
 case "$field_name" in
 hostname)_edit_hostname;;
@@ -3276,9 +3273,9 @@ fi
 _add_field "Postfix          " "$(_wiz_fmt "$_DSP_POSTFIX")" "postfix"
 _add_field "Shell            " "$(_wiz_fmt "$_DSP_SHELL")" "shell"
 _add_field "Power profile    " "$(_wiz_fmt "$_DSP_POWER")" "power_profile"
-_add_field "Security         " "$(_wiz_fmt "$_DSP_SECURITY")" "features_security"
-_add_field "Monitoring       " "$(_wiz_fmt "$_DSP_MONITORING")" "features_monitoring"
-_add_field "Tools            " "$(_wiz_fmt "$_DSP_TOOLS")" "features_tools"
+_add_field "Security         " "$(_wiz_fmt "$_DSP_SECURITY")" "security"
+_add_field "Monitoring       " "$(_wiz_fmt "$_DSP_MONITORING")" "monitoring"
+_add_field "Tools            " "$(_wiz_fmt "$_DSP_TOOLS")" "tools"
 ;;
 5)_add_field "Admin User       " "$(_wiz_fmt "$_DSP_ADMIN_USER")" "admin_username"
 _add_field "Admin Password   " "$(_wiz_fmt "$_DSP_ADMIN_PASS")" "admin_password"
