@@ -24,7 +24,7 @@ _configure_cpu_governor() {
   remote_exec "
     systemctl daemon-reload
     systemctl enable --now cpupower.service
-    cpupower frequency-set -g '$governor' 2>/dev/null || true
+    cpupower frequency-set -g \"$governor\" 2>/dev/null || true
   " || return 1
 }
 
