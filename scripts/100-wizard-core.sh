@@ -40,41 +40,50 @@ _wizard_main() {
         # Show cursor for edit screens
         _wiz_show_cursor
         # Edit selected field based on field map
-        local field_name="${_WIZ_FIELD_MAP[$selection]}"
-        case "$field_name" in
-          hostname) _edit_hostname ;;
-          email) _edit_email ;;
-          password) _edit_password ;;
-          timezone) _edit_timezone ;;
-          keyboard) _edit_keyboard ;;
-          country) _edit_country ;;
-          iso_version) _edit_iso_version ;;
-          repository) _edit_repository ;;
-          interface) _edit_interface ;;
-          bridge_mode) _edit_bridge_mode ;;
-          private_subnet) _edit_private_subnet ;;
-          bridge_mtu) _edit_bridge_mtu ;;
-          ipv6) _edit_ipv6 ;;
-          firewall) _edit_firewall ;;
-          boot_disk) _edit_boot_disk ;;
-          wipe_disks) _edit_wipe_disks ;;
-          existing_pool) _edit_existing_pool ;;
-          pool_disks) _edit_pool_disks ;;
-          zfs_mode) _edit_zfs_mode ;;
-          zfs_arc) _edit_zfs_arc ;;
-          tailscale) _edit_tailscale ;;
-          ssl) _edit_ssl ;;
-          postfix) _edit_postfix ;;
-          shell) _edit_shell ;;
-          power_profile) _edit_power_profile ;;
-          security) _edit_features_security ;;
-          monitoring) _edit_features_monitoring ;;
-          tools) _edit_features_tools ;;
-          api_token) _edit_api_token ;;
-          admin_username) _edit_admin_username ;;
-          admin_password) _edit_admin_password ;;
-          ssh_key) _edit_ssh_key ;;
-        esac
+        local field_name="${_WIZ_FIELD_MAP[$selection]:-}"
+        local editor_func="_edit_${field_name}"
+        # Skip if field name empty or editor function doesn't exist
+        if [[ -z $field_name ]]; then
+          log "WARNING: No field mapped for selection $selection"
+        elif ! declare -F "$editor_func" >/dev/null 2>&1; then
+          log "WARNING: Editor function $editor_func not found for field $field_name"
+        else
+          case "$field_name" in
+            hostname) _edit_hostname ;;
+            email) _edit_email ;;
+            password) _edit_password ;;
+            timezone) _edit_timezone ;;
+            keyboard) _edit_keyboard ;;
+            country) _edit_country ;;
+            iso_version) _edit_iso_version ;;
+            repository) _edit_repository ;;
+            interface) _edit_interface ;;
+            bridge_mode) _edit_bridge_mode ;;
+            private_subnet) _edit_private_subnet ;;
+            bridge_mtu) _edit_bridge_mtu ;;
+            ipv6) _edit_ipv6 ;;
+            firewall) _edit_firewall ;;
+            boot_disk) _edit_boot_disk ;;
+            wipe_disks) _edit_wipe_disks ;;
+            existing_pool) _edit_existing_pool ;;
+            pool_disks) _edit_pool_disks ;;
+            zfs_mode) _edit_zfs_mode ;;
+            zfs_arc) _edit_zfs_arc ;;
+            tailscale) _edit_tailscale ;;
+            ssl) _edit_ssl ;;
+            postfix) _edit_postfix ;;
+            shell) _edit_shell ;;
+            power_profile) _edit_power_profile ;;
+            security) _edit_features_security ;;
+            monitoring) _edit_features_monitoring ;;
+            tools) _edit_features_tools ;;
+            api_token) _edit_api_token ;;
+            admin_username) _edit_admin_username ;;
+            admin_password) _edit_admin_password ;;
+            ssh_key) _edit_ssh_key ;;
+            *) log "WARNING: Unknown field name: $field_name" ;;
+          esac
+        fi
         # Hide cursor again
         _wiz_hide_cursor
         ;;
