@@ -26,10 +26,14 @@ _config_postfix_relay() {
   }
   rm -f "$tmp_passwd"
 
-  # Generate password hash and secure files
+  # Secure password file and generate hash (set umask to prevent any readable window)
   remote_exec '
+    umask 077
+    chmod 600 /etc/postfix/sasl_passwd
+    chown root:root /etc/postfix/sasl_passwd
     postmap /etc/postfix/sasl_passwd
-    chmod 600 /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db
+    chmod 600 /etc/postfix/sasl_passwd.db
+    chown root:root /etc/postfix/sasl_passwd.db
   ' || return 1
 
   # Restart Postfix
