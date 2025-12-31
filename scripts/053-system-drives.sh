@@ -32,6 +32,9 @@ detect_drives() {
 
 # Get disks in existing ZFS pools → stdout (one per line)
 _get_existing_pool_disks() {
+  # Return early if no pools detected
+  [[ ${#DETECTED_POOLS[@]} -eq 0 ]] && return 0
+
   local pool_disks=()
   for pool_info in "${DETECTED_POOLS[@]}"; do
     # Format: "name|status|/dev/disk1,/dev/disk2"
