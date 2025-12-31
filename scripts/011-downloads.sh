@@ -12,17 +12,6 @@ download_file() {
   while [ "$retry_count" -lt "$max_retries" ]; do
     if wget -q -O "$output_file" "$url"; then
       if [ -s "$output_file" ]; then
-        # Check file integrity - verify it's not corrupted/empty
-        local file_type
-        file_type=$(file "$output_file" 2>/dev/null || printf '\n')
-
-        # For files detected as "empty" or suspicious "data", verify size
-        if echo "$file_type" | grep -q "empty"; then
-          print_error "Downloaded file is empty: $output_file"
-          retry_count=$((retry_count + 1))
-          continue
-        fi
-
         return 0
       else
         print_error "Downloaded file is empty: $output_file"
