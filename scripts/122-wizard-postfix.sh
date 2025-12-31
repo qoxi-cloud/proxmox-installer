@@ -12,29 +12,42 @@ _postfix_configure_relay() {
     "  Common providers: Gmail, Mailgun, SendGrid, AWS SES" \
     ""
 
-  _show_input_footer "input"
+  _show_input_footer
 
   # SMTP Host
   local host
-  host=$(_wiz_input "SMTP Host:" "${SMTP_RELAY_HOST:-smtp.gmail.com}" "smtp.example.com")
+  host=$(_wiz_input \
+    --placeholder "smtp.example.com" \
+    --value "${SMTP_RELAY_HOST:-smtp.gmail.com}" \
+    --prompt "SMTP Host: ")
   [[ -z $host ]] && return 1
   SMTP_RELAY_HOST="$host"
 
   # SMTP Port
   local port
-  port=$(_wiz_input "SMTP Port:" "${SMTP_RELAY_PORT:-587}" "587")
+  port=$(_wiz_input \
+    --placeholder "587" \
+    --value "${SMTP_RELAY_PORT:-587}" \
+    --prompt "SMTP Port: ")
   [[ -z $port ]] && return 1
   SMTP_RELAY_PORT="$port"
 
   # Username
   local user
-  user=$(_wiz_input "Username:" "${SMTP_RELAY_USER}" "user@example.com")
+  user=$(_wiz_input \
+    --placeholder "user@example.com" \
+    --value "${SMTP_RELAY_USER}" \
+    --prompt "Username: ")
   [[ -z $user ]] && return 1
   SMTP_RELAY_USER="$user"
 
-  # Password (using gum input directly for simple password entry)
+  # Password
   local pass
-  pass=$(_wiz_input --password --prompt "Password: " --placeholder "App password or API key")
+  pass=$(_wiz_input \
+    --password \
+    --placeholder "App password or API key" \
+    --value "${SMTP_RELAY_PASSWORD}" \
+    --prompt "Password: ")
   [[ -z $pass ]] && return 1
   SMTP_RELAY_PASSWORD="$pass"
 
