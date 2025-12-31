@@ -111,16 +111,18 @@ _config_ensure_rpool_storage() {
   log "INFO: Ensuring rpool storage is configured for Proxmox"
 
   # Check if rpool exists and configure storage if not already present
+  # Use pvesm status first, fallback to grep on storage.cfg (pvesm may fail if storage has issues)
   # shellcheck disable=SC2016
   if ! remote_run "Configuring rpool storage" '
     if zpool list rpool &>/dev/null; then
-      if ! pvesm status local-zfs &>/dev/null; then
+      # Check if storage exists: pvesm status (works if healthy) OR grep config (always works)
+      if pvesm status local-zfs &>/dev/null || grep -q "^local-zfs:" /etc/pve/storage.cfg 2>/dev/null; then
+        echo "local-zfs storage already exists"
+      else
         zfs list rpool/data &>/dev/null || zfs create rpool/data
         pvesm add zfspool local-zfs --pool rpool/data --content images,rootdir
         pvesm set local --content iso,vztmpl,backup,snippets
         echo "local-zfs storage created"
-      else
-        echo "local-zfs storage already exists"
       fi
     else
       echo "WARNING: rpool not found - system may have installed on LVM/ext4"

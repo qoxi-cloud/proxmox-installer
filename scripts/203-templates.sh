@@ -131,6 +131,8 @@ make_templates() {
     # ZFS
     "./templates/zfs-scrub.service:zfs-scrub.service"
     "./templates/zfs-scrub.timer:zfs-scrub.timer"
+    "./templates/zfs-import-cache.service.d-override.conf:zfs-import-cache.service.d-override.conf"
+    "./templates/zfs-cachefile-initramfs-hook:zfs-cachefile-initramfs-hook"
     # Let's Encrypt
     "./templates/letsencrypt-deploy-hook.sh:letsencrypt-deploy-hook.sh"
     "./templates/letsencrypt-firstboot.sh:letsencrypt-firstboot.sh"
