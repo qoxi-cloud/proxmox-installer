@@ -26,7 +26,7 @@ _edit_hostname() {
   [[ -z $new_domain ]] && return
 
   DOMAIN_SUFFIX="$new_domain"
-  FQDN="${PVE_HOSTNAME}.${DOMAIN_SUFFIX}"
+  [[ -n $PVE_HOSTNAME ]] && FQDN="${PVE_HOSTNAME}.${DOMAIN_SUFFIX}"
 }
 
 # Edits admin email address via input dialog.
