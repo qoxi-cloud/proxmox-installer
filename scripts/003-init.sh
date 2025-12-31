@@ -105,10 +105,6 @@ INSTALL_RINGBUFFER="" # Network ring buffer tuning for high throughput
 INSTALL_YAZI="" # Terminal file manager
 INSTALL_NVIM="" # Neovim editor with config
 
-# --- System Maintenance ---
-# Set: Wizard (114-wizard-services.sh), default: "yes"
-INSTALL_UNATTENDED_UPGRADES="" # Automatic security updates
-
 # --- Tailscale VPN ---
 # Set: Wizard (114-wizard-services.sh)
 INSTALL_TAILSCALE=""  # Enable Tailscale VPN

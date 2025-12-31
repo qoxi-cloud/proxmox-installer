@@ -97,26 +97,6 @@ _ssh_get_passfile() {
   printf '%s\n' "$_SSH_SESSION_PASSFILE"
 }
 
-# SSH command construction
-
-# Builds base SSH command with options and auth. $1=timeout (optional)
-_ssh_base_cmd() {
-  local passfile
-  passfile=$(_ssh_get_passfile)
-  local cmd_timeout="${1:-${SSH_COMMAND_TIMEOUT:-$SSH_DEFAULT_TIMEOUT}}"
-  # shellcheck disable=SC2086
-  printf 'timeout %s sshpass -f "%s" ssh -p "%s" %s root@localhost' \
-    "$cmd_timeout" "$passfile" "$SSH_PORT" "$SSH_OPTS"
-}
-
-# Builds SCP command with options and auth
-_scp_base_cmd() {
-  local passfile
-  passfile=$(_ssh_get_passfile)
-  # shellcheck disable=SC2086
-  printf 'sshpass -f "%s" scp -P "%s" %s' "$passfile" "$SSH_PORT" "$SSH_OPTS"
-}
-
 # Port and connection checks
 
 # Checks if port is available. Returns 0 if available, 1 if in use
