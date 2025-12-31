@@ -5,11 +5,16 @@
 validate_ssh_key_secure() {
   local key="$1"
 
-  # Validate it's a proper OpenSSH public key
-  if ! echo "$key" | ssh-keygen -l -f - >/dev/null 2>&1; then
+  # Validate and get key info in single ssh-keygen call
+  local key_info
+  if ! key_info=$(echo "$key" | ssh-keygen -l -f - 2>/dev/null); then
     log "ERROR: Invalid SSH public key format"
     return 1
   fi
+
+  # Parse bits from cached output (first field)
+  local bits
+  bits=$(echo "$key_info" | awk '{print $1}')
 
   # Check key type is secure (no DSA/RSA <2048)
   local key_type
@@ -23,8 +28,6 @@ validate_ssh_key_secure() {
     ecdsa-*)
       # ECDSA keys report curve size (256, 384, 521), not RSA-equivalent bits
       # ECDSA-256 is equivalent to ~3072-bit RSA, so all standard curves are secure
-      local bits
-      bits=$(echo "$key" | ssh-keygen -l -f - 2>/dev/null | awk '{print $1}')
       if [[ $bits -ge 256 ]]; then
         log "INFO: SSH key validated ($key_type, $bits bits)"
         return 0
@@ -33,8 +36,6 @@ validate_ssh_key_secure() {
       return 1
       ;;
     ssh-rsa)
-      local bits
-      bits=$(echo "$key" | ssh-keygen -l -f - 2>/dev/null | awk '{print $1}')
       if [[ $bits -ge 2048 ]]; then
         log "INFO: SSH key validated ($key_type, $bits bits)"
         return 0
