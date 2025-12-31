@@ -56,6 +56,9 @@ readonly QEMU_BOOT_TIMEOUT=300      # Max wait for QEMU to boot and expose SSH p
 readonly QEMU_PORT_CHECK_INTERVAL=3 # Interval between port availability checks
 readonly QEMU_SSH_READY_TIMEOUT=120 # Max wait for SSH to be fully ready
 
+# ZFS storage defaults
+readonly DEFAULT_ZFS_POOL_NAME="tank"
+
 # Retry and timing constants
 readonly RETRY_DELAY_SECONDS=2      # Standard retry delay for recoverable operations
 readonly SSH_RETRY_ATTEMPTS=3       # Number of SSH connection retries

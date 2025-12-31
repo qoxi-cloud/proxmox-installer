@@ -34,11 +34,12 @@ _config_import_existing_pool() {
   return 0
 }
 
-# Creates new ZFS pool 'tank' from ZFS_POOL_DISKS.
+# Creates new ZFS pool from ZFS_POOL_DISKS using DEFAULT_ZFS_POOL_NAME.
 # Uses ZFS_RAID global for RAID configuration.
 # Create new ZFS pool with optimal settings
 _config_create_new_pool() {
-  log "INFO: Creating separate ZFS pool 'tank' from pool disks"
+  local pool_name="$DEFAULT_ZFS_POOL_NAME"
+  log "INFO: Creating separate ZFS pool '$pool_name' from pool disks"
   log "INFO: ZFS_POOL_DISKS=(${ZFS_POOL_DISKS[*]}), count=${#ZFS_POOL_DISKS[@]}"
   log "INFO: ZFS_RAID=$ZFS_RAID, BOOT_DISK=$BOOT_DISK"
 
@@ -70,7 +71,7 @@ _config_create_new_pool() {
 
   # Build zpool create command based on RAID type
   local pool_cmd
-  pool_cmd=$(build_zpool_command "tank" "$ZFS_RAID" "${vdevs[@]}")
+  pool_cmd=$(build_zpool_command "$pool_name" "$ZFS_RAID" "${vdevs[@]}")
   if [[ -z $pool_cmd ]]; then
     log "ERROR: Failed to build zpool create command"
     return 1
@@ -85,22 +86,22 @@ _config_create_new_pool() {
 
   # Create pool, set properties, configure Proxmox storage
   # Use set -e to fail on ANY error (prevents silent failures)
-  if ! remote_run "Creating ZFS pool 'tank'" "
+  if ! remote_run "Creating ZFS pool '$pool_name'" "
     set -e
     ${pool_cmd}
-    zfs set compression=lz4 tank
-    zfs set atime=off tank
-    zfs set xattr=sa tank
-    zfs set dnodesize=auto tank
-    zfs create tank/vm-disks
-    pvesm add zfspool tank --pool tank/vm-disks --content images,rootdir
+    zfs set compression=lz4 '$pool_name'
+    zfs set atime=off '$pool_name'
+    zfs set xattr=sa '$pool_name'
+    zfs set dnodesize=auto '$pool_name'
+    zfs create '$pool_name'/vm-disks
+    pvesm add zfspool '$pool_name' --pool '$pool_name'/vm-disks --content images,rootdir
     pvesm set local --content iso,vztmpl,backup,snippets
-  " "ZFS pool 'tank' created"; then
-    log "ERROR: Failed to create ZFS pool 'tank'"
+  " "ZFS pool '$pool_name' created"; then
+    log "ERROR: Failed to create ZFS pool '$pool_name'"
     return 1
   fi
 
-  log "INFO: ZFS pool 'tank' created successfully"
+  log "INFO: ZFS pool '$pool_name' created successfully"
   return 0
 }
 
@@ -156,7 +157,7 @@ _config_zfs_pool() {
 # Public wrapper
 
 # Creates or imports ZFS pool when BOOT_DISK is set.
-# Modes: USE_EXISTING_POOL=yes imports existing pool, otherwise creates new 'tank'.
+# Modes: USE_EXISTING_POOL=yes imports existing, otherwise creates DEFAULT_ZFS_POOL_NAME.
 # Configures Proxmox storage: pool for VMs, local for ISO/templates.
 configure_zfs_pool() {
   _config_zfs_pool
