@@ -127,16 +127,23 @@ make_answer_toml() {
   # SSH key is deployed directly to the admin user in 302-configure-admin.sh
   # Root login is disabled for both SSH and Proxmox UI.
 
-  # Escape password for TOML basic string (double-quoted) per TOML spec
-  # Must escape: backslash, double quote, and control characters
-  local escaped_password="$NEW_ROOT_PASSWORD"
-  escaped_password="${escaped_password//\\/\\\\}"   # Escape backslashes first (must be first!)
-  escaped_password="${escaped_password//\"/\\\"}"   # Escape double quotes
-  escaped_password="${escaped_password//$'\t'/\\t}" # Escape tabs
-  escaped_password="${escaped_password//$'\n'/\\n}" # Escape newlines
-  escaped_password="${escaped_password//$'\r'/\\r}" # Escape carriage returns
-  # Note: Other control chars (0x00-0x1F except \t\n\r) are rare in passwords
-  # and would require \uXXXX escaping - validation should reject them earlier
+  # Escape password for TOML basic string. Reject unsupported control chars first.
+  local escaped_password="$NEW_ROOT_PASSWORD" test_pwd="$NEW_ROOT_PASSWORD"
+  for c in $'\t' $'\n' $'\r' $'\b' $'\f'; do test_pwd="${test_pwd//$c/}"; done
+  # shellcheck disable=SC2076
+  [[ "$test_pwd" =~ [[:cntrl:]] ]] && {
+    log "ERROR: Password has unsupported control chars"
+    exit 1
+  }
+
+  # CRITICAL: Backslashes must be escaped first to avoid double-escaping other sequences
+  escaped_password="${escaped_password//\\/\\\\}"
+  escaped_password="${escaped_password//\"/\\\"}"
+  escaped_password="${escaped_password//$'\t'/\\t}"
+  escaped_password="${escaped_password//$'\n'/\\n}"
+  escaped_password="${escaped_password//$'\r'/\\r}"
+  escaped_password="${escaped_password//$'\b'/\\b}"
+  escaped_password="${escaped_password//$'\f'/\\f}"
 
   # Generate [global] section
   # IMPORTANT: Use kebab-case for all keys (root-password, reboot-on-error)
