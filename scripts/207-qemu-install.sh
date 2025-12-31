@@ -140,7 +140,7 @@ boot_proxmox_with_port_forwarding() {
       if exec 3<>/dev/tcp/localhost/"${SSH_PORT_QEMU}" 2>/dev/null; then
         exec 3<&- # Close the file descriptor
         exit 0
-      fi 2>/dev/null
+      fi
       sleep "$check_interval"
       ((elapsed += check_interval))
     done
