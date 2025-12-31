@@ -29,7 +29,7 @@ _edit_boot_disk() {
   _show_input_footer "filter" "$((DRIVE_COUNT + 2))"
 
   local selected
-  if ! selected=$(printf '%s' "$options" | _wiz_choose --header="Boot disk:"); then
+  if ! selected=$(printf '%s\n' "$options" | _wiz_choose --header="Boot disk:"); then
     return
   fi
 
