@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.755-pr.21"
+readonly VERSION="2.0.756-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -4912,7 +4912,7 @@ log "ERROR: Disk $disk does not exist or is not a block device"
 return 1
 fi
 log "QEMU drive order: $vdev -> $disk"
-DRIVE_ARGS="$DRIVE_ARGS -drive file=\"$disk\",format=raw,media=disk,if=virtio"
+DRIVE_ARGS="$DRIVE_ARGS -drive file=$disk,format=raw,media=disk,if=virtio"
 done
 if [[ -z $DRIVE_ARGS ]];then
 log "ERROR: No drive arguments built - QEMU would start without disks"
