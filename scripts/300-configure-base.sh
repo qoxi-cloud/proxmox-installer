@@ -58,8 +58,7 @@ _configure_bat() {
 _configure_zsh_files() {
   deploy_user_config "templates/zshrc" ".zshrc" "LOCALE=${LOCALE}" || return 1
   deploy_user_config "templates/p10k.zsh" ".p10k.zsh" || return 1
-  # shellcheck disable=SC2016
-  remote_exec 'chsh -s /bin/zsh '"$ADMIN_USERNAME"'' || return 1
+  remote_exec "chsh -s /bin/zsh ${ADMIN_USERNAME}" || return 1
 }
 
 # Private implementation functions
