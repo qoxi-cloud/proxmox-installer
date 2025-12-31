@@ -18,8 +18,9 @@ echo "Starting Let's Encrypt certificate obtainment at $(date)" >> "$LOG_FILE"
 # Wait for network to be fully ready
 sleep 10
 
-# Stop pveproxy to free port 443 (we'll use port 80 for challenge)
-systemctl stop pveproxy 2>> "$LOG_FILE"
+# Gracefully stop pveproxy to free port 443 (allow active connections to complete)
+echo "Stopping pveproxy gracefully..." >> "$LOG_FILE"
+systemctl stop --timeout=30s pveproxy 2>> "$LOG_FILE" || true
 
 # Obtain certificate using standalone mode on port 80
 certbot certonly --standalone \
