@@ -5,8 +5,9 @@
 
 # Configuration function for ring buffer tuning
 # Deploys systemd service and script to maximize RX/TX ring buffer size
+# Requires: INTERFACE_NAME (set by 052-system-network.sh)
 _config_ringbuffer() {
-  local ringbuffer_interface="${DEFAULT_INTERFACE:-eth0}"
+  local ringbuffer_interface="${INTERFACE_NAME:-eth0}"
 
   # Deploy the script first
   deploy_template "templates/network-ringbuffer.sh" "/usr/local/bin/network-ringbuffer.sh" \
