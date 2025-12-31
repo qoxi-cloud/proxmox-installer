@@ -90,7 +90,7 @@ _edit_existing_pool() {
     USE_EXISTING_POOL=""
     EXISTING_POOL_NAME=""
     EXISTING_POOL_DISKS=()
-  elif [[ $selected =~ ^Use\ existing:\ ([^[:space:]]+) ]]; then
+  elif [[ $selected =~ ^Use\ existing:\ (.+)\ \( ]]; then
     # Check if boot disk is set - required for existing pool mode
     if [[ -z $BOOT_DISK ]]; then
       _wiz_start_edit
