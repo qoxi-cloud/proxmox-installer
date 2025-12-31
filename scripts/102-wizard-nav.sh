@@ -19,9 +19,9 @@ _wiz_center() {
   local term_width
   term_width=$(tput cols 2>/dev/null || echo 80)
 
-  # Strip ANSI escape codes to get visible length
+  # Strip ANSI escape codes to get visible length (using $'\e' for portability)
   local visible_text
-  visible_text=$(printf '%s' "$text" | sed 's/\x1b\[[0-9;]*m//g')
+  visible_text=$(printf '%s' "$text" | sed $'s/\e\\[[0-9;]*m//g')
   local text_len=${#visible_text}
 
   # Calculate padding
