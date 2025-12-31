@@ -174,9 +174,14 @@ make_templates() {
 
   # Derive PRIVATE_IP_CIDR from PRIVATE_SUBNET (e.g., 10.0.0.0/24 → 10.0.0.1/24)
   if [[ -n ${PRIVATE_SUBNET:-} && $BRIDGE_MODE != "external" ]]; then
-    PRIVATE_IP_CIDR="${PRIVATE_SUBNET%.*}.1/${PRIVATE_SUBNET#*/}"
-    export PRIVATE_IP_CIDR
-    log "Derived PRIVATE_IP_CIDR=$PRIVATE_IP_CIDR from PRIVATE_SUBNET=$PRIVATE_SUBNET"
+    if validate_subnet "$PRIVATE_SUBNET"; then
+      PRIVATE_IP_CIDR="${PRIVATE_SUBNET%.*}.1/${PRIVATE_SUBNET#*/}"
+      export PRIVATE_IP_CIDR
+      log "Derived PRIVATE_IP_CIDR=$PRIVATE_IP_CIDR from PRIVATE_SUBNET=$PRIVATE_SUBNET"
+    else
+      log "ERROR: Invalid PRIVATE_SUBNET format: $PRIVATE_SUBNET (expected CIDR like 10.0.0.0/24)"
+      return 1
+    fi
   fi
 
   # Modify template files in background with progress
