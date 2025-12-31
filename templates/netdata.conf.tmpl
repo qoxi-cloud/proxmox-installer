@@ -13,9 +13,9 @@
     dbengine multihost disk space = 256
 
 [web]
-    # Bind addresses:
-    # - 127.0.0.1: localhost only
-    # - 100.*: Tailscale network (if enabled)
+    # {{NETDATA_BIND_TO}} - Set by 342-configure-netdata.sh:
+    #   "127.0.0.1"       - Tailscale disabled (localhost only)
+    #   "127.0.0.1 100.*" - Tailscale enabled (localhost + Tailscale network)
     bind to = {{NETDATA_BIND_TO}}
 
     # Default port
