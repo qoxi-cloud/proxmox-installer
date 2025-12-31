@@ -41,12 +41,9 @@ _wizard_main() {
         _wiz_show_cursor
         # Edit selected field based on field map
         local field_name="${_WIZ_FIELD_MAP[$selection]:-}"
-        local editor_func="_edit_${field_name}"
-        # Skip if field name empty or editor function doesn't exist
+        # Skip if field name empty
         if [[ -z $field_name ]]; then
           log "WARNING: No field mapped for selection $selection"
-        elif ! declare -F "$editor_func" >/dev/null 2>&1; then
-          log "WARNING: Editor function $editor_func not found for field $field_name"
         else
           case "$field_name" in
             hostname) _edit_hostname ;;
