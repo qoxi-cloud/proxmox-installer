@@ -53,7 +53,10 @@ _country_to_locale() {
     sa) echo "ar_SA.UTF-8" ;;
     ae) echo "ar_AE.UTF-8" ;;
     ir) echo "fa_IR.UTF-8" ;;
-    *) echo "en_US.UTF-8" ;; # Default fallback
+    *)
+      log "WARNING: Unknown country code '$country', using en_US.UTF-8 fallback"
+      echo "en_US.UTF-8"
+      ;;
   esac
 }
 
