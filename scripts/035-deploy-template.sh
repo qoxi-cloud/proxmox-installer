@@ -48,8 +48,8 @@ deploy_user_config() {
       dirs_to_chown+="'$dir' "
       dir="$(dirname "$dir")"
     done
-    remote_exec "chown ${ADMIN_USERNAME}:${ADMIN_USERNAME} $dirs_to_chown" || {
-      log "ERROR: Failed to set ownership on $dirs_to_chown"
+    remote_exec "chown ${ADMIN_USERNAME}:${ADMIN_USERNAME} ${dirs_to_chown}" || {
+      log "ERROR: Failed to set ownership on ${dirs_to_chown}"
       rm -f "$staged"
       return 1
     }
