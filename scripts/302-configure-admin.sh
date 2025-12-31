@@ -41,10 +41,10 @@ _config_admin_user() {
   # Grant Proxmox UI access to admin user
   # Create PAM user in Proxmox (will auth against Linux PAM)
   # Using grep to check if user exists, avoiding || true which hides real errors
-  remote_exec "pveum user list 2>/dev/null | grep -q '${ADMIN_USERNAME}@pam' || pveum user add ${ADMIN_USERNAME}@pam"
+  remote_exec "pveum user list 2>/dev/null | grep -q '${ADMIN_USERNAME}@pam' || pveum user add '${ADMIN_USERNAME}@pam'"
 
   # Grant Administrator role to admin user
-  remote_exec "pveum acl modify / -user ${ADMIN_USERNAME}@pam -role Administrator" || {
+  remote_exec "pveum acl modify / -user '${ADMIN_USERNAME}@pam' -role Administrator" || {
     log "WARNING: Failed to grant Proxmox Administrator role"
   }
 
