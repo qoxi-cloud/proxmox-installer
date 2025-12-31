@@ -106,11 +106,14 @@ _edit_existing_pool() {
 
     local pool_name="${BASH_REMATCH[1]}"
 
-    # Get disks for this pool
+    # Get disks for this pool (comma-separated device paths)
+    # Note: Linux device paths never contain commas, so simple CSV parsing is safe
     local disks_csv
     disks_csv=$(get_pool_disks "$pool_name")
     local pool_disks=()
-    IFS=',' read -ra pool_disks <<<"$disks_csv"
+    while IFS= read -r disk; do
+      [[ -n $disk ]] && pool_disks+=("$disk")
+    done < <(tr ',' '\n' <<<"$disks_csv")
 
     # Check if boot disk is part of this pool (would destroy the pool!)
     local boot_in_pool=false
