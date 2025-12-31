@@ -65,20 +65,17 @@ _phase_security_configuration() {
 
 # PHASE 4: Monitoring & Tools (parallel where possible)
 _phase_monitoring_tools() {
-  # Special installers (non-apt) - run in parallel
-  (
-    pids=()
-    if [[ $INSTALL_NETDATA == "yes" ]]; then
-      configure_netdata &
-      pids+=($!)
-    fi
-    if [[ $INSTALL_YAZI == "yes" ]]; then
-      configure_yazi &
-      pids+=($!)
-    fi
-    for pid in "${pids[@]}"; do wait "$pid" 2>/dev/null || true; done
-  ) >/dev/null 2>&1 &
-  local special_pid=$!
+  # Special installers (non-apt) - run in background with proper error tracking
+  local netdata_pid="" yazi_pid=""
+
+  if [[ $INSTALL_NETDATA == "yes" ]]; then
+    configure_netdata >>"$LOG_FILE" 2>&1 &
+    netdata_pid=$!
+  fi
+  if [[ $INSTALL_YAZI == "yes" ]]; then
+    configure_yazi >>"$LOG_FILE" 2>&1 &
+    yazi_pid=$!
+  fi
 
   # Parallel config for apt-installed tools (packages already installed by batch)
   run_parallel_group "Configuring tools" "Tools configured" \
@@ -88,8 +85,17 @@ _phase_monitoring_tools() {
     configure_nvim \
     configure_postfix
 
-  # Wait for special installers
-  wait "$special_pid" 2>/dev/null || true
+  # Wait for special installers and check results
+  if [[ -n $netdata_pid ]]; then
+    if ! wait "$netdata_pid"; then
+      log "WARNING: configure_netdata failed (exit code: $?)"
+    fi
+  fi
+  if [[ -n $yazi_pid ]]; then
+    if ! wait "$yazi_pid"; then
+      log "WARNING: configure_yazi failed (exit code: $?)"
+    fi
+  fi
 }
 
 # PHASE 5: SSL & API Configuration
