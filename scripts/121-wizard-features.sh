@@ -34,32 +34,47 @@ _edit_power_profile() {
     avail_governors=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors)
   fi
 
+  # Cache governor availability (single parse instead of repeated grep calls)
+  local has_performance=false has_ondemand=false has_powersave=false
+  local has_schedutil=false has_conservative=false
+  if [[ -n $avail_governors ]]; then
+    for gov in $avail_governors; do
+      case "$gov" in
+        performance) has_performance=true ;;
+        ondemand) has_ondemand=true ;;
+        powersave) has_powersave=true ;;
+        schedutil) has_schedutil=true ;;
+        conservative) has_conservative=true ;;
+      esac
+    done
+  fi
+
   # Build dynamic options based on available governors
   local options=()
   local descriptions=()
 
   # Always show Performance if available
-  if [[ -z $avail_governors ]] || printf '%s\n' "$avail_governors" | grep -qw "performance"; then
+  if [[ -z $avail_governors ]] || $has_performance; then
     options+=("Performance")
     descriptions+=("  {{cyan:Performance}}:  Max frequency (highest power)")
   fi
 
   # Show governor-specific options
-  if printf '%s\n' "$avail_governors" | grep -qw "ondemand"; then
+  if $has_ondemand; then
     options+=("Balanced")
     descriptions+=("  {{cyan:Balanced}}:     Scale based on load")
-  elif printf '%s\n' "$avail_governors" | grep -qw "powersave"; then
+  elif $has_powersave; then
     # intel_pstate powersave is actually dynamic scaling
     options+=("Balanced")
     descriptions+=("  {{cyan:Balanced}}:     Dynamic scaling (power efficient)")
   fi
 
-  if printf '%s\n' "$avail_governors" | grep -qw "schedutil"; then
+  if $has_schedutil; then
     options+=("Adaptive")
     descriptions+=("  {{cyan:Adaptive}}:     Kernel-managed scaling")
   fi
 
-  if printf '%s\n' "$avail_governors" | grep -qw "conservative"; then
+  if $has_conservative; then
     options+=("Conservative")
     descriptions+=("  {{cyan:Conservative}}: Gradual frequency changes")
   fi
@@ -94,7 +109,7 @@ _edit_power_profile() {
     "Performance") CPU_GOVERNOR="performance" ;;
     "Balanced")
       # Use ondemand if available, otherwise powersave
-      if printf '%s\n' "$avail_governors" | grep -qw "ondemand"; then
+      if $has_ondemand; then
         CPU_GOVERNOR="ondemand"
       else
         CPU_GOVERNOR="powersave"
