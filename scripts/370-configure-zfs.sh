@@ -9,6 +9,12 @@ _config_zfs_arc() {
   local total_ram_mb
   total_ram_mb=$(free -m | awk 'NR==2 {print $2}')
 
+  # Validate numeric before arithmetic
+  if [[ ! $total_ram_mb =~ ^[0-9]+$ ]] || [[ $total_ram_mb -eq 0 ]]; then
+    log "ERROR: Failed to detect RAM size (got: '$total_ram_mb')"
+    return 1
+  fi
+
   local arc_max_mb
   case "$ZFS_ARC_MODE" in
     vm-focused)
