@@ -42,7 +42,7 @@ parse_cli_args() {
         return 2
         ;;
       --qemu-ram)
-        if [[ -z ${2:-} || ${2:-} =~ ^- ]]; then
+        if [[ -z ${2:-} || ${2:-} =~ ^-- ]]; then
           printf '%s\n' "${CLR_RED}Error: --qemu-ram requires a value in MB${CLR_RESET}"
           return 1
         fi
@@ -58,7 +58,7 @@ parse_cli_args() {
         shift 2
         ;;
       --qemu-cores)
-        if [[ -z ${2:-} || ${2:-} =~ ^- ]]; then
+        if [[ -z ${2:-} || ${2:-} =~ ^-- ]]; then
           printf '%s\n' "${CLR_RED}Error: --qemu-cores requires a value${CLR_RESET}"
           return 1
         fi
@@ -74,7 +74,7 @@ parse_cli_args() {
         shift 2
         ;;
       --iso-version)
-        if [[ -z ${2:-} || ${2:-} =~ ^- ]]; then
+        if [[ -z ${2:-} || ${2:-} =~ ^-- ]]; then
           printf '%s\n' "${CLR_RED}Error: --iso-version requires a filename${CLR_RESET}"
           return 1
         fi
