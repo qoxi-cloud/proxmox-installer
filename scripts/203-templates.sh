@@ -7,6 +7,10 @@
 _modify_template_files() {
   log "Starting template modification"
   apply_common_template_vars "./templates/hosts" || return 1
+  # Add IPv6 hosts entry only if IPv6 is configured (prevents invalid empty IP line)
+  if [[ ${IPV6_MODE:-} != "disabled" && -n ${MAIN_IPV6:-} ]]; then
+    printf '%s %s %s\n' "$MAIN_IPV6" "$FQDN" "$PVE_HOSTNAME" >>"./templates/hosts"
+  fi
   generate_interfaces_file "./templates/interfaces" || return 1
   apply_common_template_vars "./templates/resolv.conf" || return 1
   apply_template_vars "./templates/cpupower.service" "CPU_GOVERNOR=${CPU_GOVERNOR:-performance}" || return 1
