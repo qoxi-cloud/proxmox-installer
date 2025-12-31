@@ -14,7 +14,8 @@ _sanitize_script_for_log() {
   local d=$'\x01'
 
   # Mask common password patterns (variable assignments and chpasswd)
-  script=$(printf '%s\n' "$script" | sed -E "s${d}(PASSWORD|password|PASSWD|passwd|SECRET|secret|TOKEN|token|KEY|key)=('[^']*'|\"[^\"]*\"|[^[:space:]'\";]+)${d}\\1=[REDACTED]${d}g")
+  # Handle escaped quotes in double-quoted strings: "([^"\\]|\\.)*" matches "foo\"bar"
+  script=$(printf '%s\n' "$script" | sed -E "s${d}(PASSWORD|password|PASSWD|passwd|SECRET|secret|TOKEN|token|KEY|key)=('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^[:space:]'\";]+)${d}\\1=[REDACTED]${d}g")
 
   # Pattern: echo "user:password" | chpasswd
   script=$(printf '%s\n' "$script" | sed -E "s${d}(echo[[:space:]]+['\"]?[^:]+:)[^|'\"]*${d}\\1[REDACTED]${d}g")
