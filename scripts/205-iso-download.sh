@@ -99,16 +99,21 @@ download_proxmox_iso() {
       fi
     else
       log "Verifying ISO checksum"
-      local actual_checksum
-      (actual_checksum=$(sha256sum pve.iso | awk '{print $1}') && printf '%s\n' "$actual_checksum" >/tmp/checksum_result) &
+      local actual_checksum checksum_file
+      checksum_file=$(mktemp) || {
+        log "ERROR: mktemp failed for checksum_file"
+        exit 1
+      }
+      register_temp_file "$checksum_file"
+      (actual_checksum=$(sha256sum pve.iso | awk '{print $1}') && printf '%s\n' "$actual_checksum" >"$checksum_file") &
       local checksum_pid=$!
       if type show_progress &>/dev/null 2>&1; then
         show_progress $checksum_pid "Verifying checksum" "Checksum verified"
       else
         wait "$checksum_pid"
       fi
-      actual_checksum=$(cat /tmp/checksum_result 2>/dev/null)
-      rm -f /tmp/checksum_result
+      actual_checksum=$(cat "$checksum_file" 2>/dev/null)
+      rm -f "$checksum_file"
       if [[ $actual_checksum != "$expected_checksum" ]]; then
         log "ERROR: Checksum mismatch! Expected: $expected_checksum, Got: $actual_checksum"
         if type live_log_subtask &>/dev/null 2>&1; then
@@ -129,6 +134,6 @@ download_proxmox_iso() {
 
   # Clean up /tmp to free memory (rescue system uses tmpfs)
   log "Cleaning up temporary files in /tmp"
-  rm -rf /tmp/tmp.* /tmp/pve-* /tmp/checksum_result 2>/dev/null || true
+  rm -rf /tmp/tmp.* /tmp/pve-* 2>/dev/null || true
   log "Temporary files cleaned"
 }
