@@ -31,14 +31,10 @@ create_api_token() {
     return 1
   fi
 
-  # Filter out perl locale warnings and other non-JSON output
-  # Only keep lines that could be valid JSON (starting with { or containing "value")
-  local json_output
-  json_output=$(echo "$output" | grep -v "^perl:" | grep -v "^warning:" | grep -E '^\{|"value"' | head -1)
-
-  # Parse JSON output to extract token value using jq
+  # Extract token value from JSON output, skipping any non-JSON lines (perl warnings, etc.)
+  # jq's try/fromjson handles invalid JSON gracefully
   local token_value
-  token_value=$(echo "$json_output" | jq -r '.value // empty' 2>/dev/null || true)
+  token_value=$(printf '%s\n' "$output" | jq -R 'try (fromjson | .value) // empty' 2>/dev/null | grep -v '^$' | head -1)
 
   if [[ -z $token_value ]]; then
     log "ERROR: Failed to extract token value from pveum output"
