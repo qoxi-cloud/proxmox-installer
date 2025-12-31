@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.682-pr.21"
+readonly VERSION="2.0.753-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -46,6 +46,7 @@ readonly DNS_RETRY_DELAY=10
 readonly QEMU_BOOT_TIMEOUT=300
 readonly QEMU_PORT_CHECK_INTERVAL=3
 readonly QEMU_SSH_READY_TIMEOUT=120
+readonly DEFAULT_ZFS_POOL_NAME="tank"
 readonly RETRY_DELAY_SECONDS=2
 readonly SSH_RETRY_ATTEMPTS=3
 readonly PROGRESS_POLL_INTERVAL=0.2
@@ -166,7 +167,6 @@ INSTALL_PROMTAIL=""
 INSTALL_RINGBUFFER=""
 INSTALL_YAZI=""
 INSTALL_NVIM=""
-INSTALL_UNATTENDED_UPGRADES=""
 INSTALL_TAILSCALE=""
 TAILSCALE_AUTH_KEY=""
 TAILSCALE_WEBUI=""
@@ -185,31 +185,33 @@ ADMIN_USERNAME=""
 ADMIN_PASSWORD=""
 INSTALL_FIREWALL=""
 FIREWALL_MODE=""
+_TEMP_API_TOKEN_FILE="/tmp/pve-install-api-token.$$.env"
+_TEMP_SSH_CONTROL_PATH="/tmp/ssh-pve-control.$$"
+_TEMP_SCP_LOCK_FILE="/tmp/pve-scp-lock.$$"
 _TEMP_FILES=()
 register_temp_file(){
 _TEMP_FILES+=("$1")
 }
 cleanup_temp_files(){
-for f in "${_TEMP_FILES[@]}";do
-[[ -f $f ]]&&rm -f "$f"
-done
 local install_dir="${INSTALL_DIR:-${HOME:-/root}}"
-local pid="$$"
 if type secure_delete_file &>/dev/null;then
-secure_delete_file /tmp/pve-install-api-token.env
+[[ -n ${_TEMP_API_TOKEN_FILE:-} ]]&&secure_delete_file "$_TEMP_API_TOKEN_FILE"
 secure_delete_file "$install_dir/answer.toml"
-secure_delete_file "/dev/shm/pve-ssh-session.$pid"
-secure_delete_file "/tmp/pve-ssh-session.$pid"
-secure_delete_file "/dev/shm/pve-passfile.$pid"
-secure_delete_file "/tmp/pve-passfile.$pid"
 else
-rm -f /tmp/pve-install-api-token.env 2>/dev/null||true
-rm -f "$install_dir/answer.toml" 2>/dev/null||true
-rm -f "/dev/shm/pve-ssh-session.$pid" "/tmp/pve-ssh-session.$pid" 2>/dev/null||true
-rm -f "/dev/shm/pve-passfile.$pid" "/tmp/pve-passfile.$pid" 2>/dev/null||true
+if [[ -n ${_TEMP_API_TOKEN_FILE:-} ]];then
+rm -f "$_TEMP_API_TOKEN_FILE" 2>/dev/null||true
 fi
-rm -f /tmp/tailscale_*.txt /tmp/iso_checksum.txt /tmp/*.tmp 2>/dev/null||true
-rm -f "/tmp/ssh-pve-control.$pid" "/tmp/pve-scp-lock.$pid" 2>/dev/null||true
+rm -f "$install_dir/answer.toml" 2>/dev/null||true
+fi
+for f in "${_TEMP_FILES[@]}";do
+if [[ -f $f ]]||[[ -S $f ]];then
+if [[ $f == *"pve-ssh-session"* ]]&&type secure_delete_file &>/dev/null;then
+secure_delete_file "$f"
+else
+rm -f "$f" 2>/dev/null||true
+fi
+fi
+done
 if [[ $INSTALL_COMPLETED != "true" ]];then
 rm -f "$install_dir/pve.iso" "$install_dir/pve-autoinstall.iso" "$install_dir/SHA256SUMS" 2>/dev/null||true
 rm -f "$install_dir"/qemu_*.log 2>/dev/null||true
@@ -279,7 +281,7 @@ return 2
 return 2
 ;;
 --qemu-ram)if
-[[ -z ${2:-} || ${2:-} =~ ^- ]]
+[[ -z ${2:-} || ${2:-} =~ ^-- ]]
 then
 printf '%s\n' "${CLR_RED}Error: --qemu-ram requires a value in MB$CLR_RESET"
 return 1
@@ -296,7 +298,7 @@ QEMU_RAM_OVERRIDE="$2"
 shift 2
 ;;
 --qemu-cores)if
-[[ -z ${2:-} || ${2:-} =~ ^- ]]
+[[ -z ${2:-} || ${2:-} =~ ^-- ]]
 then
 printf '%s\n' "${CLR_RED}Error: --qemu-cores requires a value$CLR_RESET"
 return 1
@@ -313,7 +315,7 @@ QEMU_CORES_OVERRIDE="$2"
 shift 2
 ;;
 --iso-version)if
-[[ -z ${2:-} || ${2:-} =~ ^- ]]
+[[ -z ${2:-} || ${2:-} =~ ^-- ]]
 then
 printf '%s\n' "${CLR_RED}Error: --iso-version requires a filename$CLR_RESET"
 return 1
@@ -460,7 +462,7 @@ current_letter=0
 trap 'exit 0' TERM INT
 trap 'clear' WINCH
 exec 3>&1
-exec 1>/dev/tty
+[[ -c /dev/tty ]]&&exec 1>/dev/tty
 exec 2>/dev/null
 while true;do
 _show_banner_frame "$current_letter"
@@ -527,8 +529,8 @@ local silent=false
 [[ ${3:-} == "--silent" ]]&&done_message="$message"
 local poll_interval="${PROGRESS_POLL_INTERVAL:-0.2}"
 gum spin --spinner meter --spinner.foreground "#ff8700" --title "$message" -- bash -c "
-    while kill -0 $pid 2>/dev/null; do
-      sleep $poll_interval
+    while kill -0 \"$pid\" 2>/dev/null; do
+      sleep \"$poll_interval\"
     done
   "
 wait "$pid" 2>/dev/null
@@ -571,13 +573,6 @@ local retry_count=0
 while [ "$retry_count" -lt "$max_retries" ];do
 if wget -q -O "$output_file" "$url";then
 if [ -s "$output_file" ];then
-local file_type
-file_type=$(file "$output_file" 2>/dev/null||printf '\n')
-if echo "$file_type"|grep -q "empty";then
-print_error "Downloaded file is empty: $output_file"
-retry_count=$((retry_count+1))
-continue
-fi
 return 0
 else
 print_error "Downloaded file is empty: $output_file"
@@ -594,7 +589,9 @@ return 1
 cmd_exists(){ command -v "$1" &>/dev/null;}
 _get_file_size(){
 local file="$1"
-stat -c%s "$file" 2>/dev/null||stat -f%z "$file" 2>/dev/null||echo 1024
+local size
+size=$(stat -c%s "$file" 2>/dev/null)||size=$(stat -f%z "$file" 2>/dev/null)||size=$(wc -c <"$file" 2>/dev/null|tr -d ' ')
+[[ -n $size && $size =~ ^[0-9]+$ ]]&&echo "$size"
 }
 secure_delete_file(){
 local file="$1"
@@ -605,7 +602,9 @@ shred -u -z "$file" 2>/dev/null||rm -f "$file"
 else
 local file_size
 file_size=$(_get_file_size "$file")
+if [[ -n $file_size ]];then
 dd if=/dev/zero of="$file" bs=1 count="$file_size" conv=notrunc 2>/dev/null||true
+fi
 rm -f "$file"
 fi
 return 0
@@ -652,9 +651,9 @@ log "DEBUG: Original file exists: $([[ -f $file ]]&&echo yes||echo no), size: $(
 rm -f "$tmpfile"
 return 1
 fi
-if grep -qE '\{\{[A-Z0-9_]+\}\}' "$tmpfile" 2>/dev/null;then
+if grep -qE '\{\{[A-Za-z0-9_]+\}\}' "$tmpfile" 2>/dev/null;then
 local remaining
-remaining=$(grep -oE '\{\{[A-Z0-9_]+\}\}' "$tmpfile" 2>/dev/null|sort -u|tr '\n' ' ')
+remaining=$(grep -oE '\{\{[A-Za-z0-9_]+\}\}' "$tmpfile" 2>/dev/null|sort -u|tr '\n' ' ')
 log "WARNING: Unsubstituted placeholders remain in $file: $remaining"
 rm -f "$tmpfile"
 return 1
@@ -788,8 +787,7 @@ esac
 log "Template $remote_file downloaded and validated successfully"
 return 0
 }
-_SSH_CONTROL_PATH="/tmp/ssh-pve-control.$$"
-SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=${SSH_CONNECT_TIMEOUT:-10} -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ControlMaster=auto -o ControlPath=$_SSH_CONTROL_PATH -o ControlPersist=300"
+SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=${SSH_CONNECT_TIMEOUT:-10} -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ControlMaster=auto -o ControlPath=$_TEMP_SSH_CONTROL_PATH -o ControlPersist=300"
 SSH_PORT="${SSH_PORT_QEMU:-5555}"
 _SSH_SESSION_PASSFILE=""
 _SSH_SESSION_LOGGED=false
@@ -811,16 +809,17 @@ printf '%s' "$NEW_ROOT_PASSWORD" >"$passfile_path"
 chmod 600 "$passfile_path"
 _SSH_SESSION_PASSFILE="$passfile_path"
 if [[ $BASHPID == "$$" ]]&&[[ $_SSH_SESSION_LOGGED != true ]];then
+register_temp_file "$passfile_path"
+register_temp_file "$_TEMP_SSH_CONTROL_PATH"
 log "SSH session initialized: $passfile_path"
 _SSH_SESSION_LOGGED=true
 fi
 }
 _ssh_control_cleanup(){
-local control_path="/tmp/ssh-pve-control.$$"
-if [[ -S $control_path ]];then
-ssh -o ControlPath="$control_path" -O exit root@localhost 2>/dev/null||true
-rm -f "$control_path" 2>/dev/null||true
-log "SSH control socket cleaned up: $control_path"
+if [[ -S $_TEMP_SSH_CONTROL_PATH ]];then
+ssh -o ControlPath="$_TEMP_SSH_CONTROL_PATH" -O exit root@localhost 2>/dev/null||true
+rm -f "$_TEMP_SSH_CONTROL_PATH" 2>/dev/null||true
+log "SSH control socket cleaned up: $_TEMP_SSH_CONTROL_PATH"
 fi
 }
 _ssh_session_cleanup(){
@@ -834,8 +833,10 @@ elif cmd_exists shred;then
 shred -u -z "$passfile_path" 2>/dev/null||rm -f "$passfile_path"
 else
 local file_size
-file_size=$(stat -c%s "$passfile_path" 2>/dev/null||stat -f%z "$passfile_path" 2>/dev/null||echo 1024)
+file_size=$(stat -c%s "$passfile_path" 2>/dev/null)||file_size=$(stat -f%z "$passfile_path" 2>/dev/null)||file_size=$(wc -c <"$passfile_path" 2>/dev/null|tr -d ' ')
+if [[ -n $file_size && $file_size =~ ^[0-9]+$ ]];then
 dd if=/dev/zero of="$passfile_path" bs=1 count="$file_size" conv=notrunc 2>/dev/null||true
+fi
 rm -f "$passfile_path"
 fi
 _SSH_SESSION_PASSFILE=""
@@ -844,18 +845,6 @@ log "SSH session cleaned up: $passfile_path"
 _ssh_get_passfile(){
 _ssh_session_init
 printf '%s\n' "$_SSH_SESSION_PASSFILE"
-}
-_ssh_base_cmd(){
-local passfile
-passfile=$(_ssh_get_passfile)
-local cmd_timeout="${1:-${SSH_COMMAND_TIMEOUT:-$SSH_DEFAULT_TIMEOUT}}"
-printf 'timeout %s sshpass -f "%s" ssh -p "%s" %s root@localhost' \
-"$cmd_timeout" "$passfile" "$SSH_PORT" "$SSH_OPTS"
-}
-_scp_base_cmd(){
-local passfile
-passfile=$(_ssh_get_passfile)
-printf 'sshpass -f "%s" scp -P "%s" %s' "$passfile" "$SSH_PORT" "$SSH_OPTS"
 }
 check_port_available(){
 local port="$1"
@@ -942,7 +931,7 @@ readonly SSH_DEFAULT_TIMEOUT=300
 _sanitize_script_for_log(){
 local script="$1"
 local d=$'\x01'
-script=$(printf '%s\n' "$script"|sed -E "s$d(PASSWORD|password|PASSWD|passwd|SECRET|secret|TOKEN|token|KEY|key)=('[^']*'|\"[^\"]*\"|[^[:space:]'\";]+)$d\\1=[REDACTED]${d}g")
+script=$(printf '%s\n' "$script"|sed -E "s$d(PASSWORD|password|PASSWD|passwd|SECRET|secret|TOKEN|token|KEY|key)=('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^[:space:]'\";]+)$d\\1=[REDACTED]${d}g")
 script=$(printf '%s\n' "$script"|sed -E "s$d(echo[[:space:]]+['\"]?[^:]+:)[^|'\"]*$d\\1[REDACTED]${d}g")
 script=$(printf '%s\n' "$script"|sed -E "s$d(--authkey=)('[^']*'|\"[^\"]*\"|[^[:space:]'\";]+)$d\\1[REDACTED]${d}g")
 script=$(printf '%s\n' "$script"|sed -E "s$d(echo[[:space:]]+['\"]?)[A-Za-z0-9+/=]+(['\"]?[[:space:]]*\\|[[:space:]]*base64[[:space:]]+-d)$d\\1[REDACTED]\\2${d}g")
@@ -1019,12 +1008,14 @@ log "ERROR: $message failed"
 exit 1
 fi
 }
-_SCP_LOCK_FILE="/tmp/pve-scp-lock.$$"
 remote_copy(){
 local src="$1"
 local dst="$2"
 local passfile
 passfile=$(_ssh_get_passfile)
+if [[ ! -f $_TEMP_SCP_LOCK_FILE ]]&&[[ $BASHPID == "$$" ]];then
+register_temp_file "$_TEMP_SCP_LOCK_FILE"
+fi
 (flock -x 200||{
 log "ERROR: Failed to acquire SCP lock for $src"
 exit 1
@@ -1033,7 +1024,7 @@ if ! sshpass -f "$passfile" scp -P "$SSH_PORT" $SSH_OPTS "$src" "root@localhost:
 log "ERROR: Failed to copy $src to $dst"
 exit 1
 fi) 200> \
-"$_SCP_LOCK_FILE"
+"$_TEMP_SCP_LOCK_FILE"
 return $?
 }
 generate_password(){
@@ -1076,10 +1067,19 @@ log "Virtio mapping: $drive → /dev/$vdev (pool)"
 ((virtio_idx++))
 done
 declare -p VIRTIO_MAP|sed 's/declare -A/declare -gA/' >/tmp/virtio_map.env
+register_temp_file "/tmp/virtio_map.env"
 log "Virtio mapping saved to /tmp/virtio_map.env"
 }
 load_virtio_mapping(){
 if [[ -f /tmp/virtio_map.env ]];then
+if ! grep -qE '^declare -gA VIRTIO_MAP=' /tmp/virtio_map.env;then
+log "ERROR: virtio_map.env missing expected declare statement"
+return 1
+fi
+if grep -qvE '^declare -gA VIRTIO_MAP=' /tmp/virtio_map.env;then
+log "ERROR: virtio_map.env contains unexpected content"
+return 1
+fi
 source /tmp/virtio_map.env
 return 0
 else
@@ -1189,9 +1189,9 @@ _wiz_error "$message"
 sleep "${WIZARD_MESSAGE_DELAY:-3}"
 }
 install_base_packages(){
-local packages="$SYSTEM_UTILITIES $OPTIONAL_PACKAGES locales chrony unattended-upgrades apt-listchanges linux-cpupower"
-[[ ${SHELL_TYPE:-bash} == "zsh" ]]&&packages="$packages zsh git"
-log "Installing base packages: $packages"
+local packages=($SYSTEM_UTILITIES $OPTIONAL_PACKAGES locales chrony unattended-upgrades apt-listchanges linux-cpupower)
+[[ ${SHELL_TYPE:-bash} == "zsh" ]]&&packages+=(zsh git)
+log "Installing base packages: ${packages[*]}"
 remote_run "Installing system packages" "
     set -e
     export DEBIAN_FRONTEND=noninteractive
@@ -1203,14 +1203,14 @@ remote_run "Installing system packages" "
     done
     apt-get update -qq
     apt-get dist-upgrade -yqq
-    apt-get install -yqq $packages
+    apt-get install -yqq ${packages[*]}
     apt-get autoremove -yqq
     apt-get clean
     set +e
     pveupgrade 2>/dev/null || echo 'pveupgrade check skipped' >&2
     pveam update 2>/dev/null || echo 'pveam update skipped' >&2
   " "System packages installed"
-log_subtasks $packages
+log_subtasks "${packages[@]}"
 }
 batch_install_packages(){
 local packages=()
@@ -1443,13 +1443,16 @@ return 1
 local dirs_to_chown=""
 local dir="$dest_dir"
 while [[ $dir != "$home_dir" && $dir != "/" ]];do
-dirs_to_chown+="'$dir' "
+local escaped_dir="${dir//\'/\'\\\'\'}"
+dirs_to_chown+="'$escaped_dir' "
 dir="$(dirname "$dir")"
 done
+[[ -n $dirs_to_chown ]]&&{
 remote_exec "chown $ADMIN_USERNAME:$ADMIN_USERNAME $dirs_to_chown"||{
 log "ERROR: Failed to set ownership on $dirs_to_chown"
 rm -f "$staged"
 return 1
+}
 }
 fi
 remote_copy "$staged" "$dest"||{
@@ -1789,7 +1792,7 @@ local email="$1"
 validate_smtp_host(){
 local host="$1"
 [[ -z $host ]]&&return 1
-[[ $host =~ ^[a-zA-Z0-9.\[\]:-]+$ ]]&&[[ ${#host} -le 253 ]]
+[[ $host =~ ^[][a-zA-Z0-9.:-]+$ ]]&&[[ ${#host} -le 253 ]]
 }
 validate_smtp_port(){
 local port="$1"
@@ -1799,7 +1802,8 @@ validate_not_empty(){
 [[ -n $1 ]]
 }
 is_ascii_printable(){
-LC_ALL=C bash -c '[[ "$1" =~ ^[[:print:]]+$ ]]' _ "$1"
+local LC_ALL=C
+[[ $1 =~ ^[[:print:]]+$ ]]
 }
 get_password_error(){
 local password="$1"
@@ -1834,24 +1838,30 @@ ipv6="${ipv6%%\%*}"
 [[ $ipv6 =~ ^:[^:] ]]&&return 1
 [[ $ipv6 =~ [^:]:$ ]]&&return 1
 [[ $ipv6 =~ ::: ]]&&return 1
-local double_colon_count
-double_colon_count=$(grep -o '::' <<<"$ipv6"|wc -l)
+local temp="${ipv6//::/}"
+local double_colon_count=$(((${#ipv6}-${#temp})/2))
 [[ $double_colon_count -gt 1 ]]&&return 1
-local groups
+local groups left_count=0 right_count=0 colons
 if [[ $ipv6 == *"::"* ]];then
 local left="${ipv6%%::*}"
 local right="${ipv6##*::}"
-local left_count=0 right_count=0
-[[ -n $left ]]&&left_count=$(tr ':' '\n' <<<"$left"|grep -c .)
-[[ -n $right ]]&&right_count=$(tr ':' '\n' <<<"$right"|grep -c .)
+if [[ -n $left ]];then
+colons="${left//[!:]/}"
+left_count=$((${#colons}+1))
+fi
+if [[ -n $right ]];then
+colons="${right//[!:]/}"
+right_count=$((${#colons}+1))
+fi
 groups=$((left_count+right_count))
 [[ $groups -ge 8 ]]&&return 1
 else
-groups=$(tr ':' '\n' <<<"$ipv6"|grep -c .)
-[[ $groups -ne 8 ]]&&return 1
+colons="${ipv6//[!:]/}"
+[[ ${#colons} -ne 7 ]]&&return 1
 fi
-local group
-for group in $(tr ':' ' ' <<<"$ipv6");do
+local group IFS=':'
+set -- $ipv6
+for group in "$@";do
 [[ -z $group ]]&&continue
 [[ ${#group} -gt 4 ]]&&return 1
 [[ ! $group =~ ^[0-9a-fA-F]+$ ]]&&return 1
@@ -1872,6 +1882,40 @@ local gateway="$1"
 [[ -z $gateway ]]&&return 0
 [[ $gateway == "auto" ]]&&return 0
 validate_ipv6 "$gateway"
+}
+_extract_ipv4(){
+grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}'|head -1
+}
+_parse_dig_output(){
+local output="$1"
+local ip=""
+ip=$(printf '%s\n' "$output"|grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'|head -1)
+[[ -z $ip ]]&&ip=$(printf '%s\n' "$output"|_extract_ipv4)
+printf '%s' "$ip"
+}
+_parse_host_output(){
+local output="$1"
+local ip=""
+ip=$(printf '%s\n' "$output"|grep -i "has address"|head -1|awk '{print $NF}')
+[[ -z $ip ]]&&ip=$(printf '%s\n' "$output"|grep -iE '(^|\s)A\s'|head -1|_extract_ipv4)
+[[ -z $ip ]]&&ip=$(printf '%s\n' "$output"|tail -n +2|_extract_ipv4)
+printf '%s' "$ip"
+}
+_parse_nslookup_output(){
+local output="$1"
+local ip=""
+ip=$(printf '%s\n' "$output"|awk '/^Address:/ && !/#/ {print $2; exit}')
+[[ -z $ip ]]&&ip=$(printf '%s\n' "$output"|grep -E '^Address:\s*[0-9]'|grep -v '#'|head -1|awk '{print $2}')
+[[ -z $ip ]]&&ip=$(printf '%s\n' "$output"|awk '/^Name:/{found=1} found && /^Address:/{print $2; exit}')
+[[ -z $ip ]]&&ip=$(printf '%s\n' "$output"|sed -n '/Non-authoritative\|^Name:/,$p'|_extract_ipv4)
+printf '%s' "$ip"
+}
+_parse_getent_output(){
+local output="$1"
+local ip=""
+ip=$(printf '%s\n' "$output"|grep -i 'STREAM'|head -1|awk '{print $1}')
+[[ -z $ip ]]&&ip=$(printf '%s\n' "$output"|_extract_ipv4)
+printf '%s' "$ip"
 }
 validate_dns_resolution(){
 local fqdn="$1"
@@ -1895,13 +1939,17 @@ return 1
 fi
 for ((attempt=1; attempt<=max_attempts; attempt++));do
 resolved_ip=""
+local raw_output=""
 for dns_server in "${DNS_SERVERS[@]}";do
 case "$dns_tool" in
-dig)resolved_ip=$(timeout "$dns_timeout" dig +short +time=3 +tries=1 A "$fqdn" "@$dns_server" 2>/dev/null|grep -E '^[0-9]+\.'|head -1)
+dig)raw_output=$(timeout "$dns_timeout" dig +short +time=3 +tries=1 A "$fqdn" "@$dns_server" 2>/dev/null)
+resolved_ip=$(_parse_dig_output "$raw_output")
 ;;
-host)resolved_ip=$(timeout "$dns_timeout" host -W 3 -t A "$fqdn" "$dns_server" 2>/dev/null|grep "has address"|head -1|awk '{print $NF}')
+host)raw_output=$(timeout "$dns_timeout" host -W 3 -t A "$fqdn" "$dns_server" 2>/dev/null)
+resolved_ip=$(_parse_host_output "$raw_output")
 ;;
-nslookup)resolved_ip=$(timeout "$dns_timeout" nslookup -timeout=3 "$fqdn" "$dns_server" 2>/dev/null|awk '/^Address:/ && !/#/ {print $2; exit}')
+nslookup)raw_output=$(timeout "$dns_timeout" nslookup -timeout=3 "$fqdn" "$dns_server" 2>/dev/null)
+resolved_ip=$(_parse_nslookup_output "$raw_output")
 esac
 if [[ -n $resolved_ip ]];then
 break
@@ -1909,12 +1957,14 @@ fi
 done
 if [[ -z $resolved_ip ]];then
 case "$dns_tool" in
-dig)resolved_ip=$(timeout "$dns_timeout" dig +short +time=3 +tries=1 A "$fqdn" 2>/dev/null|grep -E '^[0-9]+\.'|head -1)
+dig)raw_output=$(timeout "$dns_timeout" dig +short +time=3 +tries=1 A "$fqdn" 2>/dev/null)
+resolved_ip=$(_parse_dig_output "$raw_output")
 ;;
 *)if
 cmd_exists getent
 then
-resolved_ip=$(timeout "$dns_timeout" getent ahosts "$fqdn" 2>/dev/null|grep STREAM|head -1|awk '{print $1}')
+raw_output=$(timeout "$dns_timeout" getent ahosts "$fqdn" 2>/dev/null)
+resolved_ip=$(_parse_getent_output "$raw_output")
 fi
 esac
 fi
@@ -1937,28 +1987,31 @@ return 1
 }
 validate_ssh_key_secure(){
 local key="$1"
-if ! echo "$key"|ssh-keygen -l -f - >/dev/null 2>&1;then
+local key_info
+if ! key_info=$(echo "$key"|ssh-keygen -l -f - 2>/dev/null);then
 log "ERROR: Invalid SSH public key format"
 return 1
 fi
+local bits
+bits=$(echo "$key_info"|awk '{print $1}')
 local key_type
 key_type=$(echo "$key"|awk '{print $1}')
 case "$key_type" in
 ssh-ed25519)log "INFO: SSH key validated (ED25519)"
 return 0
 ;;
-ecdsa-*)local bits
-bits=$(echo "$key"|ssh-keygen -l -f - 2>/dev/null|awk '{print $1}')
-if [[ $bits -ge 256 ]];then
+ecdsa-*)if
+[[ $bits -ge 256 ]]
+then
 log "INFO: SSH key validated ($key_type, $bits bits)"
 return 0
 fi
 log "ERROR: ECDSA key curve too small (current: $bits)"
 return 1
 ;;
-ssh-rsa)local bits
-bits=$(echo "$key"|ssh-keygen -l -f - 2>/dev/null|awk '{print $1}')
-if [[ $bits -ge 2048 ]];then
+ssh-rsa)if
+[[ $bits -ge 2048 ]]
+then
 log "INFO: SSH key validated ($key_type, $bits bits)"
 return 0
 fi
@@ -2047,12 +2100,13 @@ local -A required_commands=(
 [aria2c]="aria2"
 [findmnt]="util-linux"
 [gpg]="gnupg"
+[xargs]="findutils"
 [gum]="gum")
-local packages_to_install=""
+local packages_to_install=()
 local need_charm_repo=false
 for cmd in "${!required_commands[@]}";do
 if ! cmd_exists "$cmd";then
-packages_to_install+=" ${required_commands[$cmd]}"
+packages_to_install+=("${required_commands[$cmd]}")
 [[ $cmd == "gum" ]]&&need_charm_repo=true
 fi
 done
@@ -2061,9 +2115,9 @@ mkdir -p /etc/apt/keyrings 2>/dev/null
 curl -fsSL https://repo.charm.sh/apt/gpg.key 2>/dev/null|gpg --dearmor -o /etc/apt/keyrings/charm.gpg >/dev/null 2>&1
 printf '%s\n' "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" >/etc/apt/sources.list.d/charm.list 2>/dev/null
 fi
-if [[ -n $packages_to_install ]];then
+if [[ ${#packages_to_install[@]} -gt 0 ]];then
 apt-get update -qq >/dev/null 2>&1
-DEBIAN_FRONTEND=noninteractive apt-get install -qq -y $packages_to_install >/dev/null 2>&1
+DEBIAN_FRONTEND=noninteractive apt-get install -qq -y "${packages_to_install[@]}" >/dev/null 2>&1
 fi
 _install_zfs_if_needed
 }
@@ -2134,7 +2188,11 @@ modprobe kvm_amd 2>/dev/null||true
 else
 modprobe kvm_intel 2>/dev/null||modprobe kvm_amd 2>/dev/null||true
 fi
+local retries=6
+while [[ ! -e /dev/kvm && $retries -gt 0 ]];do
 sleep 0.5
+((retries--))
+done
 fi
 if [[ -e /dev/kvm ]];then
 PREFLIGHT_KVM="Available"
@@ -2277,10 +2335,8 @@ IPV6_CIDR=$(ifconfig "$CURRENT_INTERFACE" 2>/dev/null|awk '/inet6/ && /global/ {
 fi
 MAIN_IPV6="${IPV6_CIDR%/*}"
 if [[ -n $IPV6_CIDR ]];then
-local ipv6_prefix="${MAIN_IPV6%%:*:*:*:*}"
-if [[ $ipv6_prefix == "$MAIN_IPV6" ]]||[[ -z $ipv6_prefix ]];then
+local ipv6_prefix
 ipv6_prefix=$(printf '%s' "$MAIN_IPV6"|cut -d':' -f1-4)
-fi
 FIRST_IPV6_CIDR="$ipv6_prefix:1::1/80"
 else
 FIRST_IPV6_CIDR=""
@@ -2312,6 +2368,7 @@ DRIVE_MODELS+=("$model")
 done
 }
 _get_existing_pool_disks(){
+[[ ${#DETECTED_POOLS[@]} -eq 0 ]]&&return 0
 local pool_disks=()
 for pool_info in "${DETECTED_POOLS[@]}";do
 local disks_csv="${pool_info##*|}"
@@ -2566,8 +2623,13 @@ log "ERROR: Pre-flight checks failed"
 exit 1
 }
 get_terminal_dimensions(){
-_LOG_TERM_HEIGHT=$(tput lines)
-_LOG_TERM_WIDTH=$(tput cols)
+if [[ -t 1 && -n ${TERM:-} ]];then
+_LOG_TERM_HEIGHT=$(tput lines 2>/dev/null)||_LOG_TERM_HEIGHT=24
+_LOG_TERM_WIDTH=$(tput cols 2>/dev/null)||_LOG_TERM_WIDTH=80
+else
+_LOG_TERM_HEIGHT=24
+_LOG_TERM_WIDTH=80
+fi
 }
 LOGO_HEIGHT=${BANNER_HEIGHT:-9}
 HEADER_HEIGHT=4
@@ -2652,13 +2714,15 @@ local silent=false
 [[ ${3:-} == "--silent" ]]&&done_message="$message"
 start_task "$CLR_ORANGE├─$CLR_RESET $message"
 local task_idx=$TASK_INDEX
+local animation_counter=0
 while kill -0 "$pid" 2>/dev/null;do
 sleep 0.3
-local dots_count=$((($(date +%s)%3)+1))
+local dots_count=$(((animation_counter%3)+1))
 local dots=""
 for ((d=0; d<dots_count; d++));do dots+=".";done
 LOG_LINES[task_idx]="$CLR_ORANGE├─$CLR_RESET $message$CLR_ORANGE$dots$CLR_RESET"
 render_logs
+((animation_counter++))
 done
 wait "$pid" 2>/dev/null
 local exit_code=$?
@@ -2736,7 +2800,13 @@ selection=0
 fi
 ;;
 enter)_wiz_show_cursor
-local field_name="${_WIZ_FIELD_MAP[$selection]}"
+local field_name="${_WIZ_FIELD_MAP[$selection]:-}"
+local editor_func="_edit_$field_name"
+if [[ -z $field_name ]];then
+log "WARNING: No field mapped for selection $selection"
+elif ! declare -F "$editor_func" >/dev/null 2>&1;then
+log "WARNING: Editor function $editor_func not found for field $field_name"
+else
 case "$field_name" in
 hostname)_edit_hostname;;
 email)_edit_email;;
@@ -2769,8 +2839,10 @@ tools)_edit_features_tools;;
 api_token)_edit_api_token;;
 admin_username)_edit_admin_username;;
 admin_password)_edit_admin_password;;
-ssh_key)_edit_ssh_key
+ssh_key)_edit_ssh_key;;
+*)log "WARNING: Unknown field name: $field_name"
 esac
+fi
 _wiz_hide_cursor
 ;;
 start)return 0
@@ -2790,6 +2862,7 @@ done
 _show_input_footer(){
 local type="${1:-input}"
 local component_lines="${2:-1}"
+local -r footer_fixed_lines=2
 local i
 for ((i=0; i<component_lines; i++));do
 _wiz_blank_line
@@ -2804,7 +2877,7 @@ checkbox)footer_text="$CLR_GRAY[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORA
 *)footer_text="$CLR_GRAY[${CLR_ORANGE}Enter$CLR_GRAY] confirm  [${CLR_ORANGE}Esc$CLR_GRAY] cancel$CLR_RESET"
 esac
 printf '%s\n' "$(_wiz_center "$footer_text")"
-tput cuu $((component_lines+2))
+tput cuu $((component_lines+footer_fixed_lines))
 }
 _validate_config(){
 _wiz_config_complete&&return 0
@@ -3011,7 +3084,7 @@ local text="$1"
 local term_width
 term_width=$(tput cols 2>/dev/null||echo 80)
 local visible_text
-visible_text=$(printf '%s' "$text"|sed 's/\x1b\[[0-9;]*m//g')
+visible_text=$(printf '%s' "$text"|sed $'s/\e\\[[0-9;]*m//g')
 local text_len=${#visible_text}
 local padding=$(((term_width-text_len)/2))
 ((padding<0))&&padding=0
@@ -3103,7 +3176,7 @@ _wiz_read_key(){
 local key
 IFS= read -rsn1 key
 if [[ $key == $'\x1b' ]];then
-read -rsn2 -t 0.1 key
+read -rsn2 -t 0.5 key
 case "$key" in
 '[A')WIZ_KEY="up";;
 '[B')WIZ_KEY="down";;
@@ -3286,11 +3359,16 @@ _dsp_lookup(){
 local key="$1:$2"
 echo "${_DSP_MAP[$key]:-$2}"
 }
+_dsp_escape(){
+printf '%s' "${1//\\/\\\\}"
+}
 _dsp_basic(){
 _DSP_PASS=""
 [[ -n $NEW_ROOT_PASSWORD ]]&&_DSP_PASS="********"
 _DSP_HOSTNAME=""
-[[ -n $PVE_HOSTNAME && -n $DOMAIN_SUFFIX ]]&&_DSP_HOSTNAME="$PVE_HOSTNAME.$DOMAIN_SUFFIX"
+if [[ -n $PVE_HOSTNAME && -n $DOMAIN_SUFFIX ]];then
+_DSP_HOSTNAME="$(_dsp_escape "$PVE_HOSTNAME").$(_dsp_escape "$DOMAIN_SUFFIX")"
+fi
 }
 _dsp_proxmox(){
 _DSP_REPO=""
@@ -3302,7 +3380,9 @@ _dsp_network(){
 _DSP_IPV6=""
 if [[ -n $IPV6_MODE ]];then
 _DSP_IPV6=$(_dsp_lookup "ipv6" "$IPV6_MODE")
-[[ $IPV6_MODE == "manual" && -n $MAIN_IPV6 ]]&&_DSP_IPV6+=" ($MAIN_IPV6, gw: $IPV6_GATEWAY)"
+if [[ $IPV6_MODE == "manual" && -n $MAIN_IPV6 ]];then
+_DSP_IPV6+=" ($(_dsp_escape "$MAIN_IPV6"), gw: $(_dsp_escape "$IPV6_GATEWAY"))"
+fi
 fi
 _DSP_BRIDGE=""
 [[ -n $BRIDGE_MODE ]]&&_DSP_BRIDGE=$(_dsp_lookup "bridge" "$BRIDGE_MODE")
@@ -3320,7 +3400,7 @@ _DSP_MTU="${BRIDGE_MTU:-9000}"
 _dsp_storage(){
 _DSP_EXISTING_POOL=""
 if [[ $USE_EXISTING_POOL == "yes" && -n $EXISTING_POOL_NAME ]];then
-_DSP_EXISTING_POOL="Use: $EXISTING_POOL_NAME (${#EXISTING_POOL_DISKS[@]} disks)"
+_DSP_EXISTING_POOL="Use: $(_dsp_escape "$EXISTING_POOL_NAME") (${#EXISTING_POOL_DISKS[@]} disks)"
 else
 _DSP_EXISTING_POOL="Create new"
 fi
@@ -3363,7 +3443,7 @@ _DSP_SSL=""
 _DSP_POSTFIX=""
 if [[ -n $INSTALL_POSTFIX ]];then
 if [[ $INSTALL_POSTFIX == "yes" && -n $SMTP_RELAY_HOST ]];then
-_DSP_POSTFIX="Relay: $SMTP_RELAY_HOST:${SMTP_RELAY_PORT:-587}"
+_DSP_POSTFIX="Relay: $(_dsp_escape "$SMTP_RELAY_HOST"):$(_dsp_escape "${SMTP_RELAY_PORT:-587}")"
 elif [[ $INSTALL_POSTFIX == "yes" ]];then
 _DSP_POSTFIX="Enabled (no relay)"
 else
@@ -3398,15 +3478,15 @@ local tool_items=()
 }
 _dsp_access(){
 _DSP_ADMIN_USER=""
-[[ -n $ADMIN_USERNAME ]]&&_DSP_ADMIN_USER="$ADMIN_USERNAME"
+[[ -n $ADMIN_USERNAME ]]&&_DSP_ADMIN_USER="$(_dsp_escape "$ADMIN_USERNAME")"
 _DSP_ADMIN_PASS=""
 [[ -n $ADMIN_PASSWORD ]]&&_DSP_ADMIN_PASS="********"
 _DSP_SSH=""
-[[ -n $SSH_PUBLIC_KEY ]]&&_DSP_SSH="${SSH_PUBLIC_KEY:0:20}..."
+[[ -n $SSH_PUBLIC_KEY ]]&&_DSP_SSH="$(_dsp_escape "${SSH_PUBLIC_KEY:0:20}")..."
 _DSP_API=""
 if [[ -n $INSTALL_API_TOKEN ]];then
 case "$INSTALL_API_TOKEN" in
-yes)_DSP_API="Yes ($API_TOKEN_NAME)";;
+yes)_DSP_API="Yes ($(_dsp_escape "$API_TOKEN_NAME"))";;
 no)_DSP_API="No"
 esac
 fi
@@ -3619,7 +3699,8 @@ eg)echo "ar_EG.UTF-8";;
 sa)echo "ar_SA.UTF-8";;
 ae)echo "ar_AE.UTF-8";;
 ir)echo "fa_IR.UTF-8";;
-*)echo "en_US.UTF-8"
+*)log "WARNING: Unknown country code '$country', using en_US.UTF-8 fallback"
+echo "en_US.UTF-8"
 esac
 }
 _update_locale_from_country(){
@@ -3640,7 +3721,7 @@ new_domain=$(_wiz_input \
 --prompt "Domain: ")
 [[ -z $new_domain ]]&&return
 DOMAIN_SUFFIX="$new_domain"
-FQDN="$PVE_HOSTNAME.$DOMAIN_SUFFIX"
+[[ -n $PVE_HOSTNAME ]]&&FQDN="$PVE_HOSTNAME.$DOMAIN_SUFFIX"
 }
 _edit_email(){
 _wiz_input_validated "EMAIL" "validate_email" "Invalid email format" \
@@ -3973,7 +4054,7 @@ if [[ $selected == "Create new pool (format disks)" ]];then
 USE_EXISTING_POOL=""
 EXISTING_POOL_NAME=""
 EXISTING_POOL_DISKS=()
-elif [[ $selected =~ ^Use\ existing:\ ([^[:space:]]+) ]];then
+elif [[ $selected =~ ^Use\ existing:\ (.+)\ \( ]];then
 if [[ -z $BOOT_DISK ]];then
 _wiz_start_edit
 _wiz_hide_cursor
@@ -3989,7 +4070,9 @@ local pool_name="${BASH_REMATCH[1]}"
 local disks_csv
 disks_csv=$(get_pool_disks "$pool_name")
 local pool_disks=()
-IFS=',' read -ra pool_disks <<<"$disks_csv"
+while IFS= read -r disk;do
+[[ -n $disk ]]&&pool_disks+=("$disk")
+done < <(tr ',' '\n' <<<"$disks_csv")
 local boot_in_pool=false
 for disk in "${pool_disks[@]}";do
 if [[ $disk == "$BOOT_DISK" ]];then
@@ -4130,12 +4213,14 @@ printf '%s\n' "$?" >"$dns_result_file") > \
 /dev/null 2>&1&
 local dns_pid=$!
 printf "%s" "${CLR_CYAN}Validating DNS resolution$CLR_RESET"
+local animation_counter=0
 while kill -0 "$dns_pid" 2>/dev/null;do
 sleep 0.3
-local dots_count=$((($(date +%s)%3)+1))
+local dots_count=$(((animation_counter%3)+1))
 local dots=""
 for ((d=0; d<dots_count; d++));do dots+=".";done
 printf "\r%sValidating DNS resolution%s%-3s%s" "$CLR_CYAN" "$CLR_ORANGE" "$dots" "$CLR_RESET"
+((animation_counter++))
 done
 wait "$dns_pid" 2>/dev/null
 local dns_result
@@ -4401,7 +4486,7 @@ options+=$'\n'"$disk_name - $disk_size  $disk_model"
 done
 _show_input_footer "filter" "$((DRIVE_COUNT+2))"
 local selected
-if ! selected=$(printf '%s' "$options"|_wiz_choose --header="Boot disk:");then
+if ! selected=$(printf '%s\n' "$options"|_wiz_choose --header="Boot disk:");then
 return
 fi
 if [[ -n $selected ]];then
@@ -4437,6 +4522,10 @@ _wiz_description \
 ""
 local options=""
 local preselected=()
+local -A pool_disk_set=()
+for pool_disk in "${ZFS_POOL_DISKS[@]}";do
+pool_disk_set["$pool_disk"]=1
+done
 for i in "${!DRIVES[@]}";do
 if [[ -z $BOOT_DISK || ${DRIVES[$i]} != "$BOOT_DISK" ]];then
 local disk_name="${DRIVE_NAMES[$i]}"
@@ -4445,12 +4534,7 @@ local disk_model="${DRIVE_MODELS[$i]:0:25}"
 local disk_label="$disk_name - $disk_size  $disk_model"
 [[ -n $options ]]&&options+=$'\n'
 options+="$disk_label"
-for pool_disk in "${ZFS_POOL_DISKS[@]}";do
-if [[ $pool_disk == "/dev/$disk_name" ]];then
-preselected+=("$disk_label")
-break
-fi
-done
+[[ -v pool_disk_set["/dev/$disk_name"] ]]&&preselected+=("$disk_label")
 fi
 done
 local available_count
@@ -4521,24 +4605,37 @@ local avail_governors=""
 if [[ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors ]];then
 avail_governors=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors)
 fi
+local has_performance=false has_ondemand=false has_powersave=false
+local has_schedutil=false has_conservative=false
+if [[ -n $avail_governors ]];then
+for gov in $avail_governors;do
+case "$gov" in
+performance)has_performance=true;;
+ondemand)has_ondemand=true;;
+powersave)has_powersave=true;;
+schedutil)has_schedutil=true;;
+conservative)has_conservative=true
+esac
+done
+fi
 local options=()
 local descriptions=()
-if [[ -z $avail_governors ]]||printf '%s\n' "$avail_governors"|grep -qw "performance";then
+if [[ -z $avail_governors ]]||$has_performance;then
 options+=("Performance")
 descriptions+=("  {{cyan:Performance}}:  Max frequency (highest power)")
 fi
-if printf '%s\n' "$avail_governors"|grep -qw "ondemand";then
+if $has_ondemand;then
 options+=("Balanced")
 descriptions+=("  {{cyan:Balanced}}:     Scale based on load")
-elif printf '%s\n' "$avail_governors"|grep -qw "powersave";then
+elif $has_powersave;then
 options+=("Balanced")
 descriptions+=("  {{cyan:Balanced}}:     Dynamic scaling (power efficient)")
 fi
-if printf '%s\n' "$avail_governors"|grep -qw "schedutil";then
+if $has_schedutil;then
 options+=("Adaptive")
 descriptions+=("  {{cyan:Adaptive}}:     Kernel-managed scaling")
 fi
-if printf '%s\n' "$avail_governors"|grep -qw "conservative";then
+if $has_conservative;then
 options+=("Conservative")
 descriptions+=("  {{cyan:Conservative}}: Gradual frequency changes")
 fi
@@ -4563,7 +4660,7 @@ fi
 case "$selected" in
 "Performance")CPU_GOVERNOR="performance";;
 "Balanced")if
-printf '%s\n' "$avail_governors"|grep -qw "ondemand"
+$has_ondemand
 then
 CPU_GOVERNOR="ondemand"
 else
@@ -4699,8 +4796,14 @@ log "Adding Proxmox repository"
 printf '%s\n' "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" >/etc/apt/sources.list.d/pve.list
 log "Downloading Proxmox GPG key"
 curl -fsSL -o /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg >>"$LOG_FILE" 2>&1&
-show_progress $! "Adding Proxmox repository" "Proxmox repository added"
-wait "$!"
+local bg_pid=$!
+if [[ -z $bg_pid || ! $bg_pid =~ ^[0-9]+$ ]];then
+log "ERROR: Failed to start background job for GPG key download"
+print_error "Failed to start download process"
+exit 1
+fi
+show_progress "$bg_pid" "Adding Proxmox repository" "Proxmox repository added"
+wait "$bg_pid"
 local exit_code=$?
 if [[ $exit_code -ne 0 ]];then
 log "ERROR: Failed to download Proxmox GPG key"
@@ -4714,8 +4817,13 @@ fi
 log "Updating package lists"
 apt-get clean >>"$LOG_FILE" 2>&1
 apt-get update >>"$LOG_FILE" 2>&1&
-show_progress $! "Updating package lists" "Package lists updated"
-wait "$!"
+bg_pid=$!
+if [[ -z $bg_pid || ! $bg_pid =~ ^[0-9]+$ ]];then
+log "ERROR: Failed to start background job for package list update"
+exit 1
+fi
+show_progress "$bg_pid" "Updating package lists" "Package lists updated"
+wait "$bg_pid"
 exit_code=$?
 if [[ $exit_code -ne 0 ]];then
 log "ERROR: Failed to update package lists"
@@ -4727,8 +4835,13 @@ live_log_subtask "Downloading package lists"
 fi
 log "Installing required packages: proxmox-auto-install-assistant xorriso ovmf wget sshpass"
 apt-get install -yq proxmox-auto-install-assistant xorriso ovmf wget sshpass >>"$LOG_FILE" 2>&1&
-show_progress $! "Installing required packages" "Required packages installed"
-wait "$!"
+bg_pid=$!
+if [[ -z $bg_pid || ! $bg_pid =~ ^[0-9]+$ ]];then
+log "ERROR: Failed to start background job for package installation"
+exit 1
+fi
+show_progress "$bg_pid" "Installing required packages" "Required packages installed"
+wait "$bg_pid"
 exit_code=$?
 if [[ $exit_code -ne 0 ]];then
 log "ERROR: Failed to install required packages"
@@ -4783,7 +4896,7 @@ return 1
 fi
 if [[ ${#VIRTIO_MAP[@]} -eq 0 ]];then
 log "ERROR: VIRTIO_MAP is empty - no disks mapped for QEMU"
-print_error "No disks available for QEMU. Check disk detection."
+print_error "No disk-to-virtio mappings found. Ensure ZFS pool disks were selected in wizard storage configuration."
 return 1
 fi
 DRIVE_ARGS=""
@@ -4802,7 +4915,7 @@ log "ERROR: Disk $disk does not exist or is not a block device"
 return 1
 fi
 log "QEMU drive order: $vdev -> $disk"
-DRIVE_ARGS="$DRIVE_ARGS -drive file=$disk,format=raw,media=disk,if=virtio"
+DRIVE_ARGS="$DRIVE_ARGS -drive file=\"$disk\",format=raw,media=disk,if=virtio"
 done
 if [[ -z $DRIVE_ARGS ]];then
 log "ERROR: No drive arguments built - QEMU would start without disks"
@@ -4834,9 +4947,9 @@ _signal_process "$pid" "9" "Force killing process $pid"
 done
 sleep "${PROCESS_KILL_WAIT:-1}"
 fi
-pkill -TERM "$pattern" 2>/dev/null||true
+pkill -f -TERM "$pattern" 2>/dev/null||true
 sleep "${PROCESS_KILL_WAIT:-1}"
-pkill -9 "$pattern" 2>/dev/null||true
+pkill -f -9 "$pattern" 2>/dev/null||true
 }
 _stop_mdadm_arrays(){
 if ! cmd_exists mdadm;then
@@ -4900,7 +5013,7 @@ done
 }
 release_drives(){
 log "Releasing drives from locks..."
-_kill_processes_by_pattern "qemu-system-x86"
+_kill_processes_by_pattern "qemu-system-x86_64"
 _stop_mdadm_arrays
 _deactivate_lvm
 _unmount_drive_filesystems
@@ -4911,8 +5024,15 @@ log "Drives released"
 _modify_template_files(){
 log "Starting template modification"
 apply_common_template_vars "./templates/hosts"||return 1
+if [[ ${IPV6_MODE:-} != "disabled" && -n ${MAIN_IPV6:-} ]];then
+printf '%s %s %s\n' "$MAIN_IPV6" "$FQDN" "$PVE_HOSTNAME" >>"./templates/hosts"
+fi
 generate_interfaces_file "./templates/interfaces"||return 1
 apply_common_template_vars "./templates/resolv.conf"||return 1
+if [[ ${IPV6_MODE:-} != "disabled" ]];then
+printf 'nameserver %s\n' "${DNS6_PRIMARY:-2606:4700:4700::1111}" >>"./templates/resolv.conf"
+printf 'nameserver %s\n' "${DNS6_SECONDARY:-2606:4700:4700::1001}" >>"./templates/resolv.conf"
+fi
 apply_template_vars "./templates/cpupower.service" "CPU_GOVERNOR=${CPU_GOVERNOR:-performance}"||return 1
 apply_common_template_vars "./templates/locale.sh"||return 1
 apply_common_template_vars "./templates/default-locale"||return 1
@@ -5034,9 +5154,14 @@ log "ERROR: Failed to download template files"
 exit 1
 fi
 if [[ -n ${PRIVATE_SUBNET:-} && $BRIDGE_MODE != "external" ]];then
+if validate_subnet "$PRIVATE_SUBNET";then
 PRIVATE_IP_CIDR="${PRIVATE_SUBNET%.*}.1/${PRIVATE_SUBNET#*/}"
 export PRIVATE_IP_CIDR
 log "Derived PRIVATE_IP_CIDR=$PRIVATE_IP_CIDR from PRIVATE_SUBNET=$PRIVATE_SUBNET"
+else
+log "ERROR: Invalid PRIVATE_SUBNET format: $PRIVATE_SUBNET (expected CIDR like 10.0.0.0/24)"
+return 1
+fi
 fi
 if ! run_with_progress "Modifying template files" "Template files modified" _modify_template_files;then
 log "ERROR: Template modification failed"
@@ -5196,16 +5321,21 @@ live_log_subtask "SHA256: OK (verified by aria2c)"
 fi
 else
 log "Verifying ISO checksum"
-local actual_checksum
-(actual_checksum=$(sha256sum pve.iso|awk '{print $1}')&&printf '%s\n' "$actual_checksum" >/tmp/checksum_result)&
+local actual_checksum checksum_file
+checksum_file=$(mktemp)||{
+log "ERROR: mktemp failed for checksum_file"
+exit 1
+}
+register_temp_file "$checksum_file"
+(actual_checksum=$(sha256sum pve.iso|awk '{print $1}')&&printf '%s\n' "$actual_checksum" >"$checksum_file")&
 local checksum_pid=$!
 if type show_progress &>/dev/null 2>&1;then
 show_progress $checksum_pid "Verifying checksum" "Checksum verified"
 else
 wait "$checksum_pid"
 fi
-actual_checksum=$(cat /tmp/checksum_result 2>/dev/null)
-rm -f /tmp/checksum_result
+actual_checksum=$(cat "$checksum_file" 2>/dev/null)
+rm -f "$checksum_file"
 if [[ $actual_checksum != "$expected_checksum" ]];then
 log "ERROR: Checksum mismatch! Expected: $expected_checksum, Got: $actual_checksum"
 if type live_log_subtask &>/dev/null 2>&1;then
@@ -5224,7 +5354,7 @@ log "WARNING: Could not find checksum for $ISO_FILENAME"
 print_warning "Could not find checksum for $ISO_FILENAME"
 fi
 log "Cleaning up temporary files in /tmp"
-rm -rf /tmp/tmp.* /tmp/pve-* /tmp/checksum_result 2>/dev/null||true
+rm -rf /tmp/tmp.* /tmp/pve-* 2>/dev/null||true
 log "Temporary files cleaned"
 }
 validate_answer_toml(){
@@ -5308,12 +5438,19 @@ exit 1
 fi
 log "FILESYSTEM=$FILESYSTEM, DISK_LIST=$DISK_LIST"
 log "Generating answer.toml for autoinstall"
-local escaped_password="$NEW_ROOT_PASSWORD"
+local escaped_password="$NEW_ROOT_PASSWORD" test_pwd="$NEW_ROOT_PASSWORD"
+for c in $'\t' $'\n' $'\r' $'\b' $'\f';do test_pwd="${test_pwd//$c/}";done
+[[ $test_pwd =~ [[:cntrl:]] ]]&&{
+log "ERROR: Password has unsupported control chars"
+exit 1
+}
 escaped_password="${escaped_password//\\/\\\\}"
 escaped_password="${escaped_password//\"/\\\"}"
 escaped_password="${escaped_password//$'\t'/\\t}"
 escaped_password="${escaped_password//$'\n'/\\n}"
 escaped_password="${escaped_password//$'\r'/\\r}"
+escaped_password="${escaped_password//$'\b'/\\b}"
+escaped_password="${escaped_password//$'\f'/\\f}"
 cat >./answer.toml <<EOF
 [global]
     keyboard = "$KEYBOARD"
@@ -5417,6 +5554,11 @@ sleep 0.1
 ((timeout--))
 done
 if [[ -s $qemu_config_file ]];then
+if grep -qvE '^(QEMU_CORES|QEMU_RAM|UEFI_MODE|KVM_OPTS|UEFI_OPTS|CPU_OPTS|DRIVE_ARGS)=' "$qemu_config_file";then
+log "ERROR: QEMU config file contains unexpected content"
+rm -f "$qemu_config_file"
+exit 1
+fi
 source "$qemu_config_file"
 rm -f "$qemu_config_file"
 fi
@@ -5434,7 +5576,7 @@ $CPU_OPTS -smp "$QEMU_CORES" -m "$QEMU_RAM" \
 $DRIVE_ARGS -no-reboot -display none >qemu_install.log 2>&1&
 local qemu_pid=$!
 sleep "${RETRY_DELAY_SECONDS:-2}"
-if ! kill -0 $qemu_pid 2>/dev/null;then
+if ! kill -0 "$qemu_pid" 2>/dev/null;then
 log "ERROR: QEMU failed to start"
 log "QEMU install log:"
 cat qemu_install.log >>"$LOG_FILE" 2>&1
@@ -5474,7 +5616,7 @@ while ((elapsed<timeout));do
 if exec 3<>/dev/tcp/localhost/"$SSH_PORT_QEMU" 2>/dev/null;then
 exec 3<&-
 exit 0
-fi 2>/dev/null
+fi
 sleep "$check_interval"
 ((elapsed+=check_interval))
 done
@@ -5496,31 +5638,35 @@ cat qemu_output.log >>"$LOG_FILE" 2>&1
 return 1
 }
 }
+_escape_regex(){
+printf '%s' "$1"|sed 's/[[\.*^$(){}?+|]/\\&/g'
+}
 _get_disks_to_wipe(){
 local disks=()
+local -A seen=()
 if [[ $USE_EXISTING_POOL == "yes" ]];then
 [[ -n $BOOT_DISK ]]&&disks+=("$BOOT_DISK")
 else
-[[ -n $BOOT_DISK ]]&&disks+=("$BOOT_DISK")
+if [[ -n $BOOT_DISK ]];then
+disks+=("$BOOT_DISK")
+seen["$BOOT_DISK"]=1
+fi
 for disk in "${ZFS_POOL_DISKS[@]}";do
-local found=false
-for d in "${disks[@]}";do
-[[ $d == "$disk" ]]&&found=true&&break
-done
-[[ $found == false ]]&&disks+=("$disk")
+[[ -z ${seen["$disk"]+x} ]]&&disks+=("$disk")&&seen["$disk"]=1
 done
 fi
 printf '%s\n' "${disks[@]}"
 }
 _wipe_zfs_on_disk(){
 local disk="$1"
-local disk_name
+local disk_name escaped_disk_name
 disk_name=$(basename "$disk")
+escaped_disk_name=$(_escape_regex "$disk_name")
 cmd_exists zpool||return 0
 local pools_to_destroy=()
 while IFS= read -r pool;do
 [[ -z $pool ]]&&continue
-if zpool status "$pool" 2>/dev/null|grep -qE "(^|[[:space:]])$disk_name([p0-9]*)?([[:space:]]|$)";then
+if zpool status "$pool" 2>/dev/null|grep -qE "(^|[[:space:]])$escaped_disk_name([p0-9]*)?([[:space:]]|$)";then
 pools_to_destroy+=("$pool")
 fi
 done < <(zpool list -H -o name 2>/dev/null)
@@ -5540,7 +5686,7 @@ done
 fi
 current_pool="${BASH_REMATCH[1]}"
 pool_has_disk=false
-elif [[ $line =~ $disk_name ]];then
+elif [[ $line =~ $escaped_disk_name ]];then
 pool_has_disk=true
 fi
 done <<<"$import_output"
@@ -5583,12 +5729,13 @@ done
 }
 _wipe_mdadm_on_disk(){
 local disk="$1"
-local disk_name
+local disk_name escaped_disk_name
 disk_name=$(basename "$disk")
+escaped_disk_name=$(_escape_regex "$disk_name")
 cmd_exists mdadm||return 0
 while IFS= read -r md;do
 [[ -z $md ]]&&continue
-if mdadm --detail "$md" 2>/dev/null|grep -q "$disk_name";then
+if mdadm --detail "$md" 2>/dev/null|grep -q "$escaped_disk_name";then
 log "Stopping mdadm array: $md (contains $disk)"
 mdadm --stop "$md" 2>/dev/null||true
 fi
@@ -5687,7 +5834,7 @@ deploy_user_config "templates/bat-config" ".config/bat/config"||return 1
 _configure_zsh_files(){
 deploy_user_config "templates/zshrc" ".zshrc" "LOCALE=$LOCALE"||return 1
 deploy_user_config "templates/p10k.zsh" ".p10k.zsh"||return 1
-remote_exec 'chsh -s /bin/zsh '"$ADMIN_USERNAME"''||return 1
+remote_exec "chsh -s /bin/zsh $ADMIN_USERNAME"||return 1
 }
 _config_base_system(){
 run_with_progress "Copying configuration files" "Configuration files copied" _copy_config_files
@@ -5758,10 +5905,10 @@ remote_run "Installing ZSH theme and plugins" '
             pid3=$!
             # Wait and check exit codes (set -e doesnt catch background failures)
             failed=0
-            wait $pid1 || failed=1
-            wait $pid2 || failed=1
-            wait $pid3 || failed=1
-            if [ $failed -eq 1 ]; then
+            wait "$pid1" || failed=1
+            wait "$pid2" || failed=1
+            wait "$pid3" || failed=1
+            if [[ $failed -eq 1 ]]; then
               echo "ERROR: Failed to clone ZSH plugins" >&2
               exit 1
             fi
@@ -5883,8 +6030,8 @@ remote_exec "chmod 600 /home/$ADMIN_USERNAME/.ssh/authorized_keys"||return 1
 remote_exec "chown -R $ADMIN_USERNAME:$ADMIN_USERNAME /home/$ADMIN_USERNAME/.ssh"||return 1
 remote_exec "echo '$ADMIN_USERNAME ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/$ADMIN_USERNAME"||return 1
 remote_exec "chmod 440 /etc/sudoers.d/$ADMIN_USERNAME"||return 1
-remote_exec "pveum user list 2>/dev/null | grep -q '$ADMIN_USERNAME@pam' || pveum user add $ADMIN_USERNAME@pam"
-remote_exec "pveum acl modify / -user $ADMIN_USERNAME@pam -role Administrator"||{
+remote_exec "pveum user list 2>/dev/null | grep -q '$ADMIN_USERNAME@pam' || pveum user add '$ADMIN_USERNAME@pam'"
+remote_exec "pveum acl modify / -user '$ADMIN_USERNAME@pam' -role Administrator"||{
 log "WARNING: Failed to grant Proxmox Administrator role"
 }
 remote_exec "pveum user modify root@pam -enable 0"||{
@@ -5916,7 +6063,7 @@ remote_copy "templates/cpupower.service" "/etc/systemd/system/cpupower.service"|
 remote_exec "
     systemctl daemon-reload
     systemctl enable --now cpupower.service
-    cpupower frequency-set -g '$governor' 2>/dev/null || true
+    cpupower frequency-set -g \"$governor\" 2>/dev/null || true
   "||return 1
 }
 _configure_io_scheduler(){
@@ -6254,7 +6401,7 @@ parallel_mark_configured "needrestart"
 }
 make_feature_wrapper "needrestart" "INSTALL_NEEDRESTART"
 _config_ringbuffer(){
-local ringbuffer_interface="${DEFAULT_INTERFACE:-eth0}"
+local ringbuffer_interface="${INTERFACE_NAME:-eth0}"
 deploy_template "templates/network-ringbuffer.sh" "/usr/local/bin/network-ringbuffer.sh" \
 "RINGBUFFER_INTERFACE=$ringbuffer_interface"||return 1
 remote_exec "chmod +x /usr/local/bin/network-ringbuffer.sh"||return 1
@@ -6317,8 +6464,12 @@ return 1
 }
 rm -f "$tmp_passwd"
 remote_exec '
+    umask 077
+    chmod 600 /etc/postfix/sasl_passwd
+    chown root:root /etc/postfix/sasl_passwd
     postmap /etc/postfix/sasl_passwd
-    chmod 600 /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db
+    chmod 600 /etc/postfix/sasl_passwd.db
+    chown root:root /etc/postfix/sasl_passwd.db
   '||return 1
 remote_run "Restarting Postfix" \
 'systemctl restart postfix' \
@@ -6403,24 +6554,22 @@ create_api_token(){
 [[ $INSTALL_API_TOKEN != "yes" ]]&&return 0
 log "INFO: Creating Proxmox API token for $ADMIN_USERNAME: $API_TOKEN_NAME"
 local existing
-existing=$(remote_exec "pveum user token list $ADMIN_USERNAME@pam 2>/dev/null | grep -q '$API_TOKEN_NAME' && echo 'exists' || echo ''")
+existing=$(remote_exec "pveum user token list '$ADMIN_USERNAME@pam' 2>/dev/null | grep -q '$API_TOKEN_NAME' && echo 'exists' || echo ''")
 if [[ $existing == "exists" ]];then
 log "WARNING: Token $API_TOKEN_NAME exists, removing first"
-remote_exec "pveum user token remove $ADMIN_USERNAME@pam $API_TOKEN_NAME"||{
+remote_exec "pveum user token remove '$ADMIN_USERNAME@pam' '$API_TOKEN_NAME'"||{
 log "ERROR: Failed to remove existing token"
 return 1
 }
 fi
 local output
-output=$(remote_exec "pveum user token add $ADMIN_USERNAME@pam $API_TOKEN_NAME --privsep 0 --expire 0 --output-format json 2>&1")
+output=$(remote_exec "pveum user token add '$ADMIN_USERNAME@pam' '$API_TOKEN_NAME' --privsep 0 --expire 0 --output-format json 2>&1")
 if [[ -z $output ]];then
 log "ERROR: Failed to create API token - empty output"
 return 1
 fi
-local json_output
-json_output=$(echo "$output"|grep -v "^perl:"|grep -v "^warning:"|grep -E '^\{|"value"'|head -1)
 local token_value
-token_value=$(echo "$json_output"|jq -r '.value // empty' 2>/dev/null||true)
+token_value=$(printf '%s\n' "$output"|jq -R 'try (fromjson | .value) // empty' 2>/dev/null|grep -v '^$'|head -1)
 if [[ -z $token_value ]];then
 log "ERROR: Failed to extract token value from pveum output"
 log "DEBUG: pveum output: $output"
@@ -6429,12 +6578,13 @@ fi
 API_TOKEN_VALUE="$token_value"
 API_TOKEN_ID="$ADMIN_USERNAME@pam!$API_TOKEN_NAME"
 (umask 0077
-cat >/tmp/pve-install-api-token.env <<EOF
+cat >"$_TEMP_API_TOKEN_FILE" <<EOF
 API_TOKEN_VALUE=$token_value
 API_TOKEN_ID=$API_TOKEN_ID
 API_TOKEN_NAME=$API_TOKEN_NAME
 EOF
 )
+register_temp_file "$_TEMP_API_TOKEN_FILE"
 log "INFO: API token created successfully: $API_TOKEN_ID"
 return 0
 }
@@ -6442,6 +6592,10 @@ _config_zfs_arc(){
 log "INFO: Configuring ZFS ARC memory allocation (mode: $ZFS_ARC_MODE)"
 local total_ram_mb
 total_ram_mb=$(free -m|awk 'NR==2 {print $2}')
+if [[ ! $total_ram_mb =~ ^[0-9]+$ ]]||[[ $total_ram_mb -eq 0 ]];then
+log "ERROR: Failed to detect RAM size (got: '$total_ram_mb')"
+return 1
+fi
 local arc_max_mb
 case "$ZFS_ARC_MODE" in
 vm-focused)arc_max_mb=4096
@@ -6533,14 +6687,16 @@ if ! remote_run "Importing ZFS pool '$pool_name'" \
 log "ERROR: Failed to import ZFS pool '$pool_name'"
 return 1
 fi
-if ! remote_run "Configuring Proxmox storage for '$pool_name'" '
-    if zfs list "'"$pool_name"'/vm-disks" >/dev/null 2>&1; then ds="'"$pool_name"'/vm-disks"
-    else ds=$(zfs list -H -o name -r "'"$pool_name"'" 2>/dev/null | grep -v "^'"$pool_name"'\$" | head -1)
-      [[ -z $ds ]] && { zfs create "'"$pool_name"'/vm-disks"; ds="'"$pool_name"'/vm-disks"; }
+if ! remote_run "Configuring Proxmox storage for '$pool_name'" "
+    if zfs list '$pool_name/vm-disks' >/dev/null 2>&1; then
+      ds='$pool_name/vm-disks'
+    else
+      ds=\$(zfs list -H -o name -r '$pool_name' 2>/dev/null | grep -v '^$pool_name\$' | head -1)
+      [[ -z \$ds ]] && { zfs create '$pool_name/vm-disks'; ds='$pool_name/vm-disks'; }
     fi
-    pvesm status "'"$pool_name"'" >/dev/null 2>&1 || pvesm add zfspool "'"$pool_name"'" --pool "$ds" --content images,rootdir
+    pvesm status '$pool_name' >/dev/null 2>&1 || pvesm add zfspool '$pool_name' --pool \"\$ds\" --content images,rootdir
     pvesm set local --content iso,vztmpl,backup,snippets
-  ' "Proxmox storage configured for '$pool_name'";then
+  " "Proxmox storage configured for '$pool_name'";then
 log "ERROR: Failed to configure Proxmox storage for '$pool_name'"
 return 1
 fi
@@ -6548,7 +6704,8 @@ log "INFO: Existing ZFS pool '$pool_name' imported and configured"
 return 0
 }
 _config_create_new_pool(){
-log "INFO: Creating separate ZFS pool 'tank' from pool disks"
+local pool_name="$DEFAULT_ZFS_POOL_NAME"
+log "INFO: Creating separate ZFS pool '$pool_name' from pool disks"
 log "INFO: ZFS_POOL_DISKS=(${ZFS_POOL_DISKS[*]}), count=${#ZFS_POOL_DISKS[@]}"
 log "INFO: ZFS_RAID=$ZFS_RAID, BOOT_DISK=$BOOT_DISK"
 if [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]];then
@@ -6572,27 +6729,31 @@ fi
 read -ra vdevs <<<"$vdevs_str"
 log "INFO: Pool disks: ${vdevs[*]} (RAID: $ZFS_RAID)"
 local pool_cmd
-pool_cmd=$(build_zpool_command "tank" "$ZFS_RAID" "${vdevs[@]}")
+pool_cmd=$(build_zpool_command "$pool_name" "$ZFS_RAID" "${vdevs[@]}")
 if [[ -z $pool_cmd ]];then
 log "ERROR: Failed to build zpool create command"
 return 1
 fi
 log "INFO: ZFS pool command: $pool_cmd"
-if ! remote_run "Creating ZFS pool 'tank'" "
-    set -e
-    $pool_cmd
-    zfs set compression=lz4 tank
-    zfs set atime=off tank
-    zfs set xattr=sa tank
-    zfs set dnodesize=auto tank
-    zfs create tank/vm-disks
-    pvesm add zfspool tank --pool tank/vm-disks --content images,rootdir
-    pvesm set local --content iso,vztmpl,backup,snippets
-  " "ZFS pool 'tank' created";then
-log "ERROR: Failed to create ZFS pool 'tank'"
+if [[ $pool_cmd != zpool\ create* ]];then
+log "ERROR: Invalid pool command format: $pool_cmd"
 return 1
 fi
-log "INFO: ZFS pool 'tank' created successfully"
+if ! remote_run "Creating ZFS pool '$pool_name'" "
+    set -e
+    $pool_cmd
+    zfs set compression=lz4 '$pool_name'
+    zfs set atime=off '$pool_name'
+    zfs set xattr=sa '$pool_name'
+    zfs set dnodesize=auto '$pool_name'
+    zfs create '$pool_name'/vm-disks
+    pvesm add zfspool '$pool_name' --pool '$pool_name'/vm-disks --content images,rootdir
+    pvesm set local --content iso,vztmpl,backup,snippets
+  " "ZFS pool '$pool_name' created";then
+log "ERROR: Failed to create ZFS pool '$pool_name'"
+return 1
+fi
+log "INFO: ZFS pool '$pool_name' created successfully"
 return 0
 }
 _config_ensure_rpool_storage(){
@@ -6650,7 +6811,7 @@ if ! remote_run "Expanding LVM root filesystem" '
       lvremove -f /dev/pve/data
       echo "Removed data LV"
     fi
-    free_extents=$(vgs --noheadings -o vg_free_count pve 2>/dev/null | tr -d " ")
+    free_extents=$(vgs --noheadings -o vg_free_count pve 2>/dev/null | xargs)
     if [ "$free_extents" -gt 0 ]; then
       lvextend -l +100%FREE /dev/pve/root
       resize2fs /dev/mapper/pve-root
@@ -6887,25 +7048,31 @@ return 1
 fi
 }
 _phase_monitoring_tools(){
-(pids=()
+local netdata_pid="" yazi_pid=""
 if [[ $INSTALL_NETDATA == "yes" ]];then
-configure_netdata&
-pids+=($!)
+configure_netdata >>"$LOG_FILE" 2>&1&
+netdata_pid=$!
 fi
 if [[ $INSTALL_YAZI == "yes" ]];then
-configure_yazi&
-pids+=($!)
+configure_yazi >>"$LOG_FILE" 2>&1&
+yazi_pid=$!
 fi
-for pid in "${pids[@]}";do wait "$pid" 2>/dev/null||true;done) > \
-/dev/null 2>&1&
-local special_pid=$!
 run_parallel_group "Configuring tools" "Tools configured" \
 configure_promtail \
 configure_vnstat \
 configure_ringbuffer \
 configure_nvim \
 configure_postfix
-wait "$special_pid" 2>/dev/null||true
+if [[ -n $netdata_pid ]];then
+if ! wait "$netdata_pid";then
+log "WARNING: configure_netdata failed (exit code: $?)"
+fi
+fi
+if [[ -n $yazi_pid ]];then
+if ! wait "$yazi_pid";then
+log "WARNING: configure_yazi failed (exit code: $?)"
+fi
+fi
 }
 _phase_ssl_api(){
 configure_ssl_certificate
@@ -6973,8 +7140,12 @@ fi
 _cred_field "Web UI           " "${CLR_CYAN}https://$MAIN_IPV4:8006$CLR_RESET"
 [[ $has_tailscale == "yes" ]]&&_cred_field "" "${CLR_CYAN}https://$TAILSCALE_IP:8006$CLR_RESET" "(Tailscale)"
 esac
-if [[ -f /tmp/pve-install-api-token.env ]];then
-source /tmp/pve-install-api-token.env
+if [[ -f $_TEMP_API_TOKEN_FILE ]];then
+if grep -qvE '^API_TOKEN_(VALUE|ID|NAME)=' "$_TEMP_API_TOKEN_FILE";then
+log "ERROR: API token file contains unexpected content"
+else
+source "$_TEMP_API_TOKEN_FILE"
+fi
 if [[ -n $API_TOKEN_VALUE ]];then
 output+="\n"
 _cred_field "API Token ID     " "$CLR_CYAN$API_TOKEN_ID$CLR_RESET"
@@ -7033,7 +7204,11 @@ declare -p|grep -E "^declare -[^ ]* (PREFLIGHT_|DRIVE_|INTERFACE_|CURRENT_INTERF
 wait "$!"
 show_banner_animated_stop
 if [[ -s $SYSTEM_INFO_CACHE ]];then
+if grep -qvE '^declare -' "$SYSTEM_INFO_CACHE";then
+log "ERROR: SYSTEM_INFO_CACHE contains invalid content, skipping import"
+else
 source "$SYSTEM_INFO_CACHE"
+fi
 rm -f "$SYSTEM_INFO_CACHE"
 fi
 log "Step: show_system_status"
