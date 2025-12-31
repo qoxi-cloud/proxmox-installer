@@ -57,6 +57,15 @@ create_virtio_mapping() {
 # Load virtio mapping from /tmp/virtio_map.env into VIRTIO_MAP array
 load_virtio_mapping() {
   if [[ -f /tmp/virtio_map.env ]]; then
+    # Validate file contains only expected declare statement (defense in depth)
+    if ! grep -qE '^declare -gA VIRTIO_MAP=' /tmp/virtio_map.env; then
+      log "ERROR: virtio_map.env missing expected declare statement"
+      return 1
+    fi
+    if grep -qvE '^declare -gA VIRTIO_MAP=' /tmp/virtio_map.env; then
+      log "ERROR: virtio_map.env contains unexpected content"
+      return 1
+    fi
     # shellcheck disable=SC1091
     source /tmp/virtio_map.env
     return 0

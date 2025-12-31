@@ -49,6 +49,12 @@ EOF
 
   # Load QEMU configuration
   if [[ -s $qemu_config_file ]]; then
+    # Validate file contains only expected QEMU config variables (defense in depth)
+    if grep -qvE '^(QEMU_CORES|QEMU_RAM|UEFI_MODE|KVM_OPTS|UEFI_OPTS|CPU_OPTS|DRIVE_ARGS)=' "$qemu_config_file"; then
+      log "ERROR: QEMU config file contains unexpected content"
+      rm -f "$qemu_config_file"
+      exit 1
+    fi
     # shellcheck disable=SC1090
     source "$qemu_config_file"
     rm -f "$qemu_config_file"

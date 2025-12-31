@@ -76,8 +76,13 @@ _render_completion_screen() {
 
   # API Token (if created)
   if [[ -f /tmp/pve-install-api-token.env ]]; then
-    # shellcheck disable=SC1091
-    source /tmp/pve-install-api-token.env
+    # Validate file contains only expected API token variables (defense in depth)
+    if grep -qvE '^API_TOKEN_(VALUE|ID|NAME)=' /tmp/pve-install-api-token.env; then
+      log "ERROR: API token file contains unexpected content"
+    else
+      # shellcheck disable=SC1091
+      source /tmp/pve-install-api-token.env
+    fi
 
     if [[ -n $API_TOKEN_VALUE ]]; then
       output+="\n"
@@ -160,12 +165,7 @@ register_temp_file "$SYSTEM_INFO_CACHE"
   log "Step: prefetch_proxmox_iso_info"
   prefetch_proxmox_iso_info
 
-  # Export all important variables to temp file using atomic write pattern
-  # Include: PREFLIGHT_*, DRIVE_*, INTERFACE_*, CURRENT_INTERFACE, PREDICTABLE_NAME,
-  # DEFAULT_INTERFACE, AVAILABLE_*, MAC_ADDRESS, MAIN_IPV*, IPV6_*, FIRST_IPV6_*, _ISO_*, _CHECKSUM_*
-  # Also: WIZ_TIMEZONES, WIZ_COUNTRIES, TZ_TO_COUNTRY (loaded dynamically from system)
-  # Also: DETECTED_POOLS (for existing ZFS pool import feature)
-  # Write to temp file first, then atomic mv to prevent truncated/partial data on interruption
+  # Export system/network/ISO variables to temp file (atomic write to prevent partial data)
   declare -p | grep -E "^declare -[^ ]* (PREFLIGHT_|DRIVE_|INTERFACE_|CURRENT_INTERFACE|PREDICTABLE_NAME|DEFAULT_INTERFACE|AVAILABLE_|MAC_ADDRESS|MAIN_IPV|IPV6_|FIRST_IPV6_|_ISO_|_CHECKSUM_|WIZ_TIMEZONES|WIZ_COUNTRIES|TZ_TO_COUNTRY|DETECTED_POOLS)" >"${SYSTEM_INFO_CACHE}.tmp" \
     && mv "${SYSTEM_INFO_CACHE}.tmp" "$SYSTEM_INFO_CACHE"
 } >/dev/null 2>&1 &
@@ -178,8 +178,13 @@ show_banner_animated_stop
 
 # Import variables from background job
 if [[ -s $SYSTEM_INFO_CACHE ]]; then
-  # shellcheck disable=SC1090
-  source "$SYSTEM_INFO_CACHE"
+  # Validate file contains only declare statements (defense in depth)
+  if grep -qvE '^declare -' "$SYSTEM_INFO_CACHE"; then
+    log "ERROR: SYSTEM_INFO_CACHE contains invalid content, skipping import"
+  else
+    # shellcheck disable=SC1090
+    source "$SYSTEM_INFO_CACHE"
+  fi
   rm -f "$SYSTEM_INFO_CACHE"
 fi
 
