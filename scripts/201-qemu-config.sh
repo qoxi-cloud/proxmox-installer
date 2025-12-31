@@ -93,7 +93,7 @@ setup_qemu_config() {
       return 1
     fi
     log "QEMU drive order: $vdev -> $disk"
-    DRIVE_ARGS="$DRIVE_ARGS -drive file=$disk,format=raw,media=disk,if=virtio"
+    DRIVE_ARGS="$DRIVE_ARGS -drive file=\"$disk\",format=raw,media=disk,if=virtio"
   done
 
   if [[ -z $DRIVE_ARGS ]]; then
