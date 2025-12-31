@@ -50,6 +50,7 @@ create_virtio_mapping() {
 
   # Export mapping to file (use -gA so it creates global when sourced)
   declare -p VIRTIO_MAP | sed 's/declare -A/declare -gA/' >/tmp/virtio_map.env
+  register_temp_file "/tmp/virtio_map.env"
   log "Virtio mapping saved to /tmp/virtio_map.env"
 }
 
