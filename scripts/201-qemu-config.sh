@@ -64,7 +64,7 @@ setup_qemu_config() {
   # Validate VIRTIO_MAP is not empty before proceeding
   if [[ ${#VIRTIO_MAP[@]} -eq 0 ]]; then
     log "ERROR: VIRTIO_MAP is empty - no disks mapped for QEMU"
-    print_error "No disks available for QEMU. Check disk detection."
+    print_error "No disk-to-virtio mappings found. Ensure ZFS pool disks were selected in wizard storage configuration."
     return 1
   fi
 
