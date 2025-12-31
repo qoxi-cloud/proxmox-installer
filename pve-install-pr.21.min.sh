@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.678-pr.21"
+readonly VERSION="2.0.680-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -170,6 +170,11 @@ INSTALL_UNATTENDED_UPGRADES=""
 INSTALL_TAILSCALE=""
 TAILSCALE_AUTH_KEY=""
 TAILSCALE_WEBUI=""
+INSTALL_POSTFIX=""
+SMTP_RELAY_HOST=""
+SMTP_RELAY_PORT=""
+SMTP_RELAY_USER=""
+SMTP_RELAY_PASSWORD=""
 BRIDGE_MTU=""
 INSTALL_API_TOKEN=""
 API_TOKEN_NAME="automation"
@@ -2743,6 +2748,7 @@ zfs_mode)_edit_zfs_mode;;
 zfs_arc)_edit_zfs_arc;;
 tailscale)_edit_tailscale;;
 ssl)_edit_ssl;;
+postfix)_edit_postfix;;
 shell)_edit_shell;;
 power_profile)_edit_power_profile;;
 security)_edit_features_security;;
@@ -2818,6 +2824,9 @@ fi
 [[ -z $SSH_PUBLIC_KEY ]]&&missing_fields+=("SSH Key")
 [[ $INSTALL_TAILSCALE != "yes" && -z $SSL_TYPE ]]&&missing_fields+=("SSL Certificate")
 [[ $FIREWALL_MODE == "stealth" && $INSTALL_TAILSCALE != "yes" ]]&&missing_fields+=("Tailscale (required for Stealth firewall)")
+if [[ $INSTALL_POSTFIX == "yes" ]];then
+[[ -z $SMTP_RELAY_HOST || -z $SMTP_RELAY_USER || -z $SMTP_RELAY_PASSWORD ]]&&missing_fields+=("Postfix SMTP relay settings")
+fi
 if [[ ${#missing_fields[@]} -gt 0 ]];then
 _wiz_start_edit
 _wiz_hide_cursor
@@ -3130,6 +3139,9 @@ fi
 [[ -z $SSH_PUBLIC_KEY ]]&&return 1
 [[ $INSTALL_TAILSCALE != "yes" && -z $SSL_TYPE ]]&&return 1
 [[ $FIREWALL_MODE == "stealth" && $INSTALL_TAILSCALE != "yes" ]]&&return 1
+if [[ $INSTALL_POSTFIX == "yes" ]];then
+[[ -z $SMTP_RELAY_HOST || -z $SMTP_RELAY_USER || -z $SMTP_RELAY_PASSWORD ]]&&return 1
+fi
 return 0
 }
 _wiz_render_screen_content(){
@@ -3176,6 +3188,7 @@ _add_field "ZFS ARC          " "$(_wiz_fmt "$_DSP_ARC")" "zfs_arc"
 if [[ $INSTALL_TAILSCALE != "yes" ]];then
 _add_field "SSL Certificate  " "$(_wiz_fmt "$_DSP_SSL")" "ssl"
 fi
+_add_field "Postfix          " "$(_wiz_fmt "$_DSP_POSTFIX")" "postfix"
 _add_field "Shell            " "$(_wiz_fmt "$_DSP_SHELL")" "shell"
 _add_field "Power profile    " "$(_wiz_fmt "$_DSP_POWER")" "power_profile"
 _add_field "Security         " "$(_wiz_fmt "$_DSP_SECURITY")" "security"
@@ -3335,6 +3348,16 @@ if [[ -n $INSTALL_TAILSCALE ]];then
 fi
 _DSP_SSL=""
 [[ -n $SSL_TYPE ]]&&_DSP_SSL=$(_dsp_lookup "ssl" "$SSL_TYPE")
+_DSP_POSTFIX=""
+if [[ -n $INSTALL_POSTFIX ]];then
+if [[ $INSTALL_POSTFIX == "yes" && -n $SMTP_RELAY_HOST ]];then
+_DSP_POSTFIX="Relay: $SMTP_RELAY_HOST:${SMTP_RELAY_PORT:-587}"
+elif [[ $INSTALL_POSTFIX == "yes" ]];then
+_DSP_POSTFIX="Enabled (no relay)"
+else
+_DSP_POSTFIX="Disabled"
+fi
+fi
 _DSP_SHELL=""
 [[ -n $SHELL_TYPE ]]&&_DSP_SHELL=$(_dsp_lookup "shell" "$SHELL_TYPE")
 _DSP_POWER=""
@@ -4586,6 +4609,73 @@ _wiz_feature_checkbox "Tools:" 4 "WIZ_FEATURES_TOOLS" \
 "yazi:INSTALL_YAZI" \
 "nvim:INSTALL_NVIM" \
 "ringbuffer:INSTALL_RINGBUFFER"
+}
+_postfix_configure_relay(){
+_wiz_start_edit
+_wiz_description \
+"  SMTP Relay Configuration:" \
+"" \
+"  Configure external SMTP server for sending mail." \
+"  Common providers: Gmail, Mailgun, SendGrid, AWS SES" \
+""
+_show_input_footer "input"
+local host
+host=$(_wiz_input "SMTP Host:" "${SMTP_RELAY_HOST:-smtp.gmail.com}" "smtp.example.com")
+[[ -z $host ]]&&return 1
+SMTP_RELAY_HOST="$host"
+local port
+port=$(_wiz_input "SMTP Port:" "${SMTP_RELAY_PORT:-587}" "587")
+[[ -z $port ]]&&return 1
+SMTP_RELAY_PORT="$port"
+local user
+user=$(_wiz_input "Username:" "$SMTP_RELAY_USER" "user@example.com")
+[[ -z $user ]]&&return 1
+SMTP_RELAY_USER="$user"
+local pass
+pass=$(_wiz_input --password --prompt "Password: " --placeholder "App password or API key")
+[[ -z $pass ]]&&return 1
+SMTP_RELAY_PASSWORD="$pass"
+return 0
+}
+_postfix_enable(){
+INSTALL_POSTFIX="yes"
+_postfix_configure_relay||{
+INSTALL_POSTFIX="no"
+SMTP_RELAY_HOST=""
+SMTP_RELAY_PORT=""
+SMTP_RELAY_USER=""
+SMTP_RELAY_PASSWORD=""
+}
+}
+_postfix_disable(){
+INSTALL_POSTFIX="no"
+SMTP_RELAY_HOST=""
+SMTP_RELAY_PORT=""
+SMTP_RELAY_USER=""
+SMTP_RELAY_PASSWORD=""
+}
+_edit_postfix(){
+_wiz_start_edit
+_wiz_description \
+"  Postfix Mail Relay:" \
+"" \
+"  {{cyan:Enabled}}:  Send mail via external SMTP relay (port 587)" \
+"  {{cyan:Disabled}}: Disable Postfix service completely" \
+"" \
+"  Note: Most hosting providers block port 25." \
+"  Use relay with port 587 for outgoing mail." \
+""
+_show_input_footer "filter" 3
+local result
+_wiz_toggle "INSTALL_POSTFIX" "Postfix:"
+result=$?
+if [[ $result -eq 1 ]];then
+return
+elif [[ $result -eq 2 ]];then
+_postfix_enable
+else
+_postfix_disable
+fi
 }
 prepare_packages(){
 log "Starting package preparation"
@@ -6192,6 +6282,48 @@ deploy_template "templates/netdata.conf" "/etc/netdata/netdata.conf" \
 remote_enable_services "netdata"
 }
 make_feature_wrapper "netdata" "INSTALL_NETDATA"
+_config_postfix_relay(){
+local relay_host="$SMTP_RELAY_HOST"
+local relay_port="${SMTP_RELAY_PORT:-587}"
+local relay_user="$SMTP_RELAY_USER"
+local relay_pass="$SMTP_RELAY_PASSWORD"
+deploy_template "postfix-main.cf.tmpl" "/etc/postfix/main.cf" \
+"SMTP_RELAY_HOST=$relay_host" \
+"SMTP_RELAY_PORT=$relay_port" \
+"HOSTNAME=$PVE_HOSTNAME" \
+"DOMAIN_SUFFIX=$DOMAIN_SUFFIX"||return 1
+local tmp_passwd
+tmp_passwd=$(mktemp)||return 1
+printf '[%s]:%s %s:%s\n' "$relay_host" "$relay_port" "$relay_user" "$relay_pass" >"$tmp_passwd"
+remote_copy "$tmp_passwd" "/etc/postfix/sasl_passwd"||{
+rm -f "$tmp_passwd"
+return 1
+}
+rm -f "$tmp_passwd"
+remote_exec '
+    postmap /etc/postfix/sasl_passwd
+    chmod 600 /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db
+  '||return 1
+remote_run "Restarting Postfix" \
+'systemctl restart postfix' \
+"Postfix relay configured"
+parallel_mark_configured "postfix"
+}
+_config_postfix_disable(){
+remote_exec 'systemctl stop postfix 2>/dev/null; systemctl disable postfix 2>/dev/null'||true
+log "INFO: Postfix disabled"
+}
+configure_postfix(){
+if [[ $INSTALL_POSTFIX == "yes" ]];then
+if [[ -n $SMTP_RELAY_HOST && -n $SMTP_RELAY_USER && -n $SMTP_RELAY_PASSWORD ]];then
+_config_postfix_relay
+else
+log "WARNING: Postfix enabled but SMTP relay not configured, skipping"
+fi
+elif [[ $INSTALL_POSTFIX == "no" ]];then
+_config_postfix_disable
+fi
+}
 _config_yazi(){
 remote_exec 'su - '"$ADMIN_USERNAME"' -c "
     ya pack -a kalidyasin/yazi-flavors:tokyonight-night || echo \"WARNING: Failed to install yazi flavor\" >&2
@@ -6755,7 +6887,8 @@ run_parallel_group "Configuring tools" "Tools configured" \
 configure_promtail \
 configure_vnstat \
 configure_ringbuffer \
-configure_nvim
+configure_nvim \
+configure_postfix
 wait "$special_pid" 2>/dev/null||true
 }
 _phase_ssl_api(){
