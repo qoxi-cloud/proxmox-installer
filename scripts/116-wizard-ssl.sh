@@ -55,12 +55,14 @@ _ssl_check_dns_animated() {
   local dns_pid=$!
 
   printf "%s" "${CLR_CYAN}Validating DNS resolution${CLR_RESET}"
+  local animation_counter=0
   while kill -0 "$dns_pid" 2>/dev/null; do
     sleep 0.3
-    local dots_count=$((($(date +%s) % 3) + 1))
+    local dots_count=$(((animation_counter % 3) + 1))
     local dots=""
     for ((d = 0; d < dots_count; d++)); do dots+="."; done
     printf "\r%sValidating DNS resolution%s%-3s%s" "${CLR_CYAN}" "${CLR_ORANGE}" "$dots" "${CLR_RESET}"
+    ((animation_counter++))
   done
 
   wait "$dns_pid" 2>/dev/null

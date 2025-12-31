@@ -136,14 +136,16 @@ live_show_progress() {
   local task_idx=$TASK_INDEX
 
   # Wait for process with periodic updates
+  local animation_counter=0
   while kill -0 "$pid" 2>/dev/null; do
     sleep 0.3 # Animation timing, kept at 0.3 for visual smoothness
     # Update the task line with animated dots (orange)
-    local dots_count=$((($(date +%s) % 3) + 1))
+    local dots_count=$(((animation_counter % 3) + 1))
     local dots=""
     for ((d = 0; d < dots_count; d++)); do dots+="."; done
     LOG_LINES[task_idx]="${CLR_ORANGE}├─${CLR_RESET} ${message}${CLR_ORANGE}${dots}${CLR_RESET}"
     render_logs
+    ((animation_counter++))
   done
 
   # Get exit code
