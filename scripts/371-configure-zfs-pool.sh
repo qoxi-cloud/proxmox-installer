@@ -17,15 +17,16 @@ _config_import_existing_pool() {
   fi
 
   # Configure Proxmox storage - find or create vm-disks dataset
-  # shellcheck disable=SC2016
-  if ! remote_run "Configuring Proxmox storage for '$pool_name'" '
-    if zfs list "'"$pool_name"'/vm-disks" >/dev/null 2>&1; then ds="'"$pool_name"'/vm-disks"
-    else ds=$(zfs list -H -o name -r "'"$pool_name"'" 2>/dev/null | grep -v "^'"$pool_name"'\$" | head -1)
-      [[ -z $ds ]] && { zfs create "'"$pool_name"'/vm-disks"; ds="'"$pool_name"'/vm-disks"; }
+  if ! remote_run "Configuring Proxmox storage for '$pool_name'" "
+    if zfs list '${pool_name}/vm-disks' >/dev/null 2>&1; then
+      ds='${pool_name}/vm-disks'
+    else
+      ds=\$(zfs list -H -o name -r '${pool_name}' 2>/dev/null | grep -v '^${pool_name}\$' | head -1)
+      [[ -z \$ds ]] && { zfs create '${pool_name}/vm-disks'; ds='${pool_name}/vm-disks'; }
     fi
-    pvesm status "'"$pool_name"'" >/dev/null 2>&1 || pvesm add zfspool "'"$pool_name"'" --pool "$ds" --content images,rootdir
+    pvesm status '${pool_name}' >/dev/null 2>&1 || pvesm add zfspool '${pool_name}' --pool \"\$ds\" --content images,rootdir
     pvesm set local --content iso,vztmpl,backup,snippets
-  ' "Proxmox storage configured for '$pool_name'"; then
+  " "Proxmox storage configured for '$pool_name'"; then
     log "ERROR: Failed to configure Proxmox storage for '$pool_name'"
     return 1
   fi
