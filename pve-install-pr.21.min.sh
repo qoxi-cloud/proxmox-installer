@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.681-pr.21"
+readonly VERSION="2.0.682-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1785,6 +1785,18 @@ local fqdn="$1"
 validate_email(){
 local email="$1"
 [[ $email =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]
+}
+validate_smtp_host(){
+local host="$1"
+[[ -z $host ]]&&return 1
+[[ $host =~ ^[a-zA-Z0-9.\[\]:-]+$ ]]&&[[ ${#host} -le 253 ]]
+}
+validate_smtp_port(){
+local port="$1"
+[[ $port =~ ^[0-9]+$ ]]&&((port>=1&&port<=65535))
+}
+validate_not_empty(){
+[[ -n $1 ]]
 }
 is_ascii_printable(){
 LC_ALL=C bash -c '[[ "$1" =~ ^[[:print:]]+$ ]]' _ "$1"
@@ -4618,36 +4630,27 @@ _wiz_description \
 "  Configure external SMTP server for sending mail." \
 "  Common providers: Gmail, Mailgun, SendGrid, AWS SES" \
 ""
-_show_input_footer
-local host
-host=$(_wiz_input \
+_wiz_input_validated "SMTP_RELAY_HOST" "validate_smtp_host" \
+"Invalid host. Enter hostname, FQDN, or IP address." \
 --placeholder "smtp.example.com" \
 --value "${SMTP_RELAY_HOST:-smtp.gmail.com}" \
---prompt "SMTP Host: ")
-[[ -z $host ]]&&return 1
-SMTP_RELAY_HOST="$host"
-local port
-port=$(_wiz_input \
+--prompt "SMTP Host: "||return 1
+_wiz_input_validated "SMTP_RELAY_PORT" "validate_smtp_port" \
+"Invalid port. Enter a number between 1 and 65535." \
 --placeholder "587" \
 --value "${SMTP_RELAY_PORT:-587}" \
---prompt "SMTP Port: ")
-[[ -z $port ]]&&return 1
-SMTP_RELAY_PORT="$port"
-local user
-user=$(_wiz_input \
+--prompt "SMTP Port: "||return 1
+_wiz_input_validated "SMTP_RELAY_USER" "validate_email" \
+"Invalid email format." \
 --placeholder "user@example.com" \
 --value "$SMTP_RELAY_USER" \
---prompt "Username: ")
-[[ -z $user ]]&&return 1
-SMTP_RELAY_USER="$user"
-local pass
-pass=$(_wiz_input \
+--prompt "Username: "||return 1
+_wiz_input_validated "SMTP_RELAY_PASSWORD" "validate_not_empty" \
+"Password cannot be empty." \
 --password \
 --placeholder "App password or API key" \
 --value "$SMTP_RELAY_PASSWORD" \
---prompt "Password: ")
-[[ -z $pass ]]&&return 1
-SMTP_RELAY_PASSWORD="$pass"
+--prompt "Password: "||return 1
 return 0
 }
 _postfix_enable(){
