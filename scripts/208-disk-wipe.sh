@@ -13,20 +13,19 @@ _escape_regex() {
 # - BOOT_DISK empty (rpool mode): all disks in pool
 _get_disks_to_wipe() {
   local disks=()
+  local -A seen=()
 
   if [[ $USE_EXISTING_POOL == "yes" ]]; then
     # Existing pool mode: wipe only boot disk (pool disks preserved)
     [[ -n $BOOT_DISK ]] && disks+=("$BOOT_DISK")
   else
-    # New pool mode: wipe boot + pool disks
-    [[ -n $BOOT_DISK ]] && disks+=("$BOOT_DISK")
+    # New pool mode: wipe boot + pool disks (deduplicated via associative array)
+    if [[ -n $BOOT_DISK ]]; then
+      disks+=("$BOOT_DISK")
+      seen["$BOOT_DISK"]=1
+    fi
     for disk in "${ZFS_POOL_DISKS[@]}"; do
-      # Avoid duplicates
-      local found=false
-      for d in "${disks[@]}"; do
-        [[ $d == "$disk" ]] && found=true && break
-      done
-      [[ $found == false ]] && disks+=("$disk")
+      [[ -z ${seen["$disk"]+x} ]] && disks+=("$disk") && seen["$disk"]=1
     done
   fi
 
