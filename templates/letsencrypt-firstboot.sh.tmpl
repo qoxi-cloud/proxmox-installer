@@ -55,6 +55,18 @@ else
 fi
 
 # Always restart pveproxy (with new cert or self-signed)
-systemctl start pveproxy
+echo "Starting pveproxy service..." >> "$LOG_FILE"
+if ! systemctl start pveproxy 2>> "$LOG_FILE"; then
+    echo "ERROR: Failed to start pveproxy, retrying in 5 seconds..." >> "$LOG_FILE"
+    sleep 5
+    if ! systemctl start pveproxy 2>> "$LOG_FILE"; then
+        echo "ERROR: pveproxy failed to start after retry - Proxmox web UI unavailable" >> "$LOG_FILE"
+        systemctl status pveproxy >> "$LOG_FILE" 2>&1
+    else
+        echo "pveproxy started successfully on retry" >> "$LOG_FILE"
+    fi
+else
+    echo "pveproxy started successfully" >> "$LOG_FILE"
+fi
 
 echo "Completed at $(date)" >> "$LOG_FILE"
