@@ -35,10 +35,10 @@ _kill_processes_by_pattern() {
     sleep "${PROCESS_KILL_WAIT:-1}"
   fi
 
-  # Also try pkill as fallback
-  pkill -TERM "$pattern" 2>/dev/null || true
+  # Also try pkill as fallback (use -f to match full command line)
+  pkill -f -TERM "$pattern" 2>/dev/null || true
   sleep "${PROCESS_KILL_WAIT:-1}"
-  pkill -9 "$pattern" 2>/dev/null || true
+  pkill -f -9 "$pattern" 2>/dev/null || true
 }
 
 # Stops all mdadm RAID arrays to release drive locks.
@@ -132,8 +132,8 @@ _kill_drive_holders() {
 release_drives() {
   log "Releasing drives from locks..."
 
-  # Kill QEMU processes
-  _kill_processes_by_pattern "qemu-system-x86"
+  # Kill QEMU processes (use full binary name to avoid matching unintended processes)
+  _kill_processes_by_pattern "qemu-system-x86_64"
 
   # Stop RAID arrays
   _stop_mdadm_arrays
