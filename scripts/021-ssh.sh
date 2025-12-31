@@ -75,10 +75,14 @@ _ssh_session_cleanup() {
   elif cmd_exists shred; then
     shred -u -z "$passfile_path" 2>/dev/null || rm -f "$passfile_path"
   else
-    # Fallback: overwrite with zeros (cross-platform stat: GNU -c%s, BSD -f%z)
+    # Fallback: overwrite with zeros (cross-platform stat: GNU -c%s, BSD -f%z, wc -c)
     local file_size
-    file_size=$(stat -c%s "$passfile_path" 2>/dev/null || stat -f%z "$passfile_path" 2>/dev/null || echo 1024)
-    dd if=/dev/zero of="$passfile_path" bs=1 count="$file_size" conv=notrunc 2>/dev/null || true
+    file_size=$(stat -c%s "$passfile_path" 2>/dev/null) \
+      || file_size=$(stat -f%z "$passfile_path" 2>/dev/null) \
+      || file_size=$(wc -c <"$passfile_path" 2>/dev/null | tr -d ' ')
+    if [[ -n "$file_size" && "$file_size" =~ ^[0-9]+$ ]]; then
+      dd if=/dev/zero of="$passfile_path" bs=1 count="$file_size" conv=notrunc 2>/dev/null || true
+    fi
     rm -f "$passfile_path"
   fi
 
