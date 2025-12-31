@@ -137,10 +137,8 @@ _detect_ipv6_and_mac() {
   MAIN_IPV6="${IPV6_CIDR%/*}"
 
   if [[ -n $IPV6_CIDR ]]; then
-    local ipv6_prefix="${MAIN_IPV6%%:*:*:*:*}"
-    if [[ $ipv6_prefix == "$MAIN_IPV6" ]] || [[ -z $ipv6_prefix ]]; then
-      ipv6_prefix=$(printf '%s' "$MAIN_IPV6" | cut -d':' -f1-4)
-    fi
+    local ipv6_prefix
+    ipv6_prefix=$(printf '%s' "$MAIN_IPV6" | cut -d':' -f1-4)
     FIRST_IPV6_CIDR="${ipv6_prefix}:1::1/80"
   else
     FIRST_IPV6_CIDR=""
