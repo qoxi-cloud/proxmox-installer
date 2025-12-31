@@ -169,10 +169,10 @@ _config_shell() {
             pid3=$!
             # Wait and check exit codes (set -e doesnt catch background failures)
             failed=0
-            wait $pid1 || failed=1
-            wait $pid2 || failed=1
-            wait $pid3 || failed=1
-            if [ $failed -eq 1 ]; then
+            wait "$pid1" || failed=1
+            wait "$pid2" || failed=1
+            wait "$pid3" || failed=1
+            if [[ $failed -eq 1 ]]; then
               echo "ERROR: Failed to clone ZSH plugins" >&2
               exit 1
             fi

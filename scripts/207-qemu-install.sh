@@ -84,7 +84,7 @@ EOF
   sleep "${RETRY_DELAY_SECONDS:-2}"
 
   # Check if QEMU is still running
-  if ! kill -0 $qemu_pid 2>/dev/null; then
+  if ! kill -0 "$qemu_pid" 2>/dev/null; then
     log "ERROR: QEMU failed to start"
     log "QEMU install log:"
     cat qemu_install.log >>"$LOG_FILE" 2>&1
