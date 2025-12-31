@@ -45,32 +45,39 @@ validate_ipv6() {
   # Reject three or more consecutive colons (invalid)
   [[ $ipv6 =~ ::: ]] && return 1
 
-  # Cannot have more than one :: sequence
-  local double_colon_count
-  double_colon_count=$(grep -o '::' <<<"$ipv6" | wc -l)
+  # Cannot have more than one :: sequence (pure bash: count by removal)
+  local temp="${ipv6//::/}"
+  local double_colon_count=$(((${#ipv6} - ${#temp}) / 2))
   [[ $double_colon_count -gt 1 ]] && return 1
 
-  # Count groups (split by :, accounting for ::)
-  local groups
+  # Count groups using pure bash (split by :, accounting for ::)
+  local groups left_count=0 right_count=0 colons
   if [[ $ipv6 == *"::"* ]]; then
-    # With :: compression, count actual groups
+    # With :: compression, count actual groups via colon count
     local left="${ipv6%%::*}"
     local right="${ipv6##*::}"
-    local left_count=0 right_count=0
-    [[ -n $left ]] && left_count=$(tr ':' '\n' <<<"$left" | grep -c .)
-    [[ -n $right ]] && right_count=$(tr ':' '\n' <<<"$right" | grep -c .)
+    if [[ -n $left ]]; then
+      colons="${left//[!:]/}"
+      left_count=$((${#colons} + 1))
+    fi
+    if [[ -n $right ]]; then
+      colons="${right//[!:]/}"
+      right_count=$((${#colons} + 1))
+    fi
     groups=$((left_count + right_count))
     # Total groups must be less than 8 (:: fills the rest)
     [[ $groups -ge 8 ]] && return 1
   else
-    # Without compression, must have exactly 8 groups
-    groups=$(tr ':' '\n' <<<"$ipv6" | grep -c .)
-    [[ $groups -ne 8 ]] && return 1
+    # Without compression, must have exactly 8 groups (7 colons)
+    colons="${ipv6//[!:]/}"
+    [[ ${#colons} -ne 7 ]] && return 1
   fi
 
-  # Validate each group (1-4 hex digits)
-  local group
-  for group in $(tr ':' ' ' <<<"$ipv6"); do
+  # Validate each group (1-4 hex digits) using IFS splitting
+  local group IFS=':'
+  # shellcheck disable=SC2086
+  set -- $ipv6
+  for group in "$@"; do
     [[ -z $group ]] && continue
     [[ ${#group} -gt 4 ]] && return 1
     [[ ! $group =~ ^[0-9a-fA-F]+$ ]] && return 1
