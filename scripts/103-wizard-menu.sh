@@ -25,6 +25,8 @@ _wiz_config_complete() {
   [[ -z $PROXMOX_ISO_VERSION ]] && return 1
   [[ -z $PVE_REPO_TYPE ]] && return 1
   [[ -z $INTERFACE_NAME ]] && return 1
+  [[ -z $MAIN_IPV4 ]] && return 1
+  [[ -z $MAIN_IPV4_GW ]] && return 1
   [[ -z $BRIDGE_MODE ]] && return 1
   [[ $BRIDGE_MODE != "external" && -z $PRIVATE_SUBNET ]] && return 1
   [[ -z $IPV6_MODE ]] && return 1

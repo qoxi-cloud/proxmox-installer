@@ -171,6 +171,10 @@ _detect_ipv4() {
       sleep "${RETRY_DELAY_SECONDS:-2}"
     fi
   done
+
+  # All attempts failed
+  log_error "IPv4 detection failed after $max_attempts attempts"
+  return 1
 }
 
 # Detect MAC and IPv6 info. Sets MAC_ADDRESS, IPV6_*, MAIN_IPV6.

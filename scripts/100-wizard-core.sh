@@ -161,6 +161,8 @@ _validate_config() {
   [[ -z $PROXMOX_ISO_VERSION ]] && missing_fields+=("Proxmox Version")
   [[ -z $PVE_REPO_TYPE ]] && missing_fields+=("Repository")
   [[ -z $INTERFACE_NAME ]] && missing_fields+=("Network Interface")
+  [[ -z $MAIN_IPV4 ]] && missing_fields+=("IPv4 Address")
+  [[ -z $MAIN_IPV4_GW ]] && missing_fields+=("IPv4 Gateway")
   [[ -z $BRIDGE_MODE ]] && missing_fields+=("Bridge mode")
   [[ $BRIDGE_MODE != "external" && -z $PRIVATE_SUBNET ]] && missing_fields+=("Private subnet")
   [[ -z $IPV6_MODE ]] && missing_fields+=("IPv6")

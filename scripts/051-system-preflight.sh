@@ -130,7 +130,9 @@ collect_system_info() {
   _detect_available_interfaces
 
   # Collect IP information
-  _detect_ipv4
+  if ! _detect_ipv4; then
+    log_warn "IPv4 detection failed - network config will require manual configuration"
+  fi
   _detect_ipv6_and_mac
 
   # Load dynamic data for wizard
