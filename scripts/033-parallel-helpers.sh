@@ -175,6 +175,7 @@ run_parallel_group() {
     log "ERROR: Failed to create temp dir for parallel group '$group_name'"
     return 1
   }
+  register_temp_file "$result_dir"
   export PARALLEL_RESULT_DIR="$result_dir"
 
   # Start functions in background with concurrency limit

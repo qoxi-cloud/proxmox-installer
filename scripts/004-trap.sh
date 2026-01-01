@@ -31,9 +31,12 @@ cleanup_temp_files() {
   fi
 
   # Clean up registered temp files (from register_temp_file)
-  # This handles: SSH passfile, SSH control socket, SCP lock file, and any mktemp files
+  # This handles: SSH passfile, SSH control socket, SCP lock file, mktemp files, and temp directories
   for f in "${_TEMP_FILES[@]}"; do
-    if [[ -f "$f" ]] || [[ -S "$f" ]]; then
+    if [[ -d "$f" ]]; then
+      # Handle temp directories (e.g., parallel group result dirs)
+      rm -rf "$f" 2>/dev/null || true
+    elif [[ -f "$f" ]] || [[ -S "$f" ]]; then
       # Use secure delete for passfile (contains password)
       if [[ "$f" == *"pve-ssh-session"* ]] && type secure_delete_file &>/dev/null; then
         secure_delete_file "$f"
