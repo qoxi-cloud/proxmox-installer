@@ -7,6 +7,7 @@ install_base_packages() {
   local packages=(${SYSTEM_UTILITIES} ${OPTIONAL_PACKAGES} locales chrony unattended-upgrades apt-listchanges linux-cpupower)
   # Add ZSH packages if needed
   [[ ${SHELL_TYPE:-bash} == "zsh" ]] && packages+=(zsh git)
+  local pkg_list && printf -v pkg_list '"%s" ' "${packages[@]}"
   log "Installing base packages: ${packages[*]}"
   remote_run "Installing system packages" "
     set -e
@@ -19,7 +20,7 @@ install_base_packages() {
     done
     apt-get update -qq
     apt-get dist-upgrade -yqq
-    apt-get install -yqq ${packages[*]}
+    apt-get install -yqq ${pkg_list}
     apt-get autoremove -yqq
     apt-get clean
     set +e
@@ -61,10 +62,10 @@ batch_install_packages() {
     return 0
   fi
 
+  local pkg_list && printf -v pkg_list '"%s" ' "${packages[@]}"
   log "Batch installing packages: ${packages[*]}"
 
-  # Build repo setup commands for packages needing custom repos
-  # Detect Debian codename dynamically to support future releases (trixie, etc.)
+  # Build repo setup commands (detect Debian codename dynamically for future releases)
   # shellcheck disable=SC2016
   local repo_setup='
     DEBIAN_CODENAME=$(grep -oP "VERSION_CODENAME=\K\w+" /etc/os-release 2>/dev/null || echo "bookworm")
@@ -101,7 +102,6 @@ batch_install_packages() {
     '
   fi
 
-  # Use remote_run for reliable execution (pipes script to bash -s, better for long scripts)
   # remote_run exits on failure, so no need for error handling here
   # shellcheck disable=SC2086,SC2016
   remote_run "Installing packages (${#packages[@]})" '
@@ -115,7 +115,7 @@ batch_install_packages() {
       done
       '"$repo_setup"'
       apt-get update -qq
-      apt-get install -yqq '"${packages[*]}"'
+      apt-get install -yqq '"${pkg_list}"'
     ' "Packages installed"
 
   # Show installed packages as subtasks
