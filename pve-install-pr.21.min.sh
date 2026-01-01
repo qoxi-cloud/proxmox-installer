@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.769-pr.21"
+readonly VERSION="2.0.770-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -204,7 +204,9 @@ fi
 rm -f "$install_dir/answer.toml" 2>/dev/null||true
 fi
 for f in "${_TEMP_FILES[@]}";do
-if [[ -f $f ]]||[[ -S $f ]];then
+if [[ -d $f ]];then
+rm -rf "$f" 2>/dev/null||true
+elif [[ -f $f ]]||[[ -S $f ]];then
 if [[ $f == *"pve-ssh-session"* ]]&&type secure_delete_file &>/dev/null;then
 secure_delete_file "$f"
 else
@@ -1310,6 +1312,7 @@ result_dir=$(mktemp -d)||{
 log "ERROR: Failed to create temp dir for parallel group '$group_name'"
 return 1
 }
+register_temp_file "$result_dir"
 export PARALLEL_RESULT_DIR="$result_dir"
 local i=0
 local running=0
