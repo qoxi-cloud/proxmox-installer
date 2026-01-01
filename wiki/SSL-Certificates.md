@@ -35,8 +35,10 @@ Automatically obtain a free, trusted SSL certificate with automatic renewal.
 Before selecting Let's Encrypt, ensure:
 
 1. **Domain resolves to server IP** - Your FQDN must resolve to the server's public IP
-2. **Port 80 accessible** - HTTP challenge requires port 80 during issuance
+2. **Port 80 accessible** - HTTP challenge requires port 80 (automatically opened by firewall when Let's Encrypt is selected)
 3. **Valid email address** - Required for Let's Encrypt notifications
+
+> **Note:** The installer automatically adds port 80 to nftables firewall rules when Let's Encrypt is selected (except in stealth mode).
 
 ### DNS Validation
 
@@ -140,6 +142,27 @@ dig +short your-domain.com
 curl -I http://your-domain.com
 ```
 
+**Port 80 blocked by firewall (common issue):**
+
+If certbot logs show `Timeout during connect (likely firewall problem)`:
+
+```bash
+# Check if port 80 is in nftables rules
+nft list ruleset | grep "dport 80"
+
+# If not present, add port 80 permanently
+sudo nano /etc/nftables.conf
+# Add after "tcp dport 8006" line:
+#         tcp dport 80 ct state new accept
+
+# Reload firewall
+sudo nft -f /etc/nftables.conf
+
+# Retry certificate obtainment
+rm -f /etc/letsencrypt/.certificate-obtained
+/usr/local/bin/obtain-letsencrypt-cert.sh
+```
+
 **Re-run certificate obtainment:**
 
 ```bash
@@ -190,7 +213,7 @@ systemctl restart pveproxy
 | Browser warning | Yes | No |
 | Auto-renewal | N/A | Yes (90 days) |
 | Domain required | No | Yes |
-| Port 80 required | No | Yes (issuance only) |
+| Port 80 required | No | Yes (auto-configured) |
 | External dependency | No | Yes (ACME servers) |
 | Setup complexity | None | Low |
 

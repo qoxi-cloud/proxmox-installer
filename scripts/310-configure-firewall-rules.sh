@@ -31,6 +31,15 @@ EOF
 EOF
       ;;
   esac
+
+  # Add port 80 for Let's Encrypt HTTP challenge (initial + renewals)
+  if [[ $SSL_TYPE == "letsencrypt" && $mode != "stealth" ]]; then
+    cat <<'EOF'
+
+        # HTTP for Let's Encrypt ACME challenge
+        tcp dport 80 ct state new accept
+EOF
+  fi
 }
 
 # Generates bridge interface rules for input chain

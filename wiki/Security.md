@@ -22,6 +22,8 @@ The installer uses nftables (modern replacement for iptables) with unified IPv4/
 | **Standard** | SSH + Proxmox Web UI (ports 22, 8006) |
 | **Disabled** | No firewall rules |
 
+> **Note:** When Let's Encrypt SSL is selected, port 80 is automatically added for ACME HTTP challenge (initial certificate + renewals). This does not apply to stealth mode.
+
 ### What's Always Allowed
 
 Regardless of mode, the firewall always allows:
