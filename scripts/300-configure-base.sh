@@ -57,6 +57,7 @@ _configure_bat() {
 
 # Configure ZSH with .zshrc and p10k
 _configure_zsh_files() {
+  require_admin_username "configure ZSH files" || return 1
   deploy_user_config "templates/zshrc" ".zshrc" "LOCALE=${LOCALE}" || return 1
   deploy_user_config "templates/p10k.zsh" ".p10k.zsh" || return 1
   remote_exec "chsh -s /bin/zsh ${ADMIN_USERNAME}" || return 1
