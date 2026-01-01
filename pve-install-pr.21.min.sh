@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.760-pr.21"
+readonly VERSION="2.0.761-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -248,6 +248,7 @@ printf '\n'
 fi
 }
 trap cleanup_and_error_handler EXIT
+register_temp_file "$_TEMP_SCP_LOCK_FILE"
 show_help(){
 cat <<EOF
 Qoxi Automated Installer v$VERSION
@@ -1014,9 +1015,6 @@ local src="$1"
 local dst="$2"
 local passfile
 passfile=$(_ssh_get_passfile)
-if [[ ! -f $_TEMP_SCP_LOCK_FILE ]]&&[[ $BASHPID == "$$" ]];then
-register_temp_file "$_TEMP_SCP_LOCK_FILE"
-fi
 (flock -x 200||{
 log "ERROR: Failed to acquire SCP lock for $src"
 exit 1
