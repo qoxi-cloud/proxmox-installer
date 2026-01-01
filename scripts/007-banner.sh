@@ -147,8 +147,7 @@ show_banner_animated_start() {
     trap 'exit 0' TERM INT
     trap 'clear' WINCH
 
-    # Redirect any stray output to /dev/null
-    exec 3>&1
+    # Redirect output to tty (for animation), stderr to /dev/null
     [[ -c /dev/tty ]] && exec 1>/dev/tty
     exec 2>/dev/null
 
