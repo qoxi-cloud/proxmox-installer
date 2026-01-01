@@ -57,6 +57,7 @@ _parse_getent_output() {
 }
 
 # Validate FQDN resolves to IP. $1=fqdn, $2=expected_ip. Sets DNS_RESOLVED_IP.
+# Returns: 0=match, 1=no resolution, 2=wrong IP
 validate_dns_resolution() {
   local fqdn="$1"
   local expected_ip="$2"

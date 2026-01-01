@@ -366,15 +366,18 @@ cmd_exists() {
 
 ## Documentation Gaps
 
-### 1. Missing: Error Code Documentation
-Functions return various codes (0, 1, 2) but this isn't always documented.
+### 1. ~~Missing: Error Code Documentation~~ ✓ FIXED
+~~Functions return various codes (0, 1, 2) but this isn't always documented.~~
 
-**Example:** `validate_dns_resolution` returns:
-- 0 = match
-- 1 = no resolution
-- 2 = wrong IP
-
-This should be in a comment.
+```bash
+# Now documented in function comments:
+# validate_dns_resolution: Returns: 0=match, 1=no resolution, 2=wrong IP
+# _wiz_toggle: Returns: 0=disabled, 1=cancel, 2=enabled
+# parse_cli_args: Returns: 0=ok, 1=error, 2=help/version (already documented)
+# _ssl_validate_fqdn: Returns 0=valid, 1=missing, 2=invalid (already documented)
+# _ssl_check_dns_animated: Returns 0=ok, 1=no resolve, 2=wrong IP (already documented)
+```
+**Status:** Fixed with inline return code documentation for all functions returning multiple codes.
 
 ### 2. Missing: Template Variable Reference
 While CLAUDE.md lists common variables, a complete reference with which templates use which variables would be helpful.
@@ -390,6 +393,7 @@ While CLAUDE.md lists common variables, a complete reference with which template
 | Style Inconsistencies | 3 | 3 |
 | Security Notes | 4 | 1 |
 | Performance Notes | 3 | 1 |
+| Documentation Gaps | 2 | 1 |
 
 **Overall Assessment:** The codebase is high quality with consistent patterns and good security practices. The identified issues are mostly minor improvements rather than critical bugs.
 
@@ -405,3 +409,4 @@ While CLAUDE.md lists common variables, a complete reference with which template
 - Style #2: Added typed log helpers (`log_info`, `log_error`, `log_warn`, `log_debug`) and migrated 247 log calls
 - Style #3: Standardized variable quoting across 30+ scripts (~150 assignments now use "always quote" style)
 - Security #4: API token file now created with `umask 0077` in subshell for mode 600 permissions
+- Documentation #1: Added return code documentation to `validate_dns_resolution` and `_wiz_toggle`
