@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.798-pr.21"
+readonly VERSION="2.0.799-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1450,15 +1450,16 @@ start_async_feature(){
 local feature="$1"
 local flag_var="$2"
 local flag_value="${!flag_var:-}"
+REPLY=""
 [[ $flag_value != "yes" ]]&&return 0
 "configure_$feature" >>"$LOG_FILE" 2>&1&
-echo "$!"
+REPLY="$!"
 }
 wait_async_feature(){
 local feature="$1"
 local pid="$2"
 [[ -z $pid ]]&&return 0
-if ! wait "$pid";then
+if ! wait "$pid" 2>/dev/null;then
 log_warn "configure_$feature failed (exit code: $?)"
 return 1
 fi
@@ -7234,8 +7235,10 @@ fi
 }
 _phase_monitoring_tools(){
 local netdata_pid yazi_pid
-netdata_pid=$(start_async_feature "netdata" "INSTALL_NETDATA")
-yazi_pid=$(start_async_feature "yazi" "INSTALL_YAZI")
+start_async_feature "netdata" "INSTALL_NETDATA"
+netdata_pid="$REPLY"
+start_async_feature "yazi" "INSTALL_YAZI"
+yazi_pid="$REPLY"
 run_parallel_group "Configuring tools" "Tools configured" \
 configure_promtail \
 configure_vnstat \
