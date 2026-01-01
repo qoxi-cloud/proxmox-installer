@@ -148,7 +148,7 @@ ADMIN_PASSWORD="" # Admin password for sudo/Proxmox UI (required)
 # Modes:
 #   stealth  - Blocks ALL incoming except Tailscale/bridges
 #   strict   - SSH only (port 22)
-#   standard - SSH + Proxmox Web UI (ports 22, 8006)
+#   standard - SSH + Proxmox Web UI (ports 22, 443)
 INSTALL_FIREWALL="" # Enable nftables firewall (yes/no)
 FIREWALL_MODE=""    # stealth, strict, standard
 

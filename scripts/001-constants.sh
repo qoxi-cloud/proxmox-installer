@@ -35,9 +35,9 @@ readonly DOWNLOAD_RETRY_DELAY=2
 readonly SSH_CONNECT_TIMEOUT=10
 
 # Ports configuration
-readonly SSH_PORT_QEMU=5555   # SSH port for QEMU VM (installer-internal)
-readonly PORT_SSH=22          # Standard SSH port for firewall rules
-readonly PORT_PROXMOX_UI=8006 # Proxmox Web UI port
+readonly SSH_PORT_QEMU=5555  # SSH port for QEMU VM (installer-internal)
+readonly PORT_SSH=22         # Standard SSH port for firewall rules
+readonly PORT_PROXMOX_UI=443 # Proxmox Web UI port (standard HTTPS)
 
 # Password settings
 readonly DEFAULT_PASSWORD_LENGTH=16

@@ -126,7 +126,7 @@ apply_common_template_vars() {
     "COUNTRY=${COUNTRY:-US}" \
     "BAT_THEME=${BAT_THEME:-Catppuccin Mocha}" \
     "PORT_SSH=${PORT_SSH:-22}" \
-    "PORT_PROXMOX_UI=${PORT_PROXMOX_UI:-8006}"
+    "PORT_PROXMOX_UI=${PORT_PROXMOX_UI:-443}"
 }
 
 # Download template from GitHub with validation. $1=local_path, $2=remote_name (optional)

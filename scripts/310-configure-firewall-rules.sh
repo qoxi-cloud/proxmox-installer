@@ -6,7 +6,7 @@
 _generate_port_rules() {
   local mode="${1:-standard}"
   local ssh="${PORT_SSH:-22}"
-  local webui="${PORT_PROXMOX_UI:-8006}"
+  local webui="${PORT_PROXMOX_UI:-443}"
 
   case "$mode" in
     stealth)

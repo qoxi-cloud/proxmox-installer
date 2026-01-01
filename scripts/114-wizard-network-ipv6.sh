@@ -117,7 +117,7 @@ _edit_firewall() {
     "" \
     "  {{cyan:Stealth}}:  Blocks ALL incoming (Tailscale/bridges only)" \
     "  {{cyan:Strict}}:   Allows SSH only (port 22)" \
-    "  {{cyan:Standard}}: Allows SSH + Proxmox Web UI (8006)" \
+    "  {{cyan:Standard}}: Allows SSH + Proxmox Web UI (443)" \
     "  {{cyan:Disabled}}: No firewall rules" \
     "" \
     "  Note: VMs always have full network access via bridges." \

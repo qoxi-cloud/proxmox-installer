@@ -71,7 +71,7 @@ _config_tailscale() {
       # Configure Tailscale Serve for Proxmox Web UI (only if auth succeeded)
       if [[ $TAILSCALE_WEBUI == "yes" ]]; then
         remote_run "Configuring Tailscale Serve" \
-          'tailscale serve --bg --https=443 https://127.0.0.1:8006' \
+          'tailscale serve --bg --https=443 https://127.0.0.1:443' \
           "Proxmox Web UI available via Tailscale Serve"
       fi
 

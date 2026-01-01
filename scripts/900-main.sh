@@ -51,7 +51,7 @@ _render_completion_screen() {
     stealth)
       if [[ $has_tailscale == "yes" ]]; then
         _cred_field "SSH              " "${CLR_CYAN}ssh ${ADMIN_USERNAME}@${TAILSCALE_IP}${CLR_RESET}" "(Tailscale)"
-        _cred_field "Web UI           " "${CLR_CYAN}https://${TAILSCALE_IP}:8006${CLR_RESET}" "(Tailscale)"
+        _cred_field "Web UI           " "${CLR_CYAN}https://${TAILSCALE_IP}${CLR_RESET}" "(Tailscale)"
       else
         _cred_field "SSH              " "${CLR_YELLOW}blocked${CLR_RESET}" "(stealth mode)"
         _cred_field "Web UI           " "${CLR_YELLOW}blocked${CLR_RESET}" "(stealth mode)"
@@ -61,7 +61,7 @@ _render_completion_screen() {
       _cred_field "SSH              " "${CLR_CYAN}ssh ${ADMIN_USERNAME}@${MAIN_IPV4}${CLR_RESET}"
       if [[ $has_tailscale == "yes" ]]; then
         _cred_field "" "${CLR_CYAN}ssh ${ADMIN_USERNAME}@${TAILSCALE_IP}${CLR_RESET}" "(Tailscale)"
-        _cred_field "Web UI           " "${CLR_CYAN}https://${TAILSCALE_IP}:8006${CLR_RESET}" "(Tailscale)"
+        _cred_field "Web UI           " "${CLR_CYAN}https://${TAILSCALE_IP}${CLR_RESET}" "(Tailscale)"
       else
         _cred_field "Web UI           " "${CLR_YELLOW}blocked${CLR_RESET}" "(strict mode)"
       fi
@@ -69,8 +69,8 @@ _render_completion_screen() {
     *)
       _cred_field "SSH              " "${CLR_CYAN}ssh ${ADMIN_USERNAME}@${MAIN_IPV4}${CLR_RESET}"
       [[ $has_tailscale == "yes" ]] && _cred_field "" "${CLR_CYAN}ssh ${ADMIN_USERNAME}@${TAILSCALE_IP}${CLR_RESET}" "(Tailscale)"
-      _cred_field "Web UI           " "${CLR_CYAN}https://${MAIN_IPV4}:8006${CLR_RESET}"
-      [[ $has_tailscale == "yes" ]] && _cred_field "" "${CLR_CYAN}https://${TAILSCALE_IP}:8006${CLR_RESET}" "(Tailscale)"
+      _cred_field "Web UI           " "${CLR_CYAN}https://${MAIN_IPV4}${CLR_RESET}"
+      [[ $has_tailscale == "yes" ]] && _cred_field "" "${CLR_CYAN}https://${TAILSCALE_IP}${CLR_RESET}" "(Tailscale)"
       ;;
   esac
 
