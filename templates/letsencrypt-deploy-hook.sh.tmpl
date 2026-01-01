@@ -1,35 +1,37 @@
 #!/bin/bash
 # Deploy renewed certificate to Proxmox
-# Find first certificate directory (excluding README)
-CERT_FOUND=false
+# Called by certbot after successful renewal
+
 for dir in /etc/letsencrypt/live/*/; do
-    [[ -d "$dir" ]] || continue
-    DOMAIN=$(basename "$dir")
-    if [[ "$DOMAIN" != "README" ]]; then
-        FULLCHAIN="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
-        PRIVKEY="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
+	[[ -d "$dir" ]] || continue
+	DOMAIN=$(basename "$dir")
+	[[ "$DOMAIN" == "README" ]] && continue
 
-        # Verify certificate files exist before copying
-        if [[ ! -f "$FULLCHAIN" ]]; then
-            echo "ERROR: Certificate file not found: $FULLCHAIN"
-            exit 1
-        fi
-        if [[ ! -f "$PRIVKEY" ]]; then
-            echo "ERROR: Private key file not found: $PRIVKEY"
-            exit 1
-        fi
+	FULLCHAIN="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+	PRIVKEY="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
 
-        cp "$FULLCHAIN" /etc/pve/local/pveproxy-ssl.pem
-        cp "$PRIVKEY" /etc/pve/local/pveproxy-ssl.key
-        chmod 640 /etc/pve/local/pveproxy-ssl.pem
-        chmod 600 /etc/pve/local/pveproxy-ssl.key
-        systemctl restart pveproxy
-        CERT_FOUND=true
-        break
-    fi
+	# Verify source files exist
+	if [[ ! -f "$FULLCHAIN" ]] || [[ ! -f "$PRIVKEY" ]]; then
+		echo "ERROR: Certificate files not found for $DOMAIN"
+		exit 1
+	fi
+
+	# Deploy to Proxmox
+	if ! cp "$FULLCHAIN" /etc/pve/local/pveproxy-ssl.pem; then
+		echo "ERROR: Failed to copy certificate"
+		exit 1
+	fi
+	if ! cp "$PRIVKEY" /etc/pve/local/pveproxy-ssl.key; then
+		echo "ERROR: Failed to copy private key"
+		exit 1
+	fi
+	chmod 640 /etc/pve/local/pveproxy-ssl.pem
+	chmod 600 /etc/pve/local/pveproxy-ssl.key
+
+	systemctl restart pveproxy
+	echo "Certificate renewed and deployed for $DOMAIN"
+	exit 0
 done
 
-if [[ "$CERT_FOUND" != "true" ]]; then
-    echo "ERROR: No valid certificate directories found in /etc/letsencrypt/live/"
-    exit 1
-fi
+echo "ERROR: No valid certificate found in /etc/letsencrypt/live/"
+exit 1
