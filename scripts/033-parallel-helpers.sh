@@ -120,7 +120,6 @@ batch_install_packages() {
 
   # Show installed packages as subtasks
   log_subtasks "${packages[@]}"
-
   return 0
 }
 
@@ -196,7 +195,8 @@ run_parallel_group() {
       for ((j = 0; j < i; j++)); do
         [[ -f "$result_dir/success_$j" || -f "$result_dir/fail_$j" ]] && ((completed++))
       done
-      running=$((i - completed)) && ((running >= max_jobs)) && sleep 0.1
+      running=$((i - completed))
+      ((running >= max_jobs)) && sleep 0.1
     done
   done
 
