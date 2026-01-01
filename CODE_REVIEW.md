@@ -345,24 +345,22 @@ EOF
 ### 2. Good: Parallel Configuration Groups ✓
 `run_parallel_group()` with concurrency limit prevents fork bombs.
 
-### 3. Suggestion: Cache Command Existence Checks
-**File:** `scripts/012-utils.sh:10`
+### 3. ~~Suggestion: Cache Command Existence Checks~~ ✓ FIXED
+**File:** `scripts/012-utils.sh:12-18`
 
 ```bash
-cmd_exists() { command -v "$1" &>/dev/null; }
-```
+# Now implemented with associative array cache
+declare -gA _CMD_CACHE
 
-For frequently checked commands (jq, ip), consider caching results:
-```bash
-declare -A _CMD_CACHE
 cmd_exists() {
   local cmd="$1"
   if [[ -z "${_CMD_CACHE[$cmd]+isset}" ]]; then
     command -v "$cmd" &>/dev/null && _CMD_CACHE[$cmd]=1 || _CMD_CACHE[$cmd]=0
   fi
-  [[ ${_CMD_CACHE[$cmd]} -eq 1 ]]
+  [[ "${_CMD_CACHE[$cmd]}" -eq 1 ]]
 }
 ```
+**Status:** Fixed with `_CMD_CACHE` associative array. Frequently checked commands (jq, ip, shred, etc.) are now cached after first lookup.
 
 ---
 
@@ -391,11 +389,12 @@ While CLAUDE.md lists common variables, a complete reference with which template
 | Improvement Suggestions | 8 | 6 |
 | Style Inconsistencies | 3 | 3 |
 | Security Notes | 4 | 1 |
-| Performance Notes | 3 | 0 |
+| Performance Notes | 3 | 1 |
 
 **Overall Assessment:** The codebase is high quality with consistent patterns and good security practices. The identified issues are mostly minor improvements rather than critical bugs.
 
 **Recent Fixes:**
+- Performance #3: Added command existence caching with `_CMD_CACHE` associative array in `012-utils.sh`
 - Improvement #3: Added `declare -g` for explicit global variable assignments in 36 scripts (~350 assignments)
 - Improvement #4: Added defensive check for VIRTIO_MAP using `${VAR+isset}` pattern
 - Improvement #5: Added `start_async_feature` and `wait_async_feature` helpers for async feature execution

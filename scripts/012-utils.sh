@@ -6,8 +6,17 @@
 # - generate_password → 034-password-utils.sh
 # - show_progress → 010-display.sh
 
-# Check if command exists. $1=command → 0 if available
-cmd_exists() { command -v "$1" &>/dev/null; }
+# Command existence cache for frequently checked commands (jq, ip, etc.)
+declare -gA _CMD_CACHE
+
+# Check if command exists with caching. $1=command → 0 if available
+cmd_exists() {
+  local cmd="$1"
+  if [[ -z "${_CMD_CACHE[$cmd]+isset}" ]]; then
+    command -v "$cmd" &>/dev/null && _CMD_CACHE[$cmd]=1 || _CMD_CACHE[$cmd]=0
+  fi
+  [[ "${_CMD_CACHE[$cmd]}" -eq 1 ]]
+}
 
 # Get file size in bytes (cross-platform: GNU and BSD stat, wc fallback). $1=file → size
 _get_file_size() {
