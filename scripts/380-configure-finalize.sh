@@ -70,10 +70,18 @@ cleanup_installation_logs() {
     # Commented out - may cause issues with some services
     # : > /etc/machine-id
 
-    # Sync filesystems and unmount EFI partition to prevent dirty bit on next boot
+    # Sync filesystems to ensure all data is written before shutdown
+    # ZFS requires explicit zpool sync to commit all transactions (critical for data integrity)
     sync
+    if command -v zpool &>/dev/null; then
+      zpool sync 2>/dev/null || true
+    fi
     umount /boot/efi 2>/dev/null || true
     sync
+    # Final ZFS sync after EFI unmount
+    if command -v zpool &>/dev/null; then
+      zpool sync 2>/dev/null || true
+    fi
   ' "Installation logs cleaned"
 }
 

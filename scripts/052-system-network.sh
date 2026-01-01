@@ -28,6 +28,7 @@ _detect_default_interface() {
 }
 
 # Get predictable interface name from udev. Sets PREDICTABLE_NAME, DEFAULT_INTERFACE.
+# Prefers MAC-based naming (enx*) for maximum reliability across udev versions.
 _detect_predictable_name() {
   PREDICTABLE_NAME=""
 
@@ -35,7 +36,15 @@ _detect_predictable_name() {
     local udev_info
     udev_info=$(udevadm info "/sys/class/net/${CURRENT_INTERFACE}" 2>/dev/null)
 
-    PREDICTABLE_NAME=$(printf '%s\n' "$udev_info" | grep "ID_NET_NAME_PATH=" | cut -d'=' -f2)
+    # Prefer MAC-based naming (enx*) - most reliable across different udev versions
+    # Different kernels/udev can interpret SMBIOS slots differently (enp* vs ens*)
+    # but MAC-based names are always consistent
+    PREDICTABLE_NAME=$(printf '%s\n' "$udev_info" | grep "ID_NET_NAME_MAC=" | cut -d'=' -f2)
+
+    # Fallback to path-based if MAC naming unavailable
+    if [[ -z $PREDICTABLE_NAME ]]; then
+      PREDICTABLE_NAME=$(printf '%s\n' "$udev_info" | grep "ID_NET_NAME_PATH=" | cut -d'=' -f2)
+    fi
 
     if [[ -z $PREDICTABLE_NAME ]]; then
       PREDICTABLE_NAME=$(printf '%s\n' "$udev_info" | grep "ID_NET_NAME_ONBOARD=" | cut -d'=' -f2)
@@ -53,17 +62,59 @@ _detect_predictable_name() {
   fi
 }
 
+# Get MAC-based predictable name for an interface. Outputs name to stdout.
+_get_mac_based_name() {
+  local iface="$1"
+  local udev_info mac_name
+
+  if [[ -e "/sys/class/net/${iface}" ]]; then
+    udev_info=$(udevadm info "/sys/class/net/${iface}" 2>/dev/null)
+    mac_name=$(printf '%s\n' "$udev_info" | grep "ID_NET_NAME_MAC=" | cut -d'=' -f2)
+
+    if [[ -n $mac_name ]]; then
+      printf '%s' "$mac_name"
+      return 0
+    fi
+
+    # Fallback to PATH-based if no MAC name
+    mac_name=$(printf '%s\n' "$udev_info" | grep "ID_NET_NAME_PATH=" | cut -d'=' -f2)
+    if [[ -n $mac_name ]]; then
+      printf '%s' "$mac_name"
+      return 0
+    fi
+  fi
+
+  # Return original if no predictable name found
+  printf '%s' "$iface"
+}
+
 # Get available interfaces. Sets AVAILABLE_INTERFACES, INTERFACE_NAME, etc.
+# Converts all interface names to MAC-based predictable names for reliability.
 _detect_available_interfaces() {
   AVAILABLE_ALTNAMES=$(ip -d link show | grep -v "lo:" | grep -E '(^[0-9]+:|altname)' | awk '/^[0-9]+:/ {interface=$2; gsub(/:/, "", interface); printf "%s", interface} /altname/ {printf ", %s", $2} END {print ""}' | sed 's/, $//')
 
+  # Get raw interface names first
+  local raw_interfaces
   if cmd_exists ip && cmd_exists jq; then
-    AVAILABLE_INTERFACES=$(ip -j link show 2>/dev/null | jq -r '.[] | select(.ifname != "lo") | .ifname' | sort)
+    raw_interfaces=$(ip -j link show 2>/dev/null | jq -r '.[] | select(.ifname != "lo") | .ifname' | sort)
   elif cmd_exists ip; then
-    AVAILABLE_INTERFACES=$(ip link show | awk -F': ' '/^[0-9]+:/ && !/lo:/ {print $2}' | sort)
+    raw_interfaces=$(ip link show | awk -F': ' '/^[0-9]+:/ && !/lo:/ {print $2}' | sort)
   else
-    AVAILABLE_INTERFACES="$CURRENT_INTERFACE"
+    raw_interfaces="$CURRENT_INTERFACE"
   fi
+
+  # Convert each interface to MAC-based name
+  AVAILABLE_INTERFACES=""
+  local iface mac_name
+  while IFS= read -r iface; do
+    [[ -z $iface ]] && continue
+    mac_name=$(_get_mac_based_name "$iface")
+    if [[ -n $AVAILABLE_INTERFACES ]]; then
+      AVAILABLE_INTERFACES="${AVAILABLE_INTERFACES}"$'\n'"${mac_name}"
+    else
+      AVAILABLE_INTERFACES="${mac_name}"
+    fi
+  done <<<"$raw_interfaces"
 
   INTERFACE_COUNT=$(printf '%s\n' "$AVAILABLE_INTERFACES" | wc -l)
 

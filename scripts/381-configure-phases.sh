@@ -117,6 +117,10 @@ _phase_finalization() {
   # Non-fatal: continue even if validation has warnings
   validate_installation || { log "WARNING: validate_installation reported issues"; }
 
+  # Configure EFI fallback boot path (required for QEMU installs without NVRAM persistence)
+  # Must run BEFORE cleanup which unmounts /boot/efi
+  configure_efi_fallback_boot || { log "WARNING: configure_efi_fallback_boot failed"; }
+
   # Clean up installation logs for fresh first boot
   cleanup_installation_logs || { log "WARNING: cleanup_installation_logs failed"; }
 
