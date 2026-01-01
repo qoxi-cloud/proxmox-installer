@@ -379,8 +379,17 @@ cmd_exists() {
 ```
 **Status:** Fixed with inline return code documentation for all functions returning multiple codes.
 
-### 2. Missing: Template Variable Reference
-While CLAUDE.md lists common variables, a complete reference with which templates use which variables would be helpful.
+### 2. ~~Missing: Template Variable Reference~~ ✓ FIXED
+~~While CLAUDE.md lists common variables, a complete reference with which templates use which variables would be helpful.~~
+
+```bash
+# Now documented in wiki/Templates-Guide.md "Template Variable Reference" section:
+# - Templates by Variable Usage (config, localization, systemd, scripts)
+# - Variables by Category (network, DNS, email, SSL, system)
+# - Summary statistics (55 templates, 32 unique variables)
+# - Complete validation.sh.tmpl variable list (18 feature flags)
+```
+**Status:** Fixed with comprehensive template-to-variable mapping in Templates-Guide.md.
 
 ---
 
@@ -393,7 +402,7 @@ While CLAUDE.md lists common variables, a complete reference with which template
 | Style Inconsistencies | 3 | 3 |
 | Security Notes | 4 | 1 |
 | Performance Notes | 3 | 1 |
-| Documentation Gaps | 2 | 1 |
+| Documentation Gaps | 2 | 2 |
 
 **Overall Assessment:** The codebase is high quality with consistent patterns and good security practices. The identified issues are mostly minor improvements rather than critical bugs.
 
@@ -410,3 +419,4 @@ While CLAUDE.md lists common variables, a complete reference with which template
 - Style #3: Standardized variable quoting across 30+ scripts (~150 assignments now use "always quote" style)
 - Security #4: API token file now created with `umask 0077` in subshell for mode 600 permissions
 - Documentation #1: Added return code documentation to `validate_dns_resolution` and `_wiz_toggle`
+- Documentation #2: Added comprehensive template variable reference in `wiki/Templates-Guide.md` with template-to-variable mapping

@@ -279,3 +279,132 @@ Debug log for empty values:
 5. **Test templates locally** - Use `sed` to verify substitution works
 6. **Keep templates readable** - Add comments for complex configs
 
+---
+
+## Template Variable Reference
+
+Complete mapping of which templates use which variables.
+
+### Templates by Variable Usage
+
+#### Configuration Templates
+
+| Template | Variables Used | Purpose |
+|----------|----------------|---------|
+| `hosts.tmpl` | `MAIN_IPV4`, `FQDN`, `HOSTNAME` | `/etc/hosts` file |
+| `resolv.conf.tmpl` | `DNS_PRIMARY`, `DNS_SECONDARY` | DNS resolver config |
+| `sshd_config.tmpl` | `ADMIN_USERNAME` | SSH daemon hardening |
+| `postfix-main.cf.tmpl` | `HOSTNAME`, `FQDN`, `DOMAIN_SUFFIX`, `SMTP_RELAY_HOST`, `SMTP_RELAY_PORT` | Mail relay config |
+| `promtail.yml.tmpl` | `HOSTNAME` | Log collector config |
+| `netdata.conf.tmpl` | `NETDATA_BIND_TO` | Monitoring UI binding |
+| `vnstat.conf.tmpl` | `INTERFACE_NAME` | Traffic monitoring |
+
+#### Localization Templates
+
+| Template | Variables Used | Purpose |
+|----------|----------------|---------|
+| `default-locale.tmpl` | `LOCALE` | System default locale |
+| `environment.tmpl` | `LOCALE` | Environment locale |
+| `locale.sh.tmpl` | `LOCALE` | Locale profile script |
+| `zshrc.tmpl` | `LOCALE` | Zsh locale settings |
+
+#### Systemd Service Templates
+
+| Template | Variables Used | Purpose |
+|----------|----------------|---------|
+| `cpupower.service.tmpl` | `CPU_GOVERNOR` | CPU scaling service |
+| `network-ringbuffer.service.tmpl` | `RINGBUFFER_INTERFACE` | Network buffer tuning |
+| `aide-check.service.tmpl` | (none) | AIDE integrity check |
+| `chkrootkit-scan.service.tmpl` | (none) | Rootkit scanner |
+| `lynis-audit.service.tmpl` | (none) | Security audit |
+| `zfs-scrub.service.tmpl` | (none) | ZFS pool scrub |
+
+#### Script Templates
+
+| Template | Variables Used | Purpose |
+|----------|----------------|---------|
+| `validation.sh.tmpl` | 18 variables (see below) | Post-install validation |
+| `letsencrypt-firstboot.sh.tmpl` | `CERT_DOMAIN`, `CERT_EMAIL` | Let's Encrypt setup |
+| `network-ringbuffer.sh.tmpl` | `RINGBUFFER_INTERFACE` | Network tuning script |
+| `remove-subscription-nag.sh.tmpl` | (none) | Remove PVE nag |
+
+#### Templates Without Variables
+
+These use static configuration (44 templates):
+- All `.timer.tmpl` files
+- `fail2ban-jail.local.tmpl`
+- `nftables.conf.tmpl` (generated dynamically)
+- Security scan templates
+- Various helper scripts
+
+### validation.sh.tmpl Variables
+
+The validation script template uses all feature flags for post-install verification:
+
+```
+ADMIN_USERNAME       INSTALL_AIDE         INSTALL_NETDATA
+SHELL_TYPE           INSTALL_APPARMOR     INSTALL_NVIM
+SSL_TYPE             INSTALL_AUDITD       INSTALL_PROMTAIL
+INSTALL_FIREWALL     INSTALL_CHKROOTKIT   INSTALL_RINGBUFFER
+FIREWALL_MODE        INSTALL_LYNIS        INSTALL_TAILSCALE
+INSTALL_YAZI         INSTALL_NEEDRESTART  INSTALL_VNSTAT
+```
+
+### Variables by Category
+
+#### Most Frequently Used
+
+| Variable | Template Count | Templates |
+|----------|----------------|-----------|
+| `LOCALE` | 4 | default-locale, environment, locale.sh, zshrc |
+| `HOSTNAME` | 3 | hosts, postfix-main.cf, promtail.yml |
+| `FQDN` | 2 | hosts, postfix-main.cf |
+
+#### Network Variables
+
+| Variable | Template |
+|----------|----------|
+| `MAIN_IPV4` | hosts.tmpl |
+| `INTERFACE_NAME` | vnstat.conf.tmpl |
+| `RINGBUFFER_INTERFACE` | network-ringbuffer.sh.tmpl, network-ringbuffer.service.tmpl |
+| `NETDATA_BIND_TO` | netdata.conf.tmpl |
+
+#### DNS Variables
+
+| Variable | Template |
+|----------|----------|
+| `DNS_PRIMARY` | resolv.conf.tmpl |
+| `DNS_SECONDARY` | resolv.conf.tmpl |
+
+#### Email Variables
+
+| Variable | Template |
+|----------|----------|
+| `SMTP_RELAY_HOST` | postfix-main.cf.tmpl |
+| `SMTP_RELAY_PORT` | postfix-main.cf.tmpl |
+| `DOMAIN_SUFFIX` | postfix-main.cf.tmpl |
+
+#### SSL Variables
+
+| Variable | Template |
+|----------|----------|
+| `CERT_DOMAIN` | letsencrypt-firstboot.sh.tmpl |
+| `CERT_EMAIL` | letsencrypt-firstboot.sh.tmpl |
+| `SSL_TYPE` | validation.sh.tmpl |
+
+#### System Variables
+
+| Variable | Template |
+|----------|----------|
+| `CPU_GOVERNOR` | cpupower.service.tmpl |
+| `ADMIN_USERNAME` | sshd_config.tmpl, validation.sh.tmpl |
+| `SHELL_TYPE` | validation.sh.tmpl |
+
+### Summary Statistics
+
+- **Total template files:** 55
+- **Templates with variables:** 15
+- **Templates without variables:** 40
+- **Unique variables:** 32
+- **Most variables in one template:** 18 (validation.sh.tmpl)
+
