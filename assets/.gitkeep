@@ -1,0 +1,10 @@
+# Assets Directory
+
+Place demo.gif here (terminal recording of the installation wizard).
+
+Recommended recording tools:
+- asciinema (record) + agg (convert to gif)
+- VHS (https://github.com/charmbracelet/vhs)
+- terminalizer
+
+Recommended dimensions: 800px width, ~30-60 seconds duration

@@ -36,7 +36,7 @@ git config core.hooksPath .githooks
 
 ```
 proxmox-installer/
-├── scripts/           # 89 bash scripts (numbered for execution order)
+├── scripts/           # 92 bash scripts (numbered for execution order)
 │   ├── 000-colors.sh  # Terminal colors, version
 │   ├── 001-constants.sh # DNS, timeouts, ports, resource limits
 │   ├── 002-wizard-options.sh # WIZ_* menu option lists
@@ -46,7 +46,7 @@ proxmox-installer/
 │   ├── 006-logging.sh # Logging and metrics
 │   ├── ...
 │   └── 900-main.sh    # Main orchestrator
-├── templates/         # 52 configuration templates (.tmpl extension)
+├── templates/         # 54 configuration templates (.tmpl extension)
 ├── wiki/              # User documentation (synced to GitHub Wiki)
 ├── spec/              # ShellSpec unit tests
 └── .cursor/rules/     # AI assistant context

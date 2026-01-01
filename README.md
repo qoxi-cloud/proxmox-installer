@@ -7,6 +7,12 @@
   ![Version](https://img.shields.io/endpoint?url=https://qoxi-cloud.github.io/proxmox-installer/version.json&style=for-the-badge)
   ![GitHub Stars](https://img.shields.io/github/stars/qoxi-cloud/proxmox-installer?style=for-the-badge&logo=github)
   ![GitHub License](https://img.shields.io/github/license/qoxi-cloud/proxmox-installer?style=for-the-badge)
+
+  <br/>
+
+  <!-- TODO: Replace with actual terminal recording -->
+  <img src="https://github.com/qoxi-cloud/proxmox-installer/raw/main/icons/demo.gif" alt="Installation Demo" width="800" />
+
 </div>
 
 ## Overview
@@ -39,6 +45,7 @@ Automated Proxmox VE installer for dedicated servers **without console access**.
 - vnstat bandwidth monitoring
 - Netdata real-time dashboard
 - Promtail log collector
+- Postfix mail relay (SMTP forwarding for alerts)
 - ZSH with Powerlevel10k or Bash
 - Optional: yazi file manager, Neovim
 
