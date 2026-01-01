@@ -91,18 +91,18 @@ validate_dns_resolution() {
     for dns_server in "${DNS_SERVERS[@]}"; do
       case "$dns_tool" in
         dig)
-          # dig supports +time for timeout
-          raw_output=$(timeout "$dns_timeout" dig +short +time=3 +tries=1 A "$fqdn" "@${dns_server}" 2>/dev/null)
+          # Use outer timeout only to avoid conflicting timeout values
+          raw_output=$(timeout "$dns_timeout" dig +short +tries=1 A "$fqdn" "@${dns_server}" 2>/dev/null)
           resolved_ip=$(_parse_dig_output "$raw_output")
           ;;
         host)
-          # host supports -W for timeout
-          raw_output=$(timeout "$dns_timeout" host -W 3 -t A "$fqdn" "$dns_server" 2>/dev/null)
+          # Use outer timeout only to avoid conflicting timeout values
+          raw_output=$(timeout "$dns_timeout" host -t A "$fqdn" "$dns_server" 2>/dev/null)
           resolved_ip=$(_parse_host_output "$raw_output")
           ;;
         nslookup)
-          # nslookup doesn't have timeout option, use timeout command
-          raw_output=$(timeout "$dns_timeout" nslookup -timeout=3 "$fqdn" "$dns_server" 2>/dev/null)
+          # Use outer timeout only to avoid conflicting timeout values
+          raw_output=$(timeout "$dns_timeout" nslookup "$fqdn" "$dns_server" 2>/dev/null)
           resolved_ip=$(_parse_nslookup_output "$raw_output")
           ;;
       esac
@@ -116,7 +116,7 @@ validate_dns_resolution() {
     if [[ -z $resolved_ip ]]; then
       case "$dns_tool" in
         dig)
-          raw_output=$(timeout "$dns_timeout" dig +short +time=3 +tries=1 A "$fqdn" 2>/dev/null)
+          raw_output=$(timeout "$dns_timeout" dig +short +tries=1 A "$fqdn" 2>/dev/null)
           resolved_ip=$(_parse_dig_output "$raw_output")
           ;;
         *)
