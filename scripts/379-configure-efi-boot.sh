@@ -7,7 +7,7 @@
 configure_efi_fallback_boot() {
   # Only needed for UEFI systems
   if ! remote_exec 'test -d /sys/firmware/efi' 2>/dev/null; then
-    log "INFO: Legacy BIOS mode - skipping EFI fallback configuration"
+    log_info "Legacy BIOS mode - skipping EFI fallback configuration"
     return 0
   fi
 

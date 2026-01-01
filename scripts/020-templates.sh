@@ -7,7 +7,7 @@ apply_template_vars() {
   shift
 
   if [[ ! -f "$file" ]]; then
-    log "ERROR: Template file not found: $file"
+    log_error "Template file not found: $file"
     return 1
   fi
 
@@ -28,7 +28,7 @@ apply_template_vars() {
             [[ ${IPV6_MODE:-} != "auto" && ${IPV6_MODE:-} != "manual" ]] && skip_log=true
             ;;
         esac
-        [[ $skip_log == false ]] && log "DEBUG: Template variable $var is empty, {{${var}}} will be replaced with empty string in $file"
+        [[ $skip_log == false ]] && log_debug "Template variable $var is empty, {{${var}}} will be replaced with empty string in $file"
       fi
 
       # Escape special characters in value for sed replacement
@@ -50,20 +50,20 @@ apply_template_vars() {
     # Debug: log file size and substitution count
     local size_before
     size_before=$(wc -c <"$file" 2>/dev/null || echo "?")
-    log "DEBUG: Processing $file (${size_before} bytes, ${#sed_args[@]} substitutions)"
+    log_debug "Processing $file (${size_before} bytes, ${#sed_args[@]} substitutions)"
 
     # Use temp file approach - more portable than sed -i (busybox compatibility)
     local tmpfile="${file}.tmp.$$"
     if ! sed "${sed_args[@]}" "$file" >"$tmpfile" 2>>"$LOG_FILE"; then
-      log "ERROR: sed substitution failed for $file"
+      log_error "sed substitution failed for $file"
       rm -f "$tmpfile"
       return 1
     fi
 
     # Verify temp file exists and has content
     if [[ ! -s "$tmpfile" ]]; then
-      log "ERROR: sed produced empty output for $file"
-      log "DEBUG: Original file exists: $([[ -f "$file" ]] && echo yes || echo no), size: $(wc -c <"$file" 2>/dev/null || echo 0)"
+      log_error "sed produced empty output for $file"
+      log_debug "Original file exists: $([[ -f "$file" ]] && echo yes || echo no), size: $(wc -c <"$file" 2>/dev/null || echo 0)"
       rm -f "$tmpfile"
       return 1
     fi
@@ -73,21 +73,21 @@ apply_template_vars() {
     if grep -qE '\{\{[A-Za-z0-9_]+\}\}' "$tmpfile" 2>/dev/null; then
       local remaining
       remaining=$(grep -oE '\{\{[A-Za-z0-9_]+\}\}' "$tmpfile" 2>/dev/null | sort -u | tr '\n' ' ')
-      log "WARNING: Unsubstituted placeholders remain in $file: $remaining"
+      log_warn "Unsubstituted placeholders remain in $file: $remaining"
       rm -f "$tmpfile"
       return 1
     fi
 
     # Replace original with processed file (only after validation passed)
     if ! mv "$tmpfile" "$file"; then
-      log "ERROR: Failed to replace $file with processed template"
+      log_error "Failed to replace $file with processed template"
       rm -f "$tmpfile"
       return 1
     fi
 
     local size_after
     size_after=$(wc -c <"$file" 2>/dev/null || echo "?")
-    log "DEBUG: Finished $file (${size_after} bytes)"
+    log_debug "Finished $file (${size_after} bytes)"
   fi
 
   return 0
@@ -101,7 +101,7 @@ apply_common_template_vars() {
   local -a critical_vars=(MAIN_IPV4 MAIN_IPV4_GW PVE_HOSTNAME INTERFACE_NAME)
   for var in "${critical_vars[@]}"; do
     if [[ -z ${!var:-} ]]; then
-      log "WARNING: [apply_common_template_vars] Critical variable $var is empty for $file"
+      log_warn "[apply_common_template_vars] Critical variable $var is empty for $file"
     fi
   done
 
@@ -143,7 +143,7 @@ download_template() {
   # Verify file is not empty after download
   if [[ ! -s $local_path ]]; then
     print_error "Template $remote_file is empty or download failed"
-    log "ERROR: Template $remote_file is empty after download"
+    log_error "Template $remote_file is empty after download"
     return 1
   fi
 
@@ -154,14 +154,14 @@ download_template() {
     answer.toml)
       if ! grep -q "\[global\]" "$local_path" 2>/dev/null; then
         print_error "Template $remote_file appears corrupted (missing [global] section)"
-        log "ERROR: Template $remote_file corrupted - missing [global] section"
+        log_error "Template $remote_file corrupted - missing [global] section"
         return 1
       fi
       ;;
     sshd_config)
       if ! grep -q "PasswordAuthentication" "$local_path" 2>/dev/null; then
         print_error "Template $remote_file appears corrupted (missing PasswordAuthentication)"
-        log "ERROR: Template $remote_file corrupted - missing PasswordAuthentication"
+        log_error "Template $remote_file corrupted - missing PasswordAuthentication"
         return 1
       fi
       ;;
@@ -169,7 +169,7 @@ download_template() {
       # Shell scripts should start with shebang or at least contain some bash syntax
       if ! head -1 "$local_path" | grep -qE "^#!.*bash|^# shellcheck|^export " && ! grep -qE "(if|then|echo|function|export)" "$local_path" 2>/dev/null; then
         print_error "Template $remote_file appears corrupted (invalid shell script)"
-        log "ERROR: Template $remote_file corrupted - invalid shell script"
+        log_error "Template $remote_file corrupted - invalid shell script"
         return 1
       fi
       ;;
@@ -177,7 +177,7 @@ download_template() {
       # nftables config must have table definition
       if ! grep -q "table inet" "$local_path" 2>/dev/null; then
         print_error "Template $remote_file appears corrupted (missing table inet definition)"
-        log "ERROR: Template $remote_file corrupted - missing table inet"
+        log_error "Template $remote_file corrupted - missing table inet"
         return 1
       fi
       ;;
@@ -185,7 +185,7 @@ download_template() {
       # Promtail config must have server and clients sections
       if ! grep -q "server:" "$local_path" 2>/dev/null || ! grep -q "clients:" "$local_path" 2>/dev/null; then
         print_error "Template $remote_file appears corrupted (missing YAML structure)"
-        log "ERROR: Template $remote_file corrupted - missing server: or clients: section"
+        log_error "Template $remote_file corrupted - missing server: or clients: section"
         return 1
       fi
       ;;
@@ -193,7 +193,7 @@ download_template() {
       # Chrony config must have pool or server directive
       if ! grep -qE "^(pool|server)" "$local_path" 2>/dev/null; then
         print_error "Template $remote_file appears corrupted (missing NTP server config)"
-        log "ERROR: Template $remote_file corrupted - missing pool or server directive"
+        log_error "Template $remote_file corrupted - missing pool or server directive"
         return 1
       fi
       ;;
@@ -201,12 +201,12 @@ download_template() {
       # Systemd service files must have [Service] section with ExecStart or Type=oneshot
       if ! grep -q "\[Service\]" "$local_path" 2>/dev/null; then
         print_error "Template $remote_file appears corrupted (missing [Service] section)"
-        log "ERROR: Template $remote_file corrupted - missing [Service] section"
+        log_error "Template $remote_file corrupted - missing [Service] section"
         return 1
       fi
       if ! grep -qE "^ExecStart=" "$local_path" 2>/dev/null; then
         print_error "Template $remote_file appears corrupted (missing ExecStart)"
-        log "ERROR: Template $remote_file corrupted - missing ExecStart"
+        log_error "Template $remote_file corrupted - missing ExecStart"
         return 1
       fi
       ;;
@@ -214,12 +214,12 @@ download_template() {
       # Config files should have some content
       if [[ $(wc -l <"$local_path" 2>/dev/null || echo 0) -lt 2 ]]; then
         print_error "Template $remote_file appears corrupted (too short)"
-        log "ERROR: Template $remote_file corrupted - file too short"
+        log_error "Template $remote_file corrupted - file too short"
         return 1
       fi
       ;;
   esac
 
-  log "Template $remote_file downloaded and validated successfully"
+  log_info "Template $remote_file downloaded and validated successfully"
   return 0
 }

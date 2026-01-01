@@ -27,7 +27,7 @@ _apply_basic_settings() {
   # rpcbind: NFS RPC portmapper
   # nfs-blkmap: pNFS block layout mapper (causes "open pipe file failed" errors)
   remote_exec "systemctl disable --now rpcbind rpcbind.socket nfs-blkmap.service 2>/dev/null" || {
-    log "WARNING: Failed to disable rpcbind/nfs-blkmap"
+    log_warn "Failed to disable rpcbind/nfs-blkmap"
   }
   # Mask nfs-blkmap to prevent it from starting on boot
   remote_exec "systemctl mask nfs-blkmap.service 2>/dev/null" || true
@@ -77,9 +77,9 @@ _config_base_system() {
   run_with_progress "Applying basic system settings" "Basic system settings applied" _apply_basic_settings
 
   # Configure Proxmox repository
-  log "configure_base_system: PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
+  log_debug "configure_base_system: PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription}"
   if [[ ${PVE_REPO_TYPE:-no-subscription} == "enterprise" ]]; then
-    log "configure_base_system: configuring enterprise repository"
+    log_info "configure_base_system: configuring enterprise repository"
     # Enterprise: disable default no-subscription repo (template already has enterprise)
     # shellcheck disable=SC2016 # Single quotes intentional - executed on remote system
     remote_run "Configuring enterprise repository" '
@@ -93,14 +93,14 @@ _config_base_system() {
 
     # Register subscription key if provided
     if [[ -n $PVE_SUBSCRIPTION_KEY ]]; then
-      log "configure_base_system: registering subscription key"
+      log_info "configure_base_system: registering subscription key"
       remote_run "Registering subscription key" \
         "pvesubscription set '${PVE_SUBSCRIPTION_KEY}' 2>/dev/null || true" \
         "Subscription key registered"
     fi
   else
     # No-subscription or test: disable enterprise repo
-    log "configure_base_system: configuring ${PVE_REPO_TYPE:-no-subscription} repository"
+    log_info "configure_base_system: configuring ${PVE_REPO_TYPE:-no-subscription} repository"
     # shellcheck disable=SC2016 # Single quotes intentional - executed on remote system
     remote_run "Configuring ${PVE_REPO_TYPE:-no-subscription} repository" '
             for repo_file in /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do

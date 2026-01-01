@@ -75,38 +75,38 @@ EOF
 # Main implementation for nftables configuration
 _config_nftables() {
   # Set up iptables-nft compatibility layer
-  log "INFO: Setting up iptables-nft compatibility layer"
+  log_info "Setting up iptables-nft compatibility layer"
   remote_exec '
     update-alternatives --set iptables /usr/sbin/iptables-nft
     update-alternatives --set ip6tables /usr/sbin/ip6tables-nft
-  ' >>"$LOG_FILE" 2>&1 || log "WARNING: Could not set iptables-nft alternatives"
+  ' >>"$LOG_FILE" 2>&1 || log_warn "Could not set iptables-nft alternatives"
 
   # Generate complete config
   local config_file="./templates/nftables.conf.generated"
   if ! _generate_nftables_conf >"$config_file"; then
-    log "ERROR: Failed to generate nftables config"
+    log_error "Failed to generate nftables config"
     return 1
   fi
 
-  log "Generated nftables config (mode: $FIREWALL_MODE, bridge: $BRIDGE_MODE)"
+  log_info "Generated nftables config (mode: $FIREWALL_MODE, bridge: $BRIDGE_MODE)"
 
   # Deploy to VM
   remote_copy "$config_file" "/etc/nftables.conf" || {
-    log "ERROR: Failed to deploy nftables config"
+    log_error "Failed to deploy nftables config"
     rm -f "$config_file"
     return 1
   }
 
   # Validate syntax
   remote_exec "nft -c -f /etc/nftables.conf" || {
-    log "ERROR: nftables config syntax validation failed"
+    log_error "nftables config syntax validation failed"
     rm -f "$config_file"
     return 1
   }
 
   # Enable service
   remote_exec "systemctl enable --now nftables" || {
-    log "ERROR: Failed to enable nftables"
+    log_error "Failed to enable nftables"
     rm -f "$config_file"
     return 1
   }
@@ -118,11 +118,11 @@ _config_nftables() {
 # Modes: stealth (VPN only), strict (SSH only), standard (SSH + Web UI)
 configure_firewall() {
   if [[ $INSTALL_FIREWALL != "yes" ]]; then
-    log "Skipping firewall configuration (INSTALL_FIREWALL=$INSTALL_FIREWALL)"
+    log_info "Skipping firewall configuration (INSTALL_FIREWALL=$INSTALL_FIREWALL)"
     return 0
   fi
 
-  log "Configuring nftables firewall (mode: $FIREWALL_MODE, bridge: $BRIDGE_MODE)"
+  log_info "Configuring nftables firewall (mode: $FIREWALL_MODE, bridge: $BRIDGE_MODE)"
 
   local mode_display=""
   case "$FIREWALL_MODE" in
@@ -133,7 +133,7 @@ configure_firewall() {
   esac
 
   if ! run_with_progress "Configuring nftables firewall" "Firewall configured ($mode_display)" _config_nftables; then
-    log "WARNING: Firewall setup failed"
+    log_warn "Firewall setup failed"
   fi
   return 0
 }

@@ -148,7 +148,7 @@ _edit_existing_pool() {
     declare -g -a ZFS_POOL_DISKS=()
     declare -g ZFS_RAID=""
 
-    log "Selected existing pool: $EXISTING_POOL_NAME with disks: ${EXISTING_POOL_DISKS[*]}"
+    log_info "Selected existing pool: $EXISTING_POOL_NAME with disks: ${EXISTING_POOL_DISKS[*]}"
   fi
 }
 

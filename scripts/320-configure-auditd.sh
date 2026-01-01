@@ -7,7 +7,7 @@
 # Deploys audit rules and configures log retention
 _config_auditd() {
   deploy_template "templates/auditd-rules" "/etc/audit/rules.d/proxmox.rules" || {
-    log "ERROR: Failed to deploy auditd rules"
+    log_error "Failed to deploy auditd rules"
     return 1
   }
 
@@ -38,7 +38,7 @@ _config_auditd() {
       sleep 2
     done
   ' || {
-    log "ERROR: Failed to configure auditd"
+    log_error "Failed to configure auditd"
     return 1
   }
   parallel_mark_configured "auditd"

@@ -4,7 +4,7 @@
 # Guard for functions that require ADMIN_USERNAME. $1=context (optional)
 require_admin_username() {
   if [[ -z ${ADMIN_USERNAME:-} ]]; then
-    log "ERROR: ADMIN_USERNAME is empty${1:+, cannot $1}"
+    log_error "ADMIN_USERNAME is empty${1:+, cannot $1}"
     return 1
   fi
 }
@@ -31,7 +31,7 @@ run_batch_copies() {
   done
 
   if [[ $failures -gt 0 ]]; then
-    log "ERROR: $failures/${#pairs[@]} parallel copies failed"
+    log_error "$failures/${#pairs[@]} parallel copies failed"
     return 1
   fi
 
@@ -48,7 +48,7 @@ deploy_timer_with_logdir() {
   deploy_systemd_timer "$timer_name" || return 1
 
   remote_exec "mkdir -p '$log_dir'" || {
-    log "ERROR: Failed to create $log_dir"
+    log_error "Failed to create $log_dir"
     return 1
   }
 }
@@ -94,7 +94,7 @@ wait_async_feature() {
   [[ -z $pid ]] && return 0
 
   if ! wait "$pid"; then
-    log "WARNING: configure_${feature} failed (exit code: $?)"
+    log_warn "configure_${feature} failed (exit code: $?)"
     return 1
   fi
   return 0

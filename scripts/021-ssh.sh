@@ -55,7 +55,7 @@ _ssh_session_init() {
   if [[ $BASHPID == "$$" ]] && [[ $_SSH_SESSION_LOGGED != true ]]; then
     register_temp_file "$passfile_path"
     register_temp_file "$_TEMP_SSH_CONTROL_PATH"
-    log "SSH session initialized: $passfile_path"
+    log_info "SSH session initialized: $passfile_path"
     declare -g _SSH_SESSION_LOGGED=true
   fi
 }
@@ -66,7 +66,7 @@ _ssh_control_cleanup() {
     # Gracefully close master connection
     ssh -o ControlPath="$_TEMP_SSH_CONTROL_PATH" -O exit root@localhost >>"${LOG_FILE:-/dev/null}" 2>&1 || true
     rm -f "$_TEMP_SSH_CONTROL_PATH" 2>/dev/null || true
-    log "SSH control socket cleaned up: $_TEMP_SSH_CONTROL_PATH"
+    log_info "SSH control socket cleaned up: $_TEMP_SSH_CONTROL_PATH"
   fi
 }
 
@@ -98,7 +98,7 @@ _ssh_session_cleanup() {
   fi
 
   declare -g _SSH_SESSION_PASSFILE=""
-  log "SSH session cleaned up: $passfile_path"
+  log_info "SSH session cleaned up: $passfile_path"
 }
 
 # Gets session passfile (initializes if needed)
@@ -151,7 +151,7 @@ wait_for_ssh_ready() {
 
   if [[ $port_check -eq 0 ]]; then
     print_error "Port $SSH_PORT is not accessible"
-    log "ERROR: Port $SSH_PORT not accessible after ${port_timeout}s"
+    log_error "Port $SSH_PORT not accessible after ${port_timeout}s"
     return 1
   fi
 

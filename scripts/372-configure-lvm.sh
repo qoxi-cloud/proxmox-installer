@@ -4,7 +4,7 @@
 # Expands LVM root to use all disk space (ext4 boot mode only).
 # Removes local-lvm data LV and extends root LV to 100% free.
 _config_expand_lvm_root() {
-  log "INFO: Expanding LVM root to use all disk space"
+  log_info "Expanding LVM root to use all disk space"
 
   # shellcheck disable=SC2016
   if ! remote_run "Expanding LVM root filesystem" '
@@ -31,7 +31,7 @@ _config_expand_lvm_root() {
     fi
     pvesm set local --content iso,vztmpl,backup,snippets,images,rootdir 2>/dev/null || true
   ' "LVM root filesystem expanded"; then
-    log "WARNING: LVM expansion had issues, continuing"
+    log_warn "LVM expansion had issues, continuing"
   fi
   return 0
 }

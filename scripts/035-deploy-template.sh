@@ -16,19 +16,19 @@ deploy_user_config() {
 
   # Stage template to temp location to preserve original
   staged=$(mktemp) || {
-    log "ERROR: Failed to create temp file for $template"
+    log_error "Failed to create temp file for $template"
     return 1
   }
   register_temp_file "$staged"
   cp "$template" "$staged" || {
-    log "ERROR: Failed to stage template $template"
+    log_error "Failed to stage template $template"
     rm -f "$staged"
     return 1
   }
 
   # Apply template vars (also validates no unsubstituted placeholders remain)
   apply_template_vars "$staged" "$@" || {
-    log "ERROR: Template substitution failed for $template"
+    log_error "Template substitution failed for $template"
     rm -f "$staged"
     return 1
   }
@@ -36,7 +36,7 @@ deploy_user_config() {
   # Create parent directory if needed (skip if deploying to home root)
   if [[ "$dest_dir" != "$home_dir" ]]; then
     remote_exec "mkdir -p '$dest_dir'" || {
-      log "ERROR: Failed to create directory $dest_dir"
+      log_error "Failed to create directory $dest_dir"
       rm -f "$staged"
       return 1
     }
@@ -52,7 +52,7 @@ deploy_user_config() {
     done
     [[ -n $dirs_to_chown ]] && {
       remote_exec "chown ${ADMIN_USERNAME}:${ADMIN_USERNAME} $dirs_to_chown" || {
-        log "ERROR: Failed to set ownership on $dirs_to_chown"
+        log_error "Failed to set ownership on $dirs_to_chown"
         rm -f "$staged"
         return 1
       }
@@ -61,7 +61,7 @@ deploy_user_config() {
 
   # Copy file
   remote_copy "$staged" "$dest" || {
-    log "ERROR: Failed to copy $template to $dest"
+    log_error "Failed to copy $template to $dest"
     rm -f "$staged"
     return 1
   }
@@ -69,7 +69,7 @@ deploy_user_config() {
 
   # Set ownership
   remote_exec "chown ${ADMIN_USERNAME}:${ADMIN_USERNAME} '$dest'" || {
-    log "ERROR: Failed to set ownership on $dest"
+    log_error "Failed to set ownership on $dest"
     return 1
   }
 }
@@ -93,23 +93,23 @@ deploy_systemd_timer() {
 
   remote_copy "templates/${template_dir}${timer_name}.service" \
     "/etc/systemd/system/${timer_name}.service" || {
-    log "ERROR: Failed to deploy ${timer_name} service"
+    log_error "Failed to deploy ${timer_name} service"
     return 1
   }
 
   remote_copy "templates/${template_dir}${timer_name}.timer" \
     "/etc/systemd/system/${timer_name}.timer" || {
-    log "ERROR: Failed to deploy ${timer_name} timer"
+    log_error "Failed to deploy ${timer_name} timer"
     return 1
   }
 
   # Set proper permissions to avoid systemd warnings
   remote_exec "chmod 644 /etc/systemd/system/${timer_name}.service /etc/systemd/system/${timer_name}.timer" || {
-    log "WARNING: Failed to set permissions on ${timer_name} unit files"
+    log_warn "Failed to set permissions on ${timer_name} unit files"
   }
 
   remote_exec "systemctl daemon-reload && systemctl enable --now ${timer_name}.timer" || {
-    log "ERROR: Failed to enable ${timer_name} timer"
+    log_error "Failed to enable ${timer_name} timer"
     return 1
   }
 }
@@ -126,26 +126,26 @@ deploy_template() {
 
   # Stage template to temp location to preserve original
   staged=$(mktemp) || {
-    log "ERROR: Failed to create temp file for $template"
+    log_error "Failed to create temp file for $template"
     return 1
   }
   register_temp_file "$staged"
   cp "$template" "$staged" || {
-    log "ERROR: Failed to stage template $template"
+    log_error "Failed to stage template $template"
     rm -f "$staged"
     return 1
   }
 
   # Apply template vars (also validates no unsubstituted placeholders remain)
   apply_template_vars "$staged" "$@" || {
-    log "ERROR: Template substitution failed for $template"
+    log_error "Template substitution failed for $template"
     rm -f "$staged"
     return 1
   }
 
   # For .service files, verify ExecStart exists after substitution
   if [[ $is_service == true ]] && ! grep -q "ExecStart=" "$staged" 2>/dev/null; then
-    log "ERROR: Service file $dest missing ExecStart after template substitution"
+    log_error "Service file $dest missing ExecStart after template substitution"
     rm -f "$staged"
     return 1
   fi
@@ -154,13 +154,13 @@ deploy_template() {
   local dest_dir
   dest_dir=$(dirname "$dest")
   remote_exec "mkdir -p '$dest_dir'" || {
-    log "ERROR: Failed to create directory $dest_dir"
+    log_error "Failed to create directory $dest_dir"
     rm -f "$staged"
     return 1
   }
 
   remote_copy "$staged" "$dest" || {
-    log "ERROR: Failed to deploy $template to $dest"
+    log_error "Failed to deploy $template to $dest"
     rm -f "$staged"
     return 1
   }
@@ -169,7 +169,7 @@ deploy_template() {
   # For .service files, verify remote copy wasn't corrupted
   if [[ $is_service == true ]]; then
     remote_exec "grep -q 'ExecStart=' '$dest'" || {
-      log "ERROR: Remote service file $dest appears corrupted (missing ExecStart)"
+      log_error "Remote service file $dest appears corrupted (missing ExecStart)"
       return 1
     }
   fi
@@ -188,7 +188,7 @@ deploy_systemd_service() {
 
   # Set proper permissions to avoid systemd warnings
   remote_exec "chmod 644 '$dest'" || {
-    log "WARNING: Failed to set permissions on $dest"
+    log_warn "Failed to set permissions on $dest"
   }
 
   remote_enable_services "${service_name}.service"
@@ -203,7 +203,7 @@ remote_enable_services() {
   fi
 
   remote_exec "systemctl daemon-reload && systemctl enable --now ${services[*]}" || {
-    log "ERROR: Failed to enable services: ${services[*]}"
+    log_error "Failed to enable services: ${services[*]}"
     return 1
   }
 }

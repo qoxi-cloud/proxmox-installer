@@ -4,11 +4,11 @@
 # Private implementation - configures SSL certificates
 # Called by configure_ssl() public wrapper
 _config_ssl() {
-  log "_config_ssl: SSL_TYPE=$SSL_TYPE"
+  log_debug "_config_ssl: SSL_TYPE=$SSL_TYPE"
 
   # Build FQDN if not set
   local cert_domain="${FQDN:-$PVE_HOSTNAME.$DOMAIN_SUFFIX}"
-  log "_config_ssl: domain=$cert_domain, email=$EMAIL"
+  log_debug "_config_ssl: domain=$cert_domain, email=$EMAIL"
 
   # Deploy Let's Encrypt templates to /tmp (moved to final locations by remote_run)
   deploy_template "templates/letsencrypt-firstboot.sh" "/tmp/letsencrypt-firstboot.sh" \

@@ -80,7 +80,7 @@ _config_system_services() {
 
   # Remove Proxmox subscription notice (only for non-enterprise)
   if [[ ${PVE_REPO_TYPE:-no-subscription} != "enterprise" ]]; then
-    log "configure_system_services: removing subscription notice (non-enterprise)"
+    log_info "configure_system_services: removing subscription notice (non-enterprise)"
     run_with_progress "Removing Proxmox subscription notice" "Subscription notice removed" _remove_subscription_notice
   fi
 }

@@ -19,7 +19,7 @@ _config_vnstat() {
     done
     systemctl enable --now vnstat
   " || {
-    log "ERROR: Failed to configure vnstat"
+    log_error "Failed to configure vnstat"
     return 1
   }
 

@@ -54,7 +54,7 @@ _country_to_locale() {
     ae) echo "ar_AE.UTF-8" ;;
     ir) echo "fa_IR.UTF-8" ;;
     *)
-      log "WARNING: Unknown country code '$country', using en_US.UTF-8 fallback"
+      log_warn "Unknown country code '$country', using en_US.UTF-8 fallback"
       echo "en_US.UTF-8"
       ;;
   esac
@@ -64,5 +64,5 @@ _country_to_locale() {
 _update_locale_from_country() {
   declare -g LOCALE
   LOCALE=$(_country_to_locale "$COUNTRY")
-  log "Set LOCALE=$LOCALE from COUNTRY=$COUNTRY"
+  log_info "Set LOCALE=$LOCALE from COUNTRY=$COUNTRY"
 }

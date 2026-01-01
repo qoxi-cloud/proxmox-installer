@@ -43,7 +43,7 @@ _wizard_main() {
         local field_name="${_WIZ_FIELD_MAP[$selection]:-}"
         # Skip if field name empty
         if [[ -z $field_name ]]; then
-          log "WARNING: No field mapped for selection $selection"
+          log_warn "No field mapped for selection $selection"
         else
           case "$field_name" in
             hostname) _edit_hostname ;;
@@ -78,7 +78,7 @@ _wizard_main() {
             admin_username) _edit_admin_username ;;
             admin_password) _edit_admin_password ;;
             ssh_key) _edit_ssh_key ;;
-            *) log "WARNING: Unknown field name: $field_name" ;;
+            *) log_warn "Unknown field name: $field_name" ;;
           esac
         fi
         # Hide cursor again

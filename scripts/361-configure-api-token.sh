@@ -6,7 +6,7 @@
 create_api_token() {
   [[ $INSTALL_API_TOKEN != "yes" ]] && return 0
 
-  log "INFO: Creating Proxmox API token for ${ADMIN_USERNAME}: ${API_TOKEN_NAME}"
+  log_info "Creating Proxmox API token for ${ADMIN_USERNAME}: ${API_TOKEN_NAME}"
 
   # Note: PAM user and Administrator role are set up in 302-configure-admin.sh
 
@@ -15,9 +15,9 @@ create_api_token() {
   existing=$(remote_exec "pveum user token list '${ADMIN_USERNAME}@pam' 2>/dev/null | grep -q '${API_TOKEN_NAME}' && echo 'exists' || echo ''")
 
   if [[ $existing == "exists" ]]; then
-    log "WARNING: Token ${API_TOKEN_NAME} exists, removing first"
+    log_warn "Token ${API_TOKEN_NAME} exists, removing first"
     remote_exec "pveum user token remove '${ADMIN_USERNAME}@pam' '${API_TOKEN_NAME}'" || {
-      log "ERROR: Failed to remove existing token"
+      log_error "Failed to remove existing token"
       return 1
     }
   fi
@@ -27,7 +27,7 @@ create_api_token() {
   output=$(remote_exec "pveum user token add '${ADMIN_USERNAME}@pam' '${API_TOKEN_NAME}' --privsep 0 --expire 0 --output-format json 2>&1")
 
   if [[ -z $output ]]; then
-    log "ERROR: Failed to create API token - empty output"
+    log_error "Failed to create API token - empty output"
     return 1
   fi
 
@@ -37,8 +37,8 @@ create_api_token() {
   token_value=$(printf '%s\n' "$output" | jq -R 'try (fromjson | .value) // empty' 2>/dev/null | grep -v '^$' | head -1)
 
   if [[ -z $token_value ]]; then
-    log "ERROR: Failed to extract token value from pveum output"
-    log "DEBUG: pveum output: $output"
+    log_error "Failed to extract token value from pveum output"
+    log_debug "pveum output: $output"
     return 1
   fi
 
@@ -58,6 +58,6 @@ EOF
   )
   register_temp_file "$_TEMP_API_TOKEN_FILE"
 
-  log "INFO: API token created successfully: ${API_TOKEN_ID}"
+  log_info "API token created successfully: ${API_TOKEN_ID}"
   return 0
 }

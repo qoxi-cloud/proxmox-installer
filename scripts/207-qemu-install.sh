@@ -6,7 +6,7 @@ install_proxmox() {
   # Run preparation in background to show progress immediately
   local qemu_config_file
   qemu_config_file=$(mktemp) || {
-    log "ERROR: Failed to create temp file for QEMU config"
+    log_error "Failed to create temp file for QEMU config"
     exit 1
   }
   register_temp_file "$qemu_config_file"
@@ -14,7 +14,7 @@ install_proxmox() {
   (
     # Setup QEMU configuration - exit on failure
     if ! setup_qemu_config; then
-      log "ERROR: QEMU configuration failed"
+      log_error "QEMU configuration failed"
       exit 1
     fi
 
@@ -51,7 +51,7 @@ EOF
   if [[ -s $qemu_config_file ]]; then
     # Validate file contains only expected QEMU config variables (defense in depth)
     if grep -qvE '^(QEMU_CORES|QEMU_RAM|UEFI_MODE|KVM_OPTS|UEFI_OPTS|CPU_OPTS|DRIVE_ARGS)=' "$qemu_config_file"; then
-      log "ERROR: QEMU config file contains unexpected content"
+      log_error "QEMU config file contains unexpected content"
       rm -f "$qemu_config_file"
       exit 1
     fi
@@ -85,8 +85,8 @@ EOF
 
   # Check if QEMU is still running
   if ! kill -0 "$qemu_pid" 2>/dev/null; then
-    log "ERROR: QEMU failed to start"
-    log "QEMU install log:"
+    log_error "QEMU failed to start"
+    log_info "QEMU install log:"
     cat qemu_install.log >>"$LOG_FILE" 2>&1
     exit 1
   fi
@@ -96,8 +96,8 @@ EOF
 
   # Verify installation completed (QEMU exited cleanly)
   if [[ $exit_code -ne 0 ]]; then
-    log "ERROR: QEMU installation failed with exit code $exit_code"
-    log "QEMU install log:"
+    log_error "QEMU installation failed with exit code $exit_code"
+    log_info "QEMU install log:"
     cat qemu_install.log >>"$LOG_FILE" 2>&1
     exit 1
   fi
@@ -109,14 +109,14 @@ boot_proxmox_with_port_forwarding() {
   _deactivate_lvm
 
   if ! setup_qemu_config; then
-    log "ERROR: QEMU configuration failed in boot_proxmox_with_port_forwarding"
+    log_error "QEMU configuration failed in boot_proxmox_with_port_forwarding"
     return 1
   fi
 
   # Check if port is already in use
   if ! check_port_available "$SSH_PORT"; then
     print_error "Port $SSH_PORT is already in use"
-    log "ERROR: Port $SSH_PORT is already in use"
+    log_error "Port $SSH_PORT is already in use"
     exit 1
   fi
 
@@ -152,16 +152,16 @@ boot_proxmox_with_port_forwarding() {
   local exit_code=$?
 
   if [[ $exit_code -ne 0 ]]; then
-    log "ERROR: Timeout waiting for SSH port"
-    log "QEMU output log:"
+    log_error "Timeout waiting for SSH port"
+    log_info "QEMU output log:"
     cat qemu_output.log >>"$LOG_FILE" 2>&1
     return 1
   fi
 
   # Wait for SSH to be fully ready (handles key exchange timing)
   wait_for_ssh_ready "${QEMU_SSH_READY_TIMEOUT:-120}" || {
-    log "ERROR: SSH connection failed"
-    log "QEMU output log:"
+    log_error "SSH connection failed"
+    log_info "QEMU output log:"
     cat qemu_output.log >>"$LOG_FILE" 2>&1
     return 1
   }

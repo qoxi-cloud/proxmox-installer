@@ -23,6 +23,6 @@ download_file() {
     [[ "$retry_count" -lt "$max_retries" ]] && sleep "$retry_delay"
   done
 
-  log "ERROR: Failed to download $url after $max_retries attempts"
+  log_error "Failed to download $url after $max_retries attempts"
   return 1
 }

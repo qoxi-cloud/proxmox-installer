@@ -10,7 +10,7 @@ _config_fail2ban() {
     "EMAIL=${EMAIL}" "HOSTNAME=${PVE_HOSTNAME}" || return 1
 
   remote_copy "templates/fail2ban-proxmox.conf" "/etc/fail2ban/filter.d/proxmox.conf" || {
-    log "ERROR: Failed to deploy fail2ban filter"
+    log_error "Failed to deploy fail2ban filter"
     return 1
   }
 

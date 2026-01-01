@@ -20,17 +20,17 @@ _config_tailscale() {
     # Use unique temporary files to avoid race conditions
     local tmp_ip="" tmp_hostname="" tmp_result=""
     tmp_ip=$(mktemp) || {
-      log "ERROR: mktemp failed for tmp_ip"
+      log_error "mktemp failed for tmp_ip"
       return 1
     }
     tmp_hostname=$(mktemp) || {
       rm -f "$tmp_ip"
-      log "ERROR: mktemp failed for tmp_hostname"
+      log_error "mktemp failed for tmp_hostname"
       return 1
     }
     tmp_result=$(mktemp) || {
       rm -f "$tmp_ip" "$tmp_hostname"
-      log "ERROR: mktemp failed for tmp_result"
+      log_error "mktemp failed for tmp_result"
       return 1
     }
 
@@ -51,7 +51,7 @@ _config_tailscale() {
         } || true
       else
         echo "failed" >"$tmp_result"
-        log "ERROR: tailscale up command failed"
+        log_error "tailscale up command failed"
       fi
     ) >/dev/null 2>&1 &
     show_progress $! "Authenticating Tailscale"
@@ -81,29 +81,29 @@ _config_tailscale() {
       # In stealth mode, all public ports are blocked - SSH access is only via Tailscale
       # Only deploy if Tailscale auth succeeded (otherwise we'd lock ourselves out!)
       if [[ ${FIREWALL_MODE:-standard} == "stealth" ]]; then
-        log "Deploying disable-openssh.service (FIREWALL_MODE=$FIREWALL_MODE)"
+        log_info "Deploying disable-openssh.service (FIREWALL_MODE=$FIREWALL_MODE)"
         (
-          log "Using pre-downloaded disable-openssh.service, size: $(wc -c <./templates/disable-openssh.service 2>/dev/null || echo 'failed')"
+          log_info "Using pre-downloaded disable-openssh.service, size: $(wc -c <./templates/disable-openssh.service 2>/dev/null || echo 'failed')"
           remote_copy "templates/disable-openssh.service" "/etc/systemd/system/disable-openssh.service" || exit 1
-          log "Copied disable-openssh.service to VM"
+          log_info "Copied disable-openssh.service to VM"
           remote_exec "systemctl daemon-reload && systemctl enable disable-openssh.service" >/dev/null || exit 1
-          log "Enabled disable-openssh.service"
+          log_info "Enabled disable-openssh.service"
         ) &
         show_progress $! "Configuring OpenSSH disable on boot" "OpenSSH disable configured"
       else
-        log "Skipping disable-openssh.service (FIREWALL_MODE=${FIREWALL_MODE:-standard})"
+        log_info "Skipping disable-openssh.service (FIREWALL_MODE=${FIREWALL_MODE:-standard})"
       fi
     else
       declare -g TAILSCALE_IP="auth failed"
       declare -g TAILSCALE_HOSTNAME=""
       complete_task "$TASK_INDEX" "${TREE_BRANCH} ${CLR_YELLOW}Tailscale auth failed - check auth key${CLR_RESET}" "warning"
-      log "WARNING: Tailscale authentication failed. Auth key may be invalid or expired."
+      log_warn "Tailscale authentication failed. Auth key may be invalid or expired."
 
       # In stealth mode with failed Tailscale auth, warn but DON'T disable SSH
       # This prevents locking out the user
       if [[ ${FIREWALL_MODE:-standard} == "stealth" ]]; then
         add_log "${TREE_VERT}   ${CLR_YELLOW}SSH will remain enabled (Tailscale auth failed)${CLR_RESET}"
-        log "WARNING: Stealth mode requested but Tailscale auth failed - SSH will remain enabled to prevent lockout"
+        log_warn "Stealth mode requested but Tailscale auth failed - SSH will remain enabled to prevent lockout"
       fi
     fi
 

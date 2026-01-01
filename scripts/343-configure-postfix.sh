@@ -47,7 +47,7 @@ _config_postfix_relay() {
 # Private implementation - disables Postfix service
 _config_postfix_disable() {
   remote_exec 'systemctl stop postfix 2>/dev/null; systemctl disable postfix 2>/dev/null' || true
-  log "INFO: Postfix disabled"
+  log_info "Postfix disabled"
 }
 
 # Public wrapper - configures or disables Postfix based on INSTALL_POSTFIX
@@ -56,7 +56,7 @@ configure_postfix() {
     if [[ -n $SMTP_RELAY_HOST && -n $SMTP_RELAY_USER && -n $SMTP_RELAY_PASSWORD ]]; then
       _config_postfix_relay
     else
-      log "WARNING: Postfix enabled but SMTP relay not configured, skipping"
+      log_warn "Postfix enabled but SMTP relay not configured, skipping"
     fi
   elif [[ $INSTALL_POSTFIX == "no" ]]; then
     _config_postfix_disable

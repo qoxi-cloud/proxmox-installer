@@ -6,6 +6,26 @@ log() {
   printf '%s\n' "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >>"$LOG_FILE"
 }
 
+# Log info message. $*=message
+log_info() {
+  log "INFO: $*"
+}
+
+# Log error message. $*=message
+log_error() {
+  log "ERROR: $*"
+}
+
+# Log warning message. $*=message
+log_warn() {
+  log "WARNING: $*"
+}
+
+# Log debug message. $*=message
+log_debug() {
+  log "DEBUG: $*"
+}
+
 # Installation Metrics
 
 # Start installation metrics timer. Sets INSTALL_START_TIME.

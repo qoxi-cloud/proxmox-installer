@@ -8,32 +8,32 @@ is_uefi_mode() {
 
 # Configure QEMU settings. Sets UEFI_OPTS, KVM_OPTS, QEMU_CORES/RAM, DRIVE_ARGS.
 setup_qemu_config() {
-  log "Setting up QEMU configuration"
+  log_info "Setting up QEMU configuration"
 
   # UEFI configuration
   if is_uefi_mode; then
     declare -g UEFI_OPTS="-bios /usr/share/ovmf/OVMF.fd"
-    log "UEFI mode detected"
+    log_info "UEFI mode detected"
   else
     declare -g UEFI_OPTS=""
-    log "Legacy BIOS mode"
+    log_info "Legacy BIOS mode"
   fi
 
   # KVM acceleration
   declare -g KVM_OPTS="-enable-kvm"
   declare -g CPU_OPTS="-cpu host"
-  log "Using KVM acceleration"
+  log_info "Using KVM acceleration"
 
   # CPU and RAM configuration
   local available_cores available_ram_mb
   available_cores=$(nproc)
   available_ram_mb=$(free -m | awk '/^Mem:/{print $2}')
-  log "Available cores: $available_cores, Available RAM: ${available_ram_mb}MB"
+  log_info "Available cores: $available_cores, Available RAM: ${available_ram_mb}MB"
 
   # Use override values if provided, otherwise auto-detect
   if [[ -n $QEMU_CORES_OVERRIDE ]]; then
     declare -g QEMU_CORES="$QEMU_CORES_OVERRIDE"
-    log "Using user-specified cores: $QEMU_CORES"
+    log_info "Using user-specified cores: $QEMU_CORES"
   else
     # Use all available cores for QEMU
     declare -g QEMU_CORES=$available_cores
@@ -42,7 +42,7 @@ setup_qemu_config() {
 
   if [[ -n $QEMU_RAM_OVERRIDE ]]; then
     declare -g QEMU_RAM="$QEMU_RAM_OVERRIDE"
-    log "Using user-specified RAM: ${QEMU_RAM}MB"
+    log_info "Using user-specified RAM: ${QEMU_RAM}MB"
     # Warn if requested RAM exceeds available
     if [[ $QEMU_RAM -gt $((available_ram_mb - QEMU_MIN_RAM_RESERVE)) ]]; then
       print_warning "Requested QEMU RAM (${QEMU_RAM}MB) may exceed safe limits (available: ${available_ram_mb}MB)"
@@ -53,17 +53,17 @@ setup_qemu_config() {
     [[ $QEMU_RAM -lt $MIN_QEMU_RAM ]] && declare -g QEMU_RAM=$MIN_QEMU_RAM
   fi
 
-  log "QEMU config: $QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM"
+  log_info "QEMU config: $QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM"
 
   # Load virtio mapping (created by make_answer_toml)
   if ! load_virtio_mapping; then
-    log "ERROR: Failed to load virtio mapping"
+    log_error "Failed to load virtio mapping"
     return 1
   fi
 
   # Validate VIRTIO_MAP is not empty before proceeding
   if [[ ${#VIRTIO_MAP[@]} -eq 0 ]]; then
-    log "ERROR: VIRTIO_MAP is empty - no disks mapped for QEMU"
+    log_error "VIRTIO_MAP is empty - no disks mapped for QEMU"
     print_error "No disk-to-virtio mappings found. Ensure ZFS pool disks were selected in wizard storage configuration."
     return 1
   fi
@@ -89,17 +89,17 @@ setup_qemu_config() {
     disk="${REVERSE_MAP[$vdev]}"
     # Validate disk exists before adding to QEMU args
     if [[ ! -b $disk ]]; then
-      log "ERROR: Disk $disk does not exist or is not a block device"
+      log_error "Disk $disk does not exist or is not a block device"
       return 1
     fi
-    log "QEMU drive order: $vdev -> $disk"
+    log_info "QEMU drive order: $vdev -> $disk"
     declare -g DRIVE_ARGS="$DRIVE_ARGS -drive file=$disk,format=raw,media=disk,if=virtio"
   done
 
   if [[ -z $DRIVE_ARGS ]]; then
-    log "ERROR: No drive arguments built - QEMU would start without disks"
+    log_error "No drive arguments built - QEMU would start without disks"
     return 1
   fi
 
-  log "Drive args: $DRIVE_ARGS"
+  log_info "Drive args: $DRIVE_ARGS"
 }

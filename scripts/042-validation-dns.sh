@@ -77,7 +77,7 @@ validate_dns_resolution() {
 
   # If no DNS tool available, log warning and return no resolution
   if [[ -z $dns_tool ]]; then
-    log "WARNING: No DNS lookup tool available (dig, host, or nslookup)"
+    log_warn "No DNS lookup tool available (dig, host, or nslookup)"
     declare -g DNS_RESOLVED_IP=""
     return 1
   fi
@@ -140,13 +140,13 @@ validate_dns_resolution() {
 
     # No resolution on this attempt
     if [[ $attempt -lt $max_attempts ]]; then
-      log "WARN: DNS lookup for $fqdn failed (attempt $attempt/$max_attempts), retrying in ${retry_delay}s..."
+      log_warn "DNS lookup for $fqdn failed (attempt $attempt/$max_attempts), retrying in ${retry_delay}s..."
       sleep "$retry_delay"
     fi
   done
 
   # All attempts failed
-  log "ERROR: Failed to resolve $fqdn after $max_attempts attempts"
+  log_error "Failed to resolve $fqdn after $max_attempts attempts"
   declare -g DNS_RESOLVED_IP=""
   return 1 # No resolution
 }

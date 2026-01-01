@@ -87,6 +87,6 @@ Status,Item,Value
   printf '\n'
   print_error "System requirements not met. Please fix the issues above."
   printf '\n'
-  log "ERROR: Pre-flight checks failed"
+  log_error "Pre-flight checks failed"
   exit 1
 }

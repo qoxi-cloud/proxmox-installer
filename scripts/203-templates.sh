@@ -5,7 +5,7 @@
 # Handles hosts, resolv.conf, cpupower, locale templates.
 # Interfaces is generated via heredoc (039-network-helpers.sh).
 _modify_template_files() {
-  log "Starting template modification"
+  log_info "Starting template modification"
   apply_common_template_vars "./templates/hosts" || return 1
   # Add IPv6 hosts entry only if IPv6 is configured (prevents invalid empty IP line)
   if [[ ${IPV6_MODE:-} != "disabled" && -n ${MAIN_IPV6:-} ]]; then
@@ -23,7 +23,7 @@ _modify_template_files() {
   apply_common_template_vars "./templates/locale.sh" || return 1
   apply_common_template_vars "./templates/default-locale" || return 1
   apply_common_template_vars "./templates/environment" || return 1
-  log "Template modification complete"
+  log_info "Template modification complete"
 }
 
 # Download templates in parallel (aria2c→wget fallback). $@="path:name" pairs
@@ -31,7 +31,7 @@ _download_templates_parallel() {
   local -a templates=("$@")
   local input_file=""
   input_file=$(mktemp) || {
-    log "ERROR: mktemp failed for aria2c input file"
+    log_error "mktemp failed for aria2c input file"
     return 1
   }
   register_temp_file "$input_file"
@@ -45,7 +45,7 @@ _download_templates_parallel() {
     printf '%s\n' "  out=$local_path"
   done >"$input_file"
 
-  log "Downloading ${#templates[@]} templates in parallel"
+  log_info "Downloading ${#templates[@]} templates in parallel"
 
   # Use aria2c for parallel download if available
   if cmd_exists aria2c; then
@@ -64,13 +64,13 @@ _download_templates_parallel() {
       for entry in "${templates[@]}"; do
         local local_path="${entry%%:*}"
         if [[ ! -s $local_path ]]; then
-          log "ERROR: Template $local_path is empty after aria2c download"
+          log_error "Template $local_path is empty after aria2c download"
           return 1
         fi
       done
       return 0
     fi
-    log "WARNING: aria2c failed, falling back to sequential download"
+    log_warn "aria2c failed, falling back to sequential download"
   fi
 
   rm -f "$input_file"
@@ -88,9 +88,9 @@ _download_templates_parallel() {
 
 # Download and prepare all template files for Proxmox configuration
 make_templates() {
-  log "Starting template preparation"
+  log_info "Starting template preparation"
   mkdir -p ./templates
-  log "Using bridge mode: ${BRIDGE_MODE:-internal}"
+  log_info "Using bridge mode: ${BRIDGE_MODE:-internal}"
 
   # Select Proxmox repository template based on PVE_REPO_TYPE
   local proxmox_sources_template="proxmox.sources"
@@ -98,7 +98,7 @@ make_templates() {
     enterprise) proxmox_sources_template="proxmox-enterprise.sources" ;;
     test) proxmox_sources_template="proxmox-test.sources" ;;
   esac
-  log "Using repository template: $proxmox_sources_template"
+  log_info "Using repository template: $proxmox_sources_template"
 
   # Build list of ALL templates: "local_path:remote_name"
   # All templates are pre-downloaded, used as needed
@@ -180,7 +180,7 @@ make_templates() {
   # Download all templates in parallel
   if ! run_with_progress "Downloading template files" "Template files downloaded" \
     _download_templates_parallel "${template_list[@]}"; then
-    log "ERROR: Failed to download template files"
+    log_error "Failed to download template files"
     exit 1
   fi
 
@@ -189,16 +189,16 @@ make_templates() {
     if validate_subnet "$PRIVATE_SUBNET"; then
       declare -g PRIVATE_IP_CIDR="${PRIVATE_SUBNET%.*}.1/${PRIVATE_SUBNET#*/}"
       export PRIVATE_IP_CIDR
-      log "Derived PRIVATE_IP_CIDR=$PRIVATE_IP_CIDR from PRIVATE_SUBNET=$PRIVATE_SUBNET"
+      log_info "Derived PRIVATE_IP_CIDR=$PRIVATE_IP_CIDR from PRIVATE_SUBNET=$PRIVATE_SUBNET"
     else
-      log "ERROR: Invalid PRIVATE_SUBNET format: $PRIVATE_SUBNET (expected CIDR like 10.0.0.0/24)"
+      log_error "Invalid PRIVATE_SUBNET format: $PRIVATE_SUBNET (expected CIDR like 10.0.0.0/24)"
       return 1
     fi
   fi
 
   # Modify template files in background with progress
   if ! run_with_progress "Modifying template files" "Template files modified" _modify_template_files; then
-    log "ERROR: Template modification failed"
+    log_error "Template modification failed"
     return 1
   fi
 }

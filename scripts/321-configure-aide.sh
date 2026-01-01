@@ -14,7 +14,7 @@ _config_aide() {
     aideinit -y -f
     [[ -f /var/lib/aide/aide.db.new ]] && mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
   ' || {
-    log "ERROR: Failed to initialize AIDE"
+    log_error "Failed to initialize AIDE"
     return 1
   }
 

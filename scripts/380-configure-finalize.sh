@@ -14,7 +14,7 @@ _deploy_ssh_config() {
 # SSH key was deployed to admin user in 302-configure-admin.sh.
 deploy_ssh_hardening_config() {
   if ! run_with_progress "Deploying SSH hardening config" "SSH config deployed" _deploy_ssh_config; then
-    log "ERROR: SSH config deploy failed"
+    log_error "SSH config deploy failed"
     return 1
   fi
 }
@@ -22,11 +22,11 @@ deploy_ssh_hardening_config() {
 # Restarts SSH service to apply hardened configuration.
 # Called as the LAST SSH operation - after this, password auth is disabled.
 restart_ssh_service() {
-  log "Restarting SSH to apply hardening"
+  log_info "Restarting SSH to apply hardening"
   # Use run_with_progress for consistent UI
   if ! run_with_progress "Applying SSH hardening" "SSH hardening active" \
     remote_exec "systemctl restart sshd"; then
-    log "WARNING: SSH restart failed - config will apply on reboot"
+    log_warn "SSH restart failed - config will apply on reboot"
   fi
 }
 
@@ -36,17 +36,17 @@ restart_ssh_service() {
 # Uses validation.sh.tmpl with variable substitution for enabled features.
 # Shows FAIL/WARN results in live logs for visibility.
 validate_installation() {
-  log "Generating validation script from template..."
+  log_info "Generating validation script from template..."
 
   # Stage template to preserve original
   local staged
   staged=$(mktemp) || {
-    log "ERROR: Failed to create temp file for validation.sh"
+    log_error "Failed to create temp file for validation.sh"
     return 1
   }
   register_temp_file "$staged"
   cp "./templates/validation.sh" "$staged" || {
-    log "ERROR: Failed to stage validation.sh"
+    log_error "Failed to stage validation.sh"
     rm -f "$staged"
     return 1
   }
@@ -75,7 +75,7 @@ validate_installation() {
   validation_script=$(cat "$staged")
   rm -f "$staged"
 
-  log "Validation script generated"
+  log_info "Validation script generated"
   printf '%s\n' "$validation_script" >>"$LOG_FILE"
 
   # Execute validation and capture output
@@ -103,7 +103,7 @@ validate_installation() {
   # Update task with final status
   if ((errors > 0)); then
     complete_task "$task_idx" "${TREE_BRANCH} Validation: ${CLR_RED}${errors} error(s)${CLR_RESET}, ${CLR_YELLOW}${warnings} warning(s)${CLR_RESET}" "error"
-    log "ERROR: Installation validation failed with $errors error(s)"
+    log_error "Installation validation failed with $errors error(s)"
   elif ((warnings > 0)); then
     complete_task "$task_idx" "${TREE_BRANCH} Validation passed with ${CLR_YELLOW}${warnings} warning(s)${CLR_RESET}" "warning"
   else
@@ -142,7 +142,7 @@ finalize_vm() {
   show_progress $wait_pid "Waiting for QEMU process to exit" "QEMU process exited"
   local exit_code=$?
   if [[ $exit_code -ne 0 ]]; then
-    log "WARNING: QEMU process did not exit cleanly within 120 seconds"
+    log_warn "QEMU process did not exit cleanly within 120 seconds"
     # Force kill if still running
     kill -9 "$QEMU_PID" 2>/dev/null || true
   fi
@@ -154,30 +154,30 @@ finalize_vm() {
 # Orchestrates all configuration steps with parallel execution where safe.
 # Uses batch package installation and parallel config groups for speed.
 configure_proxmox_via_ssh() {
-  log "Starting Proxmox configuration via SSH"
+  log_info "Starting Proxmox configuration via SSH"
 
   _phase_base_configuration || {
-    log "ERROR: Base configuration failed"
+    log_error "Base configuration failed"
     return 1
   }
   _phase_storage_configuration || {
-    log "ERROR: Storage configuration failed"
+    log_error "Storage configuration failed"
     return 1
   }
   _phase_security_configuration || {
-    log "ERROR: Security configuration failed"
+    log_error "Security configuration failed"
     return 1
   }
   _phase_monitoring_tools || {
-    log "WARNING: Monitoring tools configuration had issues"
+    log_warn "Monitoring tools configuration had issues"
     # Non-fatal: continue with installation
   }
   _phase_ssl_api || {
-    log "WARNING: SSL/API configuration had issues"
+    log_warn "SSL/API configuration had issues"
     # Non-fatal: continue with installation
   }
   _phase_finalization || {
-    log "ERROR: Finalization failed"
+    log_error "Finalization failed"
     return 1
   }
 }

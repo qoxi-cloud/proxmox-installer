@@ -8,7 +8,7 @@ validate_ssh_key_secure() {
   # Validate and get key info in single ssh-keygen call
   local key_info
   if ! key_info=$(echo "$key" | ssh-keygen -l -f - 2>/dev/null); then
-    log "ERROR: Invalid SSH public key format"
+    log_error "Invalid SSH public key format"
     return 1
   fi
 
@@ -22,29 +22,29 @@ validate_ssh_key_secure() {
 
   case "$key_type" in
     ssh-ed25519)
-      log "INFO: SSH key validated (ED25519)"
+      log_info "SSH key validated (ED25519)"
       return 0
       ;;
     ecdsa-*)
       # ECDSA keys report curve size (256, 384, 521), not RSA-equivalent bits
       # ECDSA-256 is equivalent to ~3072-bit RSA, so all standard curves are secure
       if [[ $bits -ge 256 ]]; then
-        log "INFO: SSH key validated ($key_type, $bits bits)"
+        log_info "SSH key validated ($key_type, $bits bits)"
         return 0
       fi
-      log "ERROR: ECDSA key curve too small (current: $bits)"
+      log_error "ECDSA key curve too small (current: $bits)"
       return 1
       ;;
     ssh-rsa)
       if [[ $bits -ge 2048 ]]; then
-        log "INFO: SSH key validated ($key_type, $bits bits)"
+        log_info "SSH key validated ($key_type, $bits bits)"
         return 0
       fi
-      log "ERROR: RSA key must be >= 2048 bits (current: $bits)"
+      log_error "RSA key must be >= 2048 bits (current: $bits)"
       return 1
       ;;
     *)
-      log "ERROR: Unsupported key type: $key_type"
+      log_error "Unsupported key type: $key_type"
       return 1
       ;;
   esac
@@ -62,18 +62,18 @@ validate_disk_space() {
   available_mb=$(df -m "$path" 2>/dev/null | awk 'NR==2 {print $4}')
 
   if [[ -z $available_mb ]]; then
-    log "ERROR: Could not determine disk space for $path"
+    log_error "Could not determine disk space for $path"
     return 1
   fi
 
   declare -g DISK_SPACE_MB=$available_mb
 
   if [[ $available_mb -lt $min_required_mb ]]; then
-    log "ERROR: Insufficient disk space: ${available_mb}MB available, ${min_required_mb}MB required"
+    log_error "Insufficient disk space: ${available_mb}MB available, ${min_required_mb}MB required"
     return 1
   fi
 
-  log "INFO: Disk space OK: ${available_mb}MB available (${min_required_mb}MB required)"
+  log_info "Disk space OK: ${available_mb}MB available (${min_required_mb}MB required)"
   return 0
 }
 

@@ -18,7 +18,7 @@ _config_yazi() {
     ya pkg add yazi-rs/plugins:smart-filter || echo \"WARNING: Failed to install smart-filter plugin\" >&2
     ya pkg add yazi-rs/plugins:full-border || echo \"WARNING: Failed to install full-border plugin\" >&2
   "' || {
-    log "WARNING: Failed to install some yazi plugins (yazi will still work)"
+    log_warn "Failed to install some yazi plugins (yazi will still work)"
   }
 
   deploy_user_configs \
@@ -26,7 +26,7 @@ _config_yazi() {
     "templates/yazi-theme.toml:.config/yazi/theme.toml" \
     "templates/yazi-init.lua:.config/yazi/init.lua" \
     "templates/yazi-keymap.toml:.config/yazi/keymap.toml" || {
-    log "ERROR: Failed to deploy yazi configs"
+    log_error "Failed to deploy yazi configs"
     return 1
   }
 }

@@ -56,12 +56,12 @@ _detect_pools() {
   done <<<"$pool_output"
 
   if [[ ${#DETECTED_POOLS[@]} -gt 0 ]]; then
-    log "Detected ${#DETECTED_POOLS[@]} existing ZFS pool(s):"
+    log_info "Detected ${#DETECTED_POOLS[@]} existing ZFS pool(s):"
     for pool in "${DETECTED_POOLS[@]}"; do
-      log "  - $pool"
+      log_info "  - $pool"
     done
   else
-    log "No existing ZFS pools detected"
+    log_info "No existing ZFS pools detected"
   fi
 }
 

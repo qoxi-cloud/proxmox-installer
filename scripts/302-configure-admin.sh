@@ -45,22 +45,22 @@ _config_admin_user() {
 
   # Grant Administrator role to admin user
   remote_exec "pveum acl modify / -user '${ADMIN_USERNAME}@pam' -role Administrator" || {
-    log "WARNING: Failed to grant Proxmox Administrator role"
+    log_warn "Failed to grant Proxmox Administrator role"
   }
 
   # Disable root login in Proxmox UI (admin user is now the only way in)
   remote_exec "pveum user modify root@pam -enable 0" || {
-    log "WARNING: Failed to disable root user in Proxmox UI"
+    log_warn "Failed to disable root user in Proxmox UI"
   }
 }
 
 # Create admin user with sudo and deploy SSH key (before SSH hardening)
 configure_admin_user() {
-  log "Creating admin user: $ADMIN_USERNAME"
+  log_info "Creating admin user: $ADMIN_USERNAME"
   if ! run_with_progress "Creating admin user" "Admin user created" _config_admin_user; then
-    log "ERROR: Failed to create admin user"
+    log_error "Failed to create admin user"
     return 1
   fi
-  log "Admin user ${ADMIN_USERNAME} created successfully"
+  log_info "Admin user ${ADMIN_USERNAME} created successfully"
   return 0
 }

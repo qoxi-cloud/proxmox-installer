@@ -31,27 +31,27 @@ create_virtio_mapping() {
     local vdev
     vdev="$(_virtio_name_for_index "$virtio_idx")"
     VIRTIO_MAP["$boot_disk"]="$vdev"
-    log "Virtio mapping: $boot_disk → /dev/$vdev (boot)"
+    log_info "Virtio mapping: $boot_disk → /dev/$vdev (boot)"
     ((virtio_idx++))
   fi
 
   # Add pool disks (skip if already mapped as boot disk)
   for drive in "${pool_disks[@]}"; do
     if [[ -n ${VIRTIO_MAP[$drive]:-} ]]; then
-      log "Virtio mapping: $drive already mapped as boot disk, skipping"
+      log_info "Virtio mapping: $drive already mapped as boot disk, skipping"
       continue
     fi
     local vdev
     vdev="$(_virtio_name_for_index "$virtio_idx")"
     VIRTIO_MAP["$drive"]="$vdev"
-    log "Virtio mapping: $drive → /dev/$vdev (pool)"
+    log_info "Virtio mapping: $drive → /dev/$vdev (pool)"
     ((virtio_idx++))
   done
 
   # Export mapping to file (use -gA so it creates global when sourced)
   declare -p VIRTIO_MAP | sed 's/declare -A/declare -gA/' >/tmp/virtio_map.env
   register_temp_file "/tmp/virtio_map.env"
-  log "Virtio mapping saved to /tmp/virtio_map.env"
+  log_info "Virtio mapping saved to /tmp/virtio_map.env"
 }
 
 # Load virtio mapping from /tmp/virtio_map.env into VIRTIO_MAP array
@@ -59,18 +59,18 @@ load_virtio_mapping() {
   if [[ -f /tmp/virtio_map.env ]]; then
     # Validate file contains only expected declare statement (defense in depth)
     if ! grep -qE '^declare -gA VIRTIO_MAP=' /tmp/virtio_map.env; then
-      log "ERROR: virtio_map.env missing expected declare statement"
+      log_error "virtio_map.env missing expected declare statement"
       return 1
     fi
     if grep -qvE '^declare -gA VIRTIO_MAP=' /tmp/virtio_map.env; then
-      log "ERROR: virtio_map.env contains unexpected content"
+      log_error "virtio_map.env contains unexpected content"
       return 1
     fi
     # shellcheck disable=SC1091
     source /tmp/virtio_map.env
     return 0
   else
-    log "ERROR: Virtio mapping file not found"
+    log_error "Virtio mapping file not found"
     return 1
   fi
 }
@@ -82,14 +82,14 @@ map_disks_to_virtio() {
   local disks=("$@")
 
   if [[ ${#disks[@]} -eq 0 ]]; then
-    log "ERROR: No disks provided to map_disks_to_virtio"
+    log_error "No disks provided to map_disks_to_virtio"
     return 1
   fi
 
   local vdevs=()
   for disk in "${disks[@]}"; do
     if [[ -z "${VIRTIO_MAP[$disk]+isset}" ]]; then
-      log "ERROR: VIRTIO_MAP not initialized or disk $disk not mapped"
+      log_error "VIRTIO_MAP not initialized or disk $disk not mapped"
       return 1
     fi
     local vdev="${VIRTIO_MAP[$disk]}"
@@ -118,7 +118,7 @@ map_disks_to_virtio() {
       printf '%s\n' "${vdevs[*]}"
       ;;
     *)
-      log "ERROR: Unknown format: $format"
+      log_error "Unknown format: $format"
       return 1
       ;;
   esac
@@ -132,12 +132,12 @@ build_zpool_command() {
   local vdevs=("$@")
 
   if [[ -z "$pool_name" ]]; then
-    log "ERROR: Pool name not provided"
+    log_error "Pool name not provided"
     return 1
   fi
 
   if [[ ${#vdevs[@]} -eq 0 ]]; then
-    log "ERROR: No vdevs provided to build_zpool_command"
+    log_error "No vdevs provided to build_zpool_command"
     return 1
   fi
 
@@ -167,11 +167,11 @@ build_zpool_command() {
       # Example: mirror vda vdb mirror vdc vdd
       local vdev_count=${#vdevs[@]}
       if ((vdev_count < 4)); then
-        log "ERROR: raid10 requires at least 4 vdevs, got $vdev_count"
+        log_error "raid10 requires at least 4 vdevs, got $vdev_count"
         return 1
       fi
       if ((vdev_count % 2 != 0)); then
-        log "ERROR: raid10 requires even number of vdevs, got $vdev_count"
+        log_error "raid10 requires even number of vdevs, got $vdev_count"
         return 1
       fi
       for ((i = 0; i < vdev_count; i += 2)); do
@@ -179,7 +179,7 @@ build_zpool_command() {
       done
       ;;
     *)
-      log "ERROR: Unknown RAID type: $raid_type"
+      log_error "Unknown RAID type: $raid_type"
       return 1
       ;;
   esac
@@ -201,7 +201,7 @@ map_raid_to_toml() {
     raid5) echo "raidz-1" ;; # Legacy mapping
     raid10) echo "raid10" ;;
     *)
-      log "WARNING: Unknown RAID type '$raid', defaulting to raid0"
+      log_warn "Unknown RAID type '$raid', defaulting to raid0"
       printf '%s\n' "raid0"
       ;;
   esac

@@ -273,15 +273,22 @@ while [[ "$retry_count" -lt "$max_retries" ]]; do
 ```
 **Status:** Fixed in `011-downloads.sh`, `300-configure-base.sh`, and `372-configure-lvm.sh`.
 
-### 2. Inconsistent Log Message Prefixes
-**Observed patterns:**
-- `log "INFO: message"`
-- `log "ERROR: message"`
-- `log "WARNING: message"`
-- `log "WARN: message"` (scripts/042-validation-dns.sh:143)
+### 2. ~~Inconsistent Log Message Prefixes~~ ✓ FIXED
+~~**Observed patterns:**~~
+- ~~`log "INFO: message"`~~
+- ~~`log "ERROR: message"`~~
+- ~~`log "WARNING: message"`~~
+- ~~`log "WARN: message"` (scripts/042-validation-dns.sh:143)~~
 - `log "message"` (no prefix)
 
-**Suggestion:** Standardize on INFO/ERROR/WARNING/DEBUG.
+**Status:** Added typed log helper functions in `006-logging.sh`:
+```bash
+log_info "message"   # → INFO: message
+log_error "message"  # → ERROR: message
+log_warn "message"   # → WARNING: message
+log_debug "message"  # → DEBUG: message
+```
+Migrated all 247 log calls across 50+ files to use typed helpers. This prevents typos and ensures consistent prefixes.
 
 ### 3. Variable Quoting Style
 Most code correctly quotes variables, but some places have unnecessary quotes:
@@ -374,7 +381,7 @@ While CLAUDE.md lists common variables, a complete reference with which template
 |----------|-------|-------|
 | Potential Bugs | 5 | 0 |
 | Improvement Suggestions | 8 | 6 |
-| Style Inconsistencies | 3 | 1 |
+| Style Inconsistencies | 3 | 2 |
 | Security Notes | 4 | 0 |
 | Performance Notes | 3 | 0 |
 
@@ -388,3 +395,4 @@ While CLAUDE.md lists common variables, a complete reference with which template
 - Improvement #7: Converted SSH_OPTS from string to array for cleaner manipulation and proper expansion
 - Improvement #8: Added inline documentation for template variable escaping rules in `020-templates.sh`
 - Style #1: Standardized on `[[ ]]` test syntax in `011-downloads.sh`, `300-configure-base.sh`, and `372-configure-lvm.sh`
+- Style #2: Added typed log helpers (`log_info`, `log_error`, `log_warn`, `log_debug`) and migrated 247 log calls

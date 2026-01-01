@@ -36,23 +36,23 @@ get_iso_version() {
 
 # Download Proxmox ISO with fallback (aria2c→curl→wget) and verify checksum
 download_proxmox_iso() {
-  log "Starting Proxmox ISO download"
+  log_info "Starting Proxmox ISO download"
 
   if [[ -f "pve.iso" ]]; then
-    log "Proxmox ISO already exists, skipping download"
+    log_info "Proxmox ISO already exists, skipping download"
     print_success "Proxmox ISO:" "already exists, skipping download"
     return 0
   fi
 
   if [[ -z $PROXMOX_ISO_VERSION ]]; then
-    log "ERROR: PROXMOX_ISO_VERSION not set"
+    log_error "PROXMOX_ISO_VERSION not set"
     exit 1
   fi
 
-  log "Using selected ISO: $PROXMOX_ISO_VERSION"
+  log_info "Using selected ISO: $PROXMOX_ISO_VERSION"
   declare -g PROXMOX_ISO_URL
   PROXMOX_ISO_URL=$(get_proxmox_iso_url "$PROXMOX_ISO_VERSION")
-  log "Found ISO URL: $PROXMOX_ISO_URL"
+  log_info "Found ISO URL: $PROXMOX_ISO_URL"
 
   declare -g ISO_FILENAME
   ISO_FILENAME=$(basename "$PROXMOX_ISO_URL")
@@ -62,13 +62,13 @@ download_proxmox_iso() {
   if [[ -n $_CHECKSUM_CACHE ]]; then
     expected_checksum=$(printf '%s\n' "$_CHECKSUM_CACHE" | grep "$ISO_FILENAME" | awk '{print $1}')
   fi
-  log "Expected checksum: ${expected_checksum:-not available}"
+  log_info "Expected checksum: ${expected_checksum:-not available}"
 
   # Download with fallback chain: aria2c → curl → wget
-  log "Downloading ISO: $ISO_FILENAME"
+  log_info "Downloading ISO: $ISO_FILENAME"
   local method_file=""
   method_file=$(mktemp) || {
-    log "ERROR: mktemp failed for method_file"
+    log_error "mktemp failed for method_file"
     exit 1
   }
   register_temp_file "$method_file"
@@ -82,31 +82,31 @@ download_proxmox_iso() {
   rm -f "$method_file"
 
   if [[ $exit_code -ne 0 ]] || [[ ! -s "pve.iso" ]]; then
-    log "ERROR: All download methods failed for Proxmox ISO"
+    log_error "All download methods failed for Proxmox ISO"
     rm -f pve.iso
     exit 1
   fi
 
-  log "Download successful via $DOWNLOAD_METHOD"
+  log_info "Download successful via $DOWNLOAD_METHOD"
 
   local iso_size
   iso_size=$(stat -c%s pve.iso 2>/dev/null) || iso_size=0
-  log "ISO file size: $(printf '%s\n' "$iso_size" | awk '{printf "%.1fG", $1/1024/1024/1024}')"
+  log_info "ISO file size: $(printf '%s\n' "$iso_size" | awk '{printf "%.1fG", $1/1024/1024/1024}')"
 
   # Verify checksum (if not already verified by aria2c)
   if [[ -n $expected_checksum ]]; then
     # Skip manual verification if aria2c already validated
     if [[ $DOWNLOAD_METHOD == "aria2c" ]]; then
-      log "Checksum already verified by aria2c"
+      log_info "Checksum already verified by aria2c"
       # Add live log subtask for aria2c auto-verification
       if type live_log_subtask &>/dev/null 2>&1; then
         live_log_subtask "SHA256: OK (verified by aria2c)"
       fi
     else
-      log "Verifying ISO checksum"
+      log_info "Verifying ISO checksum"
       local actual_checksum checksum_file
       checksum_file=$(mktemp) || {
-        log "ERROR: mktemp failed for checksum_file"
+        log_error "mktemp failed for checksum_file"
         exit 1
       }
       register_temp_file "$checksum_file"
@@ -120,25 +120,25 @@ download_proxmox_iso() {
       actual_checksum=$(cat "$checksum_file" 2>/dev/null)
       rm -f "$checksum_file"
       if [[ $actual_checksum != "$expected_checksum" ]]; then
-        log "ERROR: Checksum mismatch! Expected: $expected_checksum, Got: $actual_checksum"
+        log_error "Checksum mismatch! Expected: $expected_checksum, Got: $actual_checksum"
         if type live_log_subtask &>/dev/null 2>&1; then
           live_log_subtask "SHA256: FAILED"
         fi
         rm -f pve.iso
         exit 1
       fi
-      log "Checksum verification passed"
+      log_info "Checksum verification passed"
       if type live_log_subtask &>/dev/null 2>&1; then
         live_log_subtask "SHA256: OK"
       fi
     fi
   else
-    log "WARNING: Could not find checksum for $ISO_FILENAME"
+    log_warn "Could not find checksum for $ISO_FILENAME"
     print_warning "Could not find checksum for $ISO_FILENAME"
   fi
 
   # Clean up /tmp to free memory (rescue system uses tmpfs)
-  log "Cleaning up temporary files in /tmp"
+  log_info "Cleaning up temporary files in /tmp"
   rm -rf /tmp/tmp.* /tmp/pve-* 2>/dev/null || true
-  log "Temporary files cleaned"
+  log_info "Temporary files cleaned"
 }

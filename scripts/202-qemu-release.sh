@@ -8,7 +8,7 @@ _signal_process() {
   local message="$3"
 
   if kill -0 "$pid" 2>/dev/null; then
-    log "$message"
+    log_info "$message"
     kill "-$signal" "$pid" 2>/dev/null || true
   fi
 }
@@ -20,7 +20,7 @@ _kill_processes_by_pattern() {
 
   pids=$(pgrep -f "$pattern" 2>/dev/null || true)
   if [[ -n $pids ]]; then
-    log "Found processes matching '$pattern': $pids"
+    log_info "Found processes matching '$pattern': $pids"
 
     # Graceful shutdown first (SIGTERM)
     for pid in $pids; do
@@ -48,7 +48,7 @@ _stop_mdadm_arrays() {
     return 0
   fi
 
-  log "Stopping mdadm arrays..."
+  log_info "Stopping mdadm arrays..."
   mdadm --stop --scan 2>/dev/null || true
 
   # Stop specific arrays if found
@@ -66,7 +66,7 @@ _deactivate_lvm() {
     return 0
   fi
 
-  log "Deactivating LVM volume groups..."
+  log_info "Deactivating LVM volume groups..."
   vgchange -an &>/dev/null || true
 
   # Deactivate specific VGs by name if vgs is available
@@ -82,13 +82,13 @@ _deactivate_lvm() {
 _unmount_drive_filesystems() {
   [[ -z ${DRIVES[*]} ]] && return 0
 
-  log "Unmounting filesystems on target drives..."
+  log_info "Unmounting filesystems on target drives..."
   for drive in "${DRIVES[@]}"; do
     # Use findmnt for efficient mount point detection (faster and more reliable)
     if cmd_exists findmnt; then
       while IFS= read -r mountpoint; do
         [[ -z $mountpoint ]] && continue
-        log "Unmounting $mountpoint"
+        log_info "Unmounting $mountpoint"
         umount -f "$mountpoint" 2>/dev/null || true
       done < <(findmnt -rn -o TARGET "$drive"* 2>/dev/null)
     else
@@ -97,7 +97,7 @@ _unmount_drive_filesystems() {
       drive_name=$(basename "$drive")
       while IFS= read -r mountpoint; do
         [[ -z $mountpoint ]] && continue
-        log "Unmounting $mountpoint"
+        log_info "Unmounting $mountpoint"
         umount -f "$mountpoint" 2>/dev/null || true
       done < <(mount | grep -E "(^|/)$drive_name" | awk '{print $3}')
     fi
@@ -109,7 +109,7 @@ _unmount_drive_filesystems() {
 _kill_drive_holders() {
   [[ -z ${DRIVES[*]} ]] && return 0
 
-  log "Checking for processes using drives..."
+  log_info "Checking for processes using drives..."
   for drive in "${DRIVES[@]}"; do
     # Use lsof if available
     if cmd_exists lsof; then
@@ -130,7 +130,7 @@ _kill_drive_holders() {
 
 # Release drives from locks (RAID, LVM, mounts, holders) before QEMU
 release_drives() {
-  log "Releasing drives from locks..."
+  log_info "Releasing drives from locks..."
 
   # Kill QEMU processes (use full binary name to avoid matching unintended processes)
   _kill_processes_by_pattern "qemu-system-x86_64"
@@ -150,5 +150,5 @@ release_drives() {
   # Kill any remaining processes holding drives
   _kill_drive_holders
 
-  log "Drives released"
+  log_info "Drives released"
 }

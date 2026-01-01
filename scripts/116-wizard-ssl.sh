@@ -42,7 +42,7 @@ _ssl_check_dns_animated() {
 
   local dns_result_file=""
   dns_result_file=$(mktemp) || {
-    log "ERROR: mktemp failed for dns_result_file"
+    log_error "mktemp failed for dns_result_file"
     return 1
   }
   register_temp_file "$dns_result_file"

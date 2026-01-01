@@ -3,17 +3,17 @@
 
 # Prepare system packages (Proxmox repo, GPG key, packages)
 prepare_packages() {
-  log "Starting package preparation"
+  log_info "Starting package preparation"
 
-  log "Adding Proxmox repository"
+  log_info "Adding Proxmox repository"
   printf '%s\n' "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" >/etc/apt/sources.list.d/pve.list
 
   # Download Proxmox GPG key
-  log "Downloading Proxmox GPG key"
+  log_info "Downloading Proxmox GPG key"
   curl -fsSL -o /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg >>"$LOG_FILE" 2>&1 &
   local bg_pid=$!
   if [[ -z $bg_pid || ! $bg_pid =~ ^[0-9]+$ ]]; then
-    log "ERROR: Failed to start background job for GPG key download"
+    log_error "Failed to start background job for GPG key download"
     print_error "Failed to start download process"
     exit 1
   fi
@@ -21,11 +21,11 @@ prepare_packages() {
   wait "$bg_pid"
   local exit_code=$?
   if [[ $exit_code -ne 0 ]]; then
-    log "ERROR: Failed to download Proxmox GPG key"
+    log_error "Failed to download Proxmox GPG key"
     print_error "Cannot reach Proxmox repository"
     exit 1
   fi
-  log "Proxmox GPG key downloaded successfully"
+  log_info "Proxmox GPG key downloaded successfully"
 
   # Add live log subtask after completion
   if type live_log_subtask &>/dev/null 2>&1; then
@@ -33,22 +33,22 @@ prepare_packages() {
   fi
 
   # Update package lists
-  log "Updating package lists"
+  log_info "Updating package lists"
   apt-get clean >>"$LOG_FILE" 2>&1
   apt-get update >>"$LOG_FILE" 2>&1 &
   bg_pid=$!
   if [[ -z $bg_pid || ! $bg_pid =~ ^[0-9]+$ ]]; then
-    log "ERROR: Failed to start background job for package list update"
+    log_error "Failed to start background job for package list update"
     exit 1
   fi
   show_progress "$bg_pid" "Updating package lists" "Package lists updated"
   wait "$bg_pid"
   exit_code=$?
   if [[ $exit_code -ne 0 ]]; then
-    log "ERROR: Failed to update package lists"
+    log_error "Failed to update package lists"
     exit 1
   fi
-  log "Package lists updated successfully"
+  log_info "Package lists updated successfully"
 
   # Add live log subtask after completion
   if type live_log_subtask &>/dev/null 2>&1; then
@@ -56,21 +56,21 @@ prepare_packages() {
   fi
 
   # Install packages
-  log "Installing required packages: proxmox-auto-install-assistant xorriso ovmf wget sshpass"
+  log_info "Installing required packages: proxmox-auto-install-assistant xorriso ovmf wget sshpass"
   apt-get install -yq proxmox-auto-install-assistant xorriso ovmf wget sshpass >>"$LOG_FILE" 2>&1 &
   bg_pid=$!
   if [[ -z $bg_pid || ! $bg_pid =~ ^[0-9]+$ ]]; then
-    log "ERROR: Failed to start background job for package installation"
+    log_error "Failed to start background job for package installation"
     exit 1
   fi
   show_progress "$bg_pid" "Installing required packages" "Required packages installed"
   wait "$bg_pid"
   exit_code=$?
   if [[ $exit_code -ne 0 ]]; then
-    log "ERROR: Failed to install required packages"
+    log_error "Failed to install required packages"
     exit 1
   fi
-  log "Required packages installed successfully"
+  log_info "Required packages installed successfully"
 
   # Add live log subtasks after completion
   if type live_log_subtask &>/dev/null 2>&1; then

@@ -51,7 +51,7 @@ remote_exec() {
     fi
 
     if [[ $exit_code -eq 124 ]]; then
-      log "ERROR: SSH command timed out after ${cmd_timeout}s: $(_sanitize_script_for_log "$*")"
+      log_error "SSH command timed out after ${cmd_timeout}s: $(_sanitize_script_for_log "$*")"
       return 124
     fi
 
@@ -59,12 +59,12 @@ remote_exec() {
       # Exponential backoff: delay = base_delay * 2^(attempt-1), capped at 30s
       local delay=$((base_delay * (1 << (attempt - 1))))
       ((delay > 30)) && delay=30
-      log "SSH attempt $attempt failed, retrying in ${delay} seconds..."
+      log_info "SSH attempt $attempt failed, retrying in ${delay} seconds..."
       sleep "$delay"
     fi
   done
 
-  log "ERROR: SSH command failed after $max_attempts attempts: $(_sanitize_script_for_log "$*")"
+  log_error "SSH command failed after $max_attempts attempts: $(_sanitize_script_for_log "$*")"
   return 1
 }
 
@@ -74,18 +74,18 @@ _remote_exec_with_progress() {
   local script="$2"
   local done_message="${3:-$message}"
 
-  log "_remote_exec_with_progress: $message"
-  log "--- Script start (sanitized) ---"
+  log_info "_remote_exec_with_progress: $message"
+  log_info "--- Script start (sanitized) ---"
   # Sanitize script before logging to prevent password leaks
   _sanitize_script_for_log "$script" >>"$LOG_FILE"
-  log "--- Script end ---"
+  log_info "--- Script end ---"
 
   local passfile
   passfile=$(_ssh_get_passfile)
 
   local output_file=""
   output_file=$(mktemp) || {
-    log "ERROR: mktemp failed for output_file in _remote_exec_with_progress"
+    log_error "mktemp failed for output_file in _remote_exec_with_progress"
     return 1
   }
   register_temp_file "$output_file"
@@ -103,7 +103,7 @@ _remote_exec_with_progress() {
   local exclude_pattern='(lib.*error|error-perl|\.deb|Unpacking|Setting up|Selecting|grub-probe|/sys/bus/usb|bInterface)'
   if grep -iE '\b(error|failed|cannot|unable|fatal)\b' "$output_file" 2>/dev/null \
     | grep -qivE "$exclude_pattern"; then
-    log "WARNING: Potential errors in remote command output:"
+    log_warn "Potential errors in remote command output:"
     grep -iE '\b(error|failed|cannot|unable|fatal)\b' "$output_file" 2>/dev/null \
       | grep -ivE "$exclude_pattern" >>"$LOG_FILE" || true
   fi
@@ -112,9 +112,9 @@ _remote_exec_with_progress() {
   rm -f "$output_file"
 
   if [[ $exit_code -ne 0 ]]; then
-    log "_remote_exec_with_progress: FAILED with exit code $exit_code"
+    log_info "_remote_exec_with_progress: FAILED with exit code $exit_code"
   else
-    log "_remote_exec_with_progress: completed successfully"
+    log_info "_remote_exec_with_progress: completed successfully"
   fi
 
   return $exit_code
@@ -128,7 +128,7 @@ remote_run() {
   local done_message="${3:-$message}"
 
   if ! _remote_exec_with_progress "$message" "$script" "$done_message"; then
-    log "ERROR: $message failed"
+    log_error "$message failed"
     exit 1
   fi
 }
@@ -150,11 +150,11 @@ remote_copy() {
   # Note: subshell exit code is captured and returned properly
   (
     flock -x 200 || {
-      log "ERROR: Failed to acquire SCP lock for $src"
+      log_error "Failed to acquire SCP lock for $src"
       exit 1
     }
     if ! sshpass -f "$passfile" scp -P "$SSH_PORT" "${SSH_OPTS[@]}" "$src" "root@localhost:$dst" >>"$LOG_FILE" 2>&1; then
-      log "ERROR: Failed to copy $src to $dst"
+      log_error "Failed to copy $src to $dst"
       exit 1
     fi
   ) 200>"$_TEMP_SCP_LOCK_FILE"

@@ -23,7 +23,7 @@ _detect_default_interface() {
 
   if [[ -z $CURRENT_INTERFACE ]]; then
     declare -g CURRENT_INTERFACE="eth0"
-    log "WARNING: Could not detect network interface, defaulting to eth0"
+    log_warn "Could not detect network interface, defaulting to eth0"
   fi
 }
 
@@ -167,7 +167,7 @@ _detect_ipv4() {
     fi
 
     if [[ $attempt -lt $max_attempts ]]; then
-      log "Network info attempt $attempt failed, retrying in ${RETRY_DELAY_SECONDS:-2} seconds..."
+      log_info "Network info attempt $attempt failed, retrying in ${RETRY_DELAY_SECONDS:-2} seconds..."
       sleep "${RETRY_DELAY_SECONDS:-2}"
     fi
   done

@@ -78,7 +78,7 @@ _render_completion_screen() {
   if [[ -f "$_TEMP_API_TOKEN_FILE" ]]; then
     # Validate file contains only expected API token variables (defense in depth)
     if grep -qvE '^API_TOKEN_(VALUE|ID|NAME)=' "$_TEMP_API_TOKEN_FILE"; then
-      log "ERROR: API token file contains unexpected content"
+      log_error "API token file contains unexpected content"
     else
       # shellcheck disable=SC1090,SC1091
       source "$_TEMP_API_TOKEN_FILE"
@@ -124,7 +124,7 @@ _completion_screen_input() {
         printf '\n'
         print_info "Rebooting the system..."
         if ! reboot; then
-          log "ERROR: Failed to reboot - system may require manual restart"
+          log_error "Failed to reboot - system may require manual restart"
           print_error "Failed to reboot the system"
           exit 1
         fi
@@ -144,17 +144,17 @@ reboot_to_main_os() {
 }
 
 # Main execution flow
-log "==================== Qoxi Automated Installer v${VERSION} ===================="
-log "QEMU_RAM_OVERRIDE=$QEMU_RAM_OVERRIDE QEMU_CORES_OVERRIDE=$QEMU_CORES_OVERRIDE"
-log "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription} SSL_TYPE=${SSL_TYPE:-self-signed}"
+log_info "==================== Qoxi Automated Installer v${VERSION} ===================="
+log_debug "QEMU_RAM_OVERRIDE=$QEMU_RAM_OVERRIDE QEMU_CORES_OVERRIDE=$QEMU_CORES_OVERRIDE"
+log_debug "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription} SSL_TYPE=${SSL_TYPE:-self-signed}"
 
 metrics_start
-log "Step: collect_system_info"
+log_info "Step: collect_system_info"
 show_banner_animated_start 0.1
 
 # Create temporary file for sharing variables between processes
 SYSTEM_INFO_CACHE=$(mktemp) || {
-  log "ERROR: Failed to create temp file"
+  log_error "Failed to create temp file"
   exit 1
 }
 register_temp_file "$SYSTEM_INFO_CACHE"
@@ -162,7 +162,7 @@ register_temp_file "$SYSTEM_INFO_CACHE"
 # Run system checks and prefetch Proxmox ISO info in background job
 {
   collect_system_info
-  log "Step: prefetch_proxmox_iso_info"
+  log_info "Step: prefetch_proxmox_iso_info"
   prefetch_proxmox_iso_info
 
   # Export system/network/ISO variables to temp file (atomic write to prevent partial data)
@@ -180,7 +180,7 @@ show_banner_animated_stop
 if [[ -s $SYSTEM_INFO_CACHE ]]; then
   # Validate file contains only declare statements (defense in depth)
   if grep -qvE '^declare -' "$SYSTEM_INFO_CACHE"; then
-    log "ERROR: SYSTEM_INFO_CACHE contains invalid content, skipping import"
+    log_error "SYSTEM_INFO_CACHE contains invalid content, skipping import"
   else
     # shellcheck disable=SC1090
     source "$SYSTEM_INFO_CACHE"
@@ -188,50 +188,50 @@ if [[ -s $SYSTEM_INFO_CACHE ]]; then
   rm -f "$SYSTEM_INFO_CACHE"
 fi
 
-log "Step: show_system_status"
+log_info "Step: show_system_status"
 show_system_status
 log_metric "system_info"
 
 # Show interactive configuration editor (replaces get_system_inputs)
-log "Step: show_gum_config_editor"
+log_info "Step: show_gum_config_editor"
 show_gum_config_editor
 log_metric "config_wizard"
 
 # Start live installation display
 start_live_installation
 
-log "Step: prepare_packages"
+log_info "Step: prepare_packages"
 prepare_packages
 log_metric "packages"
 
-log "Step: download_proxmox_iso"
+log_info "Step: download_proxmox_iso"
 download_proxmox_iso
 log_metric "iso_download"
 
-log "Step: make_answer_toml"
+log_info "Step: make_answer_toml"
 make_answer_toml
-log "Step: make_autoinstall_iso"
+log_info "Step: make_autoinstall_iso"
 make_autoinstall_iso
 log_metric "autoinstall_prep"
 
-log "Step: wipe_installation_disks"
+log_info "Step: wipe_installation_disks"
 run_with_progress "Wiping disks" "Disks wiped" wipe_installation_disks
 log_metric "disk_wipe"
 
-log "Step: install_proxmox"
+log_info "Step: install_proxmox"
 install_proxmox
 log_metric "proxmox_install"
 
-log "Step: boot_proxmox_with_port_forwarding"
+log_info "Step: boot_proxmox_with_port_forwarding"
 boot_proxmox_with_port_forwarding || {
-  log "ERROR: Failed to boot Proxmox with port forwarding"
+  log_error "Failed to boot Proxmox with port forwarding"
   exit 1
 }
 log_metric "qemu_boot"
 
-log "Step: configure_proxmox_via_ssh"
+log_info "Step: configure_proxmox_via_ssh"
 configure_proxmox_via_ssh || {
-  log "ERROR: configure_proxmox_via_ssh failed"
+  log_error "configure_proxmox_via_ssh failed"
   exit 1
 }
 log_metric "system_config"
@@ -243,5 +243,5 @@ metrics_finish
 INSTALL_COMPLETED=true
 
 # Reboot to the main OS
-log "Step: reboot_to_main_os"
+log_info "Step: reboot_to_main_os"
 reboot_to_main_os

@@ -11,19 +11,19 @@ _zfs_functional() {
 _install_zfs_if_needed() {
   # Check if ZFS is actually working, not just wrapper exists
   if _zfs_functional; then
-    log "ZFS already installed and functional"
+    log_info "ZFS already installed and functional"
     return 0
   fi
 
-  log "ZFS not functional, attempting installation..."
+  log_info "ZFS not functional, attempting installation..."
 
   # Hetzner rescue: zpool command is a wrapper that compiles ZFS on first run
   # Need to run it with 'y' to accept license
   if cmd_exists zpool; then
-    log "Found zpool wrapper, triggering ZFS compilation..."
+    log_info "Found zpool wrapper, triggering ZFS compilation..."
     echo "y" | zpool version &>/dev/null || true
     if _zfs_functional; then
-      log "ZFS compiled successfully via wrapper"
+      log_info "ZFS compiled successfully via wrapper"
       return 0
     fi
   fi
@@ -38,10 +38,10 @@ _install_zfs_if_needed() {
 
   for script in "${zfs_scripts[@]}"; do
     if [[ -x $script ]]; then
-      log "Running ZFS install script: $script"
+      log_info "Running ZFS install script: $script"
       echo "y" | "$script" >/dev/null 2>&1 || true
       if _zfs_functional; then
-        log "ZFS installed successfully via $script"
+        log_info "ZFS installed successfully via $script"
         return 0
       fi
     fi
@@ -49,15 +49,15 @@ _install_zfs_if_needed() {
 
   # Fallback: try apt on Debian-based systems
   if [[ -f /etc/debian_version ]]; then
-    log "Trying apt install zfsutils-linux..."
+    log_info "Trying apt install zfsutils-linux..."
     apt-get install -qq -y zfsutils-linux >/dev/null 2>&1 || true
     if _zfs_functional; then
-      log "ZFS installed via apt"
+      log_info "ZFS installed via apt"
       return 0
     fi
   fi
 
-  log "WARNING: Failed to install ZFS - existing pool detection unavailable"
+  log_warn "Failed to install ZFS - existing pool detection unavailable"
 }
 
 # Install required packages (aria2c, jq, gum, etc.)

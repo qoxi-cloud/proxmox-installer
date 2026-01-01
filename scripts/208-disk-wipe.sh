@@ -88,7 +88,7 @@ _wipe_zfs_on_disk() {
 
   # Destroy each pool
   for pool in "${pools_to_destroy[@]}"; do
-    log "Destroying ZFS pool: $pool (contains $disk)"
+    log_info "Destroying ZFS pool: $pool (contains $disk)"
     # Try export first (safer), then force destroy
     zpool export -f "$pool" 2>/dev/null || true
     zpool destroy -f "$pool" 2>/dev/null || true
@@ -120,7 +120,7 @@ _wipe_lvm_on_disk() {
     vg=$(pvs --noheadings -o vg_name "$pv" 2>/dev/null | tr -d ' ')
 
     if [[ -n $vg ]]; then
-      log "Removing LVM VG: $vg (on $pv)"
+      log_info "Removing LVM VG: $vg (on $pv)"
       # Deactivate all LVs in VG
       vgchange -an "$vg" 2>/dev/null || true
       # Remove VG (also removes LVs)
@@ -128,7 +128,7 @@ _wipe_lvm_on_disk() {
     fi
 
     # Remove PV
-    log "Removing LVM PV: $pv"
+    log_info "Removing LVM PV: $pv"
     pvremove -f "$pv" 2>/dev/null || true
   done
 }
@@ -146,7 +146,7 @@ _wipe_mdadm_on_disk() {
   while IFS= read -r md; do
     [[ -z $md ]] && continue
     if mdadm --detail "$md" 2>/dev/null | grep -q "$escaped_disk_name"; then
-      log "Stopping mdadm array: $md (contains $disk)"
+      log_info "Stopping mdadm array: $md (contains $disk)"
       mdadm --stop "$md" 2>/dev/null || true
     fi
   done < <(ls /dev/md* 2>/dev/null)
@@ -162,7 +162,7 @@ _wipe_mdadm_on_disk() {
 _wipe_partition_table() {
   local disk="$1"
 
-  log "Wiping partition table: $disk"
+  log_info "Wiping partition table: $disk"
 
   # wipefs removes all filesystem/raid/partition signatures
   if cmd_exists wipefs; then
@@ -192,11 +192,11 @@ _wipe_disk() {
   local disk="$1"
 
   [[ ! -b $disk ]] && {
-    log "WARNING: Disk not found: $disk"
+    log_warn "Disk not found: $disk"
     return 0
   }
 
-  log "Wiping disk: $disk"
+  log_info "Wiping disk: $disk"
 
   # Order matters: remove higher-level structures first
   _wipe_zfs_on_disk "$disk"
@@ -208,7 +208,7 @@ _wipe_disk() {
 # Main wipe function - wipes disks based on installation mode
 wipe_installation_disks() {
   [[ $WIPE_DISKS != "yes" ]] && {
-    log "Disk wipe disabled, skipping"
+    log_info "Disk wipe disabled, skipping"
     return 0
   }
 
@@ -216,14 +216,14 @@ wipe_installation_disks() {
   mapfile -t disks < <(_get_disks_to_wipe)
 
   if [[ ${#disks[@]} -eq 0 ]]; then
-    log "WARNING: No disks to wipe"
+    log_warn "No disks to wipe"
     return 0
   fi
 
   if [[ $USE_EXISTING_POOL == "yes" ]]; then
-    log "Wiping boot disk only (preserving existing pool): ${disks[*]}"
+    log_info "Wiping boot disk only (preserving existing pool): ${disks[*]}"
   else
-    log "Wiping ${#disks[@]} disk(s): ${disks[*]}"
+    log_info "Wiping ${#disks[@]} disk(s): ${disks[*]}"
   fi
 
   for disk in "${disks[@]}"; do
@@ -234,5 +234,5 @@ wipe_installation_disks() {
   sync
   sleep 1
 
-  log "Disk wipe complete"
+  log_info "Disk wipe complete"
 }

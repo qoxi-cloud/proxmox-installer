@@ -88,12 +88,12 @@ detect_disk_roles() {
 
   if [[ $size_diff -le $threshold ]]; then
     # All same size → all in pool
-    log "All disks same size, using all for ZFS pool"
+    log_info "All disks same size, using all for ZFS pool"
     declare -g BOOT_DISK=""
     declare -g -a ZFS_POOL_DISKS=("${DRIVES[@]}")
   else
     # Mixed sizes → smallest (that's NOT in an existing pool) = boot, rest = pool
-    log "Mixed disk sizes, selecting boot disk"
+    log_info "Mixed disk sizes, selecting boot disk"
 
     # Find smallest disk that's not part of an existing pool
     local smallest_idx=-1
@@ -104,7 +104,7 @@ detect_disk_roles() {
 
       # Skip disks that are part of existing pools
       if _disk_in_existing_pool "$drive"; then
-        log "  $drive: ${DRIVE_SIZES[$i]} (skipped - part of existing pool)"
+        log_info "  $drive: ${DRIVE_SIZES[$i]} (skipped - part of existing pool)"
         continue
       fi
 
@@ -117,12 +117,12 @@ detect_disk_roles() {
 
     if [[ $smallest_idx -eq -1 ]]; then
       # All disks are in existing pools - can't auto-select boot disk
-      log "WARNING: All disks belong to existing pools, no automatic boot disk selection"
+      log_warn "All disks belong to existing pools, no automatic boot disk selection"
       declare -g BOOT_DISK=""
       declare -g -a ZFS_POOL_DISKS=("${DRIVES[@]}")
     else
       declare -g BOOT_DISK="${DRIVES[$smallest_idx]}"
-      log "Boot disk: $BOOT_DISK (smallest available, ${DRIVE_SIZES[$smallest_idx]})"
+      log_info "Boot disk: $BOOT_DISK (smallest available, ${DRIVE_SIZES[$smallest_idx]})"
 
       declare -g -a ZFS_POOL_DISKS=()
       for i in "${!DRIVES[@]}"; do
@@ -131,8 +131,8 @@ detect_disk_roles() {
     fi
   fi
 
-  log "Boot disk: ${BOOT_DISK:-all in pool}"
-  log "Pool disks: ${ZFS_POOL_DISKS[*]}"
+  log_info "Boot disk: ${BOOT_DISK:-all in pool}"
+  log_info "Pool disks: ${ZFS_POOL_DISKS[*]}"
 }
 
 # Existing ZFS pool detection
@@ -141,7 +141,7 @@ detect_disk_roles() {
 detect_existing_pools() {
   # Check if zpool command exists
   if ! cmd_exists zpool; then
-    log "WARNING: zpool not found - ZFS not installed in rescue"
+    log_warn "zpool not found - ZFS not installed in rescue"
     return 0
   fi
 
@@ -157,11 +157,11 @@ detect_existing_pools() {
     import_output=$(zpool import 2>&1) || true
   fi
 
-  log "DEBUG: zpool import output: ${import_output:-(empty)}"
+  log_debug "zpool import output: ${import_output:-(empty)}"
 
   # Check if output contains pool info (not just "no pools available")
   if [[ -z "$import_output" ]] || [[ $import_output == *"no pools available"* ]]; then
-    log "DEBUG: No importable pools found"
+    log_debug "No importable pools found"
     return 0
   fi
 

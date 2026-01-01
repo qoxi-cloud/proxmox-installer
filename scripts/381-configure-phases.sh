@@ -6,34 +6,34 @@
 # Must run first - sets up admin user and base system
 _phase_base_configuration() {
   make_templates || {
-    log "ERROR: make_templates failed"
+    log_error "make_templates failed"
     return 1
   }
   configure_admin_user || {
-    log "ERROR: configure_admin_user failed"
+    log_error "configure_admin_user failed"
     return 1
   }
   configure_base_system || {
-    log "ERROR: configure_base_system failed"
+    log_error "configure_base_system failed"
     return 1
   }
-  configure_shell || { log "WARNING: configure_shell failed"; }
-  configure_system_services || { log "WARNING: configure_system_services failed"; }
+  configure_shell || { log_warn "configure_shell failed"; }
+  configure_system_services || { log_warn "configure_system_services failed"; }
 }
 
 # PHASE 2: Storage Configuration (sequential - ZFS dependencies)
 _phase_storage_configuration() {
-  configure_lvm_storage || { log "WARNING: configure_lvm_storage failed"; }
-  configure_zfs_arc || { log "WARNING: configure_zfs_arc failed"; }
+  configure_lvm_storage || { log_warn "configure_lvm_storage failed"; }
+  configure_zfs_arc || { log_warn "configure_zfs_arc failed"; }
   configure_zfs_pool || {
-    log "ERROR: configure_zfs_pool failed"
+    log_error "configure_zfs_pool failed"
     return 1
   }
-  configure_zfs_cachefile || { log "WARNING: configure_zfs_cachefile failed"; }
-  configure_zfs_scrub || { log "WARNING: configure_zfs_scrub failed"; }
+  configure_zfs_cachefile || { log_warn "configure_zfs_cachefile failed"; }
+  configure_zfs_scrub || { log_warn "configure_zfs_scrub failed"; }
 
   # Update initramfs to include ZFS cachefile changes (prevents "cachefile import failed" on boot)
-  remote_run "Updating initramfs" "update-initramfs -u -k all" || log "WARNING: update-initramfs failed"
+  remote_run "Updating initramfs" "update-initramfs -u -k all" || log_warn "update-initramfs failed"
 }
 
 # PHASE 3: Security Configuration (parallel after batch install)
@@ -56,7 +56,7 @@ _phase_security_configuration() {
     configure_chkrootkit \
     configure_lynis \
     configure_needrestart; then
-    log "ERROR: Security configuration failed - aborting installation"
+    log_error "Security configuration failed - aborting installation"
     print_error "Security hardening failed. Check $LOG_FILE for details."
     return 1
   fi
@@ -94,24 +94,24 @@ _phase_ssl_api() {
 _phase_finalization() {
   # Deploy SSH hardening config BEFORE validation (so validation can verify it)
   deploy_ssh_hardening_config || {
-    log "ERROR: deploy_ssh_hardening_config failed"
+    log_error "deploy_ssh_hardening_config failed"
     return 1
   }
 
   # Validate installation (SSH config file now has hardened settings)
   # Non-fatal: continue even if validation has warnings
-  validate_installation || { log "WARNING: validate_installation reported issues"; }
+  validate_installation || { log_warn "validate_installation reported issues"; }
 
   # Configure EFI fallback boot path (required for QEMU installs without NVRAM persistence)
   # Must run BEFORE cleanup which unmounts /boot/efi
-  configure_efi_fallback_boot || { log "WARNING: configure_efi_fallback_boot failed"; }
+  configure_efi_fallback_boot || { log_warn "configure_efi_fallback_boot failed"; }
 
   # Clean up installation logs for fresh first boot
-  cleanup_installation_logs || { log "WARNING: cleanup_installation_logs failed"; }
+  cleanup_installation_logs || { log_warn "cleanup_installation_logs failed"; }
 
   # Restart SSH as the LAST operation - after this, password auth is disabled
-  restart_ssh_service || { log "WARNING: restart_ssh_service failed"; }
+  restart_ssh_service || { log_warn "restart_ssh_service failed"; }
 
   # Power off VM - SSH no longer available, use QEMU ACPI shutdown
-  finalize_vm || { log "WARNING: finalize_vm did not complete cleanly"; }
+  finalize_vm || { log_warn "finalize_vm did not complete cleanly"; }
 }

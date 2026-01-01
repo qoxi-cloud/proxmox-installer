@@ -7,7 +7,7 @@
 # Deploys configuration for automatic restarts
 _config_needrestart() {
   deploy_template "templates/needrestart.conf" "/etc/needrestart/conf.d/50-autorestart.conf" || {
-    log "ERROR: Failed to deploy needrestart config"
+    log_error "Failed to deploy needrestart config"
     return 1
   }
 

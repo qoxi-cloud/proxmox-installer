@@ -3,7 +3,7 @@
 
 # Private implementation - configures ZFS ARC memory
 _config_zfs_arc() {
-  log "INFO: Configuring ZFS ARC memory allocation (mode: $ZFS_ARC_MODE)"
+  log_info "Configuring ZFS ARC memory allocation (mode: $ZFS_ARC_MODE)"
 
   # Calculate ARC size locally (we know RAM from rescue system)
   local total_ram_mb
@@ -11,7 +11,7 @@ _config_zfs_arc() {
 
   # Validate numeric before arithmetic
   if [[ ! $total_ram_mb =~ ^[0-9]+$ ]] || [[ $total_ram_mb -eq 0 ]]; then
-    log "ERROR: Failed to detect RAM size (got: '$total_ram_mb')"
+    log_error "Failed to detect RAM size (got: '$total_ram_mb')"
     return 1
   fi
 
@@ -39,14 +39,14 @@ _config_zfs_arc() {
       arc_max_mb=$((total_ram_mb / 2))
       ;;
     *)
-      log "ERROR: Invalid ZFS_ARC_MODE: $ZFS_ARC_MODE"
+      log_error "Invalid ZFS_ARC_MODE: $ZFS_ARC_MODE"
       return 1
       ;;
   esac
 
   local arc_max_bytes=$((arc_max_mb * 1024 * 1024))
 
-  log "INFO: ZFS ARC: ${arc_max_mb}MB (Total RAM: ${total_ram_mb}MB, Mode: $ZFS_ARC_MODE)"
+  log_info "ZFS ARC: ${arc_max_mb}MB (Total RAM: ${total_ram_mb}MB, Mode: $ZFS_ARC_MODE)"
 
   # Set ZFS ARC limit in modprobe config (persistent) and apply to running kernel
   remote_run "Configuring ZFS ARC memory" "
@@ -56,14 +56,14 @@ _config_zfs_arc() {
     fi
   "
 
-  log "INFO: ZFS ARC memory limit configured: ${arc_max_mb}MB"
+  log_info "ZFS ARC memory limit configured: ${arc_max_mb}MB"
 }
 
 # Fix ZFS cachefile import issues during boot
 
 # Private implementation - fixes cachefile import failures
 _config_zfs_cachefile() {
-  log "INFO: Configuring ZFS cachefile import fixes"
+  log_info "Configuring ZFS cachefile import fixes"
 
   # 1. Create systemd drop-in to ensure devices are ready before import
   remote_run "Creating systemd drop-in for zfs-import-cache.service" "
@@ -78,7 +78,7 @@ _config_zfs_cachefile() {
     "/etc/initramfs-tools/hooks/zfs-cachefile" || return 1
 
   remote_exec "chmod +x /etc/initramfs-tools/hooks/zfs-cachefile" || {
-    log "ERROR: Failed to make initramfs hook executable"
+    log_error "Failed to make initramfs hook executable"
     return 1
   }
 
@@ -90,22 +90,22 @@ _config_zfs_cachefile() {
     done
   " "ZFS cachefile regenerated"
 
-  log "INFO: ZFS cachefile import fixes configured"
+  log_info "ZFS cachefile import fixes configured"
 }
 
 # Configure ZFS scrub scheduling
 
 # Private implementation - configures ZFS scrub timers
 _config_zfs_scrub() {
-  log "INFO: Configuring ZFS scrub schedule"
+  log_info "Configuring ZFS scrub schedule"
 
   # Deploy systemd service and timer templates
   remote_copy "templates/zfs-scrub.service" "/etc/systemd/system/zfs-scrub@.service" || {
-    log "ERROR: Failed to deploy ZFS scrub service"
+    log_error "Failed to deploy ZFS scrub service"
     return 1
   }
   remote_copy "templates/zfs-scrub.timer" "/etc/systemd/system/zfs-scrub@.timer" || {
-    log "ERROR: Failed to deploy ZFS scrub timer"
+    log_error "Failed to deploy ZFS scrub timer"
     return 1
   }
 
@@ -115,7 +115,7 @@ _config_zfs_scrub() {
     data_pool="$EXISTING_POOL_NAME"
   fi
 
-  log "INFO: Enabling scrub timers for pools: rpool (if exists), $data_pool"
+  log_info "Enabling scrub timers for pools: rpool (if exists), $data_pool"
 
   # Enable scrub timers for all detected pools
   remote_run "Enabling ZFS scrub timers" "
@@ -125,7 +125,7 @@ _config_zfs_scrub() {
     done
   "
 
-  log "INFO: ZFS scrub schedule configured (monthly, 1st Sunday at 2:00 AM)"
+  log_info "ZFS scrub schedule configured (monthly, 1st Sunday at 2:00 AM)"
 }
 
 # Public wrappers

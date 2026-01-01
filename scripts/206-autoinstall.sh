@@ -10,28 +10,28 @@ validate_answer_toml() {
   local required_fields=("fqdn" "mailto" "timezone" "root-password")
   for field in "${required_fields[@]}"; do
     if ! grep -q "^\s*${field}\s*=" "$file" 2>/dev/null; then
-      log "ERROR: Missing required field in answer.toml: $field"
+      log_error "Missing required field in answer.toml: $field"
       return 1
     fi
   done
 
   if ! grep -q "\[global\]" "$file" 2>/dev/null; then
-    log "ERROR: Missing [global] section in answer.toml"
+    log_error "Missing [global] section in answer.toml"
     return 1
   fi
 
   # Validate using Proxmox auto-install assistant if available
   if cmd_exists proxmox-auto-install-assistant; then
-    log "Validating answer.toml with proxmox-auto-install-assistant"
+    log_info "Validating answer.toml with proxmox-auto-install-assistant"
     if ! proxmox-auto-install-assistant validate-answer "$file" >>"$LOG_FILE" 2>&1; then
-      log "ERROR: answer.toml validation failed"
+      log_error "answer.toml validation failed"
       # Show validation errors in log
       proxmox-auto-install-assistant validate-answer "$file" >>"$LOG_FILE" 2>&1 || true
       return 1
     fi
-    log "answer.toml validation passed"
+    log_info "answer.toml validation passed"
   else
-    log "WARNING: proxmox-auto-install-assistant not found, skipping advanced validation"
+    log_warn "proxmox-auto-install-assistant not found, skipping advanced validation"
   fi
 
   return 0
@@ -39,11 +39,11 @@ validate_answer_toml() {
 
 # Create answer.toml for Proxmox autoinstall
 make_answer_toml() {
-  log "Creating answer.toml for autoinstall"
-  log "ZFS_RAID=$ZFS_RAID, BOOT_DISK=$BOOT_DISK"
-  log "ZFS_POOL_DISKS=(${ZFS_POOL_DISKS[*]})"
-  log "USE_EXISTING_POOL=$USE_EXISTING_POOL, EXISTING_POOL_NAME=$EXISTING_POOL_NAME"
-  log "EXISTING_POOL_DISKS=(${EXISTING_POOL_DISKS[*]})"
+  log_info "Creating answer.toml for autoinstall"
+  log_debug "ZFS_RAID=$ZFS_RAID, BOOT_DISK=$BOOT_DISK"
+  log_debug "ZFS_POOL_DISKS=(${ZFS_POOL_DISKS[*]})"
+  log_debug "USE_EXISTING_POOL=$USE_EXISTING_POOL, EXISTING_POOL_NAME=$EXISTING_POOL_NAME"
+  log_debug "EXISTING_POOL_DISKS=(${EXISTING_POOL_DISKS[*]})"
 
   # Determine which disks to pass to QEMU
   # - For existing pool: pass existing pool disks (needed for zpool import)
@@ -52,14 +52,14 @@ make_answer_toml() {
   #       so the installer won't format them - only the boot disk gets formatted
   local virtio_pool_disks=()
   if [[ $USE_EXISTING_POOL == "yes" ]]; then
-    log "Using existing pool mode - existing pool disks will be passed to QEMU for import"
+    log_info "Using existing pool mode - existing pool disks will be passed to QEMU for import"
     # Filter to only include disks that actually exist on the host
     # (pool metadata may contain stale virtio device names from previous installations)
     for disk in "${EXISTING_POOL_DISKS[@]}"; do
       if [[ -b $disk ]]; then
         virtio_pool_disks+=("$disk")
       else
-        log "WARNING: Pool disk $disk does not exist on host, skipping"
+        log_warn "Pool disk $disk does not exist on host, skipping"
       fi
     done
   else
@@ -72,7 +72,7 @@ make_answer_toml() {
 
   # Load mapping into current shell
   load_virtio_mapping || {
-    log "ERROR: Failed to load virtio mapping"
+    log_error "Failed to load virtio mapping"
     exit 1
   }
 
@@ -90,16 +90,16 @@ make_answer_toml() {
     if [[ $USE_EXISTING_POOL == "yes" ]]; then
       # Validate existing pool name is set
       if [[ -z $EXISTING_POOL_NAME ]]; then
-        log "ERROR: USE_EXISTING_POOL=yes but EXISTING_POOL_NAME is empty"
+        log_error "USE_EXISTING_POOL=yes but EXISTING_POOL_NAME is empty"
         exit 1
       fi
-      log "Boot disk mode: ext4 on boot disk, existing pool '$EXISTING_POOL_NAME' will be imported"
+      log_info "Boot disk mode: ext4 on boot disk, existing pool '$EXISTING_POOL_NAME' will be imported"
     else
       # Pool disks are optional - if empty, local storage uses all boot disk space
       if [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]]; then
-        log "Boot disk mode: ext4 on boot disk only, no separate ZFS pool"
+        log_info "Boot disk mode: ext4 on boot disk only, no separate ZFS pool"
       else
-        log "Boot disk mode: ext4 on boot disk, ZFS 'tank' pool will be created from ${#ZFS_POOL_DISKS[@]} pool disk(s)"
+        log_info "Boot disk mode: ext4 on boot disk, ZFS 'tank' pool will be created from ${#ZFS_POOL_DISKS[@]} pool disk(s)"
       fi
     fi
   else
@@ -107,22 +107,22 @@ make_answer_toml() {
     FILESYSTEM="zfs"
     all_disks=("${ZFS_POOL_DISKS[@]}")
 
-    log "All-ZFS mode: ${#all_disks[@]} disk(s) in ZFS rpool (${ZFS_RAID})"
+    log_info "All-ZFS mode: ${#all_disks[@]} disk(s) in ZFS rpool (${ZFS_RAID})"
   fi
 
   # Build DISK_LIST from all_disks using virtio mapping
   declare -g DISK_LIST
   DISK_LIST=$(map_disks_to_virtio "toml_array" "${all_disks[@]}")
   if [[ -z $DISK_LIST ]]; then
-    log "ERROR: Failed to map disks to virtio devices"
+    log_error "Failed to map disks to virtio devices"
     exit 1
   fi
 
-  log "FILESYSTEM=$FILESYSTEM, DISK_LIST=$DISK_LIST"
+  log_debug "FILESYSTEM=$FILESYSTEM, DISK_LIST=$DISK_LIST"
 
   # Generate answer.toml dynamically based on filesystem type
   # This allows conditional sections (ZFS vs LVM parameters)
-  log "Generating answer.toml for autoinstall"
+  log_info "Generating answer.toml for autoinstall"
 
   # NOTE: SSH key is NOT added to answer.toml anymore.
   # SSH key is deployed directly to the admin user in 302-configure-admin.sh
@@ -133,7 +133,7 @@ make_answer_toml() {
   for c in $'\t' $'\n' $'\r' $'\b' $'\f'; do test_pwd="${test_pwd//$c/}"; done
   # shellcheck disable=SC2076
   [[ "$test_pwd" =~ [[:cntrl:]] ]] && {
-    log "ERROR: Password has unsupported control chars"
+    log_error "Password has unsupported control chars"
     exit 1
   }
 
@@ -171,7 +171,7 @@ EOF
     # Map ZFS_RAID to answer.toml format
     local zfs_raid_value
     zfs_raid_value=$(map_raid_to_toml "$ZFS_RAID")
-    log "Using ZFS raid: $zfs_raid_value"
+    log_info "Using ZFS raid: $zfs_raid_value"
 
     # Add ZFS parameters
     cat >>./answer.toml <<EOF
@@ -193,11 +193,11 @@ EOF
 
   # Validate the generated file
   if ! validate_answer_toml "./answer.toml"; then
-    log "ERROR: answer.toml validation failed"
+    log_error "answer.toml validation failed"
     exit 1
   fi
 
-  log "answer.toml created and validated:"
+  log_info "answer.toml created and validated:"
   # Redact password before logging to prevent credential exposure
   sed 's/^\([[:space:]]*root-password[[:space:]]*=[[:space:]]*\).*/\1"[REDACTED]"/' answer.toml >>"$LOG_FILE"
 
@@ -212,26 +212,26 @@ EOF
 
 # Create autoinstall ISO from Proxmox ISO and answer.toml
 make_autoinstall_iso() {
-  log "Creating autoinstall ISO"
-  log "Input: pve.iso exists: $(test -f pve.iso && echo 'yes' || echo 'no')"
-  log "Input: answer.toml exists: $(test -f answer.toml && echo 'yes' || echo 'no')"
-  log "Current directory: $(pwd)"
+  log_info "Creating autoinstall ISO"
+  log_info "Input: pve.iso exists: $(test -f pve.iso && echo 'yes' || echo 'no')"
+  log_info "Input: answer.toml exists: $(test -f answer.toml && echo 'yes' || echo 'no')"
+  log_info "Current directory: $(pwd)"
 
   # Run ISO creation with full logging
   proxmox-auto-install-assistant prepare-iso pve.iso --fetch-from iso --answer-file answer.toml --output pve-autoinstall.iso >>"$LOG_FILE" 2>&1 &
   show_progress $! "Creating autoinstall ISO" "Autoinstall ISO created"
   local exit_code=$?
   if [[ $exit_code -ne 0 ]]; then
-    log "WARNING: proxmox-auto-install-assistant exited with code $exit_code"
+    log_warn "proxmox-auto-install-assistant exited with code $exit_code"
   fi
 
   # Verify ISO was created
   if [[ ! -f "./pve-autoinstall.iso" ]]; then
-    log "ERROR: Autoinstall ISO not found after creation attempt"
+    log_error "Autoinstall ISO not found after creation attempt"
     exit 1
   fi
 
-  log "Autoinstall ISO created successfully: $(stat -c%s pve-autoinstall.iso 2>/dev/null | awk '{printf "%.1fM", $1/1024/1024}')"
+  log_info "Autoinstall ISO created successfully: $(stat -c%s pve-autoinstall.iso 2>/dev/null | awk '{printf "%.1fM", $1/1024/1024}')"
 
   # Add live log subtasks after completion
   if type live_log_subtask &>/dev/null 2>&1; then
@@ -239,6 +239,6 @@ make_autoinstall_iso() {
   fi
 
   # Remove original ISO to save disk space (only autoinstall ISO is needed)
-  log "Removing original ISO to save disk space"
+  log_info "Removing original ISO to save disk space"
   rm -f pve.iso
 }

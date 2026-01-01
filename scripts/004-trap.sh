@@ -71,7 +71,7 @@ cleanup_and_error_handler() {
 
   # Release drives if QEMU is still running
   if [[ -n ${QEMU_PID:-} ]] && kill -0 "$QEMU_PID" 2>/dev/null; then
-    log "Cleaning up QEMU process $QEMU_PID"
+    log_info "Cleaning up QEMU process $QEMU_PID"
     # Source release_drives if available (may not be sourced yet)
     if type release_drives &>/dev/null; then
       release_drives

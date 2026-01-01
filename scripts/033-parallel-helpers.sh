@@ -8,7 +8,7 @@ install_base_packages() {
   # Add ZSH packages if needed
   [[ ${SHELL_TYPE:-bash} == "zsh" ]] && packages+=(zsh git)
   local pkg_list && printf -v pkg_list '"%s" ' "${packages[@]}"
-  log "Installing base packages: ${packages[*]}"
+  log_info "Installing base packages: ${packages[*]}"
   remote_run "Installing system packages" "
     set -e
     export DEBIAN_FRONTEND=noninteractive
@@ -58,12 +58,12 @@ batch_install_packages() {
   # SSL packages
   [[ ${SSL_TYPE:-self-signed} == "letsencrypt" ]] && packages+=(certbot)
   if [[ ${#packages[@]} -eq 0 ]]; then
-    log "No optional packages to install"
+    log_info "No optional packages to install"
     return 0
   fi
 
   local pkg_list && printf -v pkg_list '"%s" ' "${packages[@]}"
-  log "Batch installing packages: ${packages[*]}"
+  log_info "Batch installing packages: ${packages[*]}"
 
   # Build repo setup commands (detect Debian codename dynamically for future releases)
   # shellcheck disable=SC2016
@@ -160,18 +160,18 @@ run_parallel_group() {
   local funcs=("$@")
 
   if [[ ${#funcs[@]} -eq 0 ]]; then
-    log "No functions to run in parallel group: $group_name"
+    log_info "No functions to run in parallel group: $group_name"
     return 0
   fi
 
   # Max concurrent jobs (prevents fork bombs, default 8)
   local max_jobs="${PARALLEL_MAX_JOBS:-8}"
-  log "Running parallel group '$group_name' with functions: ${funcs[*]} (max $max_jobs concurrent)"
+  log_info "Running parallel group '$group_name' with functions: ${funcs[*]} (max $max_jobs concurrent)"
 
   # Track results via temp files (avoid subshell variable issues)
   local result_dir
   result_dir=$(mktemp -d) || {
-    log "ERROR: Failed to create temp dir for parallel group '$group_name'"
+    log_error "Failed to create temp dir for parallel group '$group_name'"
     return 1
   }
   register_temp_file "$result_dir"
@@ -236,7 +236,7 @@ run_parallel_group() {
   rm -rf "$result_dir"
 
   if [[ $failures -gt 0 ]]; then
-    log "ERROR: $failures/$count functions failed in group '$group_name'"
+    log_error "$failures/$count functions failed in group '$group_name'"
     return $failures
   fi
 

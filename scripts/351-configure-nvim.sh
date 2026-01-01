@@ -15,7 +15,7 @@ _config_nvim() {
     update-alternatives --set vim /usr/bin/nvim
     update-alternatives --set editor /usr/bin/nvim
   ' || {
-    log "ERROR: Failed to configure nvim alternatives"
+    log_error "Failed to configure nvim alternatives"
     return 1
   }
 

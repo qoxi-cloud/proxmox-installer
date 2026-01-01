@@ -49,7 +49,7 @@ EOF
       ;;
     *)
       # Fallback to static config if invalid mode - ensures network connectivity
-      log "WARNING: Unknown BRIDGE_MODE '${mode}', falling back to static config"
+      log_warn "Unknown BRIDGE_MODE '${mode}', falling back to static config"
       _generate_iface_static
       echo ""
       _generate_vmbr0_nat
@@ -61,5 +61,5 @@ EOF
 generate_interfaces_file() {
   local output="${1:-./templates/interfaces}"
   _generate_interfaces_conf >"$output"
-  log "Generated interfaces config (mode: ${BRIDGE_MODE:-internal})"
+  log_info "Generated interfaces config (mode: ${BRIDGE_MODE:-internal})"
 }
