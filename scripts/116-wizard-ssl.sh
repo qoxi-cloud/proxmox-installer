@@ -49,7 +49,7 @@ _ssl_check_dns_animated() {
 
   (
     validate_dns_resolution "$FQDN" "$MAIN_IPV4"
-    printf '%s\n' "$?" >"$dns_result_file"
+    printf '%s\n%s\n' "$?" "$DNS_RESOLVED_IP" >"$dns_result_file"
   ) >/dev/null 2>&1 &
 
   local dns_pid=$!
@@ -67,7 +67,10 @@ _ssl_check_dns_animated() {
 
   wait "$dns_pid" 2>/dev/null
   local dns_result
-  dns_result=$(cat "$dns_result_file")
+  {
+    read -r dns_result
+    read -r DNS_RESOLVED_IP
+  } <"$dns_result_file"
   rm -f "$dns_result_file"
 
   printf "\r%-80s\r" " "
