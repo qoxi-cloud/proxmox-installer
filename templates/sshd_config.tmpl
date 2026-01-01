@@ -8,9 +8,6 @@ AddressFamily any
 ListenAddress 0.0.0.0
 ListenAddress ::
 
-# Protocol
-Protocol 2
-
 # Host keys
 HostKey /etc/ssh/ssh_host_rsa_key
 HostKey /etc/ssh/ssh_host_ecdsa_key
@@ -34,8 +31,7 @@ PubkeyAuthentication yes
 # Disable empty passwords
 PermitEmptyPasswords no
 
-# Disable challenge-response authentication
-ChallengeResponseAuthentication no
+# Disable keyboard-interactive authentication
 KbdInteractiveAuthentication no
 
 # Enable PAM for session management (MOTD, limits, accounting)
@@ -103,4 +99,3 @@ PrintMotd no
 PrintLastLog yes
 TCPKeepAlive yes
 Compression no
-UseDNS no
