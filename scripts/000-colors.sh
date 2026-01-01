@@ -17,6 +17,11 @@ readonly CLR_GRAY=$'\033[38;5;240m'
 readonly CLR_GOLD=$'\033[38;5;179m'
 readonly CLR_RESET=$'\033[m'
 
+# Tree characters for live logs
+readonly TREE_BRANCH="${CLR_ORANGE}├─${CLR_RESET}"
+readonly TREE_VERT="${CLR_ORANGE}│${CLR_RESET}"
+readonly TREE_END="${CLR_ORANGE}└─${CLR_RESET}"
+
 # Hex colors for gum (terminal UI toolkit)
 readonly HEX_RED="#ff0000"
 readonly HEX_CYAN="#00b1ff"

@@ -98,7 +98,7 @@ complete_task() {
 add_subtask_log() {
   local message="$1"
   local color="${2:-$CLR_GRAY}"
-  add_log "${CLR_ORANGE}│${CLR_RESET}   ${color}${message}${CLR_RESET}"
+  add_log "${TREE_VERT}   ${color}${message}${CLR_RESET}"
 }
 
 # Start live installation display in alternate screen buffer
@@ -137,7 +137,7 @@ live_show_progress() {
   [[ ${3:-} == "--silent" ]] && done_message="$message"
 
   # Add task to live display with spinner
-  start_task "${CLR_ORANGE}├─${CLR_RESET} ${message}"
+  start_task "${TREE_BRANCH} ${message}"
   local task_idx=$TASK_INDEX
 
   # Wait for process with periodic updates
@@ -148,7 +148,7 @@ live_show_progress() {
     local dots_count=$(((animation_counter % 3) + 1))
     local dots=""
     for ((d = 0; d < dots_count; d++)); do dots+="."; done
-    LOG_LINES[task_idx]="${CLR_ORANGE}├─${CLR_RESET} ${message}${CLR_ORANGE}${dots}${CLR_RESET}"
+    LOG_LINES[task_idx]="${TREE_BRANCH} ${message}${CLR_ORANGE}${dots}${CLR_RESET}"
     render_logs
     ((animation_counter++))
   done
@@ -160,7 +160,7 @@ live_show_progress() {
   # Update with final status
   if [[ $exit_code -eq 0 ]]; then
     if [[ $silent != true ]]; then
-      complete_task "$task_idx" "${CLR_ORANGE}├─${CLR_RESET} ${done_message}"
+      complete_task "$task_idx" "${TREE_BRANCH} ${done_message}"
     else
       # Remove the line for silent mode
       unset 'LOG_LINES[task_idx]'
@@ -169,7 +169,7 @@ live_show_progress() {
       render_logs
     fi
   else
-    complete_task "$task_idx" "${CLR_ORANGE}├─${CLR_RESET} ${message}" "error"
+    complete_task "$task_idx" "${TREE_BRANCH} ${message}" "error"
   fi
 
   return $exit_code

@@ -79,7 +79,7 @@ validate_installation() {
   printf '%s\n' "$validation_script" >>"$LOG_FILE"
 
   # Execute validation and capture output
-  start_task "${CLR_ORANGE}├─${CLR_RESET} Validating installation"
+  start_task "${TREE_BRANCH} Validating installation"
   local task_idx=$TASK_INDEX
   local validation_output
   validation_output=$(printf '%s\n' "$validation_script" | remote_exec 'bash -s' 2>&1) || true
@@ -102,12 +102,12 @@ validate_installation() {
 
   # Update task with final status
   if ((errors > 0)); then
-    complete_task "$task_idx" "${CLR_ORANGE}├─${CLR_RESET} Validation: ${CLR_RED}${errors} error(s)${CLR_RESET}, ${CLR_YELLOW}${warnings} warning(s)${CLR_RESET}" "error"
+    complete_task "$task_idx" "${TREE_BRANCH} Validation: ${CLR_RED}${errors} error(s)${CLR_RESET}, ${CLR_YELLOW}${warnings} warning(s)${CLR_RESET}" "error"
     log "ERROR: Installation validation failed with $errors error(s)"
   elif ((warnings > 0)); then
-    complete_task "$task_idx" "${CLR_ORANGE}├─${CLR_RESET} Validation passed with ${CLR_YELLOW}${warnings} warning(s)${CLR_RESET}" "warning"
+    complete_task "$task_idx" "${TREE_BRANCH} Validation passed with ${CLR_YELLOW}${warnings} warning(s)${CLR_RESET}" "warning"
   else
-    complete_task "$task_idx" "${CLR_ORANGE}├─${CLR_RESET} Validation passed"
+    complete_task "$task_idx" "${TREE_BRANCH} Validation passed"
   fi
 }
 

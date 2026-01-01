@@ -189,7 +189,7 @@ _config_shell() {
 
     run_with_progress "Configuring ZSH" "ZSH with Powerlevel10k configured" _configure_zsh_files
   else
-    add_log "${CLR_ORANGE}├─${CLR_RESET} Default shell: Bash ${CLR_CYAN}✓${CLR_RESET}"
+    add_log "${TREE_BRANCH} Default shell: Bash ${CLR_CYAN}✓${CLR_RESET}"
   fi
 }
 

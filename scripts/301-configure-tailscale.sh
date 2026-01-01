@@ -66,7 +66,7 @@ _config_tailscale() {
       TAILSCALE_HOSTNAME=$(cat "$tmp_hostname" 2>/dev/null || printf '\n')
 
       # Update log with IP info
-      complete_task "$TASK_INDEX" "${CLR_ORANGE}├─${CLR_RESET} Tailscale authenticated. IP: ${TAILSCALE_IP}"
+      complete_task "$TASK_INDEX" "${TREE_BRANCH} Tailscale authenticated. IP: ${TAILSCALE_IP}"
 
       # Configure Tailscale Serve for Proxmox Web UI (only if auth succeeded)
       if [[ $TAILSCALE_WEBUI == "yes" ]]; then
@@ -94,13 +94,13 @@ _config_tailscale() {
     else
       TAILSCALE_IP="auth failed"
       TAILSCALE_HOSTNAME=""
-      complete_task "$TASK_INDEX" "${CLR_ORANGE}├─${CLR_RESET} ${CLR_YELLOW}Tailscale auth failed - check auth key${CLR_RESET}" "warning"
+      complete_task "$TASK_INDEX" "${TREE_BRANCH} ${CLR_YELLOW}Tailscale auth failed - check auth key${CLR_RESET}" "warning"
       log "WARNING: Tailscale authentication failed. Auth key may be invalid or expired."
 
       # In stealth mode with failed Tailscale auth, warn but DON'T disable SSH
       # This prevents locking out the user
       if [[ ${FIREWALL_MODE:-standard} == "stealth" ]]; then
-        add_log "${CLR_ORANGE}│${CLR_RESET}   ${CLR_YELLOW}SSH will remain enabled (Tailscale auth failed)${CLR_RESET}"
+        add_log "${TREE_VERT}   ${CLR_YELLOW}SSH will remain enabled (Tailscale auth failed)${CLR_RESET}"
         log "WARNING: Stealth mode requested but Tailscale auth failed - SSH will remain enabled to prevent lockout"
       fi
     fi
@@ -109,7 +109,7 @@ _config_tailscale() {
   else
     TAILSCALE_IP="not authenticated"
     TAILSCALE_HOSTNAME=""
-    add_log "${CLR_ORANGE}├─${CLR_RESET} ${CLR_YELLOW}⚠️${CLR_RESET} Tailscale installed but not authenticated"
+    add_log "${TREE_BRANCH} ${CLR_YELLOW}⚠️${CLR_RESET} Tailscale installed but not authenticated"
     add_subtask_log "After reboot: tailscale up --ssh"
   fi
 }
