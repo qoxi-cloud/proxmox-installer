@@ -16,11 +16,6 @@ _config_auditd() {
   # Stop auditd before modifying rules to prevent conflicts
   remote_exec '
     mkdir -p /var/log/audit
-    # Fully stop auditd to prevent rule conflicts during cleanup
-    systemctl stop auditd 2>/dev/null || true
-    sleep 1
-    # Clear rules from kernel memory (fails silently if immutable from previous boot)
-    auditctl -D 2>/dev/null || true
     # Remove ALL default/conflicting rules before our rules
     find /etc/audit/rules.d -name "*.rules" ! -name "proxmox.rules" -delete 2>/dev/null || true
     rm -f /etc/audit/audit.rules 2>/dev/null || true
@@ -28,14 +23,24 @@ _config_auditd() {
     sed -i "s/^max_log_file = .*/max_log_file = 50/" /etc/audit/auditd.conf
     sed -i "s/^num_logs = .*/num_logs = 10/" /etc/audit/auditd.conf
     sed -i "s/^max_log_file_action = .*/max_log_file_action = ROTATE/" /etc/audit/auditd.conf
-    # Regenerate rules from clean state
+    # Enable auditd for boot (dont start yet)
+    systemctl daemon-reload
+    systemctl enable auditd
+    # Stop auditd, load new rules, then restart
+    # auditd requires special handling - use service command for stop/start
+    service auditd stop 2>/dev/null || true
+    sleep 1
+    auditctl -D 2>/dev/null || true
     augenrules --load 2>/dev/null || true
+    # Start with retry - audit subsystem may need time to stabilize
+    for i in 1 2 3; do
+      service auditd start 2>/dev/null && break
+      sleep 2
+    done
   ' || {
     log "ERROR: Failed to configure auditd"
     return 1
   }
-
-  remote_enable_services "auditd"
   parallel_mark_configured "auditd"
 }
 

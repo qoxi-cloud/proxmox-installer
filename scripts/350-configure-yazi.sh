@@ -8,15 +8,15 @@
 _config_yazi() {
 
   # Install flavor and plugins as admin user
-  # Note: ya pack may fail if network is unavailable - log warning but don't fail
+  # Note: ya pkg may fail if network is unavailable - log warning but don't fail
   # Yazi still works without plugins, user can install later
   # shellcheck disable=SC2016
   remote_exec 'su - '"${ADMIN_USERNAME}"' -c "
-    ya pack -a kalidyasin/yazi-flavors:tokyonight-night || echo \"WARNING: Failed to install yazi flavor\" >&2
-    ya pack -a yazi-rs/plugins:chmod || echo \"WARNING: Failed to install chmod plugin\" >&2
-    ya pack -a yazi-rs/plugins:smart-enter || echo \"WARNING: Failed to install smart-enter plugin\" >&2
-    ya pack -a yazi-rs/plugins:smart-filter || echo \"WARNING: Failed to install smart-filter plugin\" >&2
-    ya pack -a yazi-rs/plugins:full-border || echo \"WARNING: Failed to install full-border plugin\" >&2
+    ya pkg add kalidyasin/yazi-flavors:tokyonight-night || echo \"WARNING: Failed to install yazi flavor\" >&2
+    ya pkg add yazi-rs/plugins:chmod || echo \"WARNING: Failed to install chmod plugin\" >&2
+    ya pkg add yazi-rs/plugins:smart-enter || echo \"WARNING: Failed to install smart-enter plugin\" >&2
+    ya pkg add yazi-rs/plugins:smart-filter || echo \"WARNING: Failed to install smart-filter plugin\" >&2
+    ya pkg add yazi-rs/plugins:full-border || echo \"WARNING: Failed to install full-border plugin\" >&2
   "' || {
     log "WARNING: Failed to install some yazi plugins (yazi will still work)"
   }
