@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.767-pr.21"
+readonly VERSION="2.0.768-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -6868,6 +6868,56 @@ configure_lvm_storage(){
 [[ -z $BOOT_DISK ]]&&return 0
 _config_expand_lvm_root
 }
+cleanup_installation_logs(){
+remote_run "Cleaning up installation logs" '
+    # Clear systemd journal (installation messages)
+    journalctl --rotate 2>/dev/null || true
+    journalctl --vacuum-time=1s 2>/dev/null || true
+
+    # Clear traditional log files
+    : > /var/log/syslog 2>/dev/null || true
+    : > /var/log/messages 2>/dev/null || true
+    : > /var/log/auth.log 2>/dev/null || true
+    : > /var/log/kern.log 2>/dev/null || true
+    : > /var/log/daemon.log 2>/dev/null || true
+    : > /var/log/debug 2>/dev/null || true
+
+    # Clear apt logs
+    : > /var/log/apt/history.log 2>/dev/null || true
+    : > /var/log/apt/term.log 2>/dev/null || true
+    rm -f /var/log/apt/*.gz 2>/dev/null || true
+
+    # Clear dpkg log
+    : > /var/log/dpkg.log 2>/dev/null || true
+
+    # Remove rotated logs
+    find /var/log -name "*.gz" -delete 2>/dev/null || true
+    find /var/log -name "*.[0-9]" -delete 2>/dev/null || true
+    find /var/log -name "*.old" -delete 2>/dev/null || true
+
+    # Clear lastlog and wtmp (login history)
+    : > /var/log/lastlog 2>/dev/null || true
+    : > /var/log/wtmp 2>/dev/null || true
+    : > /var/log/btmp 2>/dev/null || true
+
+    # Clear machine-id and regenerate on first boot (optional - makes system unique)
+    # Commented out - may cause issues with some services
+    # : > /etc/machine-id
+
+    # Sync filesystems to ensure all data is written before shutdown
+    # ZFS requires explicit zpool sync to commit all transactions (critical for data integrity)
+    sync
+    if command -v zpool &>/dev/null; then
+      zpool sync 2>/dev/null || true
+    fi
+    umount /boot/efi 2>/dev/null || true
+    sync
+    # Final ZFS sync after EFI unmount
+    if command -v zpool &>/dev/null; then
+      zpool sync 2>/dev/null || true
+    fi
+  ' "Installation logs cleaned"
+}
 configure_efi_fallback_boot(){
 if ! remote_exec 'test -d /sys/firmware/efi' 2>/dev/null;then
 log "INFO: Legacy BIOS mode - skipping EFI fallback configuration"
@@ -6919,56 +6969,6 @@ if ! run_with_progress "Applying SSH hardening" "SSH hardening active" \
 remote_exec "systemctl restart sshd";then
 log "WARNING: SSH restart failed - config will apply on reboot"
 fi
-}
-cleanup_installation_logs(){
-remote_run "Cleaning up installation logs" '
-    # Clear systemd journal (installation messages)
-    journalctl --rotate 2>/dev/null || true
-    journalctl --vacuum-time=1s 2>/dev/null || true
-
-    # Clear traditional log files
-    : > /var/log/syslog 2>/dev/null || true
-    : > /var/log/messages 2>/dev/null || true
-    : > /var/log/auth.log 2>/dev/null || true
-    : > /var/log/kern.log 2>/dev/null || true
-    : > /var/log/daemon.log 2>/dev/null || true
-    : > /var/log/debug 2>/dev/null || true
-
-    # Clear apt logs
-    : > /var/log/apt/history.log 2>/dev/null || true
-    : > /var/log/apt/term.log 2>/dev/null || true
-    rm -f /var/log/apt/*.gz 2>/dev/null || true
-
-    # Clear dpkg log
-    : > /var/log/dpkg.log 2>/dev/null || true
-
-    # Remove rotated logs
-    find /var/log -name "*.gz" -delete 2>/dev/null || true
-    find /var/log -name "*.[0-9]" -delete 2>/dev/null || true
-    find /var/log -name "*.old" -delete 2>/dev/null || true
-
-    # Clear lastlog and wtmp (login history)
-    : > /var/log/lastlog 2>/dev/null || true
-    : > /var/log/wtmp 2>/dev/null || true
-    : > /var/log/btmp 2>/dev/null || true
-
-    # Clear machine-id and regenerate on first boot (optional - makes system unique)
-    # Commented out - may cause issues with some services
-    # : > /etc/machine-id
-
-    # Sync filesystems to ensure all data is written before shutdown
-    # ZFS requires explicit zpool sync to commit all transactions (critical for data integrity)
-    sync
-    if command -v zpool &>/dev/null; then
-      zpool sync 2>/dev/null || true
-    fi
-    umount /boot/efi 2>/dev/null || true
-    sync
-    # Final ZFS sync after EFI unmount
-    if command -v zpool &>/dev/null; then
-      zpool sync 2>/dev/null || true
-    fi
-  ' "Installation logs cleaned"
 }
 validate_installation(){
 log "Generating validation script from template..."
