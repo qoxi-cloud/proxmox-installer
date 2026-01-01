@@ -83,7 +83,10 @@ _config_nftables() {
 
   # Generate complete config
   local config_file="./templates/nftables.conf.generated"
-  _generate_nftables_conf >"$config_file"
+  if ! _generate_nftables_conf >"$config_file"; then
+    log "ERROR: Failed to generate nftables config"
+    return 1
+  fi
 
   log "Generated nftables config (mode: $FIREWALL_MODE, bridge: $BRIDGE_MODE)"
 
