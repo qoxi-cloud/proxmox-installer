@@ -19,6 +19,9 @@ readonly DNS_SECONDARY="1.0.0.1"
 readonly DNS6_PRIMARY="2606:4700:4700::1111"
 readonly DNS6_SECONDARY="2606:4700:4700::1001"
 
+# Default IPv6 gateway (standard link-local address)
+readonly DEFAULT_IPV6_GATEWAY="fe80::1"
+
 # Resource requirements (ISO ~3.5GB + QEMU + overhead = 6GB)
 readonly MIN_DISK_SPACE_MB=6000
 readonly MIN_RAM_MB=4000
