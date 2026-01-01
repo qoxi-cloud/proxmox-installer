@@ -97,3 +97,8 @@ cleanup_and_error_handler() {
 }
 
 trap cleanup_and_error_handler EXIT
+
+# Pre-register SCP lock file for cleanup (must happen before any parallel execution)
+# remote_copy() creates this file via flock redirection, but is often called from
+# parallel subshells where $BASHPID != $$ prevents runtime registration
+register_temp_file "$_TEMP_SCP_LOCK_FILE"

@@ -138,6 +138,7 @@ remote_run() {
 # Copy file to remote via SCP with lock. $1=src, $2=dst. Returns 0=success, 1=failure
 # Uses flock to serialize parallel scp calls through ControlMaster socket
 # Lock file path uses centralized constant from 003-init.sh ($_TEMP_SCP_LOCK_FILE)
+# Note: Lock file is pre-registered in 004-trap.sh (before parallel execution begins)
 # Note: stdout/stderr redirected to LOG_FILE to prevent breaking live logs display
 remote_copy() {
   local src="$1"
@@ -145,11 +146,6 @@ remote_copy() {
 
   local passfile
   passfile=$(_ssh_get_passfile)
-
-  # Register lock file on first use (only from main shell to avoid duplicates)
-  if [[ ! -f "$_TEMP_SCP_LOCK_FILE" ]] && [[ $BASHPID == "$$" ]]; then
-    register_temp_file "$_TEMP_SCP_LOCK_FILE"
-  fi
 
   # Use flock to serialize scp operations (prevents ControlMaster data corruption)
   # FD 200 is arbitrary high number to avoid conflicts
