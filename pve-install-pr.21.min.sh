@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.772-pr.21"
+readonly VERSION="2.0.773-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -6161,6 +6161,13 @@ standard|*)cat <<EOF
         tcp dport $webui ct state new accept
 EOF
 esac
+if [[ $SSL_TYPE == "letsencrypt" && $mode != "stealth" ]];then
+cat <<'EOF'
+
+        # HTTP for Let's Encrypt ACME challenge
+        tcp dport 80 ct state new accept
+EOF
+fi
 }
 _generate_bridge_input_rules(){
 local mode="${BRIDGE_MODE:-internal}"
