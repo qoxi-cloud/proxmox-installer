@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.762-pr.21"
+readonly VERSION="2.0.763-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -695,7 +695,7 @@ apply_template_vars "$file" \
 "DNS6_PRIMARY=${DNS6_PRIMARY:-2606:4700:4700::1111}" \
 "DNS6_SECONDARY=${DNS6_SECONDARY:-2606:4700:4700::1001}" \
 "LOCALE=${LOCALE:-en_US.UTF-8}" \
-"KEYBOARD=${KEYBOARD:-us}" \
+"KEYBOARD=${KEYBOARD:-en-us}" \
 "COUNTRY=${COUNTRY:-US}" \
 "BAT_THEME=${BAT_THEME:-Catppuccin Mocha}" \
 "PORT_SSH=${PORT_SSH:-22}" \
