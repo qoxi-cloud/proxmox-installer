@@ -27,7 +27,7 @@ The project is a modular bash framework. Individual scripts in `scripts/` are co
 | **350-351** | Tools: yazi, nvim |
 | **360-361** | SSL & API token |
 | **370-372** | Storage: ZFS ARC, pool creation/import, LVM |
-| **380-381** | Finalization: validation, completion, phases |
+| **378-381** | Finalization: cleanup, EFI boot, validation, phases |
 | **900** | Main orchestrator |
 
 ### Data Flow

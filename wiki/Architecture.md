@@ -25,7 +25,7 @@ This project is a bash automation framework that installs Proxmox VE on dedicate
 4. **QEMU Setup** (200-208) - Download ISO, launch VM, wait for SSH
 5. **Installation** (200-208) - Proxmox auto-install via templates
 6. **Configuration** (300-381) - Deploy configs, install packages, harden
-7. **Finalization** (380-381) - Validate, show credentials, shutdown VM
+7. **Finalization** (378-381) - Cleanup, EFI boot, validate, shutdown VM
 
 ## Flow Diagram
 
@@ -120,12 +120,13 @@ flowchart TD
         AT2 --> AU
     end
 
-    subgraph FINALIZE["✅ Finalization (380-381)"]
+    subgraph FINALIZE["✅ Finalization (378-381)"]
         AU --> AV[Run validation script<br/>380-configure-finalize.sh]
         AV --> AW{All checks pass?}
         AW -->|No| AX[Show failures]
-        AW -->|Yes| AY[Show credentials]
-        AY --> AZ[Shutdown VM]
+        AW -->|Yes| AY[Configure EFI fallback<br/>379-configure-efi-boot.sh]
+        AY --> AY2[Cleanup logs & ZFS sync<br/>378-configure-cleanup.sh]
+        AY2 --> AZ[Shutdown VM]
         AZ --> BA[End]
     end
 
@@ -311,7 +312,7 @@ graph LR
         AP[350-351 yazi/nvim]
         AQ[360-361 ssl/api-token]
         AR[370-372 zfs/pool/lvm]
-        AS[380-381 finalize/phases]
+        AS[378-381 cleanup/efi-boot/finalize/phases]
     end
 
     subgraph "900 Orchestration"
@@ -427,7 +428,9 @@ scripts/
 │   ├── 370-configure-zfs.sh       # ZFS ARC tuning
 │   ├── 371-configure-zfs-pool.sh  # Pool creation or import
 │   ├── 372-configure-lvm.sh       # LVM storage configuration
-│   ├── 380-configure-finalize.sh  # Validation, completion
+│   ├── 378-configure-cleanup.sh   # Log cleanup, ZFS sync
+│   ├── 379-configure-efi-boot.sh  # EFI fallback bootloader
+│   ├── 380-configure-finalize.sh  # SSH, validation, finalization
 │   └── 381-configure-phases.sh    # Configuration phases
 │
 └── 900-999: Orchestration
@@ -657,6 +660,6 @@ spec/
 | 350-351   | Tools                                        |
 | 360-361   | SSL & API                                    |
 | 370-372   | Storage (ZFS, LVM)                           |
-| 380-381   | Finalization                                 |
+| 378-381   | Finalization (cleanup, EFI, finalize, phases) |
 | 900       | Main orchestrator                            |
 
