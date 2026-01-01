@@ -224,22 +224,25 @@ if ! [[ $2 =~ ^[0-9]{1,3}$ ]] || [[ $2 -lt 1 ]]; then    # Cores (max 3 digits)
 ```
 **Status:** Fixed with explicit digit limits to prevent arithmetic overflow on very large inputs.
 
-### 7. Consolidate SSH Options
+### 7. ~~Consolidate SSH Options~~ ✓ FIXED
 **File:** `scripts/021-ssh.sh:10`
 
-```bash
-SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ..."
-```
+~~**Issue:** SSH options defined as a string with word-splitting on usage.~~
 
-**Suggestion:** Consider an array for cleaner manipulation:
 ```bash
+# Now implemented as array for cleaner manipulation
 SSH_OPTS=(
   -o StrictHostKeyChecking=no
   -o UserKnownHostsFile=/dev/null
   -o LogLevel=ERROR
+  -o "ConnectTimeout=${SSH_CONNECT_TIMEOUT:-10}"
   # ...
 )
+
+# Usage with proper array expansion
+ssh "${SSH_OPTS[@]}" root@localhost
 ```
+**Status:** Fixed with array pattern in `021-ssh.sh`. All usages updated to `"${SSH_OPTS[@]}"`.
 
 ### 8. Add Documentation for Template Variable Escaping Rules
 **File:** `scripts/020-templates.sh:39-43`
@@ -374,7 +377,7 @@ While CLAUDE.md lists common variables, a complete reference with which template
 | Category | Count | Fixed |
 |----------|-------|-------|
 | Potential Bugs | 5 | 0 |
-| Improvement Suggestions | 8 | 4 |
+| Improvement Suggestions | 8 | 5 |
 | Style Inconsistencies | 3 | 0 |
 | Security Notes | 4 | 0 |
 | Performance Notes | 3 | 0 |
@@ -386,3 +389,4 @@ While CLAUDE.md lists common variables, a complete reference with which template
 - Improvement #4: Added defensive check for VIRTIO_MAP using `${VAR+isset}` pattern
 - Improvement #5: Added `start_async_feature` and `wait_async_feature` helpers for async feature execution
 - Improvement #6: Added digit limits to CLI argument validation (`{1,6}` for RAM, `{1,3}` for cores) to prevent arithmetic overflow
+- Improvement #7: Converted SSH_OPTS from string to array for cleaner manipulation and proper expansion

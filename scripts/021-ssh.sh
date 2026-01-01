@@ -7,7 +7,17 @@
 
 # SSH options for QEMU VM - host key checking disabled (local/ephemeral)
 # Includes keepalive settings: ServerAliveInterval=30s, ServerAliveCountMax=3 (90s before disconnect)
-SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=${SSH_CONNECT_TIMEOUT:-10} -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ControlMaster=auto -o ControlPath=${_TEMP_SSH_CONTROL_PATH} -o ControlPersist=300"
+SSH_OPTS=(
+  -o StrictHostKeyChecking=no
+  -o UserKnownHostsFile=/dev/null
+  -o LogLevel=ERROR
+  -o "ConnectTimeout=${SSH_CONNECT_TIMEOUT:-10}"
+  -o ServerAliveInterval=30
+  -o ServerAliveCountMax=3
+  -o ControlMaster=auto
+  -o "ControlPath=${_TEMP_SSH_CONTROL_PATH}"
+  -o ControlPersist=300
+)
 SSH_PORT="${SSH_PORT_QEMU:-5555}"
 
 # Session passfile (created once, path uses $$ for subshell sharing)
@@ -160,8 +170,7 @@ wait_for_ssh_ready() {
     elapsed=0
     retry_delay="${RETRY_DELAY_SECONDS:-2}"
     while ((elapsed < ssh_timeout)); do
-      # shellcheck disable=SC2086
-      if sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' >>"${LOG_FILE:-/dev/null}" 2>&1; then
+      if sshpass -f "$passfile" ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" root@localhost 'echo ready' >>"${LOG_FILE:-/dev/null}" 2>&1; then
         exit 0
       fi
       sleep "$retry_delay"

@@ -77,7 +77,7 @@ _ssh_session_init() {
 
 ```bash
 # Password read from file, never on command line
-sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost "$@"
+sshpass -f "$passfile" ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" root@localhost "$@"
 ```
 
 This prevents password exposure in:
@@ -212,7 +212,12 @@ HOSTNAME="$user_input"
 ### SSH Options for QEMU
 
 ```bash
-SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
+SSH_OPTS=(
+  -o StrictHostKeyChecking=no
+  -o UserKnownHostsFile=/dev/null
+  -o LogLevel=ERROR
+  # ... additional options
+)
 ```
 
 **Why this is safe:**

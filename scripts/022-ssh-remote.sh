@@ -43,8 +43,7 @@ remote_exec() {
   while [[ $attempt -lt $max_attempts ]]; do
     attempt=$((attempt + 1))
 
-    # shellcheck disable=SC2086
-    timeout "$cmd_timeout" sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost "$@" 2>>"$LOG_FILE"
+    timeout "$cmd_timeout" sshpass -f "$passfile" ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" root@localhost "$@" 2>>"$LOG_FILE"
     local exit_code=$?
 
     if [[ $exit_code -eq 0 ]]; then
@@ -93,8 +92,7 @@ _remote_exec_with_progress() {
 
   local cmd_timeout="${SSH_COMMAND_TIMEOUT:-$SSH_DEFAULT_TIMEOUT}"
 
-  # shellcheck disable=SC2086
-  printf '%s\n' "$script" | timeout "$cmd_timeout" sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'bash -s' >"$output_file" 2>&1 &
+  printf '%s\n' "$script" | timeout "$cmd_timeout" sshpass -f "$passfile" ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" root@localhost 'bash -s' >"$output_file" 2>&1 &
   local pid=$!
   show_progress $pid "$message" "$done_message"
   local exit_code=$?
@@ -155,8 +153,7 @@ remote_copy() {
       log "ERROR: Failed to acquire SCP lock for $src"
       exit 1
     }
-    # shellcheck disable=SC2086
-    if ! sshpass -f "$passfile" scp -P "$SSH_PORT" $SSH_OPTS "$src" "root@localhost:$dst" >>"$LOG_FILE" 2>&1; then
+    if ! sshpass -f "$passfile" scp -P "$SSH_PORT" "${SSH_OPTS[@]}" "$src" "root@localhost:$dst" >>"$LOG_FILE" 2>&1; then
       log "ERROR: Failed to copy $src to $dst"
       exit 1
     fi
