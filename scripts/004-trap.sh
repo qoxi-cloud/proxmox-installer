@@ -55,7 +55,7 @@ cleanup_temp_files() {
 
 # EXIT trap: cleanup processes, drives, cursor, show error if failed
 cleanup_and_error_handler() {
-  local exit_code=$?
+  local exit_code="$?"
 
   # Stop all background jobs
   jobs -p | xargs -r kill 2>/dev/null || true

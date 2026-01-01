@@ -111,7 +111,7 @@ _run_preflight_checks() {
   _check_cpu
   _check_kvm || ((errors++))
 
-  declare -g PREFLIGHT_ERRORS=$errors
+  declare -g PREFLIGHT_ERRORS="$errors"
 }
 
 # Main collection function

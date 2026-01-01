@@ -41,10 +41,10 @@ remote_exec() {
   local attempt=0
 
   while [[ $attempt -lt $max_attempts ]]; do
-    attempt=$((attempt + 1))
+    attempt="$((attempt + 1))"
 
     timeout "$cmd_timeout" sshpass -f "$passfile" ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" root@localhost "$@" 2>>"$LOG_FILE"
-    local exit_code=$?
+    local exit_code="$?"
 
     if [[ $exit_code -eq 0 ]]; then
       return 0
@@ -57,7 +57,7 @@ remote_exec() {
 
     if [[ $attempt -lt $max_attempts ]]; then
       # Exponential backoff: delay = base_delay * 2^(attempt-1), capped at 30s
-      local delay=$((base_delay * (1 << (attempt - 1))))
+      local delay="$((base_delay * (1 << (attempt - 1))))"
       ((delay > 30)) && delay=30
       log_info "SSH attempt $attempt failed, retrying in ${delay} seconds..."
       sleep "$delay"
@@ -93,9 +93,9 @@ _remote_exec_with_progress() {
   local cmd_timeout="${SSH_COMMAND_TIMEOUT:-$SSH_DEFAULT_TIMEOUT}"
 
   printf '%s\n' "$script" | timeout "$cmd_timeout" sshpass -f "$passfile" ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" root@localhost 'bash -s' >"$output_file" 2>&1 &
-  local pid=$!
-  show_progress $pid "$message" "$done_message"
-  local exit_code=$?
+  local pid="$!"
+  show_progress "$pid" "$message" "$done_message"
+  local exit_code="$?"
 
   # Check output for critical errors (exclude package names like liberror-perl)
   # Use word boundaries and exclude common false positives from apt/installer output

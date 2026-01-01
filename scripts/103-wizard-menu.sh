@@ -156,7 +156,7 @@ _wiz_render_menu() {
   _wiz_render_screen_content "$WIZ_CURRENT_SCREEN" "$selection"
 
   # Store total field count for this screen
-  declare -g _WIZ_FIELD_COUNT=$field_idx
+  declare -g _WIZ_FIELD_COUNT="$field_idx"
 
   output+="\n"
 

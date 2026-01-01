@@ -85,8 +85,8 @@ _wiz_confirm() {
   # Center the dialog using gum's padding (top right bottom left)
   # Buttons are ~15 chars wide, use max of prompt or button width
   local content_width left_pad
-  content_width=$((${#prompt} > 15 ? ${#prompt} : 15))
-  left_pad=$(((TERM_WIDTH - content_width) / 2))
+  content_width="$((${#prompt} > 15 ? ${#prompt} : 15))"
+  left_pad="$(((TERM_WIDTH - content_width) / 2))"
   ((left_pad < 0)) && left_pad=0
 
   # Custom centered footer (matching project style)

@@ -47,7 +47,7 @@ validate_ipv6() {
 
   # Cannot have more than one :: sequence (pure bash: count by removal)
   local temp="${ipv6//::/}"
-  local double_colon_count=$(((${#ipv6} - ${#temp}) / 2))
+  local double_colon_count="$(((${#ipv6} - ${#temp}) / 2))"
   [[ $double_colon_count -gt 1 ]] && return 1
 
   # Count groups using pure bash (split by :, accounting for ::)
@@ -58,13 +58,13 @@ validate_ipv6() {
     local right="${ipv6##*::}"
     if [[ -n $left ]]; then
       colons="${left//[!:]/}"
-      left_count=$((${#colons} + 1))
+      left_count="$((${#colons} + 1))"
     fi
     if [[ -n $right ]]; then
       colons="${right//[!:]/}"
-      right_count=$((${#colons} + 1))
+      right_count="$((${#colons} + 1))"
     fi
-    groups=$((left_count + right_count))
+    groups="$((left_count + right_count))"
     # Total groups must be less than 8 (:: fills the rest)
     [[ $groups -ge 8 ]] && return 1
   else

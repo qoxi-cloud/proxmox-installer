@@ -11,8 +11,8 @@ _CHECKSUM_CACHE=""
 prefetch_proxmox_iso_info() {
   declare -g _ISO_LIST_CACHE
   declare -g _CHECKSUM_CACHE
-  _ISO_LIST_CACHE=$(curl -s "$PROXMOX_ISO_BASE_URL" 2>/dev/null | grep -oE 'proxmox-ve_[0-9]+\.[0-9]+-[0-9]+\.iso' | sort -uV) || true
-  _CHECKSUM_CACHE=$(curl -s "$PROXMOX_CHECKSUM_URL" 2>/dev/null) || true
+  _ISO_LIST_CACHE="$(curl -s "$PROXMOX_ISO_BASE_URL" 2>/dev/null | grep -oE 'proxmox-ve_[0-9]+\.[0-9]+-[0-9]+\.iso' | sort -uV)" || true
+  _CHECKSUM_CACHE="$(curl -s "$PROXMOX_CHECKSUM_URL" 2>/dev/null)" || true
 }
 
 # Get available Proxmox ISOs (v9+). $1=count (default 5) → stdout
@@ -51,16 +51,16 @@ download_proxmox_iso() {
 
   log_info "Using selected ISO: $PROXMOX_ISO_VERSION"
   declare -g PROXMOX_ISO_URL
-  PROXMOX_ISO_URL=$(get_proxmox_iso_url "$PROXMOX_ISO_VERSION")
+  PROXMOX_ISO_URL="$(get_proxmox_iso_url "$PROXMOX_ISO_VERSION")"
   log_info "Found ISO URL: $PROXMOX_ISO_URL"
 
   declare -g ISO_FILENAME
-  ISO_FILENAME=$(basename "$PROXMOX_ISO_URL")
+  ISO_FILENAME="$(basename "$PROXMOX_ISO_URL")"
 
   # Get checksum from cache (populated by prefetch_proxmox_iso_info)
   local expected_checksum=""
   if [[ -n $_CHECKSUM_CACHE ]]; then
-    expected_checksum=$(printf '%s\n' "$_CHECKSUM_CACHE" | grep "$ISO_FILENAME" | awk '{print $1}')
+    expected_checksum="$(printf '%s\n' "$_CHECKSUM_CACHE" | grep "$ISO_FILENAME" | awk '{print $1}')"
   fi
   log_info "Expected checksum: ${expected_checksum:-not available}"
 
@@ -74,11 +74,11 @@ download_proxmox_iso() {
   register_temp_file "$method_file"
 
   _download_iso_with_fallback "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum" "$method_file" &
-  show_progress $! "Downloading $ISO_FILENAME" "$ISO_FILENAME downloaded"
+  show_progress "$!" "Downloading $ISO_FILENAME" "$ISO_FILENAME downloaded"
   wait "$!"
-  local exit_code=$?
+  local exit_code="$?"
   declare -g DOWNLOAD_METHOD
-  DOWNLOAD_METHOD=$(cat "$method_file" 2>/dev/null)
+  DOWNLOAD_METHOD="$(cat "$method_file" 2>/dev/null)"
   rm -f "$method_file"
 
   if [[ $exit_code -ne 0 ]] || [[ ! -s "pve.iso" ]]; then
@@ -90,7 +90,7 @@ download_proxmox_iso() {
   log_info "Download successful via $DOWNLOAD_METHOD"
 
   local iso_size
-  iso_size=$(stat -c%s pve.iso 2>/dev/null) || iso_size=0
+  iso_size="$(stat -c%s pve.iso 2>/dev/null)" || iso_size=0
   log_info "ISO file size: $(printf '%s\n' "$iso_size" | awk '{printf "%.1fG", $1/1024/1024/1024}')"
 
   # Verify checksum (if not already verified by aria2c)
@@ -111,13 +111,13 @@ download_proxmox_iso() {
       }
       register_temp_file "$checksum_file"
       (actual_checksum=$(sha256sum pve.iso | awk '{print $1}') && printf '%s\n' "$actual_checksum" >"$checksum_file") &
-      local checksum_pid=$!
+      local checksum_pid="$!"
       if type show_progress &>/dev/null 2>&1; then
-        show_progress $checksum_pid "Verifying checksum" "Checksum verified"
+        show_progress "$checksum_pid" "Verifying checksum" "Checksum verified"
       else
         wait "$checksum_pid"
       fi
-      actual_checksum=$(cat "$checksum_file" 2>/dev/null)
+      actual_checksum="$(cat "$checksum_file" 2>/dev/null)"
       rm -f "$checksum_file"
       if [[ $actual_checksum != "$expected_checksum" ]]; then
         log_error "Checksum mismatch! Expected: $expected_checksum, Got: $actual_checksum"

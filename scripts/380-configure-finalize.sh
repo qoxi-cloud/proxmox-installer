@@ -80,7 +80,7 @@ validate_installation() {
 
   # Execute validation and capture output
   start_task "${TREE_BRANCH} Validating installation"
-  local task_idx=$TASK_INDEX
+  local task_idx="$TASK_INDEX"
   local validation_output
   validation_output=$(printf '%s\n' "$validation_script" | remote_exec 'bash -s' 2>&1) || true
   printf '%s\n' "$validation_output" >>"$LOG_FILE"
@@ -121,7 +121,7 @@ finalize_vm() {
       kill -TERM "$QEMU_PID" 2>/dev/null || true
     fi
   ) &
-  show_progress $! "Powering off the VM"
+  show_progress "$!" "Powering off the VM"
 
   # Wait for QEMU to exit
   (
@@ -137,10 +137,10 @@ finalize_vm() {
     done
     exit 1
   ) &
-  local wait_pid=$!
+  local wait_pid="$!"
 
-  show_progress $wait_pid "Waiting for QEMU process to exit" "QEMU process exited"
-  local exit_code=$?
+  show_progress "$wait_pid" "Waiting for QEMU process to exit" "QEMU process exited"
+  local exit_code="$?"
   if [[ $exit_code -ne 0 ]]; then
     log_warn "QEMU process did not exit cleanly within 120 seconds"
     # Force kill if still running

@@ -290,13 +290,16 @@ log_debug "message"  # → DEBUG: message
 ```
 Migrated all 247 log calls across 50+ files to use typed helpers. This prevents typos and ensures consistent prefixes.
 
-### 3. Variable Quoting Style
-Most code correctly quotes variables, but some places have unnecessary quotes:
+### 3. ~~Variable Quoting Style~~ ✓ FIXED
+~~Most code correctly quotes variables, but some places have unnecessary quotes:~~
 ```bash
-local file_size="$(_get_file_size "$file")"  # Quotes not needed for local
+# Now all assignments consistently use quotes
+local exit_code="$?"
+local pid="$!"
+local count="$i"
+declare -g VAR="$(command)"
 ```
-
-Not a bug, but inconsistent with the "always quote" style.
+**Status:** Fixed with consistent "always quote" style across 30+ scripts (~150 assignments updated). Includes `$?`, `$!`, `$1`, arithmetic expressions, command substitutions, and array lengths.
 
 ---
 
@@ -381,7 +384,7 @@ While CLAUDE.md lists common variables, a complete reference with which template
 |----------|-------|-------|
 | Potential Bugs | 5 | 0 |
 | Improvement Suggestions | 8 | 6 |
-| Style Inconsistencies | 3 | 2 |
+| Style Inconsistencies | 3 | 3 |
 | Security Notes | 4 | 0 |
 | Performance Notes | 3 | 0 |
 
@@ -396,3 +399,4 @@ While CLAUDE.md lists common variables, a complete reference with which template
 - Improvement #8: Added inline documentation for template variable escaping rules in `020-templates.sh`
 - Style #1: Standardized on `[[ ]]` test syntax in `011-downloads.sh`, `300-configure-base.sh`, and `372-configure-lvm.sh`
 - Style #2: Added typed log helpers (`log_info`, `log_error`, `log_warn`, `log_debug`) and migrated 247 log calls
+- Style #3: Standardized variable quoting across 30+ scripts (~150 assignments now use "always quote" style)

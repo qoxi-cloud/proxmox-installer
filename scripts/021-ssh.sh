@@ -136,7 +136,7 @@ wait_for_ssh_ready() {
 
   # Port check - wait for VM to boot and open SSH port
   # Allow up to 75% of timeout for port check, but track actual elapsed time
-  local port_timeout=$((timeout * 3 / 4))
+  local port_timeout="$((timeout * 3 / 4))"
   local retry_delay="${RETRY_DELAY_SECONDS:-2}"
   local port_check=0
   local elapsed=0
@@ -156,8 +156,8 @@ wait_for_ssh_ready() {
   fi
 
   # Calculate remaining time for SSH verification
-  local actual_elapsed=$(($(date +%s) - start_time))
-  local ssh_timeout=$((timeout - actual_elapsed))
+  local actual_elapsed="$(($(date +%s) - start_time))"
+  local ssh_timeout="$((timeout - actual_elapsed))"
   if ((ssh_timeout < 10)); then
     ssh_timeout=10 # Minimum 10s for SSH check
   fi
@@ -178,10 +178,10 @@ wait_for_ssh_ready() {
     done
     exit 1
   ) &
-  local wait_pid=$!
+  local wait_pid="$!"
 
-  show_progress $wait_pid "Waiting for SSH to be ready" "SSH connection established"
-  return $?
+  show_progress "$wait_pid" "Waiting for SSH to be ready" "SSH connection established"
+  return "$?"
 }
 
 # SSH key utilities
@@ -197,9 +197,9 @@ parse_ssh_key() {
 
   [[ -z "$key" ]] && return 1
 
-  declare -g SSH_KEY_TYPE=$(printf '%s\n' "$key" | awk '{print $1}')
-  declare -g SSH_KEY_DATA=$(printf '%s\n' "$key" | awk '{print $2}')
-  declare -g SSH_KEY_COMMENT=$(printf '%s\n' "$key" | awk '{$1=""; $2=""; print}' | sed 's/^ *//')
+  declare -g SSH_KEY_TYPE="$(printf '%s\n' "$key" | awk '{print $1}')"
+  declare -g SSH_KEY_DATA="$(printf '%s\n' "$key" | awk '{print $2}')"
+  declare -g SSH_KEY_COMMENT="$(printf '%s\n' "$key" | awk '{$1=""; $2=""; print}' | sed 's/^ *//')"
 
   if [[ ${#SSH_KEY_DATA} -gt 35 ]]; then
     declare -g SSH_KEY_SHORT="${SSH_KEY_DATA:0:20}...${SSH_KEY_DATA: -10}"

@@ -11,8 +11,8 @@ _virtio_name_for_index() {
     printf 'vd%s\n' "${letters:$idx:1}"
   else
     # After vdz: vdaa, vdab, ..., vdaz, vdba, ...
-    local prefix_idx=$(((idx - 26) / 26))
-    local suffix_idx=$(((idx - 26) % 26))
+    local prefix_idx="$(((idx - 26) / 26))"
+    local suffix_idx="$(((idx - 26) % 26))"
     printf 'vd%s%s\n' "${letters:$prefix_idx:1}" "${letters:$suffix_idx:1}"
   fi
 }
@@ -165,7 +165,7 @@ build_zpool_command() {
     raid10)
       # RAID10: pair up disks for striped mirrors
       # Example: mirror vda vdb mirror vdc vdd
-      local vdev_count=${#vdevs[@]}
+      local vdev_count="${#vdevs[@]}"
       if ((vdev_count < 4)); then
         log_error "raid10 requires at least 4 vdevs, got $vdev_count"
         return 1

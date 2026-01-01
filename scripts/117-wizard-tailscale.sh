@@ -73,7 +73,7 @@ _edit_tailscale() {
 
   local result
   _wiz_toggle "INSTALL_TAILSCALE" "Tailscale:"
-  result=$?
+  result="$?"
 
   if [[ $result -eq 1 ]]; then
     return

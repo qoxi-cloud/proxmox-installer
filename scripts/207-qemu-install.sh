@@ -38,7 +38,7 @@ EOF
     # Release any locks on drives before QEMU starts
     release_drives
   ) &
-  local prep_pid=$!
+  local prep_pid="$!"
 
   # Wait for config file to be ready
   local timeout=10
@@ -60,7 +60,7 @@ EOF
     rm -f "$qemu_config_file"
   fi
 
-  show_progress $prep_pid "Starting QEMU (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)" "QEMU started (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)"
+  show_progress "$prep_pid" "Starting QEMU (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)" "QEMU started (${QEMU_CORES} vCPUs, ${QEMU_RAM}MB RAM)"
 
   # Add subtasks after preparation completes
   if [[ $UEFI_MODE == "yes" ]]; then
@@ -78,7 +78,7 @@ EOF
     -boot d -cdrom ./pve-autoinstall.iso \
     $DRIVE_ARGS -no-reboot -display none >qemu_install.log 2>&1 &
 
-  local qemu_pid=$!
+  local qemu_pid="$!"
 
   # Give QEMU a moment to start or fail
   sleep "${RETRY_DELAY_SECONDS:-2}"
@@ -92,7 +92,7 @@ EOF
   fi
 
   show_progress "$qemu_pid" "Installing Proxmox VE" "Proxmox VE installed"
-  local exit_code=$?
+  local exit_code="$?"
 
   # Verify installation completed (QEMU exited cleanly)
   if [[ $exit_code -ne 0 ]]; then
@@ -128,7 +128,7 @@ boot_proxmox_with_port_forwarding() {
     $DRIVE_ARGS -display none \
     >qemu_output.log 2>&1 &
 
-  declare -g QEMU_PID=$!
+  declare -g QEMU_PID="$!"
 
   # Wait for port to be open first (in background for show_progress)
   local timeout="${QEMU_BOOT_TIMEOUT:-300}"
@@ -146,10 +146,10 @@ boot_proxmox_with_port_forwarding() {
     done
     exit 1
   ) 2>/dev/null &
-  local wait_pid=$!
+  local wait_pid="$!"
 
-  show_progress $wait_pid "Booting installed Proxmox" "Proxmox booted"
-  local exit_code=$?
+  show_progress "$wait_pid" "Booting installed Proxmox" "Proxmox booted"
+  local exit_code="$?"
 
   if [[ $exit_code -ne 0 ]]; then
     log_error "Timeout waiting for SSH port"

@@ -83,7 +83,7 @@ run_with_progress() {
   (
     "$@" || exit 1
   ) >/dev/null 2>&1 &
-  show_progress $! "$message" "$done_message"
+  show_progress "$!" "$message" "$done_message"
 }
 
 # Deploy .service + .timer and enable. $1=timer_name, $2=template_dir (optional)

@@ -203,7 +203,7 @@ EOF
 
   # Add subtasks for live log display
   if type live_log_subtask &>/dev/null 2>&1; then
-    local total_disks=${#ZFS_POOL_DISKS[@]}
+    local total_disks="${#ZFS_POOL_DISKS[@]}"
     [[ -n $BOOT_DISK ]] && ((total_disks++))
     live_log_subtask "Mapped $total_disks disk(s) to virtio"
     live_log_subtask "Generated answer.toml ($FILESYSTEM)"
@@ -219,8 +219,8 @@ make_autoinstall_iso() {
 
   # Run ISO creation with full logging
   proxmox-auto-install-assistant prepare-iso pve.iso --fetch-from iso --answer-file answer.toml --output pve-autoinstall.iso >>"$LOG_FILE" 2>&1 &
-  show_progress $! "Creating autoinstall ISO" "Autoinstall ISO created"
-  local exit_code=$?
+  show_progress "$!" "Creating autoinstall ISO" "Autoinstall ISO created"
+  local exit_code="$?"
   if [[ $exit_code -ne 0 ]]; then
     log_warn "proxmox-auto-install-assistant exited with code $exit_code"
   fi

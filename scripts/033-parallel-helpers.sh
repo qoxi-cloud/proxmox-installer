@@ -185,7 +185,7 @@ run_parallel_group() {
   local pids=()
   for func in "${funcs[@]}"; do
     _run_parallel_task "$result_dir" "$i" "$func" &
-    pids+=($!)
+    pids+=("$!")
     ((i++))
     ((running++))
 
@@ -195,12 +195,12 @@ run_parallel_group() {
       for ((j = 0; j < i; j++)); do
         [[ -f "$result_dir/success_$j" || -f "$result_dir/fail_$j" ]] && ((completed++))
       done
-      running=$((i - completed))
+      running="$((i - completed))"
       ((running >= max_jobs)) && sleep 0.1
     done
   done
 
-  local count=$i
+  local count="$i"
 
   # Wait for all with single progress
   (
@@ -213,7 +213,7 @@ run_parallel_group() {
       sleep "${PROGRESS_POLL_INTERVAL:-0.2}"
     done
   ) &
-  show_progress $! "$group_name" "$done_msg"
+  show_progress "$!" "$group_name" "$done_msg"
 
   # Collect configured features for display
   local configured=()

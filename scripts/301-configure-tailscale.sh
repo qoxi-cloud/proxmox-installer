@@ -54,7 +54,7 @@ _config_tailscale() {
         log_error "tailscale up command failed"
       fi
     ) >/dev/null 2>&1 &
-    show_progress $! "Authenticating Tailscale"
+    show_progress "$!" "Authenticating Tailscale"
 
     # Check if authentication succeeded
     local auth_result
@@ -89,7 +89,7 @@ _config_tailscale() {
           remote_exec "systemctl daemon-reload && systemctl enable disable-openssh.service" >/dev/null || exit 1
           log_info "Enabled disable-openssh.service"
         ) &
-        show_progress $! "Configuring OpenSSH disable on boot" "OpenSSH disable configured"
+        show_progress "$!" "Configuring OpenSSH disable on boot" "OpenSSH disable configured"
       else
         log_info "Skipping disable-openssh.service (FIREWALL_MODE=${FIREWALL_MODE:-standard})"
       fi

@@ -52,13 +52,13 @@ _ssl_check_dns_animated() {
     printf '%s\n%s\n' "$?" "$DNS_RESOLVED_IP" >"$dns_result_file"
   ) >/dev/null 2>&1 &
 
-  local dns_pid=$!
+  local dns_pid="$!"
 
   printf "%s" "${CLR_CYAN}Validating DNS resolution${CLR_RESET}"
   local animation_counter=0
   while kill -0 "$dns_pid" 2>/dev/null; do
     sleep 0.3
-    local dots_count=$(((animation_counter % 3) + 1))
+    local dots_count="$(((animation_counter % 3) + 1))"
     local dots=""
     for ((d = 0; d < dots_count; d++)); do dots+="."; done
     printf "\r%sValidating DNS resolution%s%-3s%s" "${CLR_CYAN}" "${CLR_ORANGE}" "$dots" "${CLR_RESET}"
@@ -110,7 +110,7 @@ _ssl_validate_letsencrypt() {
 
   local dns_result
   _ssl_check_dns_animated
-  dns_result=$?
+  dns_result="$?"
 
   if [[ $dns_result -ne 0 ]]; then
     _ssl_show_dns_error "$dns_result"

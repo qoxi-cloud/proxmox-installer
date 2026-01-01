@@ -19,7 +19,7 @@ run_batch_copies() {
     local src="${pair%%:*}"
     local dst="${pair#*:}"
     remote_copy "$src" "$dst" &
-    pids+=($!)
+    pids+=("$!")
   done
 
   # Wait for all copies and track failures
@@ -83,7 +83,7 @@ start_async_feature() {
   [[ $flag_value != "yes" ]] && return 0
 
   "configure_${feature}" >>"$LOG_FILE" 2>&1 &
-  echo $!
+  echo "$!"
 }
 
 # Wait for async feature and log result. $1=feature, $2=pid

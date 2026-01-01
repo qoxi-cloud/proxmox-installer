@@ -169,7 +169,7 @@ _edit_zfs_mode() {
     ""
 
   # Use pool disk count, not total DRIVE_COUNT
-  local pool_count=${#ZFS_POOL_DISKS[@]}
+  local pool_count="${#ZFS_POOL_DISKS[@]}"
 
   # Build options based on pool count
   local options=""

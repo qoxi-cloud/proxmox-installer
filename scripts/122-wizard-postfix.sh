@@ -83,7 +83,7 @@ _edit_postfix() {
 
   local result
   _wiz_toggle "INSTALL_POSTFIX" "Postfix:"
-  result=$?
+  result="$?"
 
   if [[ $result -eq 1 ]]; then
     return

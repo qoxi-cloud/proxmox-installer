@@ -36,8 +36,8 @@ setup_qemu_config() {
     log_info "Using user-specified cores: $QEMU_CORES"
   else
     # Use all available cores for QEMU
-    declare -g QEMU_CORES=$available_cores
-    [[ $QEMU_CORES -lt $MIN_CPU_CORES ]] && declare -g QEMU_CORES=$MIN_CPU_CORES
+    declare -g QEMU_CORES="$available_cores"
+    [[ $QEMU_CORES -lt $MIN_CPU_CORES ]] && declare -g QEMU_CORES="$MIN_CPU_CORES"
   fi
 
   if [[ -n $QEMU_RAM_OVERRIDE ]]; then
@@ -49,8 +49,8 @@ setup_qemu_config() {
     fi
   else
     # Use all available RAM minus reserve for host
-    declare -g QEMU_RAM=$((available_ram_mb - QEMU_MIN_RAM_RESERVE))
-    [[ $QEMU_RAM -lt $MIN_QEMU_RAM ]] && declare -g QEMU_RAM=$MIN_QEMU_RAM
+    declare -g QEMU_RAM="$((available_ram_mb - QEMU_MIN_RAM_RESERVE))"
+    [[ $QEMU_RAM -lt $MIN_QEMU_RAM ]] && declare -g QEMU_RAM="$MIN_QEMU_RAM"
   fi
 
   log_info "QEMU config: $QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM"

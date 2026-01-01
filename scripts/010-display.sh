@@ -41,7 +41,7 @@ print_info() {
 
 # Show gum spinner while process runs. $1=pid, $2=message, $3=done_msg/--silent
 show_progress() {
-  local pid=$1
+  local pid="$1"
   local message="${2:-Processing}"
   local done_message="${3:-$message}"
   local silent=false
@@ -58,7 +58,7 @@ show_progress() {
 
   # Get exit code from the original process
   wait "$pid" 2>/dev/null
-  local exit_code=$?
+  local exit_code="$?"
 
   if [[ $exit_code -eq 0 ]]; then
     if [[ $silent != true ]]; then
@@ -77,11 +77,11 @@ format_wizard_header() {
 
   # Use global constants for centering (from 000-init.sh and 003-banner.sh)
   local banner_pad="$_BANNER_PAD"
-  local line_width=$((BANNER_WIDTH - 3)) # minus 3 as requested
+  local line_width="$((BANNER_WIDTH - 3))" # minus 3 as requested
 
   # Calculate line segments: left line + dot + right line = line_width
   # Dot takes 1 char, so each side = (line_width - 1) / 2
-  local half=$(((line_width - 1) / 2))
+  local half="$(((line_width - 1) / 2))"
   local left_line="" right_line="" i
 
   # Use loop instead of tr (tr breaks multi-byte unicode chars on macOS)
@@ -93,9 +93,9 @@ format_wizard_header() {
   done
 
   # Center title above the dot (dot is at position 'half' from line start)
-  local title_len=${#title}
-  local dot_pos=$half
-  local title_start=$((dot_pos - title_len / 2))
+  local title_len="${#title}"
+  local dot_pos="$half"
+  local title_start="$((dot_pos - title_len / 2))"
   local title_spaces=""
   ((title_start > 0)) && title_spaces=$(printf '%*s' "$title_start" '')
 

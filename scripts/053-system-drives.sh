@@ -5,13 +5,13 @@
 detect_drives() {
   # Find all NVMe drives (excluding partitions)
   mapfile -t DRIVES < <(lsblk -d -n -o NAME,TYPE | grep nvme | grep disk | awk '{print "/dev/"$1}' | sort)
-  declare -g DRIVE_COUNT=${#DRIVES[@]}
+  declare -g DRIVE_COUNT="${#DRIVES[@]}"
 
   # Fall back to any available disk if no NVMe found (for budget servers)
   if [[ $DRIVE_COUNT -eq 0 ]]; then
     # Find any disk (sda, vda, etc.) excluding loop devices
     mapfile -t DRIVES < <(lsblk -d -n -o NAME,TYPE | grep disk | grep -v loop | awk '{print "/dev/"$1}' | sort)
-    declare -g DRIVE_COUNT=${#DRIVES[@]}
+    declare -g DRIVE_COUNT="${#DRIVES[@]}"
   fi
 
   # Collect drive info
@@ -21,9 +21,9 @@ detect_drives() {
 
   for drive in "${DRIVES[@]}"; do
     local name size model
-    name=$(basename "$drive")
-    size=$(lsblk -d -n -o SIZE "$drive" | xargs)
-    model=$(lsblk -d -n -o MODEL "$drive" 2>/dev/null | xargs || echo "Disk")
+    name="$(basename "$drive")"
+    size="$(lsblk -d -n -o SIZE "$drive" | xargs)"
+    model="$(lsblk -d -n -o MODEL "$drive" 2>/dev/null | xargs || echo "Disk")"
     DRIVE_NAMES+=("$name")
     DRIVE_SIZES+=("$size")
     DRIVE_MODELS+=("$model")
@@ -75,16 +75,16 @@ detect_disk_roles() {
   done
 
   # Find min/max sizes
-  local min_size=${size_bytes[0]}
-  local max_size=${size_bytes[0]}
+  local min_size="${size_bytes[0]}"
+  local max_size="${size_bytes[0]}"
   for size in "${size_bytes[@]}"; do
     [[ $size -lt $min_size ]] && min_size=$size
     [[ $size -gt $max_size ]] && max_size=$size
   done
 
   # Check if sizes differ by >10%
-  local size_diff=$((max_size - min_size))
-  local threshold=$((min_size / 10))
+  local size_diff="$((max_size - min_size))"
+  local threshold="$((min_size / 10))"
 
   if [[ $size_diff -le $threshold ]]; then
     # All same size → all in pool

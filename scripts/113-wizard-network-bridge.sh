@@ -13,7 +13,7 @@ _edit_interface() {
   local available_interfaces=${AVAILABLE_INTERFACES:-$INTERFACE_NAME}
 
   # Calculate footer size: 1 header + number of interfaces
-  local footer_size=$((interface_count + 1))
+  local footer_size="$((interface_count + 1))"
   _show_input_footer "filter" "$footer_size"
 
   local selected

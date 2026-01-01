@@ -4,8 +4,8 @@
 # Get terminal dimensions. Sets _LOG_TERM_HEIGHT, _LOG_TERM_WIDTH.
 get_terminal_dimensions() {
   if [[ -t 1 && -n ${TERM:-} ]]; then
-    declare -g _LOG_TERM_HEIGHT=$(tput lines 2>/dev/null) || declare -g _LOG_TERM_HEIGHT=24
-    declare -g _LOG_TERM_WIDTH=$(tput cols 2>/dev/null) || declare -g _LOG_TERM_WIDTH=80
+    declare -g _LOG_TERM_HEIGHT="$(tput lines 2>/dev/null)" || declare -g _LOG_TERM_HEIGHT=24
+    declare -g _LOG_TERM_WIDTH="$(tput cols 2>/dev/null)" || declare -g _LOG_TERM_WIDTH=80
   else
     declare -g _LOG_TERM_HEIGHT=24
     declare -g _LOG_TERM_WIDTH=80
@@ -22,7 +22,7 @@ HEADER_HEIGHT=4
 # Calculate log area height. Sets LOG_AREA_HEIGHT.
 calculate_log_area() {
   get_terminal_dimensions
-  declare -g LOG_AREA_HEIGHT=$((_LOG_TERM_HEIGHT - LOGO_HEIGHT - HEADER_HEIGHT - 1))
+  declare -g LOG_AREA_HEIGHT="$((_LOG_TERM_HEIGHT - LOGO_HEIGHT - HEADER_HEIGHT - 1))"
 }
 
 # Array to store log lines
@@ -58,7 +58,7 @@ render_logs() {
   local start_line=0
   local lines_printed=0
   if ((LOG_COUNT > LOG_AREA_HEIGHT)); then
-    start_line=$((LOG_COUNT - LOG_AREA_HEIGHT))
+    start_line="$((LOG_COUNT - LOG_AREA_HEIGHT))"
   fi
   for ((i = start_line; i < LOG_COUNT; i++)); do
     printf '%s\033[K\n' "${LOG_LINES[$i]}"
@@ -66,7 +66,7 @@ render_logs() {
   done
 
   # Clear any remaining lines below (in case log count decreased)
-  local remaining=$((LOG_AREA_HEIGHT - lines_printed))
+  local remaining="$((LOG_AREA_HEIGHT - lines_printed))"
   for ((i = 0; i < remaining; i++)); do
     printf '\033[K\n'
   done
@@ -76,7 +76,7 @@ render_logs() {
 start_task() {
   local message="$1"
   add_log "$message..."
-  declare -g TASK_INDEX=$((LOG_COUNT - 1))
+  declare -g TASK_INDEX="$((LOG_COUNT - 1))"
 }
 
 # Complete task with status. $1=idx, $2=message, $3=status (success/error/warning)
@@ -129,7 +129,7 @@ finish_live_installation() {
 
 # Show progress with animated dots. $1=pid, $2=message, $3=done_msg, $4=--silent
 live_show_progress() {
-  local pid=$1
+  local pid="$1"
   local message="${2:-Processing}"
   local done_message="${3:-$message}"
   local silent=false
@@ -138,14 +138,14 @@ live_show_progress() {
 
   # Add task to live display with spinner
   start_task "${TREE_BRANCH} ${message}"
-  local task_idx=$TASK_INDEX
+  local task_idx="$TASK_INDEX"
 
   # Wait for process with periodic updates
   local animation_counter=0
   while kill -0 "$pid" 2>/dev/null; do
     sleep 0.3 # Animation timing, kept at 0.3 for visual smoothness
     # Update the task line with animated dots (orange)
-    local dots_count=$(((animation_counter % 3) + 1))
+    local dots_count="$(((animation_counter % 3) + 1))"
     local dots=""
     for ((d = 0; d < dots_count; d++)); do dots+="."; done
     LOG_LINES[task_idx]="${TREE_BRANCH} ${message}${CLR_ORANGE}${dots}${CLR_RESET}"
@@ -155,7 +155,7 @@ live_show_progress() {
 
   # Get exit code
   wait "$pid" 2>/dev/null
-  local exit_code=$?
+  local exit_code="$?"
 
   # Update with final status
   if [[ $exit_code -eq 0 ]]; then

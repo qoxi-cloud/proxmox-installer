@@ -18,7 +18,7 @@ show_banner() {
   local tagline="${CLR_CYAN}Qoxi ${CLR_GRAY}Automated Installer ${CLR_GOLD}${VERSION}${CLR_RESET}"
   # Center the tagline within banner width
   local text="Qoxi Automated Installer ${VERSION}"
-  local pad=$(((BANNER_WIDTH - ${#text}) / 2))
+  local pad="$(((BANNER_WIDTH - ${#text}) / 2))"
   local spaces
   printf -v spaces '%*s' "$pad" ''
   printf '%s\n' \
@@ -96,7 +96,7 @@ _show_banner_frame() {
 
   # Tagline (centered within banner width)
   local text="Qoxi Automated Installer ${VERSION}"
-  local pad=$(((BANNER_WIDTH - ${#text}) / 2))
+  local pad="$(((BANNER_WIDTH - ${#text}) / 2))"
   local spaces
   printf -v spaces '%*s' "$pad" ''
   local line_tagline="${p}${spaces}${CLR_CYAN}Qoxi ${M}Automated Installer ${CLR_GOLD}${VERSION}${R}"
@@ -159,7 +159,7 @@ show_banner_animated_start() {
       if [[ $direction -eq 1 ]]; then
         ((current_letter++))
         if [[ $current_letter -ge $BANNER_LETTER_COUNT ]]; then
-          current_letter=$((BANNER_LETTER_COUNT - 2))
+          current_letter="$((BANNER_LETTER_COUNT - 2))"
           direction=-1
         fi
       else
@@ -172,7 +172,7 @@ show_banner_animated_start() {
     done
   ) &
 
-  declare -g BANNER_ANIMATION_PID=$!
+  declare -g BANNER_ANIMATION_PID="$!"
 }
 
 # Stop background animated banner, show static banner

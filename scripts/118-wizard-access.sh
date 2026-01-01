@@ -74,7 +74,7 @@ _edit_api_token() {
 
   local result
   _wiz_toggle "INSTALL_API_TOKEN" "API Token (privileged, no expiration):"
-  result=$?
+  result="$?"
 
   [[ $result -eq 1 ]] && return
   [[ $result -ne 2 ]] && return

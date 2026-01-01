@@ -100,7 +100,7 @@ parse_cli_args() {
 # shellcheck disable=SC2317
 if [[ ${BASH_SOURCE[0]} == "$0" ]] || [[ ${_CLI_PARSE_ON_SOURCE:-true} == "true" ]]; then
   parse_cli_args "$@"
-  _cli_ret=$?
+  _cli_ret="$?"
   if [[ $_cli_ret -eq 2 ]]; then
     exit 0
   elif [[ $_cli_ret -ne 0 ]]; then

@@ -100,9 +100,9 @@ _edit_pool_disks() {
 
     local available_count
     if [[ -n $BOOT_DISK ]]; then
-      available_count=$((DRIVE_COUNT - 1))
+      available_count="$((DRIVE_COUNT - 1))"
     else
-      available_count=$DRIVE_COUNT
+      available_count="$DRIVE_COUNT"
     fi
     _show_input_footer "checkbox" "$((available_count + 1))"
 
@@ -113,7 +113,7 @@ _edit_pool_disks() {
 
     local selected
     local gum_exit_code=0
-    selected=$(printf '%s\n' "$options" | _wiz_choose_multi "${gum_args[@]}") || gum_exit_code=$?
+    selected=$(printf '%s\n' "$options" | _wiz_choose_multi "${gum_args[@]}") || gum_exit_code="$?"
 
     # ESC/cancel (any non-zero exit) - keep existing selection
     if [[ $gum_exit_code -ne 0 ]]; then
@@ -154,7 +154,7 @@ _rebuild_pool_disks() {
 # Resets ZFS_RAID if current mode is incompatible with pool disk count.
 # Update ZFS RAID options after pool disk changes
 _update_zfs_mode_options() {
-  local pool_count=${#ZFS_POOL_DISKS[@]}
+  local pool_count="${#ZFS_POOL_DISKS[@]}"
   # Reset ZFS_RAID if incompatible
   case "$ZFS_RAID" in
     single) [[ $pool_count -ne 1 ]] && declare -g ZFS_RAID="" ;;

@@ -19,7 +19,7 @@ download_file() {
     else
       print_warning "Download failed (attempt $((retry_count + 1))/$max_retries): $url"
     fi
-    retry_count=$((retry_count + 1))
+    retry_count="$((retry_count + 1))"
     [[ "$retry_count" -lt "$max_retries" ]] && sleep "$retry_delay"
   done
 

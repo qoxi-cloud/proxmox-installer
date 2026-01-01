@@ -27,16 +27,16 @@ _config_zfs_arc() {
       # 16-64GB: 40% of RAM
       # > 64GB: 50% of RAM
       if [[ $total_ram_mb -lt 16384 ]]; then
-        arc_max_mb=$((total_ram_mb * 25 / 100))
+        arc_max_mb="$((total_ram_mb * 25 / 100))"
       elif [[ $total_ram_mb -lt 65536 ]]; then
-        arc_max_mb=$((total_ram_mb * 40 / 100))
+        arc_max_mb="$((total_ram_mb * 40 / 100))"
       else
-        arc_max_mb=$((total_ram_mb / 2))
+        arc_max_mb="$((total_ram_mb / 2))"
       fi
       ;;
     storage-focused)
       # Use 50% of RAM (ZFS default behavior)
-      arc_max_mb=$((total_ram_mb / 2))
+      arc_max_mb="$((total_ram_mb / 2))"
       ;;
     *)
       log_error "Invalid ZFS_ARC_MODE: $ZFS_ARC_MODE"
@@ -44,7 +44,7 @@ _config_zfs_arc() {
       ;;
   esac
 
-  local arc_max_bytes=$((arc_max_mb * 1024 * 1024))
+  local arc_max_bytes="$((arc_max_mb * 1024 * 1024))"
 
   log_info "ZFS ARC: ${arc_max_mb}MB (Total RAM: ${total_ram_mb}MB, Mode: $ZFS_ARC_MODE)"
 

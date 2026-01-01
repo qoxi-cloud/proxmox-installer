@@ -17,15 +17,15 @@ _NAV_COL_WIDTH=10
 _wiz_center() {
   local text="$1"
   local term_width
-  term_width=$(tput cols 2>/dev/null || echo 80)
+  term_width="$(tput cols 2>/dev/null || echo 80)"
 
   # Strip ANSI escape codes to get visible length (using $'\e' for portability)
   local visible_text
-  visible_text=$(printf '%s' "$text" | sed $'s/\e\\[[0-9;]*m//g')
-  local text_len=${#visible_text}
+  visible_text="$(printf '%s' "$text" | sed $'s/\e\\[[0-9;]*m//g')"
+  local text_len="${#visible_text}"
 
   # Calculate padding
-  local padding=$(((term_width - text_len) / 2))
+  local padding="$(((term_width - text_len) / 2))"
   ((padding < 0)) && padding=0
 
   # Print padding + text
@@ -78,13 +78,13 @@ _nav_line() {
 # Shows: screen names row + dots with connecting lines row.
 # Uses: CLR_CYAN for completed, CLR_ORANGE for active, CLR_GRAY for pending.
 _wiz_render_nav() {
-  local current=$WIZ_CURRENT_SCREEN
-  local total=${#WIZ_SCREENS[@]}
-  local col=$_NAV_COL_WIDTH
+  local current="$WIZ_CURRENT_SCREEN"
+  local total="${#WIZ_SCREENS[@]}"
+  local col="$_NAV_COL_WIDTH"
 
   # Calculate padding to center relative to terminal width
-  local nav_width=$((col * total))
-  local pad_left=$(((TERM_WIDTH - nav_width) / 2))
+  local nav_width="$((col * total))"
+  local pad_left="$(((TERM_WIDTH - nav_width) / 2))"
   local padding=""
   ((pad_left > 0)) && padding=$(printf '%*s' $pad_left '')
 
@@ -92,9 +92,9 @@ _wiz_render_nav() {
   local labels="$padding"
   for i in "${!WIZ_SCREENS[@]}"; do
     local name="${WIZ_SCREENS[$i]}"
-    local name_len=${#name}
-    local pad_left=$(((col - name_len) / 2))
-    local pad_right=$((col - name_len - pad_left))
+    local name_len="${#name}"
+    local pad_left="$(((col - name_len) / 2))"
+    local pad_right="$((col - name_len - pad_left))"
     local centered
     centered=$(printf '%*s%s%*s' $pad_left '' "$name" $pad_right '')
     labels+="$(_nav_color "$i" "$current")${centered}${CLR_RESET}"
@@ -102,8 +102,8 @@ _wiz_render_nav() {
 
   # Dots with connecting lines row
   local dots="$padding"
-  local center_pad=$(((col - 1) / 2))
-  local right_pad=$((col - center_pad - 1))
+  local center_pad="$(((col - 1) / 2))"
+  local right_pad="$((col - center_pad - 1))"
 
   for i in "${!WIZ_SCREENS[@]}"; do
     local color line_color dot
