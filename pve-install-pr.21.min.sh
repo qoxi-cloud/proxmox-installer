@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.775-pr.21"
+readonly VERSION="2.0.777-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -38,7 +38,7 @@ readonly DOWNLOAD_RETRY_DELAY=2
 readonly SSH_CONNECT_TIMEOUT=10
 readonly SSH_PORT_QEMU=5555
 readonly PORT_SSH=22
-readonly PORT_PROXMOX_UI=8006
+readonly PORT_PROXMOX_UI=443
 readonly DEFAULT_PASSWORD_LENGTH=16
 readonly QEMU_MIN_RAM_RESERVE=2048
 readonly DNS_LOOKUP_TIMEOUT=5
@@ -701,7 +701,7 @@ apply_template_vars "$file" \
 "COUNTRY=${COUNTRY:-US}" \
 "BAT_THEME=${BAT_THEME:-Catppuccin Mocha}" \
 "PORT_SSH=${PORT_SSH:-22}" \
-"PORT_PROXMOX_UI=${PORT_PROXMOX_UI:-8006}"
+"PORT_PROXMOX_UI=${PORT_PROXMOX_UI:-443}"
 }
 download_template(){
 local local_path="$1"
@@ -3993,7 +3993,7 @@ _wiz_description \
 "" \
 "  {{cyan:Stealth}}:  Blocks ALL incoming (Tailscale/bridges only)" \
 "  {{cyan:Strict}}:   Allows SSH only (port 22)" \
-"  {{cyan:Standard}}: Allows SSH + Proxmox Web UI (8006)" \
+"  {{cyan:Standard}}: Allows SSH + Proxmox Web UI (443)" \
 "  {{cyan:Disabled}}: No firewall rules" \
 "" \
 "  Note: VMs always have full network access via bridges." \
@@ -4336,7 +4336,7 @@ _wiz_description \
 "  {{cyan:Enabled}}:  Access Web UI at https://<tailscale-hostname>" \
 "  {{cyan:Disabled}}: Web UI only via direct IP" \
 "" \
-"  Uses: tailscale serve --bg --https=443 https://127.0.0.1:8006" \
+"  Uses: tailscale serve --bg --https=443 https://127.0.0.1:443" \
 ""
 _show_input_footer "filter" 3
 _wiz_toggle "TAILSCALE_WEBUI" "Tailscale Web UI:" "no"
@@ -5142,6 +5142,7 @@ local -a template_list=(
 "./templates/sshd_config:sshd_config"
 "./templates/resolv.conf:resolv.conf"
 "./templates/journald.conf:journald.conf"
+"./templates/pveproxy-default:pveproxy-default"
 "./templates/locale.sh:locale.sh"
 "./templates/default-locale:default-locale"
 "./templates/environment:environment"
@@ -5843,7 +5844,8 @@ run_batch_copies \
 "templates/debian.sources:/etc/apt/sources.list.d/debian.sources" \
 "templates/proxmox.sources:/etc/apt/sources.list.d/proxmox.sources" \
 "templates/resolv.conf:/etc/resolv.conf" \
-"templates/journald.conf:/etc/systemd/journald.conf.d/00-proxmox.conf"
+"templates/journald.conf:/etc/systemd/journald.conf.d/00-proxmox.conf" \
+"templates/pveproxy-default:/etc/default/pveproxy"
 }
 _apply_basic_settings(){
 remote_exec "[ -f /etc/apt/sources.list ] && mv /etc/apt/sources.list /etc/apt/sources.list.bak"||return 1
@@ -6018,7 +6020,7 @@ TAILSCALE_HOSTNAME=$(cat "$tmp_hostname" 2>/dev/null||printf '\n')
 complete_task "$TASK_INDEX" "$CLR_ORANGE├─$CLR_RESET Tailscale authenticated. IP: $TAILSCALE_IP"
 if [[ $TAILSCALE_WEBUI == "yes" ]];then
 remote_run "Configuring Tailscale Serve" \
-'tailscale serve --bg --https=443 https://127.0.0.1:8006' \
+'tailscale serve --bg --https=443 https://127.0.0.1:443' \
 "Proxmox Web UI available via Tailscale Serve"
 fi
 if [[ ${FIREWALL_MODE:-standard} == "stealth" ]];then
@@ -6141,7 +6143,7 @@ _config_system_services
 _generate_port_rules(){
 local mode="${1:-standard}"
 local ssh="${PORT_SSH:-22}"
-local webui="${PORT_PROXMOX_UI:-8006}"
+local webui="${PORT_PROXMOX_UI:-443}"
 case "$mode" in
 stealth)cat <<'EOF'
         # Stealth mode: all public ports blocked
@@ -7236,7 +7238,7 @@ stealth)if
 [[ $has_tailscale == "yes" ]]
 then
 _cred_field "SSH              " "${CLR_CYAN}ssh $ADMIN_USERNAME@$TAILSCALE_IP$CLR_RESET" "(Tailscale)"
-_cred_field "Web UI           " "${CLR_CYAN}https://$TAILSCALE_IP:8006$CLR_RESET" "(Tailscale)"
+_cred_field "Web UI           " "${CLR_CYAN}https://$TAILSCALE_IP$CLR_RESET" "(Tailscale)"
 else
 _cred_field "SSH              " "${CLR_YELLOW}blocked$CLR_RESET" "(stealth mode)"
 _cred_field "Web UI           " "${CLR_YELLOW}blocked$CLR_RESET" "(stealth mode)"
@@ -7245,15 +7247,15 @@ fi
 strict)_cred_field "SSH              " "${CLR_CYAN}ssh $ADMIN_USERNAME@$MAIN_IPV4$CLR_RESET"
 if [[ $has_tailscale == "yes" ]];then
 _cred_field "" "${CLR_CYAN}ssh $ADMIN_USERNAME@$TAILSCALE_IP$CLR_RESET" "(Tailscale)"
-_cred_field "Web UI           " "${CLR_CYAN}https://$TAILSCALE_IP:8006$CLR_RESET" "(Tailscale)"
+_cred_field "Web UI           " "${CLR_CYAN}https://$TAILSCALE_IP$CLR_RESET" "(Tailscale)"
 else
 _cred_field "Web UI           " "${CLR_YELLOW}blocked$CLR_RESET" "(strict mode)"
 fi
 ;;
 *)_cred_field "SSH              " "${CLR_CYAN}ssh $ADMIN_USERNAME@$MAIN_IPV4$CLR_RESET"
 [[ $has_tailscale == "yes" ]]&&_cred_field "" "${CLR_CYAN}ssh $ADMIN_USERNAME@$TAILSCALE_IP$CLR_RESET" "(Tailscale)"
-_cred_field "Web UI           " "${CLR_CYAN}https://$MAIN_IPV4:8006$CLR_RESET"
-[[ $has_tailscale == "yes" ]]&&_cred_field "" "${CLR_CYAN}https://$TAILSCALE_IP:8006$CLR_RESET" "(Tailscale)"
+_cred_field "Web UI           " "${CLR_CYAN}https://$MAIN_IPV4$CLR_RESET"
+[[ $has_tailscale == "yes" ]]&&_cred_field "" "${CLR_CYAN}https://$TAILSCALE_IP$CLR_RESET" "(Tailscale)"
 esac
 if [[ -f $_TEMP_API_TOKEN_FILE ]];then
 if grep -qvE '^API_TOKEN_(VALUE|ID|NAME)=' "$_TEMP_API_TOKEN_FILE";then
