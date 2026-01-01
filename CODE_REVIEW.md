@@ -213,18 +213,16 @@ wait_async_feature "yazi" "$yazi_pid"
 ```
 **Status:** Fixed with `start_async_feature` and `wait_async_feature` helpers in `034-deploy-helpers.sh`.
 
-### 6. Add Input Validation for CLI Arguments
+### 6. ~~Add Input Validation for CLI Arguments~~ ✓ FIXED
 **File:** `scripts/005-cli.sh:49-56`
 
-The RAM/cores validation is good but could be more robust:
+~~The RAM/cores validation is good but could be more robust:~~
 ```bash
-if ! [[ $2 =~ ^[0-9]+$ ]] || [[ $2 -lt 2048 ]]; then
+# Now implemented with digit limits for overflow protection
+if ! [[ $2 =~ ^[0-9]{1,6}$ ]] || [[ $2 -lt 2048 ]]; then  # RAM (max 6 digits)
+if ! [[ $2 =~ ^[0-9]{1,3}$ ]] || [[ $2 -lt 1 ]]; then    # Cores (max 3 digits)
 ```
-
-**Suggestion:** Add explicit overflow protection for very large numbers:
-```bash
-if ! [[ $2 =~ ^[0-9]{1,6}$ ]] || [[ $2 -lt 2048 ]]; then
-```
+**Status:** Fixed with explicit digit limits to prevent arithmetic overflow on very large inputs.
 
 ### 7. Consolidate SSH Options
 **File:** `scripts/021-ssh.sh:10`
@@ -376,7 +374,7 @@ While CLAUDE.md lists common variables, a complete reference with which template
 | Category | Count | Fixed |
 |----------|-------|-------|
 | Potential Bugs | 5 | 0 |
-| Improvement Suggestions | 8 | 3 |
+| Improvement Suggestions | 8 | 4 |
 | Style Inconsistencies | 3 | 0 |
 | Security Notes | 4 | 0 |
 | Performance Notes | 3 | 0 |
@@ -387,3 +385,4 @@ While CLAUDE.md lists common variables, a complete reference with which template
 - Improvement #3: Added `declare -g` for explicit global variable assignments in 36 scripts (~350 assignments)
 - Improvement #4: Added defensive check for VIRTIO_MAP using `${VAR+isset}` pattern
 - Improvement #5: Added `start_async_feature` and `wait_async_feature` helpers for async feature execution
+- Improvement #6: Added digit limits to CLI argument validation (`{1,6}` for RAM, `{1,3}` for cores) to prevent arithmetic overflow

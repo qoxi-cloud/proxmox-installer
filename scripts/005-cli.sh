@@ -46,7 +46,7 @@ parse_cli_args() {
           printf '%s\n' "${CLR_RED}Error: --qemu-ram requires a value in MB${CLR_RESET}"
           return 1
         fi
-        if ! [[ $2 =~ ^[0-9]+$ ]] || [[ $2 -lt 2048 ]]; then
+        if ! [[ $2 =~ ^[0-9]{1,6}$ ]] || [[ $2 -lt 2048 ]]; then
           printf '%s\n' "${CLR_RED}Error: --qemu-ram must be a number >= 2048 MB${CLR_RESET}"
           return 1
         fi
@@ -62,7 +62,7 @@ parse_cli_args() {
           printf '%s\n' "${CLR_RED}Error: --qemu-cores requires a value${CLR_RESET}"
           return 1
         fi
-        if ! [[ $2 =~ ^[0-9]+$ ]] || [[ $2 -lt 1 ]]; then
+        if ! [[ $2 =~ ^[0-9]{1,3}$ ]] || [[ $2 -lt 1 ]]; then
           printf '%s\n' "${CLR_RED}Error: --qemu-cores must be a positive number${CLR_RESET}"
           return 1
         fi
