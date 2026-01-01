@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.756-pr.21"
+readonly VERSION="2.0.760-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -46,7 +46,7 @@ readonly DNS_RETRY_DELAY=10
 readonly QEMU_BOOT_TIMEOUT=300
 readonly QEMU_PORT_CHECK_INTERVAL=3
 readonly QEMU_SSH_READY_TIMEOUT=120
-readonly DEFAULT_ZFS_POOL_NAME="tank"
+readonly DEFAULT_ZFS_POOL_NAME="local-zfs"
 readonly RETRY_DELAY_SECONDS=2
 readonly SSH_RETRY_ATTEMPTS=3
 readonly PROGRESS_POLL_INTERVAL=0.2
@@ -817,7 +817,7 @@ fi
 }
 _ssh_control_cleanup(){
 if [[ -S $_TEMP_SSH_CONTROL_PATH ]];then
-ssh -o ControlPath="$_TEMP_SSH_CONTROL_PATH" -O exit root@localhost 2>/dev/null||true
+ssh -o ControlPath="$_TEMP_SSH_CONTROL_PATH" -O exit root@localhost >>"${LOG_FILE:-/dev/null}" 2>&1||true
 rm -f "$_TEMP_SSH_CONTROL_PATH" 2>/dev/null||true
 log "SSH control socket cleaned up: $_TEMP_SSH_CONTROL_PATH"
 fi
@@ -864,7 +864,7 @@ local timeout="${1:-120}"
 local start_time
 start_time=$(date +%s)
 local ssh_known_hosts="${INSTALL_DIR:-${HOME:-/root}}/.ssh/known_hosts"
-ssh-keygen -f "$ssh_known_hosts" -R "[localhost]:$SSH_PORT" 2>/dev/null||true
+ssh-keygen -f "$ssh_known_hosts" -R "[localhost]:$SSH_PORT" >>"${LOG_FILE:-/dev/null}" 2>&1||true
 local port_timeout=$((timeout*3/4))
 local retry_delay="${RETRY_DELAY_SECONDS:-2}"
 local port_check=0
@@ -892,7 +892,7 @@ passfile=$(_ssh_get_passfile)
 (elapsed=0
 retry_delay="${RETRY_DELAY_SECONDS:-2}"
 while ((elapsed<ssh_timeout));do
-if sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' >/dev/null 2>&1;then
+if sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' >>"${LOG_FILE:-/dev/null}" 2>&1;then
 exit 0
 fi
 sleep "$retry_delay"
@@ -946,7 +946,7 @@ local base_delay="${RETRY_DELAY_SECONDS:-2}"
 local attempt=0
 while [[ $attempt -lt $max_attempts ]];do
 attempt=$((attempt+1))
-timeout "$cmd_timeout" sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost "$@"
+timeout "$cmd_timeout" sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost "$@" 2>>"$LOG_FILE"
 local exit_code=$?
 if [[ $exit_code -eq 0 ]];then
 return 0
@@ -986,9 +986,10 @@ printf '%s\n' "$script"|timeout "$cmd_timeout" sshpass -f "$passfile" ssh -p "$S
 local pid=$!
 show_progress $pid "$message" "$done_message"
 local exit_code=$?
-if grep -iE '\b(error|failed|cannot|unable|fatal)\b' "$output_file" 2>/dev/null|grep -qivE '(lib.*error|error-perl|\.deb|Unpacking|Setting up|Selecting)';then
+local exclude_pattern='(lib.*error|error-perl|\.deb|Unpacking|Setting up|Selecting|grub-probe|/sys/bus/usb|bInterface)'
+if grep -iE '\b(error|failed|cannot|unable|fatal)\b' "$output_file" 2>/dev/null|grep -qivE "$exclude_pattern";then
 log "WARNING: Potential errors in remote command output:"
-grep -iE '\b(error|failed|cannot|unable|fatal)\b' "$output_file" 2>/dev/null|grep -ivE '(lib.*error|error-perl|\.deb|Unpacking|Setting up|Selecting)' >>"$LOG_FILE"||true
+grep -iE '\b(error|failed|cannot|unable|fatal)\b' "$output_file" 2>/dev/null|grep -ivE "$exclude_pattern" >>"$LOG_FILE"||true
 fi
 cat "$output_file" >>"$LOG_FILE"
 rm -f "$output_file"
@@ -1020,7 +1021,7 @@ fi
 log "ERROR: Failed to acquire SCP lock for $src"
 exit 1
 }
-if ! sshpass -f "$passfile" scp -P "$SSH_PORT" $SSH_OPTS "$src" "root@localhost:$dst";then
+if ! sshpass -f "$passfile" scp -P "$SSH_PORT" $SSH_OPTS "$src" "root@localhost:$dst" >>"$LOG_FILE" 2>&1;then
 log "ERROR: Failed to copy $src to $dst"
 exit 1
 fi) 200> \
@@ -1375,7 +1376,7 @@ local -a pairs=("$@")
 for pair in "${pairs[@]}";do
 local src="${pair%%:*}"
 local dst="${pair#*:}"
-remote_copy "$src" "$dst" >/dev/null 2>&1&
+remote_copy "$src" "$dst"&
 pids+=($!)
 done
 local failures=0
@@ -5119,6 +5120,8 @@ local -a template_list=(
 "./templates/remove-subscription-nag.sh:remove-subscription-nag.sh"
 "./templates/zfs-scrub.service:zfs-scrub.service"
 "./templates/zfs-scrub.timer:zfs-scrub.timer"
+"./templates/zfs-import-cache.service.d-override.conf:zfs-import-cache.service.d-override.conf"
+"./templates/zfs-cachefile-initramfs-hook:zfs-cachefile-initramfs-hook"
 "./templates/letsencrypt-deploy-hook.sh:letsencrypt-deploy-hook.sh"
 "./templates/letsencrypt-firstboot.sh:letsencrypt-firstboot.sh"
 "./templates/letsencrypt-firstboot.service:letsencrypt-firstboot.service"
@@ -5959,7 +5962,7 @@ trap "rm -f '$tmp_ip' '$tmp_hostname' '$tmp_result'" RETURN
 remote_exec "tailscale up --authkey='$TAILSCALE_AUTH_KEY' --ssh"
 then
 echo "success" >"$tmp_result"
-remote_exec "tailscale status --json | jq -r '[(.Self.TailscaleIPs[0] // \"pending\"), (.Self.DNSName // \"\" | rtrimstr(\".\"))] | @tsv'" 2>/dev/null|{
+remote_exec "tailscale status --json | jq -r '[(.Self.TailscaleIPs[0] // \"pending\"), (.Self.DNSName // \"\" | rtrimstr(\".\"))] | @tsv'"|{
 IFS=$'\t' read -r ip hostname
 echo "$ip" >"$tmp_ip"
 echo "$hostname" >"$tmp_hostname"
@@ -5986,7 +5989,7 @@ log "Deploying disable-openssh.service (FIREWALL_MODE=$FIREWALL_MODE)"
 (log "Using pre-downloaded disable-openssh.service, size: $(wc -c <./templates/disable-openssh.service 2>/dev/null||echo 'failed')"
 remote_copy "templates/disable-openssh.service" "/etc/systemd/system/disable-openssh.service"||exit 1
 log "Copied disable-openssh.service to VM"
-remote_exec "systemctl daemon-reload && systemctl enable disable-openssh.service" >/dev/null 2>&1||exit 1
+remote_exec "systemctl daemon-reload && systemctl enable disable-openssh.service" >/dev/null||exit 1
 log "Enabled disable-openssh.service") \
 &
 show_progress $! "Configuring OpenSSH disable on boot" "OpenSSH disable configured"
@@ -6757,13 +6760,14 @@ _config_ensure_rpool_storage(){
 log "INFO: Ensuring rpool storage is configured for Proxmox"
 if ! remote_run "Configuring rpool storage" '
     if zpool list rpool &>/dev/null; then
-      if ! pvesm status local-zfs &>/dev/null; then
+      # Check if storage exists: pvesm status (works if healthy) OR grep config (always works)
+      if pvesm status local-zfs &>/dev/null || grep -q "^local-zfs:" /etc/pve/storage.cfg 2>/dev/null; then
+        echo "local-zfs storage already exists"
+      else
         zfs list rpool/data &>/dev/null || zfs create rpool/data
         pvesm add zfspool local-zfs --pool rpool/data --content images,rootdir
         pvesm set local --content iso,vztmpl,backup,snippets
         echo "local-zfs storage created"
-      else
-        echo "local-zfs storage already exists"
       fi
     else
       echo "WARNING: rpool not found - system may have installed on LVM/ext4"
@@ -7025,7 +7029,7 @@ return 1
 configure_zfs_cachefile||{ log "WARNING: configure_zfs_cachefile failed";}
 configure_zfs_scrub||{ log "WARNING: configure_zfs_scrub failed";}
 log "INFO: Updating initramfs to include ZFS cachefile changes"
-remote_exec "update-initramfs -u -k all" >>"$LOG_FILE" 2>&1||log "WARNING: update-initramfs failed"
+remote_exec "update-initramfs -u -k all" >>"$LOG_FILE"||log "WARNING: update-initramfs failed"
 }
 _phase_security_configuration(){
 batch_install_packages
