@@ -84,7 +84,7 @@ _config_base_system() {
     # shellcheck disable=SC2016 # Single quotes intentional - executed on remote system
     remote_run "Configuring enterprise repository" '
             for repo_file in /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
-                [ -f "$repo_file" ] || continue
+                [[ -f "$repo_file" ]] || continue
                 if grep -q "pve-no-subscription\|pvetest" "$repo_file" 2>/dev/null; then
                     mv "$repo_file" "${repo_file}.disabled"
                 fi
@@ -104,13 +104,13 @@ _config_base_system() {
     # shellcheck disable=SC2016 # Single quotes intentional - executed on remote system
     remote_run "Configuring ${PVE_REPO_TYPE:-no-subscription} repository" '
             for repo_file in /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
-                [ -f "$repo_file" ] || continue
+                [[ -f "$repo_file" ]] || continue
                 if grep -q "enterprise.proxmox.com" "$repo_file" 2>/dev/null; then
                     mv "$repo_file" "${repo_file}.disabled"
                 fi
             done
 
-            if [ -f /etc/apt/sources.list ] && grep -q "enterprise.proxmox.com" /etc/apt/sources.list 2>/dev/null; then
+            if [[ -f /etc/apt/sources.list ]] && grep -q "enterprise.proxmox.com" /etc/apt/sources.list 2>/dev/null; then
                 sed -i "s|^deb.*enterprise.proxmox.com|# &|g" /etc/apt/sources.list
             fi
         ' "Repository configured"
@@ -179,7 +179,7 @@ _config_shell() {
             fi
             # Validate directories exist
             for dir in themes/powerlevel10k plugins/zsh-autosuggestions plugins/zsh-syntax-highlighting; do
-              if [ ! -d "/home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/$dir" ]; then
+              if [[ ! -d "/home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/$dir" ]]; then
                 echo "ERROR: ZSH plugin directory missing: $dir" >&2
                 exit 1
               fi

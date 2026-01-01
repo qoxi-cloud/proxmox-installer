@@ -9,9 +9,9 @@ download_file() {
   local retry_delay="${DOWNLOAD_RETRY_DELAY:-2}"
   local retry_count=0
 
-  while [ "$retry_count" -lt "$max_retries" ]; do
+  while [[ "$retry_count" -lt "$max_retries" ]]; do
     if wget -q -O "$output_file" "$url"; then
-      if [ -s "$output_file" ]; then
+      if [[ -s "$output_file" ]]; then
         return 0
       else
         print_error "Downloaded file is empty: $output_file"
@@ -20,7 +20,7 @@ download_file() {
       print_warning "Download failed (attempt $((retry_count + 1))/$max_retries): $url"
     fi
     retry_count=$((retry_count + 1))
-    [ "$retry_count" -lt "$max_retries" ] && sleep "$retry_delay"
+    [[ "$retry_count" -lt "$max_retries" ]] && sleep "$retry_delay"
   done
 
   log "ERROR: Failed to download $url after $max_retries attempts"

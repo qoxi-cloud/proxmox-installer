@@ -22,7 +22,7 @@ _config_expand_lvm_root() {
       echo "Removed data LV"
     fi
     free_extents=$(vgs --noheadings -o vg_free_count pve 2>/dev/null | xargs)
-    if [ "$free_extents" -gt 0 ]; then
+    if [[ "$free_extents" -gt 0 ]]; then
       lvextend -l +100%FREE /dev/pve/root
       resize2fs /dev/mapper/pve-root
       echo "Extended root LV to use all disk space"
