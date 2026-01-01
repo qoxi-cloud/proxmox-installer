@@ -198,17 +198,20 @@ fi
 ```
 **Status:** Fixed with `${VAR+isset}` pattern to properly detect uninitialized array or missing key.
 
-### 5. Consider Early Exit Pattern for Feature Checks
+### 5. ~~Consider Early Exit Pattern for Feature Checks~~ ✓ FIXED
 **File:** `scripts/381-configure-phases.sh:70-77`
 
-```bash
-if [[ $INSTALL_NETDATA == "yes" ]]; then
-  configure_netdata >>"$LOG_FILE" 2>&1 &
-  netdata_pid=$!
-fi
-```
+~~**Issue:** Repetitive async feature execution pattern with manual flag checks.~~
 
-**Suggestion:** The `make_feature_wrapper` pattern could be extended to handle async execution.
+```bash
+# Now implemented with async feature helpers
+netdata_pid=$(start_async_feature "netdata" "INSTALL_NETDATA")
+yazi_pid=$(start_async_feature "yazi" "INSTALL_YAZI")
+# ... parallel work ...
+wait_async_feature "netdata" "$netdata_pid"
+wait_async_feature "yazi" "$yazi_pid"
+```
+**Status:** Fixed with `start_async_feature` and `wait_async_feature` helpers in `034-deploy-helpers.sh`.
 
 ### 6. Add Input Validation for CLI Arguments
 **File:** `scripts/005-cli.sh:49-56`
@@ -373,7 +376,7 @@ While CLAUDE.md lists common variables, a complete reference with which template
 | Category | Count | Fixed |
 |----------|-------|-------|
 | Potential Bugs | 5 | 0 |
-| Improvement Suggestions | 8 | 2 |
+| Improvement Suggestions | 8 | 3 |
 | Style Inconsistencies | 3 | 0 |
 | Security Notes | 4 | 0 |
 | Performance Notes | 3 | 0 |
@@ -383,3 +386,4 @@ While CLAUDE.md lists common variables, a complete reference with which template
 **Recent Fixes:**
 - Improvement #3: Added `declare -g` for explicit global variable assignments in 36 scripts (~350 assignments)
 - Improvement #4: Added defensive check for VIRTIO_MAP using `${VAR+isset}` pattern
+- Improvement #5: Added `start_async_feature` and `wait_async_feature` helpers for async feature execution

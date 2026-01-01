@@ -71,3 +71,31 @@ make_condition_wrapper() {
   local expected_value="$3"
   eval "configure_${feature}() { [[ \${${var_name}:-} != \"${expected_value}\" ]] && return 0; _config_${feature}; }"
 }
+
+# Async feature execution helpers
+
+# Start async feature if flag is set. $1=feature, $2=flag_var. Echoes PID or empty.
+start_async_feature() {
+  local feature="$1"
+  local flag_var="$2"
+  local flag_value="${!flag_var:-}"
+
+  [[ $flag_value != "yes" ]] && return 0
+
+  "configure_${feature}" >>"$LOG_FILE" 2>&1 &
+  echo $!
+}
+
+# Wait for async feature and log result. $1=feature, $2=pid
+wait_async_feature() {
+  local feature="$1"
+  local pid="$2"
+
+  [[ -z $pid ]] && return 0
+
+  if ! wait "$pid"; then
+    log "WARNING: configure_${feature} failed (exit code: $?)"
+    return 1
+  fi
+  return 0
+}
