@@ -184,24 +184,19 @@ declare -g DNS_RESOLVED_IP="$resolved_ip"
 ```
 **Status:** Fixed in 36 scripts with ~350 global variable assignments updated to use `declare -g`.
 
-### 4. Add Defensive Check for Empty VIRTIO_MAP
+### 4. ~~Add Defensive Check for Empty VIRTIO_MAP~~ ✓ FIXED
 **File:** `scripts/031-zfs-helpers.sh:91-96`
 
-```bash
-local vdev="${VIRTIO_MAP[$disk]}"
-if [[ -z "$vdev" ]]; then
-  log "ERROR: No virtio mapping for disk $disk"
-  return 1
-fi
-```
+~~**Issue:** The check `[[ -z "$vdev" ]]` doesn't distinguish between VIRTIO_MAP not being initialized vs the disk key not existing.~~
 
-**Suggestion:** Also check if VIRTIO_MAP is defined:
 ```bash
+# Now implemented with proper key existence check
 if [[ -z "${VIRTIO_MAP[$disk]+isset}" ]]; then
   log "ERROR: VIRTIO_MAP not initialized or disk $disk not mapped"
   return 1
 fi
 ```
+**Status:** Fixed with `${VAR+isset}` pattern to properly detect uninitialized array or missing key.
 
 ### 5. Consider Early Exit Pattern for Feature Checks
 **File:** `scripts/381-configure-phases.sh:70-77`
@@ -378,7 +373,7 @@ While CLAUDE.md lists common variables, a complete reference with which template
 | Category | Count | Fixed |
 |----------|-------|-------|
 | Potential Bugs | 5 | 0 |
-| Improvement Suggestions | 8 | 1 |
+| Improvement Suggestions | 8 | 2 |
 | Style Inconsistencies | 3 | 0 |
 | Security Notes | 4 | 0 |
 | Performance Notes | 3 | 0 |
@@ -387,3 +382,4 @@ While CLAUDE.md lists common variables, a complete reference with which template
 
 **Recent Fixes:**
 - Improvement #3: Added `declare -g` for explicit global variable assignments in 36 scripts (~350 assignments)
+- Improvement #4: Added defensive check for VIRTIO_MAP using `${VAR+isset}` pattern

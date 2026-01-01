@@ -88,11 +88,11 @@ map_disks_to_virtio() {
 
   local vdevs=()
   for disk in "${disks[@]}"; do
-    local vdev="${VIRTIO_MAP[$disk]}"
-    if [[ -z "$vdev" ]]; then
-      log "ERROR: No virtio mapping for disk $disk"
+    if [[ -z "${VIRTIO_MAP[$disk]+isset}" ]]; then
+      log "ERROR: VIRTIO_MAP not initialized or disk $disk not mapped"
       return 1
     fi
+    local vdev="${VIRTIO_MAP[$disk]}"
     vdevs+=("/dev/$vdev")
   done
 
