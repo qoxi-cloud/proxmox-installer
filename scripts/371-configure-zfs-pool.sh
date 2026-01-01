@@ -116,7 +116,8 @@ _config_ensure_rpool_storage() {
   if ! remote_run "Configuring rpool storage" '
     if zpool list rpool &>/dev/null; then
       # Check if storage exists: pvesm status (works if healthy) OR grep config (always works)
-      if pvesm status local-zfs &>/dev/null || grep -q "^local-zfs:" /etc/pve/storage.cfg 2>/dev/null; then
+      # Note: storage.cfg format is "zfspool: local-zfs" (type: name), not "local-zfs:"
+      if pvesm status local-zfs &>/dev/null || grep -qE "^zfspool:[[:space:]]+local-zfs" /etc/pve/storage.cfg 2>/dev/null; then
         echo "local-zfs storage already exists"
       else
         zfs list rpool/data &>/dev/null || zfs create rpool/data
