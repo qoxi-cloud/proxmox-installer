@@ -33,7 +33,7 @@ _edit_admin_username() {
 
     # Validate username
     if validate_admin_username "$new_username"; then
-      ADMIN_USERNAME="$new_username"
+      declare -g ADMIN_USERNAME="$new_username"
       break
     else
       show_validation_error "Invalid username. Use lowercase letters/numbers, 1-32 chars. Reserved names (root, admin) not allowed."
@@ -91,8 +91,8 @@ _edit_api_token() {
 
   # Validate: alphanumeric, dash, underscore only
   if [[ -n $token_name && $token_name =~ ^[a-zA-Z0-9_-]+$ ]]; then
-    API_TOKEN_NAME="$token_name"
+    declare -g API_TOKEN_NAME="$token_name"
   else
-    API_TOKEN_NAME="automation"
+    declare -g API_TOKEN_NAME="automation"
   fi
 }

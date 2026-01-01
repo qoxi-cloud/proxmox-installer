@@ -46,23 +46,23 @@ _postfix_configure_relay() {
 
 # Enable Postfix with relay configuration
 _postfix_enable() {
-  INSTALL_POSTFIX="yes"
+  declare -g INSTALL_POSTFIX="yes"
   _postfix_configure_relay || {
-    INSTALL_POSTFIX="no"
-    SMTP_RELAY_HOST=""
-    SMTP_RELAY_PORT=""
-    SMTP_RELAY_USER=""
-    SMTP_RELAY_PASSWORD=""
+    declare -g INSTALL_POSTFIX="no"
+    declare -g SMTP_RELAY_HOST=""
+    declare -g SMTP_RELAY_PORT=""
+    declare -g SMTP_RELAY_USER=""
+    declare -g SMTP_RELAY_PASSWORD=""
   }
 }
 
 # Disable Postfix and clear settings
 _postfix_disable() {
-  INSTALL_POSTFIX="no"
-  SMTP_RELAY_HOST=""
-  SMTP_RELAY_PORT=""
-  SMTP_RELAY_USER=""
-  SMTP_RELAY_PASSWORD=""
+  declare -g INSTALL_POSTFIX="no"
+  declare -g SMTP_RELAY_HOST=""
+  declare -g SMTP_RELAY_PORT=""
+  declare -g SMTP_RELAY_USER=""
+  declare -g SMTP_RELAY_PASSWORD=""
 }
 
 # Edit Postfix mail configuration

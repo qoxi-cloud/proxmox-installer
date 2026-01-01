@@ -15,7 +15,7 @@ _edit_wipe_disks() {
       "" \
       "  Existing pool data must be preserved."
     sleep "${WIZARD_MESSAGE_DELAY:-3}"
-    WIPE_DISKS="no"
+    declare -g WIPE_DISKS="no"
     return
   fi
 
@@ -87,9 +87,9 @@ _edit_existing_pool() {
   fi
 
   if [[ $selected == "Create new pool (format disks)" ]]; then
-    USE_EXISTING_POOL=""
-    EXISTING_POOL_NAME=""
-    EXISTING_POOL_DISKS=()
+    declare -g USE_EXISTING_POOL=""
+    declare -g EXISTING_POOL_NAME=""
+    declare -g -a EXISTING_POOL_DISKS=()
   elif [[ $selected =~ ^Use\ existing:\ (.+)\ \( ]]; then
     # Check if boot disk is set - required for existing pool mode
     if [[ -z $BOOT_DISK ]]; then
@@ -140,13 +140,13 @@ _edit_existing_pool() {
       return
     fi
 
-    USE_EXISTING_POOL="yes"
-    EXISTING_POOL_NAME="$pool_name"
-    EXISTING_POOL_DISKS=("${pool_disks[@]}")
+    declare -g USE_EXISTING_POOL="yes"
+    declare -g EXISTING_POOL_NAME="$pool_name"
+    declare -g -a EXISTING_POOL_DISKS=("${pool_disks[@]}")
 
     # Clear pool disks since we won't be creating new pool
-    ZFS_POOL_DISKS=()
-    ZFS_RAID=""
+    declare -g -a ZFS_POOL_DISKS=()
+    declare -g ZFS_RAID=""
 
     log "Selected existing pool: $EXISTING_POOL_NAME with disks: ${EXISTING_POOL_DISKS[*]}"
   fi
@@ -207,13 +207,13 @@ RAID-10 (striped mirrors)"
   fi
 
   case "$selected" in
-    "Single disk") ZFS_RAID="single" ;;
-    "RAID-0 (striped)") ZFS_RAID="raid0" ;;
-    "RAID-1 (mirror)") ZFS_RAID="raid1" ;;
-    "RAID-Z1 (parity)") ZFS_RAID="raidz1" ;;
-    "RAID-Z2 (double parity)") ZFS_RAID="raidz2" ;;
-    "RAID-Z3 (triple parity)") ZFS_RAID="raidz3" ;;
-    "RAID-10 (striped mirrors)") ZFS_RAID="raid10" ;;
+    "Single disk") declare -g ZFS_RAID="single" ;;
+    "RAID-0 (striped)") declare -g ZFS_RAID="raid0" ;;
+    "RAID-1 (mirror)") declare -g ZFS_RAID="raid1" ;;
+    "RAID-Z1 (parity)") declare -g ZFS_RAID="raidz1" ;;
+    "RAID-Z2 (double parity)") declare -g ZFS_RAID="raidz2" ;;
+    "RAID-Z3 (triple parity)") declare -g ZFS_RAID="raidz3" ;;
+    "RAID-10 (striped mirrors)") declare -g ZFS_RAID="raid10" ;;
   esac
 }
 

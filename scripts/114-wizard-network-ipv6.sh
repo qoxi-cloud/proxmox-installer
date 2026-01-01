@@ -32,7 +32,7 @@ _edit_ipv6() {
     "Disabled") ipv6_mode="disabled" ;;
   esac
 
-  IPV6_MODE="$ipv6_mode"
+  declare -g IPV6_MODE="$ipv6_mode"
 
   # Handle manual mode - need to collect IPv6 address and gateway
   if [[ $ipv6_mode == "manual" ]]; then
@@ -58,8 +58,8 @@ _edit_ipv6() {
 
       # Validate IPv6 CIDR
       if validate_ipv6_cidr "$ipv6_addr"; then
-        IPV6_ADDRESS="$ipv6_addr"
-        MAIN_IPV6="${ipv6_addr%/*}"
+        declare -g IPV6_ADDRESS="$ipv6_addr"
+        declare -g MAIN_IPV6="${ipv6_addr%/*}"
         break
       else
         show_validation_error "Invalid IPv6 CIDR notation. Use format like: 2001:db8::1/64"
@@ -82,13 +82,13 @@ _edit_ipv6() {
 
       # If empty or cancelled, use default
       if [[ -z $ipv6_gw ]]; then
-        IPV6_GATEWAY="$DEFAULT_IPV6_GATEWAY"
+        declare -g IPV6_GATEWAY="$DEFAULT_IPV6_GATEWAY"
         break
       fi
 
       # Validate IPv6 gateway
       if validate_ipv6_gateway "$ipv6_gw"; then
-        IPV6_GATEWAY="$ipv6_gw"
+        declare -g IPV6_GATEWAY="$ipv6_gw"
         break
       else
         show_validation_error "Invalid IPv6 gateway address"
@@ -96,13 +96,13 @@ _edit_ipv6() {
     done
   elif [[ $ipv6_mode == "disabled" ]]; then
     # Clear IPv6 settings when disabled
-    MAIN_IPV6=""
-    IPV6_GATEWAY=""
-    FIRST_IPV6_CIDR=""
-    IPV6_ADDRESS=""
+    declare -g MAIN_IPV6=""
+    declare -g IPV6_GATEWAY=""
+    declare -g FIRST_IPV6_CIDR=""
+    declare -g IPV6_ADDRESS=""
   elif [[ $ipv6_mode == "auto" ]]; then
     # Auto mode - use detected values or defaults
-    IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
+    declare -g IPV6_GATEWAY="${IPV6_GATEWAY:-$DEFAULT_IPV6_GATEWAY}"
   fi
 }
 
@@ -133,20 +133,20 @@ _edit_firewall() {
 
   case "$selected" in
     "Stealth (Tailscale only)")
-      INSTALL_FIREWALL="yes"
-      FIREWALL_MODE="stealth"
+      declare -g INSTALL_FIREWALL="yes"
+      declare -g FIREWALL_MODE="stealth"
       ;;
     "Strict (SSH only)")
-      INSTALL_FIREWALL="yes"
-      FIREWALL_MODE="strict"
+      declare -g INSTALL_FIREWALL="yes"
+      declare -g FIREWALL_MODE="strict"
       ;;
     "Standard (SSH + Web UI)")
-      INSTALL_FIREWALL="yes"
-      FIREWALL_MODE="standard"
+      declare -g INSTALL_FIREWALL="yes"
+      declare -g FIREWALL_MODE="standard"
       ;;
     "Disabled")
-      INSTALL_FIREWALL="no"
-      FIREWALL_MODE=""
+      declare -g INSTALL_FIREWALL="no"
+      declare -g FIREWALL_MODE=""
       ;;
   esac
 }

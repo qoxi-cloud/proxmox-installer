@@ -106,17 +106,17 @@ _edit_power_profile() {
   fi
 
   case "$selected" in
-    "Performance") CPU_GOVERNOR="performance" ;;
+    "Performance") declare -g CPU_GOVERNOR="performance" ;;
     "Balanced")
       # Use ondemand if available, otherwise powersave
       if $has_ondemand; then
-        CPU_GOVERNOR="ondemand"
+        declare -g CPU_GOVERNOR="ondemand"
       else
-        CPU_GOVERNOR="powersave"
+        declare -g CPU_GOVERNOR="powersave"
       fi
       ;;
-    "Adaptive") CPU_GOVERNOR="schedutil" ;;
-    "Conservative") CPU_GOVERNOR="conservative" ;;
+    "Adaptive") declare -g CPU_GOVERNOR="schedutil" ;;
+    "Conservative") declare -g CPU_GOVERNOR="conservative" ;;
   esac
 }
 

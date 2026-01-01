@@ -12,16 +12,16 @@ setup_qemu_config() {
 
   # UEFI configuration
   if is_uefi_mode; then
-    UEFI_OPTS="-bios /usr/share/ovmf/OVMF.fd"
+    declare -g UEFI_OPTS="-bios /usr/share/ovmf/OVMF.fd"
     log "UEFI mode detected"
   else
-    UEFI_OPTS=""
+    declare -g UEFI_OPTS=""
     log "Legacy BIOS mode"
   fi
 
   # KVM acceleration
-  KVM_OPTS="-enable-kvm"
-  CPU_OPTS="-cpu host"
+  declare -g KVM_OPTS="-enable-kvm"
+  declare -g CPU_OPTS="-cpu host"
   log "Using KVM acceleration"
 
   # CPU and RAM configuration
@@ -32,16 +32,16 @@ setup_qemu_config() {
 
   # Use override values if provided, otherwise auto-detect
   if [[ -n $QEMU_CORES_OVERRIDE ]]; then
-    QEMU_CORES="$QEMU_CORES_OVERRIDE"
+    declare -g QEMU_CORES="$QEMU_CORES_OVERRIDE"
     log "Using user-specified cores: $QEMU_CORES"
   else
     # Use all available cores for QEMU
-    QEMU_CORES=$available_cores
-    [[ $QEMU_CORES -lt $MIN_CPU_CORES ]] && QEMU_CORES=$MIN_CPU_CORES
+    declare -g QEMU_CORES=$available_cores
+    [[ $QEMU_CORES -lt $MIN_CPU_CORES ]] && declare -g QEMU_CORES=$MIN_CPU_CORES
   fi
 
   if [[ -n $QEMU_RAM_OVERRIDE ]]; then
-    QEMU_RAM="$QEMU_RAM_OVERRIDE"
+    declare -g QEMU_RAM="$QEMU_RAM_OVERRIDE"
     log "Using user-specified RAM: ${QEMU_RAM}MB"
     # Warn if requested RAM exceeds available
     if [[ $QEMU_RAM -gt $((available_ram_mb - QEMU_MIN_RAM_RESERVE)) ]]; then
@@ -49,8 +49,8 @@ setup_qemu_config() {
     fi
   else
     # Use all available RAM minus reserve for host
-    QEMU_RAM=$((available_ram_mb - QEMU_MIN_RAM_RESERVE))
-    [[ $QEMU_RAM -lt $MIN_QEMU_RAM ]] && QEMU_RAM=$MIN_QEMU_RAM
+    declare -g QEMU_RAM=$((available_ram_mb - QEMU_MIN_RAM_RESERVE))
+    [[ $QEMU_RAM -lt $MIN_QEMU_RAM ]] && declare -g QEMU_RAM=$MIN_QEMU_RAM
   fi
 
   log "QEMU config: $QEMU_CORES vCPUs, ${QEMU_RAM}MB RAM"
@@ -71,7 +71,7 @@ setup_qemu_config() {
   # Build DRIVE_ARGS from virtio mapping in correct order (vda, vdb, vdc, ...)
   # CRITICAL: QEMU assigns virtio devices in order of -drive arguments!
   # We must iterate by virtio name (sorted) to match the mapping.
-  DRIVE_ARGS=""
+  declare -g DRIVE_ARGS=""
 
   # Build reverse map: virtio_device -> physical_disk
   declare -A REVERSE_MAP
@@ -93,7 +93,7 @@ setup_qemu_config() {
       return 1
     fi
     log "QEMU drive order: $vdev -> $disk"
-    DRIVE_ARGS="$DRIVE_ARGS -drive file=$disk,format=raw,media=disk,if=virtio"
+    declare -g DRIVE_ARGS="$DRIVE_ARGS -drive file=$disk,format=raw,media=disk,if=virtio"
   done
 
   if [[ -z $DRIVE_ARGS ]]; then

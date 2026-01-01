@@ -27,9 +27,9 @@ EOF
 # Parse CLI args. $@=args. Returns: 0=ok, 1=error, 2=help/version
 parse_cli_args() {
   # Reset variables for clean parsing
-  QEMU_RAM_OVERRIDE=""
-  QEMU_CORES_OVERRIDE=""
-  PROXMOX_ISO_VERSION=""
+  declare -g QEMU_RAM_OVERRIDE=""
+  declare -g QEMU_CORES_OVERRIDE=""
+  declare -g PROXMOX_ISO_VERSION=""
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -54,7 +54,7 @@ parse_cli_args() {
           printf '%s\n' "${CLR_RED}Error: --qemu-ram must be <= 131072 MB (128 GB)${CLR_RESET}"
           return 1
         fi
-        QEMU_RAM_OVERRIDE="$2"
+        declare -g QEMU_RAM_OVERRIDE="$2"
         shift 2
         ;;
       --qemu-cores)
@@ -70,7 +70,7 @@ parse_cli_args() {
           printf '%s\n' "${CLR_RED}Error: --qemu-cores must be <= 256${CLR_RESET}"
           return 1
         fi
-        QEMU_CORES_OVERRIDE="$2"
+        declare -g QEMU_CORES_OVERRIDE="$2"
         shift 2
         ;;
       --iso-version)
@@ -82,7 +82,7 @@ parse_cli_args() {
           printf '%s\n' "${CLR_RED}Error: --iso-version must be in format: proxmox-ve_X.Y-Z.iso${CLR_RESET}"
           return 1
         fi
-        PROXMOX_ISO_VERSION="$2"
+        declare -g PROXMOX_ISO_VERSION="$2"
         shift 2
         ;;
       *)

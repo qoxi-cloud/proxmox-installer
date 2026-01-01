@@ -150,19 +150,19 @@ _wiz_read_key() {
   if [[ $key == $'\x1b' ]]; then
     read -rsn2 -t 0.5 key
     case "$key" in
-      '[A') WIZ_KEY="up" ;;
-      '[B') WIZ_KEY="down" ;;
-      '[C') WIZ_KEY="right" ;;
-      '[D') WIZ_KEY="left" ;;
-      *) WIZ_KEY="esc" ;;
+      '[A') declare -g WIZ_KEY="up" ;;
+      '[B') declare -g WIZ_KEY="down" ;;
+      '[C') declare -g WIZ_KEY="right" ;;
+      '[D') declare -g WIZ_KEY="left" ;;
+      *) declare -g WIZ_KEY="esc" ;;
     esac
   elif [[ $key == "" ]]; then
-    WIZ_KEY="enter"
+    declare -g WIZ_KEY="enter"
   elif [[ $key == "q" || $key == "Q" ]]; then
-    WIZ_KEY="quit"
+    declare -g WIZ_KEY="quit"
   elif [[ $key == "s" || $key == "S" ]]; then
-    WIZ_KEY="start"
+    declare -g WIZ_KEY="start"
   else
-    WIZ_KEY="$key"
+    declare -g WIZ_KEY="$key"
   fi
 }

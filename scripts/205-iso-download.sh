@@ -9,6 +9,8 @@ _CHECKSUM_CACHE=""
 
 # Prefetch ISO list and checksums to cache
 prefetch_proxmox_iso_info() {
+  declare -g _ISO_LIST_CACHE
+  declare -g _CHECKSUM_CACHE
   _ISO_LIST_CACHE=$(curl -s "$PROXMOX_ISO_BASE_URL" 2>/dev/null | grep -oE 'proxmox-ve_[0-9]+\.[0-9]+-[0-9]+\.iso' | sort -uV) || true
   _CHECKSUM_CACHE=$(curl -s "$PROXMOX_CHECKSUM_URL" 2>/dev/null) || true
 }
@@ -48,9 +50,11 @@ download_proxmox_iso() {
   fi
 
   log "Using selected ISO: $PROXMOX_ISO_VERSION"
+  declare -g PROXMOX_ISO_URL
   PROXMOX_ISO_URL=$(get_proxmox_iso_url "$PROXMOX_ISO_VERSION")
   log "Found ISO URL: $PROXMOX_ISO_URL"
 
+  declare -g ISO_FILENAME
   ISO_FILENAME=$(basename "$PROXMOX_ISO_URL")
 
   # Get checksum from cache (populated by prefetch_proxmox_iso_info)
@@ -73,6 +77,7 @@ download_proxmox_iso() {
   show_progress $! "Downloading $ISO_FILENAME" "$ISO_FILENAME downloaded"
   wait "$!"
   local exit_code=$?
+  declare -g DOWNLOAD_METHOD
   DOWNLOAD_METHOD=$(cat "$method_file" 2>/dev/null)
   rm -f "$method_file"
 

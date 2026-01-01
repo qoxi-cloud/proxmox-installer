@@ -172,7 +172,7 @@ show_banner_animated_start() {
     done
   ) &
 
-  BANNER_ANIMATION_PID=$!
+  declare -g BANNER_ANIMATION_PID=$!
 }
 
 # Stop background animated banner, show static banner
@@ -181,7 +181,7 @@ show_banner_animated_stop() {
     # Kill the background process
     kill "$BANNER_ANIMATION_PID" 2>/dev/null
     wait "$BANNER_ANIMATION_PID" 2>/dev/null
-    BANNER_ANIMATION_PID=""
+    declare -g BANNER_ANIMATION_PID=""
   fi
 
   # Clear screen and show static banner

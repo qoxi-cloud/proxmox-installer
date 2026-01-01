@@ -62,7 +62,9 @@ _config_tailscale() {
 
     if [[ $auth_result == "success" ]]; then
       # Get Tailscale IP and hostname for display
+      declare -g TAILSCALE_IP
       TAILSCALE_IP=$(cat "$tmp_ip" 2>/dev/null || echo "pending")
+      declare -g TAILSCALE_HOSTNAME
       TAILSCALE_HOSTNAME=$(cat "$tmp_hostname" 2>/dev/null || printf '\n')
 
       # Update log with IP info
@@ -92,8 +94,8 @@ _config_tailscale() {
         log "Skipping disable-openssh.service (FIREWALL_MODE=${FIREWALL_MODE:-standard})"
       fi
     else
-      TAILSCALE_IP="auth failed"
-      TAILSCALE_HOSTNAME=""
+      declare -g TAILSCALE_IP="auth failed"
+      declare -g TAILSCALE_HOSTNAME=""
       complete_task "$TASK_INDEX" "${TREE_BRANCH} ${CLR_YELLOW}Tailscale auth failed - check auth key${CLR_RESET}" "warning"
       log "WARNING: Tailscale authentication failed. Auth key may be invalid or expired."
 
@@ -107,8 +109,8 @@ _config_tailscale() {
 
     # Note: Firewall is now configured separately via 310-configure-firewall.sh
   else
-    TAILSCALE_IP="not authenticated"
-    TAILSCALE_HOSTNAME=""
+    declare -g TAILSCALE_IP="not authenticated"
+    declare -g TAILSCALE_HOSTNAME=""
     add_log "${TREE_BRANCH} ${CLR_YELLOW}⚠️${CLR_RESET} Tailscale installed but not authenticated"
     add_subtask_log "After reboot: tailscale up --ssh"
   fi

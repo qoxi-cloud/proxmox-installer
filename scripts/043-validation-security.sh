@@ -66,7 +66,7 @@ validate_disk_space() {
     return 1
   fi
 
-  DISK_SPACE_MB=$available_mb
+  declare -g DISK_SPACE_MB=$available_mb
 
   if [[ $available_mb -lt $min_required_mb ]]; then
     log "ERROR: Insufficient disk space: ${available_mb}MB available, ${min_required_mb}MB required"

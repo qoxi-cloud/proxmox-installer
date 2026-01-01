@@ -135,7 +135,7 @@ _wiz_render_menu() {
   output+="${banner_output}\n\n$(_wiz_render_nav)\n\n"
 
   # Reset field map
-  _WIZ_FIELD_MAP=()
+  declare -g -a _WIZ_FIELD_MAP=()
   local field_idx=0
 
   # Helper to add field (used by _wiz_render_screen_content)
@@ -156,7 +156,7 @@ _wiz_render_menu() {
   _wiz_render_screen_content "$WIZ_CURRENT_SCREEN" "$selection"
 
   # Store total field count for this screen
-  _WIZ_FIELD_COUNT=$field_idx
+  declare -g _WIZ_FIELD_COUNT=$field_idx
 
   output+="\n"
 

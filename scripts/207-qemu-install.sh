@@ -128,7 +128,7 @@ boot_proxmox_with_port_forwarding() {
     $DRIVE_ARGS -display none \
     >qemu_output.log 2>&1 &
 
-  QEMU_PID=$!
+  declare -g QEMU_PID=$!
 
   # Wait for port to be open first (in background for show_progress)
   local timeout="${QEMU_BOOT_TIMEOUT:-300}"

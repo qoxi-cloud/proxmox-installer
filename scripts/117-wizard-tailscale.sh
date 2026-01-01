@@ -4,7 +4,7 @@
 # Prompts for Tailscale auth key with validation.
 # Sets _TAILSCALE_TMP_KEY on success, clears on cancel.
 _tailscale_get_auth_key() {
-  _TAILSCALE_TMP_KEY=""
+  declare -g _TAILSCALE_TMP_KEY=""
   _wiz_input_validated "_TAILSCALE_TMP_KEY" "validate_tailscale_key" \
     "Invalid key format. Expected: tskey-auth-xxx-xxx" \
     --placeholder "tskey-auth-..." \
@@ -32,27 +32,27 @@ _tailscale_configure_webui() {
 _tailscale_enable() {
   local auth_key="$1"
 
-  INSTALL_TAILSCALE="yes"
-  TAILSCALE_AUTH_KEY="$auth_key"
+  declare -g INSTALL_TAILSCALE="yes"
+  declare -g TAILSCALE_AUTH_KEY="$auth_key"
 
   _tailscale_configure_webui
 
-  SSL_TYPE="self-signed"
+  declare -g SSL_TYPE="self-signed"
   if [[ -z $INSTALL_FIREWALL ]]; then
-    INSTALL_FIREWALL="yes"
-    FIREWALL_MODE="stealth"
+    declare -g INSTALL_FIREWALL="yes"
+    declare -g FIREWALL_MODE="stealth"
   fi
 }
 
 # Disable Tailscale and clear related settings
 _tailscale_disable() {
-  INSTALL_TAILSCALE="no"
-  TAILSCALE_AUTH_KEY=""
-  TAILSCALE_WEBUI=""
-  SSL_TYPE=""
+  declare -g INSTALL_TAILSCALE="no"
+  declare -g TAILSCALE_AUTH_KEY=""
+  declare -g TAILSCALE_WEBUI=""
+  declare -g SSL_TYPE=""
   if [[ -z $INSTALL_FIREWALL ]]; then
-    INSTALL_FIREWALL="yes"
-    FIREWALL_MODE="standard"
+    declare -g INSTALL_FIREWALL="yes"
+    declare -g FIREWALL_MODE="standard"
   fi
 }
 

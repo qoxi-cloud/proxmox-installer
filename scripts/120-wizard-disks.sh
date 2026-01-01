@@ -36,10 +36,10 @@ _edit_boot_disk() {
   if [[ -n $selected ]]; then
     local old_boot_disk="$BOOT_DISK"
     if [[ $selected == "None (all in pool)" ]]; then
-      BOOT_DISK=""
+      declare -g BOOT_DISK=""
     else
       local disk_name="${selected%% -*}"
-      BOOT_DISK="/dev/${disk_name}"
+      declare -g BOOT_DISK="/dev/${disk_name}"
     fi
     _rebuild_pool_disks
 
@@ -53,7 +53,7 @@ _edit_boot_disk() {
         "  At least one disk must remain for the ZFS pool."
       sleep "${WIZARD_MESSAGE_DELAY:-3}"
       # Restore previous boot disk selection
-      BOOT_DISK="$old_boot_disk"
+      declare -g BOOT_DISK="$old_boot_disk"
       _rebuild_pool_disks
     fi
   fi
@@ -131,7 +131,7 @@ _edit_pool_disks() {
     fi
 
     # Valid selection - update and exit
-    ZFS_POOL_DISKS=()
+    declare -g -a ZFS_POOL_DISKS=()
     while IFS= read -r line; do
       local disk_name="${line%% -*}"
       ZFS_POOL_DISKS+=("/dev/${disk_name}")
@@ -144,7 +144,7 @@ _edit_pool_disks() {
 # Rebuilds ZFS_POOL_DISKS array after boot disk change.
 # Rebuild pool disks (all except boot). Updates ZFS_POOL_DISKS.
 _rebuild_pool_disks() {
-  ZFS_POOL_DISKS=()
+  declare -g -a ZFS_POOL_DISKS=()
   for drive in "${DRIVES[@]}"; do
     [[ -z $BOOT_DISK || $drive != "$BOOT_DISK" ]] && ZFS_POOL_DISKS+=("$drive")
   done
@@ -157,10 +157,10 @@ _update_zfs_mode_options() {
   local pool_count=${#ZFS_POOL_DISKS[@]}
   # Reset ZFS_RAID if incompatible
   case "$ZFS_RAID" in
-    single) [[ $pool_count -ne 1 ]] && ZFS_RAID="" ;;
-    raid1 | raid0) [[ $pool_count -lt 2 ]] && ZFS_RAID="" ;;
-    raidz1) [[ $pool_count -lt 3 ]] && ZFS_RAID="" ;;
-    raid10 | raidz2) [[ $pool_count -lt 4 ]] && ZFS_RAID="" ;;
-    raidz3) [[ $pool_count -lt 5 ]] && ZFS_RAID="" ;;
+    single) [[ $pool_count -ne 1 ]] && declare -g ZFS_RAID="" ;;
+    raid1 | raid0) [[ $pool_count -lt 2 ]] && declare -g ZFS_RAID="" ;;
+    raidz1) [[ $pool_count -lt 3 ]] && declare -g ZFS_RAID="" ;;
+    raid10 | raidz2) [[ $pool_count -lt 4 ]] && declare -g ZFS_RAID="" ;;
+    raidz3) [[ $pool_count -lt 5 ]] && declare -g ZFS_RAID="" ;;
   esac
 }

@@ -70,126 +70,130 @@ _dsp_escape() {
 
 # Formats Basic screen values: hostname, password
 _dsp_basic() {
-  _DSP_PASS=""
-  [[ -n $NEW_ROOT_PASSWORD ]] && _DSP_PASS="********"
+  declare -g _DSP_PASS=""
+  [[ -n $NEW_ROOT_PASSWORD ]] && declare -g _DSP_PASS="********"
 
-  _DSP_HOSTNAME=""
+  declare -g _DSP_HOSTNAME=""
   if [[ -n $PVE_HOSTNAME && -n $DOMAIN_SUFFIX ]]; then
     # Escape user values to prevent printf %b interpretation
-    _DSP_HOSTNAME="$(_dsp_escape "$PVE_HOSTNAME").$(_dsp_escape "$DOMAIN_SUFFIX")"
+    declare -g _DSP_HOSTNAME="$(_dsp_escape "$PVE_HOSTNAME").$(_dsp_escape "$DOMAIN_SUFFIX")"
   fi
 }
 
 # Formats Proxmox screen values: repository, ISO version
 _dsp_proxmox() {
-  _DSP_REPO=""
-  [[ -n $PVE_REPO_TYPE ]] && _DSP_REPO=$(_dsp_lookup "repo" "$PVE_REPO_TYPE")
+  declare -g _DSP_REPO=""
+  [[ -n $PVE_REPO_TYPE ]] && declare -g _DSP_REPO=$(_dsp_lookup "repo" "$PVE_REPO_TYPE")
 
-  _DSP_ISO=""
-  [[ -n $PROXMOX_ISO_VERSION ]] && _DSP_ISO=$(get_iso_version "$PROXMOX_ISO_VERSION")
+  declare -g _DSP_ISO=""
+  [[ -n $PROXMOX_ISO_VERSION ]] && declare -g _DSP_ISO=$(get_iso_version "$PROXMOX_ISO_VERSION")
 }
 
 # Formats Network screen values: IPv6, bridge, firewall, MTU
 _dsp_network() {
-  _DSP_IPV6=""
+  declare -g _DSP_IPV6=""
   if [[ -n $IPV6_MODE ]]; then
-    _DSP_IPV6=$(_dsp_lookup "ipv6" "$IPV6_MODE")
+    declare -g _DSP_IPV6=$(_dsp_lookup "ipv6" "$IPV6_MODE")
     # Special case: manual mode shows address details
     if [[ $IPV6_MODE == "manual" && -n $MAIN_IPV6 ]]; then
       _DSP_IPV6+=" ($(_dsp_escape "$MAIN_IPV6"), gw: $(_dsp_escape "$IPV6_GATEWAY"))"
     fi
   fi
 
-  _DSP_BRIDGE=""
-  [[ -n $BRIDGE_MODE ]] && _DSP_BRIDGE=$(_dsp_lookup "bridge" "$BRIDGE_MODE")
+  declare -g _DSP_BRIDGE=""
+  [[ -n $BRIDGE_MODE ]] && declare -g _DSP_BRIDGE=$(_dsp_lookup "bridge" "$BRIDGE_MODE")
 
-  _DSP_FIREWALL=""
+  declare -g _DSP_FIREWALL=""
   if [[ -n $INSTALL_FIREWALL ]]; then
     if [[ $INSTALL_FIREWALL == "yes" ]]; then
-      _DSP_FIREWALL=$(_dsp_lookup "firewall" "$FIREWALL_MODE")
+      declare -g _DSP_FIREWALL=$(_dsp_lookup "firewall" "$FIREWALL_MODE")
     else
-      _DSP_FIREWALL="Disabled"
+      declare -g _DSP_FIREWALL="Disabled"
     fi
   fi
 
-  _DSP_MTU="${BRIDGE_MTU:-9000}"
-  [[ $_DSP_MTU == "9000" ]] && _DSP_MTU="9000 (jumbo)"
+  declare -g _DSP_MTU="${BRIDGE_MTU:-9000}"
+  [[ $_DSP_MTU == "9000" ]] && declare -g _DSP_MTU="9000 (jumbo)"
 }
 
 # Formats Storage screen values: ZFS mode, ARC, boot/pool disks, existing pool
 _dsp_storage() {
   # Existing pool mode
-  _DSP_EXISTING_POOL=""
+  declare -g _DSP_EXISTING_POOL=""
   if [[ $USE_EXISTING_POOL == "yes" && -n $EXISTING_POOL_NAME ]]; then
-    _DSP_EXISTING_POOL="Use: $(_dsp_escape "$EXISTING_POOL_NAME") (${#EXISTING_POOL_DISKS[@]} disks)"
+    declare -g _DSP_EXISTING_POOL="Use: $(_dsp_escape "$EXISTING_POOL_NAME") (${#EXISTING_POOL_DISKS[@]} disks)"
   else
-    _DSP_EXISTING_POOL="Create new"
+    declare -g _DSP_EXISTING_POOL="Create new"
   fi
 
-  _DSP_ZFS=""
+  declare -g _DSP_ZFS=""
   if [[ -n $ZFS_RAID ]]; then
-    _DSP_ZFS=$(_dsp_lookup "zfs" "$ZFS_RAID")
+    declare -g _DSP_ZFS=$(_dsp_lookup "zfs" "$ZFS_RAID")
   elif [[ $USE_EXISTING_POOL == "yes" ]]; then
-    _DSP_ZFS="(preserved)"
+    declare -g _DSP_ZFS="(preserved)"
   fi
 
-  _DSP_ARC=""
-  [[ -n $ZFS_ARC_MODE ]] && _DSP_ARC=$(_dsp_lookup "arc" "$ZFS_ARC_MODE")
+  declare -g _DSP_ARC=""
+  [[ -n $ZFS_ARC_MODE ]] && declare -g _DSP_ARC=$(_dsp_lookup "arc" "$ZFS_ARC_MODE")
 
-  _DSP_BOOT="All in pool"
+  declare -g _DSP_BOOT="All in pool"
   if [[ -n $BOOT_DISK ]]; then
     for i in "${!DRIVES[@]}"; do
       if [[ ${DRIVES[$i]} == "$BOOT_DISK" ]]; then
-        _DSP_BOOT="${DRIVE_MODELS[$i]}"
+        declare -g _DSP_BOOT="${DRIVE_MODELS[$i]}"
         break
       fi
     done
   fi
 
   if [[ $USE_EXISTING_POOL == "yes" ]]; then
-    _DSP_POOL="(existing pool)"
+    declare -g _DSP_POOL="(existing pool)"
   else
-    _DSP_POOL="${#ZFS_POOL_DISKS[@]} disks"
+    declare -g _DSP_POOL="${#ZFS_POOL_DISKS[@]} disks"
   fi
 
   # Wipe disks option
-  _DSP_WIPE=""
+  declare -g _DSP_WIPE=""
   if [[ $WIPE_DISKS == "yes" ]]; then
-    _DSP_WIPE="Yes (full wipe)"
+    declare -g _DSP_WIPE="Yes (full wipe)"
   else
-    _DSP_WIPE="No (keep existing)"
+    declare -g _DSP_WIPE="No (keep existing)"
   fi
 }
 
 # Formats Services screen values: Tailscale, SSL, shell, power, features
 _dsp_services() {
-  _DSP_TAILSCALE=""
+  declare -g _DSP_TAILSCALE=""
   if [[ -n $INSTALL_TAILSCALE ]]; then
-    [[ $INSTALL_TAILSCALE == "yes" ]] && _DSP_TAILSCALE="Enabled + Stealth" || _DSP_TAILSCALE="Disabled"
-  fi
-
-  _DSP_SSL=""
-  [[ -n $SSL_TYPE ]] && _DSP_SSL=$(_dsp_lookup "ssl" "$SSL_TYPE")
-
-  _DSP_POSTFIX=""
-  if [[ -n $INSTALL_POSTFIX ]]; then
-    if [[ $INSTALL_POSTFIX == "yes" && -n $SMTP_RELAY_HOST ]]; then
-      _DSP_POSTFIX="Relay: $(_dsp_escape "$SMTP_RELAY_HOST"):$(_dsp_escape "${SMTP_RELAY_PORT:-587}")"
-    elif [[ $INSTALL_POSTFIX == "yes" ]]; then
-      _DSP_POSTFIX="Enabled (no relay)"
+    if [[ $INSTALL_TAILSCALE == "yes" ]]; then
+      declare -g _DSP_TAILSCALE="Enabled + Stealth"
     else
-      _DSP_POSTFIX="Disabled"
+      declare -g _DSP_TAILSCALE="Disabled"
     fi
   fi
 
-  _DSP_SHELL=""
-  [[ -n $SHELL_TYPE ]] && _DSP_SHELL=$(_dsp_lookup "shell" "$SHELL_TYPE")
+  declare -g _DSP_SSL=""
+  [[ -n $SSL_TYPE ]] && declare -g _DSP_SSL=$(_dsp_lookup "ssl" "$SSL_TYPE")
 
-  _DSP_POWER=""
-  [[ -n $CPU_GOVERNOR ]] && _DSP_POWER=$(_dsp_lookup "power" "$CPU_GOVERNOR")
+  declare -g _DSP_POSTFIX=""
+  if [[ -n $INSTALL_POSTFIX ]]; then
+    if [[ $INSTALL_POSTFIX == "yes" && -n $SMTP_RELAY_HOST ]]; then
+      declare -g _DSP_POSTFIX="Relay: $(_dsp_escape "$SMTP_RELAY_HOST"):$(_dsp_escape "${SMTP_RELAY_PORT:-587}")"
+    elif [[ $INSTALL_POSTFIX == "yes" ]]; then
+      declare -g _DSP_POSTFIX="Enabled (no relay)"
+    else
+      declare -g _DSP_POSTFIX="Disabled"
+    fi
+  fi
+
+  declare -g _DSP_SHELL=""
+  [[ -n $SHELL_TYPE ]] && declare -g _DSP_SHELL=$(_dsp_lookup "shell" "$SHELL_TYPE")
+
+  declare -g _DSP_POWER=""
+  [[ -n $CPU_GOVERNOR ]] && declare -g _DSP_POWER=$(_dsp_lookup "power" "$CPU_GOVERNOR")
 
   # Feature lists
-  _DSP_SECURITY="none"
+  declare -g _DSP_SECURITY="none"
   local sec_items=()
   [[ $INSTALL_APPARMOR == "yes" ]] && sec_items+=("apparmor")
   [[ $INSTALL_AUDITD == "yes" ]] && sec_items+=("auditd")
@@ -197,39 +201,39 @@ _dsp_services() {
   [[ $INSTALL_CHKROOTKIT == "yes" ]] && sec_items+=("chkrootkit")
   [[ $INSTALL_LYNIS == "yes" ]] && sec_items+=("lynis")
   [[ $INSTALL_NEEDRESTART == "yes" ]] && sec_items+=("needrestart")
-  [[ ${#sec_items[@]} -gt 0 ]] && _DSP_SECURITY="${sec_items[*]}"
+  [[ ${#sec_items[@]} -gt 0 ]] && declare -g _DSP_SECURITY="${sec_items[*]}"
 
-  _DSP_MONITORING="none"
+  declare -g _DSP_MONITORING="none"
   local mon_items=()
   [[ $INSTALL_VNSTAT == "yes" ]] && mon_items+=("vnstat")
   [[ $INSTALL_NETDATA == "yes" ]] && mon_items+=("netdata")
   [[ $INSTALL_PROMTAIL == "yes" ]] && mon_items+=("promtail")
-  [[ ${#mon_items[@]} -gt 0 ]] && _DSP_MONITORING="${mon_items[*]}"
+  [[ ${#mon_items[@]} -gt 0 ]] && declare -g _DSP_MONITORING="${mon_items[*]}"
 
-  _DSP_TOOLS="none"
+  declare -g _DSP_TOOLS="none"
   local tool_items=()
   [[ $INSTALL_YAZI == "yes" ]] && tool_items+=("yazi")
   [[ $INSTALL_NVIM == "yes" ]] && tool_items+=("nvim")
   [[ $INSTALL_RINGBUFFER == "yes" ]] && tool_items+=("ringbuffer")
-  [[ ${#tool_items[@]} -gt 0 ]] && _DSP_TOOLS="${tool_items[*]}"
+  [[ ${#tool_items[@]} -gt 0 ]] && declare -g _DSP_TOOLS="${tool_items[*]}"
 }
 
 # Formats Access screen values: admin user, SSH key, API token
 _dsp_access() {
-  _DSP_ADMIN_USER=""
-  [[ -n $ADMIN_USERNAME ]] && _DSP_ADMIN_USER="$(_dsp_escape "$ADMIN_USERNAME")"
+  declare -g _DSP_ADMIN_USER=""
+  [[ -n $ADMIN_USERNAME ]] && declare -g _DSP_ADMIN_USER="$(_dsp_escape "$ADMIN_USERNAME")"
 
-  _DSP_ADMIN_PASS=""
-  [[ -n $ADMIN_PASSWORD ]] && _DSP_ADMIN_PASS="********"
+  declare -g _DSP_ADMIN_PASS=""
+  [[ -n $ADMIN_PASSWORD ]] && declare -g _DSP_ADMIN_PASS="********"
 
-  _DSP_SSH=""
-  [[ -n $SSH_PUBLIC_KEY ]] && _DSP_SSH="$(_dsp_escape "${SSH_PUBLIC_KEY:0:20}")..."
+  declare -g _DSP_SSH=""
+  [[ -n $SSH_PUBLIC_KEY ]] && declare -g _DSP_SSH="$(_dsp_escape "${SSH_PUBLIC_KEY:0:20}")..."
 
-  _DSP_API=""
+  declare -g _DSP_API=""
   if [[ -n $INSTALL_API_TOKEN ]]; then
     case "$INSTALL_API_TOKEN" in
-      yes) _DSP_API="Yes ($(_dsp_escape "$API_TOKEN_NAME"))" ;;
-      no) _DSP_API="No" ;;
+      yes) declare -g _DSP_API="Yes ($(_dsp_escape "$API_TOKEN_NAME"))" ;;
+      no) declare -g _DSP_API="No" ;;
     esac
   fi
 }

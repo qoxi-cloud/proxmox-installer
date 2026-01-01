@@ -5,19 +5,19 @@
 detect_drives() {
   # Find all NVMe drives (excluding partitions)
   mapfile -t DRIVES < <(lsblk -d -n -o NAME,TYPE | grep nvme | grep disk | awk '{print "/dev/"$1}' | sort)
-  DRIVE_COUNT=${#DRIVES[@]}
+  declare -g DRIVE_COUNT=${#DRIVES[@]}
 
   # Fall back to any available disk if no NVMe found (for budget servers)
   if [[ $DRIVE_COUNT -eq 0 ]]; then
     # Find any disk (sda, vda, etc.) excluding loop devices
     mapfile -t DRIVES < <(lsblk -d -n -o NAME,TYPE | grep disk | grep -v loop | awk '{print "/dev/"$1}' | sort)
-    DRIVE_COUNT=${#DRIVES[@]}
+    declare -g DRIVE_COUNT=${#DRIVES[@]}
   fi
 
   # Collect drive info
-  DRIVE_NAMES=()
-  DRIVE_SIZES=()
-  DRIVE_MODELS=()
+  declare -g -a DRIVE_NAMES=()
+  declare -g -a DRIVE_SIZES=()
+  declare -g -a DRIVE_MODELS=()
 
   for drive in "${DRIVES[@]}"; do
     local name size model
@@ -89,8 +89,8 @@ detect_disk_roles() {
   if [[ $size_diff -le $threshold ]]; then
     # All same size → all in pool
     log "All disks same size, using all for ZFS pool"
-    BOOT_DISK=""
-    ZFS_POOL_DISKS=("${DRIVES[@]}")
+    declare -g BOOT_DISK=""
+    declare -g -a ZFS_POOL_DISKS=("${DRIVES[@]}")
   else
     # Mixed sizes → smallest (that's NOT in an existing pool) = boot, rest = pool
     log "Mixed disk sizes, selecting boot disk"
@@ -118,13 +118,13 @@ detect_disk_roles() {
     if [[ $smallest_idx -eq -1 ]]; then
       # All disks are in existing pools - can't auto-select boot disk
       log "WARNING: All disks belong to existing pools, no automatic boot disk selection"
-      BOOT_DISK=""
-      ZFS_POOL_DISKS=("${DRIVES[@]}")
+      declare -g BOOT_DISK=""
+      declare -g -a ZFS_POOL_DISKS=("${DRIVES[@]}")
     else
-      BOOT_DISK="${DRIVES[$smallest_idx]}"
+      declare -g BOOT_DISK="${DRIVES[$smallest_idx]}"
       log "Boot disk: $BOOT_DISK (smallest available, ${DRIVE_SIZES[$smallest_idx]})"
 
-      ZFS_POOL_DISKS=()
+      declare -g -a ZFS_POOL_DISKS=()
       for i in "${!DRIVES[@]}"; do
         [[ $i -ne $smallest_idx ]] && ZFS_POOL_DISKS+=("${DRIVES[$i]}")
       done

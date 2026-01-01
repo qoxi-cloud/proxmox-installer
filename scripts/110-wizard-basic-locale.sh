@@ -62,6 +62,7 @@ _country_to_locale() {
 
 # Update LOCALE based on COUNTRY selection
 _update_locale_from_country() {
+  declare -g LOCALE
   LOCALE=$(_country_to_locale "$COUNTRY")
   log "Set LOCALE=$LOCALE from COUNTRY=$COUNTRY"
 }

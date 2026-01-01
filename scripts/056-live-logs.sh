@@ -4,11 +4,11 @@
 # Get terminal dimensions. Sets _LOG_TERM_HEIGHT, _LOG_TERM_WIDTH.
 get_terminal_dimensions() {
   if [[ -t 1 && -n ${TERM:-} ]]; then
-    _LOG_TERM_HEIGHT=$(tput lines 2>/dev/null) || _LOG_TERM_HEIGHT=24
-    _LOG_TERM_WIDTH=$(tput cols 2>/dev/null) || _LOG_TERM_WIDTH=80
+    declare -g _LOG_TERM_HEIGHT=$(tput lines 2>/dev/null) || declare -g _LOG_TERM_HEIGHT=24
+    declare -g _LOG_TERM_WIDTH=$(tput cols 2>/dev/null) || declare -g _LOG_TERM_WIDTH=80
   else
-    _LOG_TERM_HEIGHT=24
-    _LOG_TERM_WIDTH=80
+    declare -g _LOG_TERM_HEIGHT=24
+    declare -g _LOG_TERM_WIDTH=80
   fi
 }
 
@@ -22,7 +22,7 @@ HEADER_HEIGHT=4
 # Calculate log area height. Sets LOG_AREA_HEIGHT.
 calculate_log_area() {
   get_terminal_dimensions
-  LOG_AREA_HEIGHT=$((_LOG_TERM_HEIGHT - LOGO_HEIGHT - HEADER_HEIGHT - 1))
+  declare -g LOG_AREA_HEIGHT=$((_LOG_TERM_HEIGHT - LOGO_HEIGHT - HEADER_HEIGHT - 1))
 }
 
 # Array to store log lines
@@ -76,7 +76,7 @@ render_logs() {
 start_task() {
   local message="$1"
   add_log "$message..."
-  TASK_INDEX=$((LOG_COUNT - 1))
+  declare -g TASK_INDEX=$((LOG_COUNT - 1))
 }
 
 # Complete task with status. $1=idx, $2=message, $3=status (success/error/warning)

@@ -25,8 +25,8 @@ _edit_hostname() {
   # If empty (cancelled), return to menu
   [[ -z $new_domain ]] && return
 
-  DOMAIN_SUFFIX="$new_domain"
-  [[ -n $PVE_HOSTNAME ]] && FQDN="${PVE_HOSTNAME}.${DOMAIN_SUFFIX}"
+  declare -g DOMAIN_SUFFIX="$new_domain"
+  [[ -n $PVE_HOSTNAME ]] && declare -g FQDN="${PVE_HOSTNAME}.${DOMAIN_SUFFIX}"
 }
 
 # Edits admin email address via input dialog.
@@ -59,7 +59,7 @@ _edit_timezone() {
   # Auto-select country based on timezone (if mapping exists)
   local country_code="${TZ_TO_COUNTRY[$TIMEZONE]:-}"
   if [[ -n $country_code ]]; then
-    COUNTRY="$country_code"
+    declare -g COUNTRY="$country_code"
     _update_locale_from_country
   fi
 }

@@ -10,7 +10,7 @@ log() {
 
 # Start installation metrics timer. Sets INSTALL_START_TIME.
 metrics_start() {
-  INSTALL_START_TIME=$(date +%s)
+  declare -g INSTALL_START_TIME=$(date +%s)
   log "METRIC: installation_started"
 }
 

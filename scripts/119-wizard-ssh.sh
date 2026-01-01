@@ -41,7 +41,7 @@ _edit_ssh_key() {
 
       case "$choice" in
         "Use detected key")
-          SSH_PUBLIC_KEY="$detected_key"
+          declare -g SSH_PUBLIC_KEY="$detected_key"
           break
           ;;
         "Enter different key")
@@ -74,7 +74,7 @@ _edit_ssh_key() {
 
     # Validate the entered key (secure validation with ssh-keygen)
     if validate_ssh_key_secure "$new_key"; then
-      SSH_PUBLIC_KEY="$new_key"
+      declare -g SSH_PUBLIC_KEY="$new_key"
       break
     else
       show_validation_error "Invalid SSH key. Must be ED25519, RSA/ECDSA ≥2048 bits"

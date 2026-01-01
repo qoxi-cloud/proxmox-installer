@@ -4,10 +4,10 @@
 # Load timezones list. Sets WIZ_TIMEZONES.
 _load_timezones() {
   if cmd_exists timedatectl; then
-    WIZ_TIMEZONES=$(timedatectl list-timezones 2>/dev/null)
+    declare -g WIZ_TIMEZONES=$(timedatectl list-timezones 2>/dev/null)
   else
     # Fallback: parse zoneinfo directory
-    WIZ_TIMEZONES=$(find /usr/share/zoneinfo -type f 2>/dev/null \
+    declare -g WIZ_TIMEZONES=$(find /usr/share/zoneinfo -type f 2>/dev/null \
       | sed 's|/usr/share/zoneinfo/||' \
       | grep -E '^(Africa|America|Antarctica|Asia|Atlantic|Australia|Europe|Indian|Pacific)/' \
       | sort)
@@ -22,10 +22,10 @@ _load_countries() {
   local iso_file="/usr/share/iso-codes/json/iso_3166-1.json"
   if [[ -f $iso_file ]]; then
     # Parse JSON with grep (no jq dependency for this)
-    WIZ_COUNTRIES=$(grep -oP '"alpha_2":\s*"\K[^"]+' "$iso_file" | tr '[:upper:]' '[:lower:]' | sort)
+    declare -g WIZ_COUNTRIES=$(grep -oP '"alpha_2":\s*"\K[^"]+' "$iso_file" | tr '[:upper:]' '[:lower:]' | sort)
   else
     # Fallback: extract from locale data
-    WIZ_COUNTRIES=$(locale -a 2>/dev/null | grep -oP '^[a-z]{2}(?=_)' | sort -u)
+    declare -g WIZ_COUNTRIES=$(locale -a 2>/dev/null | grep -oP '^[a-z]{2}(?=_)' | sort -u)
   fi
 }
 
@@ -44,7 +44,7 @@ _build_tz_to_country() {
 
 # Detect existing ZFS pools. Sets DETECTED_POOLS.
 _detect_pools() {
-  DETECTED_POOLS=()
+  declare -g -a DETECTED_POOLS=()
 
   # Capture both stdout and any errors
   local pool_output

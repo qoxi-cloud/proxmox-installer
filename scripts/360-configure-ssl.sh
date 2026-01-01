@@ -31,8 +31,8 @@ _config_ssl() {
     ' "First-boot certificate service configured"
 
   # Store the domain for summary
-  LETSENCRYPT_DOMAIN="$cert_domain"
-  LETSENCRYPT_FIRSTBOOT=true
+  declare -g LETSENCRYPT_DOMAIN="$cert_domain"
+  declare -g LETSENCRYPT_FIRSTBOOT=true
 }
 
 # Public wrapper (generated via factory)

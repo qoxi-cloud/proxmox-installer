@@ -187,7 +187,7 @@ make_templates() {
   # Derive PRIVATE_IP_CIDR from PRIVATE_SUBNET (e.g., 10.0.0.0/24 → 10.0.0.1/24)
   if [[ -n ${PRIVATE_SUBNET:-} && $BRIDGE_MODE != "external" ]]; then
     if validate_subnet "$PRIVATE_SUBNET"; then
-      PRIVATE_IP_CIDR="${PRIVATE_SUBNET%.*}.1/${PRIVATE_SUBNET#*/}"
+      declare -g PRIVATE_IP_CIDR="${PRIVATE_SUBNET%.*}.1/${PRIVATE_SUBNET#*/}"
       export PRIVATE_IP_CIDR
       log "Derived PRIVATE_IP_CIDR=$PRIVATE_IP_CIDR from PRIVATE_SUBNET=$PRIVATE_SUBNET"
     else

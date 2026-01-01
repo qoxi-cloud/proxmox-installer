@@ -146,7 +146,7 @@ _edit_ssl() {
   # Validate Let's Encrypt requirements, fallback to self-signed if not met
   if [[ $SSL_TYPE == "letsencrypt" ]]; then
     if ! _ssl_validate_letsencrypt; then
-      SSL_TYPE="self-signed"
+      declare -g SSL_TYPE="self-signed"
     fi
   fi
 }

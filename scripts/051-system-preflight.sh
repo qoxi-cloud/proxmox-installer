@@ -4,12 +4,12 @@
 # Check root access. Sets PREFLIGHT_ROOT*.
 _check_root_access() {
   if [[ $EUID -ne 0 ]]; then
-    PREFLIGHT_ROOT="✗ Not root"
-    PREFLIGHT_ROOT_STATUS="error"
+    declare -g PREFLIGHT_ROOT="✗ Not root"
+    declare -g PREFLIGHT_ROOT_STATUS="error"
     return 1
   else
-    PREFLIGHT_ROOT="Running as root"
-    PREFLIGHT_ROOT_STATUS="ok"
+    declare -g PREFLIGHT_ROOT="Running as root"
+    declare -g PREFLIGHT_ROOT_STATUS="ok"
     return 0
   fi
 }
@@ -17,12 +17,12 @@ _check_root_access() {
 # Check internet connectivity. Sets PREFLIGHT_NET*.
 _check_internet() {
   if ping -c 1 -W 3 "$DNS_PRIMARY" >/dev/null 2>&1; then
-    PREFLIGHT_NET="Available"
-    PREFLIGHT_NET_STATUS="ok"
+    declare -g PREFLIGHT_NET="Available"
+    declare -g PREFLIGHT_NET_STATUS="ok"
     return 0
   else
-    PREFLIGHT_NET="No connection"
-    PREFLIGHT_NET_STATUS="error"
+    declare -g PREFLIGHT_NET="No connection"
+    declare -g PREFLIGHT_NET_STATUS="error"
     return 1
   fi
 }
@@ -30,12 +30,12 @@ _check_internet() {
 # Check disk space. Sets PREFLIGHT_DISK*.
 _check_disk_space() {
   if validate_disk_space "/root" "$MIN_DISK_SPACE_MB"; then
-    PREFLIGHT_DISK="${DISK_SPACE_MB} MB"
-    PREFLIGHT_DISK_STATUS="ok"
+    declare -g PREFLIGHT_DISK="${DISK_SPACE_MB} MB"
+    declare -g PREFLIGHT_DISK_STATUS="ok"
     return 0
   else
-    PREFLIGHT_DISK="${DISK_SPACE_MB:-0} MB (need ${MIN_DISK_SPACE_MB}MB+)"
-    PREFLIGHT_DISK_STATUS="error"
+    declare -g PREFLIGHT_DISK="${DISK_SPACE_MB:-0} MB (need ${MIN_DISK_SPACE_MB}MB+)"
+    declare -g PREFLIGHT_DISK_STATUS="error"
     return 1
   fi
 }
@@ -45,12 +45,12 @@ _check_ram() {
   local total_ram_mb
   total_ram_mb=$(free -m | awk '/^Mem:/{print $2}')
   if [[ $total_ram_mb -ge $MIN_RAM_MB ]]; then
-    PREFLIGHT_RAM="${total_ram_mb} MB"
-    PREFLIGHT_RAM_STATUS="ok"
+    declare -g PREFLIGHT_RAM="${total_ram_mb} MB"
+    declare -g PREFLIGHT_RAM_STATUS="ok"
     return 0
   else
-    PREFLIGHT_RAM="${total_ram_mb} MB (need ${MIN_RAM_MB}MB+)"
-    PREFLIGHT_RAM_STATUS="error"
+    declare -g PREFLIGHT_RAM="${total_ram_mb} MB (need ${MIN_RAM_MB}MB+)"
+    declare -g PREFLIGHT_RAM_STATUS="error"
     return 1
   fi
 }
@@ -60,11 +60,11 @@ _check_cpu() {
   local cpu_cores
   cpu_cores=$(nproc)
   if [[ $cpu_cores -ge 2 ]]; then
-    PREFLIGHT_CPU="${cpu_cores} cores"
-    PREFLIGHT_CPU_STATUS="ok"
+    declare -g PREFLIGHT_CPU="${cpu_cores} cores"
+    declare -g PREFLIGHT_CPU_STATUS="ok"
   else
-    PREFLIGHT_CPU="${cpu_cores} core(s)"
-    PREFLIGHT_CPU_STATUS="warn"
+    declare -g PREFLIGHT_CPU="${cpu_cores} core(s)"
+    declare -g PREFLIGHT_CPU_STATUS="warn"
   fi
 }
 
@@ -90,12 +90,12 @@ _check_kvm() {
   fi
 
   if [[ -e /dev/kvm ]]; then
-    PREFLIGHT_KVM="Available"
-    PREFLIGHT_KVM_STATUS="ok"
+    declare -g PREFLIGHT_KVM="Available"
+    declare -g PREFLIGHT_KVM_STATUS="ok"
     return 0
   else
-    PREFLIGHT_KVM="Not available"
-    PREFLIGHT_KVM_STATUS="error"
+    declare -g PREFLIGHT_KVM="Not available"
+    declare -g PREFLIGHT_KVM_STATUS="error"
     return 1
   fi
 }
@@ -111,7 +111,7 @@ _run_preflight_checks() {
   _check_cpu
   _check_kvm || ((errors++))
 
-  PREFLIGHT_ERRORS=$errors
+  declare -g PREFLIGHT_ERRORS=$errors
 }
 
 # Main collection function

@@ -43,8 +43,8 @@ create_api_token() {
   fi
 
   # Store for final display
-  API_TOKEN_VALUE="$token_value"
-  API_TOKEN_ID="${ADMIN_USERNAME}@pam!${API_TOKEN_NAME}"
+  declare -g API_TOKEN_VALUE="$token_value"
+  declare -g API_TOKEN_ID="${ADMIN_USERNAME}@pam!${API_TOKEN_NAME}"
 
   # Save to temp file for display after installation (restricted permissions)
   # Uses centralized path constant from 003-init.sh, registered for cleanup

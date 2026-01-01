@@ -21,7 +21,7 @@ _edit_interface() {
     return
   fi
 
-  INTERFACE_NAME="$selected"
+  declare -g INTERFACE_NAME="$selected"
 }
 
 # Edits network bridge mode for VM networking.
@@ -89,7 +89,7 @@ _edit_private_subnet() {
 
       # Validate subnet
       if validate_subnet "$new_subnet"; then
-        PRIVATE_SUBNET="$new_subnet"
+        declare -g PRIVATE_SUBNET="$new_subnet"
         break
       else
         show_validation_error "Invalid subnet format. Use CIDR notation like: 10.0.0.0/24"
@@ -97,7 +97,7 @@ _edit_private_subnet() {
     done
   else
     # Use selected preset
-    PRIVATE_SUBNET="$selected"
+    declare -g PRIVATE_SUBNET="$selected"
   fi
 }
 

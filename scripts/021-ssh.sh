@@ -32,21 +32,21 @@ _ssh_session_init() {
 
   # Already exists with content? Just set variable and return
   if [[ -f "$passfile_path" ]] && [[ -s "$passfile_path" ]]; then
-    _SSH_SESSION_PASSFILE="$passfile_path"
+    declare -g _SSH_SESSION_PASSFILE="$passfile_path"
     return 0
   fi
 
   # Create new passfile (no trailing newline - sshpass reads entire file content)
   printf '%s' "$NEW_ROOT_PASSWORD" >"$passfile_path"
   chmod 600 "$passfile_path"
-  _SSH_SESSION_PASSFILE="$passfile_path"
+  declare -g _SSH_SESSION_PASSFILE="$passfile_path"
 
   # Register temp files for cleanup (once from main shell)
   if [[ $BASHPID == "$$" ]] && [[ $_SSH_SESSION_LOGGED != true ]]; then
     register_temp_file "$passfile_path"
     register_temp_file "$_TEMP_SSH_CONTROL_PATH"
     log "SSH session initialized: $passfile_path"
-    _SSH_SESSION_LOGGED=true
+    declare -g _SSH_SESSION_LOGGED=true
   fi
 }
 
@@ -87,7 +87,7 @@ _ssh_session_cleanup() {
     rm -f "$passfile_path"
   fi
 
-  _SSH_SESSION_PASSFILE=""
+  declare -g _SSH_SESSION_PASSFILE=""
   log "SSH session cleaned up: $passfile_path"
 }
 
@@ -181,21 +181,21 @@ wait_for_ssh_ready() {
 parse_ssh_key() {
   local key="$1"
 
-  SSH_KEY_TYPE=""
-  SSH_KEY_DATA=""
-  SSH_KEY_COMMENT=""
-  SSH_KEY_SHORT=""
+  declare -g SSH_KEY_TYPE=""
+  declare -g SSH_KEY_DATA=""
+  declare -g SSH_KEY_COMMENT=""
+  declare -g SSH_KEY_SHORT=""
 
   [[ -z "$key" ]] && return 1
 
-  SSH_KEY_TYPE=$(printf '%s\n' "$key" | awk '{print $1}')
-  SSH_KEY_DATA=$(printf '%s\n' "$key" | awk '{print $2}')
-  SSH_KEY_COMMENT=$(printf '%s\n' "$key" | awk '{$1=""; $2=""; print}' | sed 's/^ *//')
+  declare -g SSH_KEY_TYPE=$(printf '%s\n' "$key" | awk '{print $1}')
+  declare -g SSH_KEY_DATA=$(printf '%s\n' "$key" | awk '{print $2}')
+  declare -g SSH_KEY_COMMENT=$(printf '%s\n' "$key" | awk '{$1=""; $2=""; print}' | sed 's/^ *//')
 
   if [[ ${#SSH_KEY_DATA} -gt 35 ]]; then
-    SSH_KEY_SHORT="${SSH_KEY_DATA:0:20}...${SSH_KEY_DATA: -10}"
+    declare -g SSH_KEY_SHORT="${SSH_KEY_DATA:0:20}...${SSH_KEY_DATA: -10}"
   else
-    SSH_KEY_SHORT="$SSH_KEY_DATA"
+    declare -g SSH_KEY_SHORT="$SSH_KEY_DATA"
   fi
 
   return 0

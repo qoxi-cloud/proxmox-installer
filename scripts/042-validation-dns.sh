@@ -78,7 +78,7 @@ validate_dns_resolution() {
   # If no DNS tool available, log warning and return no resolution
   if [[ -z $dns_tool ]]; then
     log "WARNING: No DNS lookup tool available (dig, host, or nslookup)"
-    DNS_RESOLVED_IP=""
+    declare -g DNS_RESOLVED_IP=""
     return 1
   fi
 
@@ -130,7 +130,7 @@ validate_dns_resolution() {
 
     # If we got a result, process it
     if [[ -n $resolved_ip ]]; then
-      DNS_RESOLVED_IP="$resolved_ip"
+      declare -g DNS_RESOLVED_IP="$resolved_ip"
       if [[ $resolved_ip == "$expected_ip" ]]; then
         return 0 # Match
       else
@@ -147,6 +147,6 @@ validate_dns_resolution() {
 
   # All attempts failed
   log "ERROR: Failed to resolve $fqdn after $max_attempts attempts"
-  DNS_RESOLVED_IP=""
+  declare -g DNS_RESOLVED_IP=""
   return 1 # No resolution
 }

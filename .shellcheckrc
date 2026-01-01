@@ -39,6 +39,11 @@ disable=SC1003
 # Reason: sed is used for complex regex with ANSI escape codes that bash can't handle
 disable=SC2001
 
+# SC2155: Declare and assign separately to avoid masking return values
+# Reason: We use `declare -g VAR=$(cmd)` for explicit global intent; return value masking
+# is not a concern since we check command success separately where needed
+disable=SC2155
+
 # =============================================================================
 # NOT globally disabled (use inline comments where needed)
 # =============================================================================

@@ -111,6 +111,7 @@ make_answer_toml() {
   fi
 
   # Build DISK_LIST from all_disks using virtio mapping
+  declare -g DISK_LIST
   DISK_LIST=$(map_disks_to_virtio "toml_array" "${all_disks[@]}")
   if [[ -z $DISK_LIST ]]; then
     log "ERROR: Failed to map disks to virtio devices"

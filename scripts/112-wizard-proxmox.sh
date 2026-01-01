@@ -33,7 +33,7 @@ _edit_iso_version() {
     return
   fi
 
-  PROXMOX_ISO_VERSION="$selected"
+  declare -g PROXMOX_ISO_VERSION="$selected"
 }
 
 # Edits Proxmox package repository type.
@@ -70,17 +70,17 @@ _edit_repository() {
         --prompt "Subscription Key: "
     )
 
-    PVE_SUBSCRIPTION_KEY="$sub_key"
+    declare -g PVE_SUBSCRIPTION_KEY="$sub_key"
 
     # If no key provided, fallback to no-subscription
     if [[ -z $PVE_SUBSCRIPTION_KEY ]]; then
-      PVE_REPO_TYPE="no-subscription"
+      declare -g PVE_REPO_TYPE="no-subscription"
       _wiz_hide_cursor
       _wiz_warn "Enterprise repository requires subscription key"
       sleep "${RETRY_DELAY_SECONDS:-2}"
     fi
   else
     # Clear subscription key if not enterprise
-    PVE_SUBSCRIPTION_KEY=""
+    declare -g PVE_SUBSCRIPTION_KEY=""
   fi
 }
