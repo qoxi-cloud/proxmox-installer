@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.766-pr.21"
+readonly VERSION="2.0.767-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -2250,7 +2250,10 @@ PREDICTABLE_NAME=""
 if [[ -e "/sys/class/net/$CURRENT_INTERFACE" ]];then
 local udev_info
 udev_info=$(udevadm info "/sys/class/net/$CURRENT_INTERFACE" 2>/dev/null)
+PREDICTABLE_NAME=$(printf '%s\n' "$udev_info"|grep "ID_NET_NAME_MAC="|cut -d'=' -f2)
+if [[ -z $PREDICTABLE_NAME ]];then
 PREDICTABLE_NAME=$(printf '%s\n' "$udev_info"|grep "ID_NET_NAME_PATH="|cut -d'=' -f2)
+fi
 if [[ -z $PREDICTABLE_NAME ]];then
 PREDICTABLE_NAME=$(printf '%s\n' "$udev_info"|grep "ID_NET_NAME_ONBOARD="|cut -d'=' -f2)
 fi
@@ -2264,15 +2267,45 @@ else
 DEFAULT_INTERFACE="$CURRENT_INTERFACE"
 fi
 }
+_get_mac_based_name(){
+local iface="$1"
+local udev_info mac_name
+if [[ -e "/sys/class/net/$iface" ]];then
+udev_info=$(udevadm info "/sys/class/net/$iface" 2>/dev/null)
+mac_name=$(printf '%s\n' "$udev_info"|grep "ID_NET_NAME_MAC="|cut -d'=' -f2)
+if [[ -n $mac_name ]];then
+printf '%s' "$mac_name"
+return 0
+fi
+mac_name=$(printf '%s\n' "$udev_info"|grep "ID_NET_NAME_PATH="|cut -d'=' -f2)
+if [[ -n $mac_name ]];then
+printf '%s' "$mac_name"
+return 0
+fi
+fi
+printf '%s' "$iface"
+}
 _detect_available_interfaces(){
 AVAILABLE_ALTNAMES=$(ip -d link show|grep -v "lo:"|grep -E '(^[0-9]+:|altname)'|awk '/^[0-9]+:/ {interface=$2; gsub(/:/, "", interface); printf "%s", interface} /altname/ {printf ", %s", $2} END {print ""}'|sed 's/, $//')
+local raw_interfaces
 if cmd_exists ip&&cmd_exists jq;then
-AVAILABLE_INTERFACES=$(ip -j link show 2>/dev/null|jq -r '.[] | select(.ifname != "lo") | .ifname'|sort)
+raw_interfaces=$(ip -j link show 2>/dev/null|jq -r '.[] | select(.ifname != "lo") | .ifname'|sort)
 elif cmd_exists ip;then
-AVAILABLE_INTERFACES=$(ip link show|awk -F': ' '/^[0-9]+:/ && !/lo:/ {print $2}'|sort)
+raw_interfaces=$(ip link show|awk -F': ' '/^[0-9]+:/ && !/lo:/ {print $2}'|sort)
 else
-AVAILABLE_INTERFACES="$CURRENT_INTERFACE"
+raw_interfaces="$CURRENT_INTERFACE"
 fi
+AVAILABLE_INTERFACES=""
+local iface mac_name
+while IFS= read -r iface;do
+[[ -z $iface ]]&&continue
+mac_name=$(_get_mac_based_name "$iface")
+if [[ -n $AVAILABLE_INTERFACES ]];then
+AVAILABLE_INTERFACES="$AVAILABLE_INTERFACES"$'\n'"$mac_name"
+else
+AVAILABLE_INTERFACES="$mac_name"
+fi
+done <<<"$raw_interfaces"
 INTERFACE_COUNT=$(printf '%s\n' "$AVAILABLE_INTERFACES"|wc -l)
 if [[ -z $INTERFACE_NAME ]];then
 INTERFACE_NAME="$DEFAULT_INTERFACE"
@@ -6835,6 +6868,41 @@ configure_lvm_storage(){
 [[ -z $BOOT_DISK ]]&&return 0
 _config_expand_lvm_root
 }
+configure_efi_fallback_boot(){
+if ! remote_exec 'test -d /sys/firmware/efi' 2>/dev/null;then
+log "INFO: Legacy BIOS mode - skipping EFI fallback configuration"
+return 0
+fi
+remote_run "Configuring EFI fallback boot" '
+    # Ensure EFI partition is mounted
+    if ! mountpoint -q /boot/efi 2>/dev/null; then
+      mount /boot/efi || exit 1
+    fi
+
+    # Create fallback directory if needed
+    mkdir -p /boot/efi/EFI/BOOT
+
+    # Find and copy the bootloader to fallback path
+    # Priority: systemd-boot (ZFS) > GRUB (ext4/LVM) > shim (secure boot)
+    local bootloader=""
+    if [[ -f /boot/efi/EFI/systemd/systemd-bootx64.efi ]]; then
+      bootloader="/boot/efi/EFI/systemd/systemd-bootx64.efi"
+    elif [[ -f /boot/efi/EFI/proxmox/grubx64.efi ]]; then
+      bootloader="/boot/efi/EFI/proxmox/grubx64.efi"
+    elif [[ -f /boot/efi/EFI/debian/grubx64.efi ]]; then
+      bootloader="/boot/efi/EFI/debian/grubx64.efi"
+    fi
+
+    if [[ -z $bootloader ]]; then
+      echo "WARNING: No bootloader found to copy to fallback path"
+      exit 0
+    fi
+
+    # Copy to fallback path (overwrite if exists)
+    cp -f "$bootloader" /boot/efi/EFI/BOOT/BOOTX64.EFI
+    echo "Copied $bootloader to /EFI/BOOT/BOOTX64.EFI"
+  ' "EFI fallback boot configured"
+}
 _deploy_ssh_config(){
 deploy_template "templates/sshd_config" "/etc/ssh/sshd_config" \
 "ADMIN_USERNAME=$ADMIN_USERNAME"||return 1
@@ -6888,10 +6956,18 @@ remote_run "Cleaning up installation logs" '
     # Commented out - may cause issues with some services
     # : > /etc/machine-id
 
-    # Sync filesystems and unmount EFI partition to prevent dirty bit on next boot
+    # Sync filesystems to ensure all data is written before shutdown
+    # ZFS requires explicit zpool sync to commit all transactions (critical for data integrity)
     sync
+    if command -v zpool &>/dev/null; then
+      zpool sync 2>/dev/null || true
+    fi
     umount /boot/efi 2>/dev/null || true
     sync
+    # Final ZFS sync after EFI unmount
+    if command -v zpool &>/dev/null; then
+      zpool sync 2>/dev/null || true
+    fi
   ' "Installation logs cleaned"
 }
 validate_installation(){
@@ -7091,6 +7167,7 @@ log "ERROR: deploy_ssh_hardening_config failed"
 return 1
 }
 validate_installation||{ log "WARNING: validate_installation reported issues";}
+configure_efi_fallback_boot||{ log "WARNING: configure_efi_fallback_boot failed";}
 cleanup_installation_logs||{ log "WARNING: cleanup_installation_logs failed";}
 restart_ssh_service||{ log "WARNING: restart_ssh_service failed";}
 finalize_vm||{ log "WARNING: finalize_vm did not complete cleanly";}
