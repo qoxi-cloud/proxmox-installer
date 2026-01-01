@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.799-pr.21"
+readonly VERSION="2.0.800-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -2275,7 +2275,9 @@ _run_preflight_checks
 _detect_default_interface
 _detect_predictable_name
 _detect_available_interfaces
-_detect_ipv4
+if ! _detect_ipv4;then
+log_warn "IPv4 detection failed - network config will require manual configuration"
+fi
 _detect_ipv6_and_mac
 _load_wizard_data
 }
@@ -2409,6 +2411,8 @@ log_info "Network info attempt $attempt failed, retrying in ${RETRY_DELAY_SECOND
 sleep "${RETRY_DELAY_SECONDS:-2}"
 fi
 done
+log_error "IPv4 detection failed after $max_attempts attempts"
+return 1
 }
 _detect_ipv6_and_mac(){
 if cmd_exists ip&&cmd_exists jq;then
@@ -2979,6 +2983,8 @@ local missing_fields=()
 [[ -z $PROXMOX_ISO_VERSION ]]&&missing_fields+=("Proxmox Version")
 [[ -z $PVE_REPO_TYPE ]]&&missing_fields+=("Repository")
 [[ -z $INTERFACE_NAME ]]&&missing_fields+=("Network Interface")
+[[ -z $MAIN_IPV4 ]]&&missing_fields+=("IPv4 Address")
+[[ -z $MAIN_IPV4_GW ]]&&missing_fields+=("IPv4 Gateway")
 [[ -z $BRIDGE_MODE ]]&&missing_fields+=("Bridge mode")
 [[ $BRIDGE_MODE != "external" && -z $PRIVATE_SUBNET ]]&&missing_fields+=("Private subnet")
 [[ -z $IPV6_MODE ]]&&missing_fields+=("IPv6")
@@ -3294,6 +3300,8 @@ _wiz_config_complete(){
 [[ -z $PROXMOX_ISO_VERSION ]]&&return 1
 [[ -z $PVE_REPO_TYPE ]]&&return 1
 [[ -z $INTERFACE_NAME ]]&&return 1
+[[ -z $MAIN_IPV4 ]]&&return 1
+[[ -z $MAIN_IPV4_GW ]]&&return 1
 [[ -z $BRIDGE_MODE ]]&&return 1
 [[ $BRIDGE_MODE != "external" && -z $PRIVATE_SUBNET ]]&&return 1
 [[ -z $IPV6_MODE ]]&&return 1
