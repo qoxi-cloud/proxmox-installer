@@ -74,16 +74,18 @@ make_condition_wrapper() {
 
 # Async feature execution helpers
 
-# Start async feature if flag is set. $1=feature, $2=flag_var. Echoes PID or empty.
+# Start async feature if flag is set. $1=feature, $2=flag_var. Sets REPLY to PID.
+# IMPORTANT: Do NOT call via $(). Call directly to keep process as child of main shell.
 start_async_feature() {
   local feature="$1"
   local flag_var="$2"
   local flag_value="${!flag_var:-}"
 
+  REPLY=""
   [[ $flag_value != "yes" ]] && return 0
 
   "configure_${feature}" >>"$LOG_FILE" 2>&1 &
-  echo "$!"
+  REPLY="$!"
 }
 
 # Wait for async feature and log result. $1=feature, $2=pid
@@ -93,7 +95,7 @@ wait_async_feature() {
 
   [[ -z $pid ]] && return 0
 
-  if ! wait "$pid"; then
+  if ! wait "$pid" 2>/dev/null; then
     log_warn "configure_${feature} failed (exit code: $?)"
     return 1
   fi

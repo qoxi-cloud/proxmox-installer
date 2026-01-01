@@ -65,9 +65,12 @@ _phase_security_configuration() {
 # PHASE 4: Monitoring & Tools (parallel where possible)
 _phase_monitoring_tools() {
   # Special installers (non-apt) - run in background with proper error tracking
+  # NOTE: Must call directly (not via $()) to keep process as child of main shell
   local netdata_pid yazi_pid
-  netdata_pid=$(start_async_feature "netdata" "INSTALL_NETDATA")
-  yazi_pid=$(start_async_feature "yazi" "INSTALL_YAZI")
+  start_async_feature "netdata" "INSTALL_NETDATA"
+  netdata_pid="$REPLY"
+  start_async_feature "yazi" "INSTALL_YAZI"
+  yazi_pid="$REPLY"
 
   # Parallel config for apt-installed tools (packages already installed by batch)
   run_parallel_group "Configuring tools" "Tools configured" \
