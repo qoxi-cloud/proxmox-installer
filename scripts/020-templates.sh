@@ -122,7 +122,7 @@ apply_common_template_vars() {
     "DNS6_PRIMARY=${DNS6_PRIMARY:-2606:4700:4700::1111}" \
     "DNS6_SECONDARY=${DNS6_SECONDARY:-2606:4700:4700::1001}" \
     "LOCALE=${LOCALE:-en_US.UTF-8}" \
-    "KEYBOARD=${KEYBOARD:-us}" \
+    "KEYBOARD=${KEYBOARD:-en-us}" \
     "COUNTRY=${COUNTRY:-US}" \
     "BAT_THEME=${BAT_THEME:-Catppuccin Mocha}" \
     "PORT_SSH=${PORT_SSH:-22}" \

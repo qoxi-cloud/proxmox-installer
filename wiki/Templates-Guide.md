@@ -245,7 +245,7 @@ Debug log for empty values:
 | `{{FQDN}}` | Full domain name | `myserver.example.com` |
 | `{{TIMEZONE}}` | Timezone | `Europe/Kyiv` |
 | `{{LOCALE}}` | System locale | `en_US.UTF-8` |
-| `{{KEYBOARD}}` | Keyboard layout | `us` |
+| `{{KEYBOARD}}` | Keyboard layout | `en-us` |
 | `{{COUNTRY}}` | Country code | `US` |
 
 ### User
