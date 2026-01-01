@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.770-pr.21"
+readonly VERSION="2.0.771-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -4241,7 +4241,7 @@ return 1
 }
 register_temp_file "$dns_result_file"
 (validate_dns_resolution "$FQDN" "$MAIN_IPV4"
-printf '%s\n' "$?" >"$dns_result_file") > \
+printf '%s\n%s\n' "$?" "$DNS_RESOLVED_IP" >"$dns_result_file") > \
 /dev/null 2>&1&
 local dns_pid=$!
 printf "%s" "${CLR_CYAN}Validating DNS resolution$CLR_RESET"
@@ -4256,7 +4256,10 @@ printf "\r%sValidating DNS resolution%s%-3s%s" "$CLR_CYAN" "$CLR_ORANGE" "$dots"
 done
 wait "$dns_pid" 2>/dev/null
 local dns_result
-dns_result=$(cat "$dns_result_file")
+{
+read -r dns_result
+read -r DNS_RESOLVED_IP
+} <"$dns_result_file"
 rm -f "$dns_result_file"
 printf "\r%-80s\r" " "
 return "$dns_result"
