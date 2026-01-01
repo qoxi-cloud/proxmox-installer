@@ -16,7 +16,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.763-pr.21"
+readonly VERSION="2.0.766-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -6346,11 +6346,6 @@ return 1
 }
 remote_exec '
     mkdir -p /var/log/audit
-    # Fully stop auditd to prevent rule conflicts during cleanup
-    systemctl stop auditd 2>/dev/null || true
-    sleep 1
-    # Clear rules from kernel memory (fails silently if immutable from previous boot)
-    auditctl -D 2>/dev/null || true
     # Remove ALL default/conflicting rules before our rules
     find /etc/audit/rules.d -name "*.rules" ! -name "proxmox.rules" -delete 2>/dev/null || true
     rm -f /etc/audit/audit.rules 2>/dev/null || true
@@ -6358,13 +6353,24 @@ remote_exec '
     sed -i "s/^max_log_file = .*/max_log_file = 50/" /etc/audit/auditd.conf
     sed -i "s/^num_logs = .*/num_logs = 10/" /etc/audit/auditd.conf
     sed -i "s/^max_log_file_action = .*/max_log_file_action = ROTATE/" /etc/audit/auditd.conf
-    # Regenerate rules from clean state
+    # Enable auditd for boot (dont start yet)
+    systemctl daemon-reload
+    systemctl enable auditd
+    # Stop auditd, load new rules, then restart
+    # auditd requires special handling - use service command for stop/start
+    service auditd stop 2>/dev/null || true
+    sleep 1
+    auditctl -D 2>/dev/null || true
     augenrules --load 2>/dev/null || true
+    # Start with retry - audit subsystem may need time to stabilize
+    for i in 1 2 3; do
+      service auditd start 2>/dev/null && break
+      sleep 2
+    done
   '||{
 log "ERROR: Failed to configure auditd"
 return 1
 }
-remote_enable_services "auditd"
 parallel_mark_configured "auditd"
 }
 make_feature_wrapper "auditd" "INSTALL_AUDITD"
@@ -6491,11 +6497,11 @@ fi
 }
 _config_yazi(){
 remote_exec 'su - '"$ADMIN_USERNAME"' -c "
-    ya pack -a kalidyasin/yazi-flavors:tokyonight-night || echo \"WARNING: Failed to install yazi flavor\" >&2
-    ya pack -a yazi-rs/plugins:chmod || echo \"WARNING: Failed to install chmod plugin\" >&2
-    ya pack -a yazi-rs/plugins:smart-enter || echo \"WARNING: Failed to install smart-enter plugin\" >&2
-    ya pack -a yazi-rs/plugins:smart-filter || echo \"WARNING: Failed to install smart-filter plugin\" >&2
-    ya pack -a yazi-rs/plugins:full-border || echo \"WARNING: Failed to install full-border plugin\" >&2
+    ya pkg add kalidyasin/yazi-flavors:tokyonight-night || echo \"WARNING: Failed to install yazi flavor\" >&2
+    ya pkg add yazi-rs/plugins:chmod || echo \"WARNING: Failed to install chmod plugin\" >&2
+    ya pkg add yazi-rs/plugins:smart-enter || echo \"WARNING: Failed to install smart-enter plugin\" >&2
+    ya pkg add yazi-rs/plugins:smart-filter || echo \"WARNING: Failed to install smart-filter plugin\" >&2
+    ya pkg add yazi-rs/plugins:full-border || echo \"WARNING: Failed to install full-border plugin\" >&2
   "'||{
 log "WARNING: Failed to install some yazi plugins (yazi will still work)"
 }
@@ -6759,7 +6765,8 @@ log "INFO: Ensuring rpool storage is configured for Proxmox"
 if ! remote_run "Configuring rpool storage" '
     if zpool list rpool &>/dev/null; then
       # Check if storage exists: pvesm status (works if healthy) OR grep config (always works)
-      if pvesm status local-zfs &>/dev/null || grep -q "^local-zfs:" /etc/pve/storage.cfg 2>/dev/null; then
+      # Note: storage.cfg format is "zfspool: local-zfs" (type: name), not "local-zfs:"
+      if pvesm status local-zfs &>/dev/null || grep -qE "^zfspool:[[:space:]]+local-zfs" /etc/pve/storage.cfg 2>/dev/null; then
         echo "local-zfs storage already exists"
       else
         zfs list rpool/data &>/dev/null || zfs create rpool/data
@@ -7026,8 +7033,7 @@ return 1
 }
 configure_zfs_cachefile||{ log "WARNING: configure_zfs_cachefile failed";}
 configure_zfs_scrub||{ log "WARNING: configure_zfs_scrub failed";}
-log "INFO: Updating initramfs to include ZFS cachefile changes"
-remote_exec "update-initramfs -u -k all" >>"$LOG_FILE"||log "WARNING: update-initramfs failed"
+remote_run "Updating initramfs" "update-initramfs -u -k all"||log "WARNING: update-initramfs failed"
 }
 _phase_security_configuration(){
 batch_install_packages
