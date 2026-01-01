@@ -321,14 +321,19 @@ else
 fi
 ```
 
-### 4. Consideration: API Token File Permissions
-**File:** `scripts/003-init.sh:168`
+### 4. ~~Consideration: API Token File Permissions~~ ✓ FIXED
+**File:** `scripts/361-configure-api-token.sh:51-58`
 
 ```bash
-_TEMP_API_TOKEN_FILE="/tmp/pve-install-api-token.$$.env"
+# Now implemented with umask in subshell
+(
+  umask 0077
+  cat >"$_TEMP_API_TOKEN_FILE" <<EOF
+...
+EOF
+)
 ```
-
-**Observation:** File is created with default umask. While registered for cleanup, consider explicit `chmod 600` at creation.
+**Status:** Fixed with `umask 0077` in subshell, ensuring file is created with mode 600 (owner read/write only).
 
 ---
 
@@ -385,7 +390,7 @@ While CLAUDE.md lists common variables, a complete reference with which template
 | Potential Bugs | 5 | 0 |
 | Improvement Suggestions | 8 | 6 |
 | Style Inconsistencies | 3 | 3 |
-| Security Notes | 4 | 0 |
+| Security Notes | 4 | 1 |
 | Performance Notes | 3 | 0 |
 
 **Overall Assessment:** The codebase is high quality with consistent patterns and good security practices. The identified issues are mostly minor improvements rather than critical bugs.
@@ -400,3 +405,4 @@ While CLAUDE.md lists common variables, a complete reference with which template
 - Style #1: Standardized on `[[ ]]` test syntax in `011-downloads.sh`, `300-configure-base.sh`, and `372-configure-lvm.sh`
 - Style #2: Added typed log helpers (`log_info`, `log_error`, `log_warn`, `log_debug`) and migrated 247 log calls
 - Style #3: Standardized variable quoting across 30+ scripts (~150 assignments now use "always quote" style)
+- Security #4: API token file now created with `umask 0077` in subshell for mode 600 permissions
