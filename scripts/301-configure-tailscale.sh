@@ -44,7 +44,7 @@ _config_tailscale() {
       if remote_exec "tailscale up --authkey='$TAILSCALE_AUTH_KEY' --ssh"; then
         echo "success" >"$tmp_result"
         # Get IP and hostname in one call using tailscale status --json
-        remote_exec "tailscale status --json | jq -r '[(.Self.TailscaleIPs[0] // \"pending\"), (.Self.DNSName // \"\" | rtrimstr(\".\"))] | @tsv'" 2>/dev/null | {
+        remote_exec "tailscale status --json | jq -r '[(.Self.TailscaleIPs[0] // \"pending\"), (.Self.DNSName // \"\" | rtrimstr(\".\"))] | @tsv'" | {
           IFS=$'\t' read -r ip hostname
           echo "$ip" >"$tmp_ip"
           echo "$hostname" >"$tmp_hostname"
@@ -84,7 +84,7 @@ _config_tailscale() {
           log "Using pre-downloaded disable-openssh.service, size: $(wc -c <./templates/disable-openssh.service 2>/dev/null || echo 'failed')"
           remote_copy "templates/disable-openssh.service" "/etc/systemd/system/disable-openssh.service" || exit 1
           log "Copied disable-openssh.service to VM"
-          remote_exec "systemctl daemon-reload && systemctl enable disable-openssh.service" >/dev/null 2>&1 || exit 1
+          remote_exec "systemctl daemon-reload && systemctl enable disable-openssh.service" >/dev/null || exit 1
           log "Enabled disable-openssh.service"
         ) &
         show_progress $! "Configuring OpenSSH disable on boot" "OpenSSH disable configured"

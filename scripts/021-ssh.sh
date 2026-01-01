@@ -54,7 +54,7 @@ _ssh_session_init() {
 _ssh_control_cleanup() {
   if [[ -S "$_TEMP_SSH_CONTROL_PATH" ]]; then
     # Gracefully close master connection
-    ssh -o ControlPath="$_TEMP_SSH_CONTROL_PATH" -O exit root@localhost 2>/dev/null || true
+    ssh -o ControlPath="$_TEMP_SSH_CONTROL_PATH" -O exit root@localhost >>"${LOG_FILE:-/dev/null}" 2>&1 || true
     rm -f "$_TEMP_SSH_CONTROL_PATH" 2>/dev/null || true
     log "SSH control socket cleaned up: $_TEMP_SSH_CONTROL_PATH"
   fi
@@ -122,7 +122,7 @@ wait_for_ssh_ready() {
 
   # Clear any stale known_hosts entries
   local ssh_known_hosts="${INSTALL_DIR:-${HOME:-/root}}/.ssh/known_hosts"
-  ssh-keygen -f "$ssh_known_hosts" -R "[localhost]:${SSH_PORT}" 2>/dev/null || true
+  ssh-keygen -f "$ssh_known_hosts" -R "[localhost]:${SSH_PORT}" >>"${LOG_FILE:-/dev/null}" 2>&1 || true
 
   # Port check - wait for VM to boot and open SSH port
   # Allow up to 75% of timeout for port check, but track actual elapsed time
@@ -161,7 +161,7 @@ wait_for_ssh_ready() {
     retry_delay="${RETRY_DELAY_SECONDS:-2}"
     while ((elapsed < ssh_timeout)); do
       # shellcheck disable=SC2086
-      if sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' >/dev/null 2>&1; then
+      if sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost 'echo ready' >>"${LOG_FILE:-/dev/null}" 2>&1; then
         exit 0
       fi
       sleep "$retry_delay"

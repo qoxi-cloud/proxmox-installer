@@ -34,7 +34,7 @@ _phase_storage_configuration() {
 
   # Update initramfs to include ZFS cachefile changes (prevents "cachefile import failed" on boot)
   log "INFO: Updating initramfs to include ZFS cachefile changes"
-  remote_exec "update-initramfs -u -k all" >>"$LOG_FILE" 2>&1 || log "WARNING: update-initramfs failed"
+  remote_exec "update-initramfs -u -k all" >>"$LOG_FILE" || log "WARNING: update-initramfs failed"
 }
 
 # PHASE 3: Security Configuration (parallel after batch install)

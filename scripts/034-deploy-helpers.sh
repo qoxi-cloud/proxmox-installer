@@ -18,7 +18,7 @@ run_batch_copies() {
   for pair in "${pairs[@]}"; do
     local src="${pair%%:*}"
     local dst="${pair#*:}"
-    remote_copy "$src" "$dst" >/dev/null 2>&1 &
+    remote_copy "$src" "$dst" &
     pids+=($!)
   done
 

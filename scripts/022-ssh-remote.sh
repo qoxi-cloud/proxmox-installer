@@ -30,6 +30,7 @@ _sanitize_script_for_log() {
 }
 
 # Execute command on remote VM with exponential backoff retry. $*=command. Returns exit code (124=timeout)
+# Note: stderr is redirected to LOG_FILE to prevent breaking live logs display
 remote_exec() {
   local passfile
   passfile=$(_ssh_get_passfile)
@@ -43,7 +44,7 @@ remote_exec() {
     attempt=$((attempt + 1))
 
     # shellcheck disable=SC2086
-    timeout "$cmd_timeout" sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost "$@"
+    timeout "$cmd_timeout" sshpass -f "$passfile" ssh -p "$SSH_PORT" $SSH_OPTS root@localhost "$@" 2>>"$LOG_FILE"
     local exit_code=$?
 
     if [[ $exit_code -eq 0 ]]; then
@@ -137,6 +138,7 @@ remote_run() {
 # Copy file to remote via SCP with lock. $1=src, $2=dst. Returns 0=success, 1=failure
 # Uses flock to serialize parallel scp calls through ControlMaster socket
 # Lock file path uses centralized constant from 003-init.sh ($_TEMP_SCP_LOCK_FILE)
+# Note: stdout/stderr redirected to LOG_FILE to prevent breaking live logs display
 remote_copy() {
   local src="$1"
   local dst="$2"
@@ -158,7 +160,7 @@ remote_copy() {
       exit 1
     }
     # shellcheck disable=SC2086
-    if ! sshpass -f "$passfile" scp -P "$SSH_PORT" $SSH_OPTS "$src" "root@localhost:$dst"; then
+    if ! sshpass -f "$passfile" scp -P "$SSH_PORT" $SSH_OPTS "$src" "root@localhost:$dst" >>"$LOG_FILE" 2>&1; then
       log "ERROR: Failed to copy $src to $dst"
       exit 1
     fi
