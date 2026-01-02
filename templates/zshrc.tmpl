@@ -1,5 +1,8 @@
 # Proxmox ZSH Configuration with Oh-My-Zsh and Powerlevel10k
 
+# Suppress instant prompt warning (fastfetch runs via precmd hook)
+typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet
+
 # Enable Powerlevel10k instant prompt (should stay at the top)
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
