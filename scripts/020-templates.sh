@@ -73,7 +73,7 @@ apply_template_vars() {
     if grep -qE '\{\{[A-Za-z0-9_]+\}\}' "$tmpfile" 2>/dev/null; then
       local remaining
       remaining=$(grep -oE '\{\{[A-Za-z0-9_]+\}\}' "$tmpfile" 2>/dev/null | sort -u | tr '\n' ' ')
-      log_warn "Unsubstituted placeholders remain in $file: $remaining"
+      log_error "Unsubstituted placeholders remain in $file: $remaining"
       rm -f "$tmpfile"
       return 1
     fi
