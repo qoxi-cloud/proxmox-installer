@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.809-pr.21"
+readonly VERSION="2.0.810-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -5241,6 +5241,7 @@ local -a template_list=(
 "./templates/needrestart.conf:needrestart.conf"
 "./templates/vnstat.conf:vnstat.conf"
 "./templates/netdata.conf:netdata.conf"
+"./templates/journald-netdata.conf:journald-netdata.conf"
 "./templates/promtail.yml:promtail.yml"
 "./templates/promtail.service:promtail.service"
 "./templates/yazi.toml:yazi.toml"
@@ -6592,6 +6593,8 @@ bind_to="127.0.0.1 100.*"
 fi
 deploy_template "templates/netdata.conf" "/etc/netdata/netdata.conf" \
 "NETDATA_BIND_TO=$bind_to"||return 1
+deploy_template "templates/journald-netdata.conf" \
+"/etc/systemd/journald@netdata.conf"||return 1
 remote_enable_services "netdata"
 }
 make_feature_wrapper "netdata" "INSTALL_NETDATA"
