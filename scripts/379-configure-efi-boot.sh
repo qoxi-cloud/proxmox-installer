@@ -43,7 +43,7 @@ configure_efi_fallback_boot() {
 
     # Find and copy the bootloader to fallback path
     # Priority: systemd-boot (ZFS) > GRUB (ext4/LVM) > shim (secure boot)
-    local bootloader=""
+    bootloader=""
     if [[ -f /boot/efi/EFI/systemd/systemd-bootx64.efi ]]; then
       bootloader="/boot/efi/EFI/systemd/systemd-bootx64.efi"
     elif [[ -f /boot/efi/EFI/proxmox/grubx64.efi ]]; then
