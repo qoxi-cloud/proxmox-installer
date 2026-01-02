@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.802-pr.21"
+readonly VERSION="2.0.807-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1221,7 +1221,7 @@ _wiz_error "$message"
 sleep "${WIZARD_MESSAGE_DELAY:-3}"
 }
 install_base_packages(){
-local packages=($SYSTEM_UTILITIES $OPTIONAL_PACKAGES locales chrony unattended-upgrades apt-listchanges linux-cpupower)
+local packages=($SYSTEM_UTILITIES $OPTIONAL_PACKAGES usrmerge locales chrony unattended-upgrades apt-listchanges linux-cpupower)
 [[ ${SHELL_TYPE:-bash} == "zsh" ]]&&packages+=(zsh git)
 local pkg_list&&printf -v pkg_list '"%s" ' "${packages[@]}"
 log_info "Installing base packages: ${packages[*]}"
@@ -2791,7 +2791,7 @@ tput smcup
 tput civis
 _wiz_clear
 show_banner
-trap "tput cnorm 2>/dev/null; tput rmcup 2>/dev/null; cleanup_and_error_handler" EXIT
+trap 'ec=$?; tput cnorm 2>/dev/null; tput rmcup 2>/dev/null; (exit $ec); cleanup_and_error_handler' EXIT
 }
 finish_live_installation(){
 tput cnorm
@@ -3024,7 +3024,7 @@ return 0
 show_gum_config_editor(){
 tput smcup
 _wiz_hide_cursor
-trap "_wiz_show_cursor; tput rmcup 2>/dev/null; cleanup_and_error_handler" EXIT
+trap 'ec=$?; _wiz_show_cursor; tput rmcup 2>/dev/null; (exit $ec); cleanup_and_error_handler' EXIT
 while true;do
 _wizard_main
 if _validate_config;then
@@ -6483,12 +6483,22 @@ parallel_mark_configured "apparmor"
 }
 make_feature_wrapper "apparmor" "INSTALL_APPARMOR"
 _config_auditd(){
-deploy_template "templates/auditd-rules" "/etc/audit/rules.d/proxmox.rules"||{
+deploy_template "templates/auditd-rules" "/etc/audit/rules.d/proxmox.rules" \
+"ADMIN_USERNAME=$ADMIN_USERNAME"||{
 log_error "Failed to deploy auditd rules"
 return 1
 }
 remote_exec '
     mkdir -p /var/log/audit
+    # Create directories that audit rules will watch (rules fail if paths dont exist)
+    mkdir -p /etc/ssh/sshd_config.d /root/.ssh /etc/network/interfaces.d
+    mkdir -p /etc/pve/firewall /var/lib/pve-cluster
+    mkdir -p /etc/modprobe.d /etc/cron.d /etc/cron.daily /etc/cron.hourly
+    mkdir -p /etc/cron.monthly /etc/cron.weekly /var/spool/cron/crontabs
+    mkdir -p /etc/sudoers.d /etc/pam.d /etc/security /etc/init.d
+    mkdir -p /etc/systemd/system /etc/fail2ban
+    mkdir -p /home/'"$ADMIN_USERNAME"'/.ssh
+    chmod 700 /root/.ssh /home/'"$ADMIN_USERNAME"'/.ssh
     # Remove ALL default/conflicting rules before our rules
     find /etc/audit/rules.d -name "*.rules" ! -name "proxmox.rules" -delete 2>/dev/null || true
     rm -f /etc/audit/audit.rules 2>/dev/null || true
@@ -6548,9 +6558,7 @@ parallel_mark_configured "needrestart"
 }
 make_feature_wrapper "needrestart" "INSTALL_NEEDRESTART"
 _config_ringbuffer(){
-local ringbuffer_interface="${INTERFACE_NAME:-eth0}"
-deploy_template "templates/network-ringbuffer.sh" "/usr/local/bin/network-ringbuffer.sh" \
-"RINGBUFFER_INTERFACE=$ringbuffer_interface"||return 1
+remote_copy "templates/network-ringbuffer.sh" "/usr/local/bin/network-ringbuffer.sh"||return 1
 remote_exec "chmod +x /usr/local/bin/network-ringbuffer.sh"||return 1
 deploy_systemd_service "network-ringbuffer"||return 1
 parallel_mark_configured "ringbuffer"
