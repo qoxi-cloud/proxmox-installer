@@ -37,10 +37,9 @@ if [[ $CERTBOT_EXIT -eq 0 ]]; then
 	echo "Certificate obtained successfully" >>"$LOG_FILE"
 
 	# Copy certificates to Proxmox location
+	# Note: /etc/pve uses pmxcfs which manages permissions automatically
 	if cp "/etc/letsencrypt/live/$CERT_DOMAIN/fullchain.pem" /etc/pve/local/pveproxy-ssl.pem 2>>"$LOG_FILE" &&
 		cp "/etc/letsencrypt/live/$CERT_DOMAIN/privkey.pem" /etc/pve/local/pveproxy-ssl.key 2>>"$LOG_FILE"; then
-		chmod 640 /etc/pve/local/pveproxy-ssl.pem
-		chmod 600 /etc/pve/local/pveproxy-ssl.key
 
 		# Create marker file only after successful deployment
 		touch "$MARKER_FILE"
