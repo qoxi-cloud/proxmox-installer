@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.808-pr.21"
+readonly VERSION="2.0.809-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -7067,7 +7067,7 @@ remote_run "Configuring EFI fallback boot" '
 
     # Find and copy the bootloader to fallback path
     # Priority: systemd-boot (ZFS) > GRUB (ext4/LVM) > shim (secure boot)
-    local bootloader=""
+    bootloader=""
     if [[ -f /boot/efi/EFI/systemd/systemd-bootx64.efi ]]; then
       bootloader="/boot/efi/EFI/systemd/systemd-bootx64.efi"
     elif [[ -f /boot/efi/EFI/proxmox/grubx64.efi ]]; then
