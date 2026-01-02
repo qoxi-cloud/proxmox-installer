@@ -96,7 +96,7 @@ wait_async_feature() {
   [[ -z $pid ]] && return 0
 
   if ! wait "$pid" 2>/dev/null; then
-    log_warn "configure_${feature} failed (exit code: $?)"
+    log_error "configure_${feature} failed (exit code: $?)"
     return 1
   fi
   return 0
