@@ -13,11 +13,11 @@
 # =============================================================================
 # User/Group modifications
 # =============================================================================
--a always,exit -F path=/etc/passwd -F perm=wa -F key=identity
--a always,exit -F path=/etc/shadow -F perm=wa -F key=identity
--a always,exit -F path=/etc/group -F perm=wa -F key=identity
--a always,exit -F path=/etc/gshadow -F perm=wa -F key=identity
--a always,exit -F path=/etc/security/opasswd -F perm=wa -F key=identity
+-a always,exit -F arch=b64 -F path=/etc/passwd -F perm=wa -F key=identity
+-a always,exit -F arch=b64 -F path=/etc/shadow -F perm=wa -F key=identity
+-a always,exit -F arch=b64 -F path=/etc/group -F perm=wa -F key=identity
+-a always,exit -F arch=b64 -F path=/etc/gshadow -F perm=wa -F key=identity
+-a always,exit -F arch=b64 -F path=/etc/security/opasswd -F perm=wa -F key=identity
 
 # =============================================================================
 # Privileged commands (track all users including root)
@@ -39,26 +39,27 @@
 # =============================================================================
 # SSH configuration changes
 # =============================================================================
--a always,exit -F path=/etc/ssh/sshd_config -F perm=wa -F key=sshd_config
--a always,exit -F dir=/etc/ssh/sshd_config.d -F perm=wa -F key=sshd_config
--a always,exit -F dir=/root/.ssh -F perm=wa -F key=ssh_keys
--a always,exit -F dir=/home/{{ADMIN_USERNAME}}/.ssh -F perm=wa -F key=ssh_keys
+-a always,exit -F arch=b64 -F path=/etc/ssh/sshd_config -F perm=wa -F key=sshd_config
+-a always,exit -F arch=b64 -F dir=/etc/ssh/sshd_config.d -F perm=wa -F key=sshd_config
+# Note: User .ssh directories watched via /home and /root parent watches below
+-a always,exit -F arch=b64 -F dir=/root -F perm=wa -F key=ssh_keys
+-a always,exit -F arch=b64 -F dir=/home -F perm=wa -F key=ssh_keys
 
 # =============================================================================
 # Network configuration
 # =============================================================================
--a always,exit -F path=/etc/network/interfaces -F perm=wa -F key=network_config
--a always,exit -F dir=/etc/network/interfaces.d -F perm=wa -F key=network_config
--a always,exit -F path=/etc/hosts -F perm=wa -F key=network_config
--a always,exit -F path=/etc/resolv.conf -F perm=wa -F key=network_config
--a always,exit -F path=/etc/hostname -F perm=wa -F key=network_config
+-a always,exit -F arch=b64 -F path=/etc/network/interfaces -F perm=wa -F key=network_config
+-a always,exit -F arch=b64 -F dir=/etc/network/interfaces.d -F perm=wa -F key=network_config
+-a always,exit -F arch=b64 -F path=/etc/hosts -F perm=wa -F key=network_config
+-a always,exit -F arch=b64 -F path=/etc/resolv.conf -F perm=wa -F key=network_config
+-a always,exit -F arch=b64 -F path=/etc/hostname -F perm=wa -F key=network_config
 
 # =============================================================================
 # Proxmox VE configuration
 # =============================================================================
--a always,exit -F dir=/etc/pve -F perm=wa -F key=proxmox_config
--a always,exit -F dir=/var/lib/pve-cluster -F perm=wa -F key=proxmox_cluster
--a always,exit -F path=/etc/vzdump.conf -F perm=wa -F key=proxmox_backup
+-a always,exit -F arch=b64 -F dir=/etc/pve -F perm=wa -F key=proxmox_config
+-a always,exit -F arch=b64 -F dir=/var/lib/pve-cluster -F perm=wa -F key=proxmox_cluster
+-a always,exit -F arch=b64 -F path=/etc/vzdump.conf -F perm=wa -F key=proxmox_backup
 
 # Proxmox CLI tools - VM/container management
 -a always,exit -F arch=b64 -F path=/usr/sbin/qm -F perm=x -F key=proxmox_vm
@@ -82,16 +83,16 @@
 -a always,exit -F arch=b64 -F path=/usr/bin/pveceph -F perm=x -F key=proxmox_ceph
 
 # Proxmox firewall
--a always,exit -F dir=/etc/pve/firewall -F perm=wa -F key=proxmox_firewall
+-a always,exit -F arch=b64 -F dir=/etc/pve/firewall -F perm=wa -F key=proxmox_firewall
 -a always,exit -F arch=b64 -F path=/usr/sbin/pve-firewall -F perm=x -F key=proxmox_firewall
 
 # =============================================================================
 # System startup and services
 # =============================================================================
--a always,exit -F path=/etc/rc.local -F perm=wa -F key=init
--a always,exit -F dir=/etc/init.d -F perm=wa -F key=init
--a always,exit -F dir=/etc/systemd/system -F perm=wa -F key=systemd
--a always,exit -F dir=/usr/lib/systemd/system -F perm=wa -F key=systemd
+# Note: /etc/rc.local is deprecated and typically doesn't exist on modern systems
+-a always,exit -F arch=b64 -F dir=/etc/init.d -F perm=wa -F key=init
+-a always,exit -F arch=b64 -F dir=/etc/systemd/system -F perm=wa -F key=systemd
+-a always,exit -F arch=b64 -F dir=/usr/lib/systemd/system -F perm=wa -F key=systemd
 
 # =============================================================================
 # Kernel modules
@@ -99,47 +100,46 @@
 -a always,exit -F arch=b64 -F path=/usr/sbin/insmod -F perm=x -F key=modules
 -a always,exit -F arch=b64 -F path=/usr/sbin/rmmod -F perm=x -F key=modules
 -a always,exit -F arch=b64 -F path=/usr/sbin/modprobe -F perm=x -F key=modules
--a always,exit -F dir=/etc/modprobe.d -F perm=wa -F key=modules
+-a always,exit -F arch=b64 -F dir=/etc/modprobe.d -F perm=wa -F key=modules
 
 # =============================================================================
 # Cron jobs
 # =============================================================================
--a always,exit -F path=/etc/crontab -F perm=wa -F key=cron
--a always,exit -F dir=/etc/cron.d -F perm=wa -F key=cron
--a always,exit -F dir=/etc/cron.daily -F perm=wa -F key=cron
--a always,exit -F dir=/etc/cron.hourly -F perm=wa -F key=cron
--a always,exit -F dir=/etc/cron.monthly -F perm=wa -F key=cron
--a always,exit -F dir=/etc/cron.weekly -F perm=wa -F key=cron
--a always,exit -F dir=/var/spool/cron/crontabs -F perm=wa -F key=cron
+-a always,exit -F arch=b64 -F path=/etc/crontab -F perm=wa -F key=cron
+-a always,exit -F arch=b64 -F dir=/etc/cron.d -F perm=wa -F key=cron
+-a always,exit -F arch=b64 -F dir=/etc/cron.daily -F perm=wa -F key=cron
+-a always,exit -F arch=b64 -F dir=/etc/cron.hourly -F perm=wa -F key=cron
+-a always,exit -F arch=b64 -F dir=/etc/cron.monthly -F perm=wa -F key=cron
+-a always,exit -F arch=b64 -F dir=/etc/cron.weekly -F perm=wa -F key=cron
+-a always,exit -F arch=b64 -F dir=/var/spool/cron/crontabs -F perm=wa -F key=cron
 
 # =============================================================================
 # Sudoers configuration
 # =============================================================================
--a always,exit -F path=/etc/sudoers -F perm=wa -F key=sudoers
--a always,exit -F dir=/etc/sudoers.d -F perm=wa -F key=sudoers
+-a always,exit -F arch=b64 -F path=/etc/sudoers -F perm=wa -F key=sudoers
+-a always,exit -F arch=b64 -F dir=/etc/sudoers.d -F perm=wa -F key=sudoers
 
 # =============================================================================
 # Time changes
 # =============================================================================
 -a always,exit -F arch=b64 -S adjtimex -S settimeofday -F key=time_change
 -a always,exit -F arch=b64 -S clock_settime -F key=time_change
--a always,exit -F path=/etc/localtime -F perm=wa -F key=time_change
--a always,exit -F path=/etc/timezone -F perm=wa -F key=time_change
+-a always,exit -F arch=b64 -F path=/etc/localtime -F perm=wa -F key=time_change
+-a always,exit -F arch=b64 -F path=/etc/timezone -F perm=wa -F key=time_change
 
 # =============================================================================
 # Login/logout events
 # =============================================================================
--a always,exit -F path=/var/log/faillog -F perm=wa -F key=logins
--a always,exit -F path=/var/log/lastlog -F perm=wa -F key=logins
--a always,exit -F path=/var/run/utmp -F perm=wa -F key=session
--a always,exit -F path=/var/log/wtmp -F perm=wa -F key=logins
--a always,exit -F path=/var/log/btmp -F perm=wa -F key=logins
+-a always,exit -F arch=b64 -F path=/var/log/lastlog -F perm=wa -F key=logins
+-a always,exit -F arch=b64 -F path=/run/utmp -F perm=wa -F key=session
+-a always,exit -F arch=b64 -F path=/var/log/wtmp -F perm=wa -F key=logins
+-a always,exit -F arch=b64 -F path=/var/log/btmp -F perm=wa -F key=logins
 
 # =============================================================================
 # PAM configuration
 # =============================================================================
--a always,exit -F dir=/etc/pam.d -F perm=wa -F key=pam
--a always,exit -F dir=/etc/security -F perm=wa -F key=pam
+-a always,exit -F arch=b64 -F dir=/etc/pam.d -F perm=wa -F key=pam
+-a always,exit -F arch=b64 -F dir=/etc/security -F perm=wa -F key=pam
 
 # =============================================================================
 # Package management
@@ -167,7 +167,7 @@
 # =============================================================================
 # Fail2Ban configuration and management
 # =============================================================================
--a always,exit -F dir=/etc/fail2ban -F perm=wa -F key=fail2ban_config
+-a always,exit -F arch=b64 -F dir=/etc/fail2ban -F perm=wa -F key=fail2ban_config
 -a always,exit -F arch=b64 -F path=/usr/bin/fail2ban-client -F perm=x -F key=fail2ban_admin
 -a always,exit -F arch=b64 -F path=/usr/bin/fail2ban-server -F perm=x -F key=fail2ban_admin
 

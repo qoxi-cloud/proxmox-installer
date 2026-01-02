@@ -14,6 +14,10 @@ _config_netdata() {
   deploy_template "templates/netdata.conf" "/etc/netdata/netdata.conf" \
     "NETDATA_BIND_TO=${bind_to}" || return 1
 
+  # Configure journald namespace for netdata to prevent corruption on unclean shutdown
+  deploy_template "templates/journald-netdata.conf" \
+    "/etc/systemd/journald@netdata.conf" || return 1
+
   remote_enable_services "netdata"
 }
 

@@ -160,6 +160,7 @@ make_templates() {
     "./templates/vnstat.conf:vnstat.conf"
     # Monitoring - Netdata
     "./templates/netdata.conf:netdata.conf"
+    "./templates/journald-netdata.conf:journald-netdata.conf"
     # Monitoring - Promtail
     "./templates/promtail.yml:promtail.yml"
     "./templates/promtail.service:promtail.service"

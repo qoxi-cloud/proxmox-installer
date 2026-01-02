@@ -8,9 +8,16 @@ ReadKMsg=no
 # Compress journal files to save space
 Compress=yes
 
+# Persistent storage (survive reboots)
+Storage=persistent
+
 # Limit journal disk usage
 SystemMaxUse=500M
 RuntimeMaxUse=100M
+
+# Sync to disk more frequently to reduce corruption on unclean shutdown
+# Default is 5 minutes, reduce to 1 minute
+SyncIntervalSec=60
 
 # Forward to syslog for compatibility with other tools
 ForwardToSyslog=yes
