@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.807-pr.21"
+readonly VERSION="2.0.808-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -4693,7 +4693,7 @@ _wiz_start_edit
 _wiz_description \
 "  Default shell for root user:" \
 "" \
-"  {{cyan:ZSH}}:  Modern shell with Powerlevel10k prompt" \
+"  {{cyan:ZSH}}:  Modern shell with gentoo prompt" \
 "  {{cyan:Bash}}: Standard shell (minimal changes)" \
 ""
 _show_input_footer "filter" 3
@@ -5212,7 +5212,6 @@ local -a template_list=(
 "./templates/default-locale:default-locale"
 "./templates/environment:environment"
 "./templates/zshrc:zshrc"
-"./templates/p10k.zsh:p10k.zsh"
 "./templates/fastfetch.sh:fastfetch.sh"
 "./templates/bat-config:bat-config"
 "./templates/chrony:chrony"
@@ -5943,7 +5942,6 @@ deploy_user_config "templates/bat-config" ".config/bat/config"||return 1
 _configure_zsh_files(){
 require_admin_username "configure ZSH files"||return 1
 deploy_user_config "templates/zshrc" ".zshrc" "LOCALE=$LOCALE"||return 1
-deploy_user_config "templates/p10k.zsh" ".p10k.zsh"||return 1
 remote_exec "chsh -s /bin/zsh $ADMIN_USERNAME"||return 1
 }
 _config_base_system(){
@@ -6007,23 +6005,20 @@ remote_run "Installing Oh-My-Zsh" '
         ' "Oh-My-Zsh installed"
 remote_run "Installing ZSH theme and plugins" '
             set -e
-            git clone --depth=1 https://github.com/romkatv/powerlevel10k.git /home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/themes/powerlevel10k &
-            pid1=$!
             git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions /home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/plugins/zsh-autosuggestions &
-            pid2=$!
+            pid1=$!
             git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting /home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting &
-            pid3=$!
+            pid2=$!
             # Wait and check exit codes (set -e doesnt catch background failures)
             failed=0
             wait "$pid1" || failed=1
             wait "$pid2" || failed=1
-            wait "$pid3" || failed=1
             if [[ $failed -eq 1 ]]; then
               echo "ERROR: Failed to clone ZSH plugins" >&2
               exit 1
             fi
             # Validate directories exist
-            for dir in themes/powerlevel10k plugins/zsh-autosuggestions plugins/zsh-syntax-highlighting; do
+            for dir in plugins/zsh-autosuggestions plugins/zsh-syntax-highlighting; do
               if [[ ! -d "/home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/$dir" ]]; then
                 echo "ERROR: ZSH plugin directory missing: $dir" >&2
                 exit 1
@@ -6031,7 +6026,7 @@ remote_run "Installing ZSH theme and plugins" '
             done
             chown -R '"$ADMIN_USERNAME"':'"$ADMIN_USERNAME"' /home/'"$ADMIN_USERNAME"'/.oh-my-zsh
         ' "ZSH theme and plugins installed"
-run_with_progress "Configuring ZSH" "ZSH with Powerlevel10k configured" _configure_zsh_files
+run_with_progress "Configuring ZSH" "ZSH with gentoo configured" _configure_zsh_files
 else
 add_log "$TREE_BRANCH Default shell: Bash $CLR_CYAN✓$CLR_RESET"
 fi
