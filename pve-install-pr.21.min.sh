@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.800-pr.21"
+readonly VERSION="2.0.801-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -4402,7 +4402,7 @@ _wiz_description \
 "  {{cyan:Enabled}}:  Access Web UI at https://<tailscale-hostname>" \
 "  {{cyan:Disabled}}: Web UI only via direct IP" \
 "" \
-"  Uses: tailscale serve --bg --https=443 https://127.0.0.1:443" \
+"  Uses: tailscale serve --bg --https=443 https://127.0.0.1:8006" \
 ""
 _show_input_footer "filter" 3
 _wiz_toggle "TAILSCALE_WEBUI" "Tailscale Web UI:" "no"
@@ -5208,7 +5208,6 @@ local -a template_list=(
 "./templates/sshd_config:sshd_config"
 "./templates/resolv.conf:resolv.conf"
 "./templates/journald.conf:journald.conf"
-"./templates/pveproxy-default:pveproxy-default"
 "./templates/locale.sh:locale.sh"
 "./templates/default-locale:default-locale"
 "./templates/environment:environment"
@@ -5916,8 +5915,7 @@ run_batch_copies \
 "templates/debian.sources:/etc/apt/sources.list.d/debian.sources" \
 "templates/proxmox.sources:/etc/apt/sources.list.d/proxmox.sources" \
 "templates/resolv.conf:/etc/resolv.conf" \
-"templates/journald.conf:/etc/systemd/journald.conf.d/00-proxmox.conf" \
-"templates/pveproxy-default:/etc/default/pveproxy"
+"templates/journald.conf:/etc/systemd/journald.conf.d/00-proxmox.conf"
 }
 _apply_basic_settings(){
 remote_exec "[ -f /etc/apt/sources.list ] && mv /etc/apt/sources.list /etc/apt/sources.list.bak"||return 1
@@ -6095,7 +6093,7 @@ TAILSCALE_HOSTNAME=$(cat "$tmp_hostname" 2>/dev/null||printf '\n')
 complete_task "$TASK_INDEX" "$TREE_BRANCH Tailscale authenticated. IP: $TAILSCALE_IP"
 if [[ $TAILSCALE_WEBUI == "yes" ]];then
 remote_run "Configuring Tailscale Serve" \
-'tailscale serve --bg --https=443 https://127.0.0.1:443' \
+'tailscale serve --bg --https=443 https://127.0.0.1:8006' \
 "Proxmox Web UI available via Tailscale Serve"
 fi
 if [[ ${FIREWALL_MODE:-standard} == "stealth" ]];then
@@ -6218,7 +6216,6 @@ _config_system_services
 _generate_port_rules(){
 local mode="${1:-standard}"
 local ssh="${PORT_SSH:-22}"
-local webui="${PORT_PROXMOX_UI:-443}"
 case "$mode" in
 stealth)cat <<'EOF'
         # Stealth mode: all public ports blocked
@@ -6234,8 +6231,8 @@ standard|*)cat <<EOF
         # SSH access (port $ssh)
         tcp dport $ssh ct state new accept
 
-        # Proxmox Web UI (port $webui)
-        tcp dport $webui ct state new accept
+        # Proxmox Web UI (port 8006, after DNAT from 443)
+        tcp dport 8006 ct state new accept
 EOF
 esac
 if [[ $SSL_TYPE == "letsencrypt" && $mode != "stealth" ]];then
@@ -6320,6 +6317,20 @@ EOF
 external)echo "        # External mode: no NAT needed (VMs have public IPs)"
 esac
 }
+_generate_prerouting_rules(){
+local mode="${1:-standard}"
+local webui="${PORT_PROXMOX_UI:-443}"
+case "$mode" in
+stealth)echo "        # Stealth mode: no public port redirects"
+;;
+strict)echo "        # Strict mode: no web UI redirect"
+;;
+standard|*)cat <<EOF
+        # Redirect HTTPS (port $webui) to pveproxy (port 8006)
+        tcp dport $webui redirect to :8006
+EOF
+esac
+}
 _generate_nftables_conf(){
 cat <<EOF
 #!/usr/sbin/nft -f
@@ -6377,8 +6388,14 @@ $(_generate_bridge_forward_rules)
     }
 }
 
-# NAT table for VM internet access (masquerading)
+# NAT table for VM internet access and port redirection
 table inet nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+
+$(_generate_prerouting_rules "$FIREWALL_MODE")
+    }
+
     chain postrouting {
         type nat hook postrouting priority srcnat;
 
