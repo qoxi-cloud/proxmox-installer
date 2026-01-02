@@ -3,10 +3,10 @@
 # Returns nftables rule text via stdout
 
 # Generates port accept rules based on firewall mode
+# Note: pveproxy listens on 8006 (hardcoded), DNAT redirects 443→8006
 _generate_port_rules() {
   local mode="${1:-standard}"
   local ssh="${PORT_SSH:-22}"
-  local webui="${PORT_PROXMOX_UI:-443}"
 
   case "$mode" in
     stealth)
@@ -26,8 +26,8 @@ EOF
         # SSH access (port $ssh)
         tcp dport $ssh ct state new accept
 
-        # Proxmox Web UI (port $webui)
-        tcp dport $webui ct state new accept
+        # Proxmox Web UI (port 8006, after DNAT from 443)
+        tcp dport 8006 ct state new accept
 EOF
       ;;
   esac
@@ -134,6 +134,28 @@ EOF
       ;;
     external)
       echo "        # External mode: no NAT needed (VMs have public IPs)"
+      ;;
+  esac
+}
+
+# Generates DNAT prerouting rules for port redirection
+# pveproxy is hardcoded to listen on 8006, redirect 443→8006 for convenience
+_generate_prerouting_rules() {
+  local mode="${1:-standard}"
+  local webui="${PORT_PROXMOX_UI:-443}"
+
+  case "$mode" in
+    stealth)
+      echo "        # Stealth mode: no public port redirects"
+      ;;
+    strict)
+      echo "        # Strict mode: no web UI redirect"
+      ;;
+    standard | *)
+      cat <<EOF
+        # Redirect HTTPS (port $webui) to pveproxy (port 8006)
+        tcp dport $webui redirect to :8006
+EOF
       ;;
   esac
 }

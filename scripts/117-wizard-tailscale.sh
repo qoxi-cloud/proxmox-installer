@@ -20,7 +20,7 @@ _tailscale_configure_webui() {
     "  {{cyan:Enabled}}:  Access Web UI at https://<tailscale-hostname>" \
     "  {{cyan:Disabled}}: Web UI only via direct IP" \
     "" \
-    "  Uses: tailscale serve --bg --https=443 https://127.0.0.1:443" \
+    "  Uses: tailscale serve --bg --https=443 https://127.0.0.1:8006" \
     ""
 
   _show_input_footer "filter" 3

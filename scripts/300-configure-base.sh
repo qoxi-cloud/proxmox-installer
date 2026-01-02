@@ -15,8 +15,7 @@ _copy_config_files() {
     "templates/debian.sources:/etc/apt/sources.list.d/debian.sources" \
     "templates/proxmox.sources:/etc/apt/sources.list.d/proxmox.sources" \
     "templates/resolv.conf:/etc/resolv.conf" \
-    "templates/journald.conf:/etc/systemd/journald.conf.d/00-proxmox.conf" \
-    "templates/pveproxy-default:/etc/default/pveproxy"
+    "templates/journald.conf:/etc/systemd/journald.conf.d/00-proxmox.conf"
 }
 
 # Apply basic system settings (backup sources, set hostname, disable unused services)

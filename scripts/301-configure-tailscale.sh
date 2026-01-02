@@ -71,9 +71,10 @@ _config_tailscale() {
       complete_task "$TASK_INDEX" "${TREE_BRANCH} Tailscale authenticated. IP: ${TAILSCALE_IP}"
 
       # Configure Tailscale Serve for Proxmox Web UI (only if auth succeeded)
+      # pveproxy listens on port 8006 (hardcoded), Tailscale Serve proxies 443→8006
       if [[ $TAILSCALE_WEBUI == "yes" ]]; then
         remote_run "Configuring Tailscale Serve" \
-          'tailscale serve --bg --https=443 https://127.0.0.1:443' \
+          'tailscale serve --bg --https=443 https://127.0.0.1:8006' \
           "Proxmox Web UI available via Tailscale Serve"
       fi
 

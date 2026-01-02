@@ -61,8 +61,14 @@ $(_generate_bridge_forward_rules)
     }
 }
 
-# NAT table for VM internet access (masquerading)
+# NAT table for VM internet access and port redirection
 table inet nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+
+$(_generate_prerouting_rules "$FIREWALL_MODE")
+    }
+
     chain postrouting {
         type nat hook postrouting priority srcnat;
 

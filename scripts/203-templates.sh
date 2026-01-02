@@ -112,7 +112,6 @@ make_templates() {
     "./templates/sshd_config:sshd_config"
     "./templates/resolv.conf:resolv.conf"
     "./templates/journald.conf:journald.conf"
-    "./templates/pveproxy-default:pveproxy-default"
     # Locale
     "./templates/locale.sh:locale.sh"
     "./templates/default-locale:default-locale"
