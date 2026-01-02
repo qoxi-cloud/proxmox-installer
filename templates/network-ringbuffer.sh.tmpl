@@ -1,34 +1,44 @@
 #!/bin/bash
 # Network ring buffer tuning script
-# Maximizes RX/TX ring buffer for better throughput
+# Maximizes RX/TX ring buffer for all physical interfaces
 
-IFACE="{{RINGBUFFER_INTERFACE}}"
+# Tune ring buffer for a single interface
+tune_interface() {
+  local iface="$1"
 
-if [ -z "$IFACE" ]; then
-  echo "ERROR: No interface specified" >&2
+  local max_rx max_tx
+  max_rx=$(ethtool -g "$iface" 2>/dev/null | grep -A4 "Pre-set maximums" | grep "RX:" | awk '{print $2}')
+  max_tx=$(ethtool -g "$iface" 2>/dev/null | grep -A4 "Pre-set maximums" | grep "TX:" | awk '{print $2}')
+
+  if [ -z "$max_rx" ] || [ -z "$max_tx" ]; then
+    echo "SKIP: $iface - no ring buffer support"
+    return 0
+  fi
+
+  if ! [[ "$max_rx" =~ ^[0-9]+$ ]] || ! [[ "$max_tx" =~ ^[0-9]+$ ]]; then
+    echo "SKIP: $iface - invalid values (RX=$max_rx, TX=$max_tx)"
+    return 0
+  fi
+
+  if ethtool -G "$iface" rx "$max_rx" tx "$max_tx" 2>/dev/null; then
+    echo "OK: $iface RX=$max_rx TX=$max_tx"
+  else
+    echo "SKIP: $iface - ethtool failed"
+  fi
+}
+
+# Find physical interfaces (exclude virtual: lo, vmbr*, tap*, veth*, docker*, virbr*)
+mapfile -t interfaces < <(
+  find /sys/class/net -maxdepth 1 -type l -exec basename {} \; 2>/dev/null |
+    grep -vE '^(lo|vmbr|tap|veth|docker|virbr|br-)' |
+    sort
+)
+
+if [ ${#interfaces[@]} -eq 0 ]; then
+  echo "No physical interfaces found"
   exit 0
 fi
 
-if [ ! -d "/sys/class/net/$IFACE" ]; then
-  echo "ERROR: Interface $IFACE not found" >&2
-  exit 0
-fi
-
-MAX_RX=$(ethtool -g "$IFACE" 2>/dev/null | grep -A4 "Pre-set maximums" | grep "RX:" | awk '{print $2}')
-MAX_TX=$(ethtool -g "$IFACE" 2>/dev/null | grep -A4 "Pre-set maximums" | grep "TX:" | awk '{print $2}')
-
-if [ -z "$MAX_RX" ] || [ -z "$MAX_TX" ]; then
-  echo "WARNING: Could not determine ring buffer limits for $IFACE" >&2
-  exit 0
-fi
-
-if ! [[ "$MAX_RX" =~ ^[0-9]+$ ]] || ! [[ "$MAX_TX" =~ ^[0-9]+$ ]]; then
-  echo "WARNING: Invalid ring buffer values for $IFACE (RX=$MAX_RX, TX=$MAX_TX)" >&2
-  exit 0
-fi
-
-if ethtool -G "$IFACE" rx "$MAX_RX" tx "$MAX_TX" 2>/dev/null; then
-  echo "Ring buffer set to RX=$MAX_RX TX=$MAX_TX for $IFACE"
-else
-  echo "WARNING: Failed to set ring buffer for $IFACE" >&2
-fi
+for iface in "${interfaces[@]}"; do
+  tune_interface "$iface"
+done

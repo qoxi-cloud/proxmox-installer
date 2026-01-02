@@ -313,7 +313,7 @@ Complete mapping of which templates use which variables.
 | Template | Variables Used | Purpose |
 |----------|----------------|---------|
 | `cpupower.service.tmpl` | `CPU_GOVERNOR` | CPU scaling service |
-| `network-ringbuffer.service.tmpl` | `RINGBUFFER_INTERFACE` | Network buffer tuning |
+| `network-ringbuffer.service.tmpl` | (none) | Network buffer tuning |
 | `aide-check.service.tmpl` | (none) | AIDE integrity check |
 | `chkrootkit-scan.service.tmpl` | (none) | Rootkit scanner |
 | `lynis-audit.service.tmpl` | (none) | Security audit |
@@ -325,7 +325,7 @@ Complete mapping of which templates use which variables.
 |----------|----------------|---------|
 | `validation.sh.tmpl` | 18 variables (see below) | Post-install validation |
 | `letsencrypt-firstboot.sh.tmpl` | `CERT_DOMAIN`, `CERT_EMAIL` | Let's Encrypt setup |
-| `network-ringbuffer.sh.tmpl` | `RINGBUFFER_INTERFACE` | Network tuning script |
+| `network-ringbuffer.sh.tmpl` | (none) | Network tuning script |
 | `remove-subscription-nag.sh.tmpl` | (none) | Remove PVE nag |
 
 #### Templates Without Variables
@@ -366,7 +366,6 @@ INSTALL_YAZI         INSTALL_NEEDRESTART  INSTALL_VNSTAT
 |----------|----------|
 | `MAIN_IPV4` | hosts.tmpl |
 | `INTERFACE_NAME` | vnstat.conf.tmpl |
-| `RINGBUFFER_INTERFACE` | network-ringbuffer.sh.tmpl, network-ringbuffer.service.tmpl |
 | `NETDATA_BIND_TO` | netdata.conf.tmpl |
 
 #### DNS Variables
