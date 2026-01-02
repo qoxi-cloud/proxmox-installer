@@ -54,11 +54,10 @@ _configure_bat() {
   deploy_user_config "templates/bat-config" ".config/bat/config" || return 1
 }
 
-# Configure ZSH with .zshrc and p10k
+# Configure ZSH with .zshrc
 _configure_zsh_files() {
   require_admin_username "configure ZSH files" || return 1
   deploy_user_config "templates/zshrc" ".zshrc" "LOCALE=${LOCALE}" || return 1
-  deploy_user_config "templates/p10k.zsh" ".p10k.zsh" || return 1
   remote_exec "chsh -s /bin/zsh ${ADMIN_USERNAME}" || return 1
 }
 
@@ -142,7 +141,7 @@ _config_base_system() {
   run_with_progress "Configuring bat" "Bat configured" _configure_bat
 }
 
-# Configure admin shell (installs Oh-My-Zsh + p10k if ZSH)
+# Configure admin shell (installs Oh-My-Zsh if ZSH)
 _config_shell() {
   # Configure default shell for admin user (root login is disabled)
   if [[ $SHELL_TYPE == "zsh" ]]; then
@@ -161,23 +160,20 @@ _config_shell() {
     # shellcheck disable=SC2016 # $pid vars expand on remote; ADMIN_USERNAME uses quote concatenation
     remote_run "Installing ZSH theme and plugins" '
             set -e
-            git clone --depth=1 https://github.com/romkatv/powerlevel10k.git /home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/themes/powerlevel10k &
-            pid1=$!
             git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions /home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/plugins/zsh-autosuggestions &
-            pid2=$!
+            pid1=$!
             git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting /home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting &
-            pid3=$!
+            pid2=$!
             # Wait and check exit codes (set -e doesnt catch background failures)
             failed=0
             wait "$pid1" || failed=1
             wait "$pid2" || failed=1
-            wait "$pid3" || failed=1
             if [[ $failed -eq 1 ]]; then
               echo "ERROR: Failed to clone ZSH plugins" >&2
               exit 1
             fi
             # Validate directories exist
-            for dir in themes/powerlevel10k plugins/zsh-autosuggestions plugins/zsh-syntax-highlighting; do
+            for dir in plugins/zsh-autosuggestions plugins/zsh-syntax-highlighting; do
               if [[ ! -d "/home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/$dir" ]]; then
                 echo "ERROR: ZSH plugin directory missing: $dir" >&2
                 exit 1
@@ -186,7 +182,7 @@ _config_shell() {
             chown -R '"$ADMIN_USERNAME"':'"$ADMIN_USERNAME"' /home/'"$ADMIN_USERNAME"'/.oh-my-zsh
         ' "ZSH theme and plugins installed"
 
-    run_with_progress "Configuring ZSH" "ZSH with Powerlevel10k configured" _configure_zsh_files
+    run_with_progress "Configuring ZSH" "ZSH with gentoo configured" _configure_zsh_files
   else
     add_log "${TREE_BRANCH} Default shell: Bash ${CLR_CYAN}✓${CLR_RESET}"
   fi
@@ -199,7 +195,7 @@ configure_base_system() {
   _config_base_system
 }
 
-# Configure default shell (ZSH with Oh-My-Zsh + p10k if selected)
+# Configure default shell (ZSH with Oh-My-Zsh if selected)
 configure_shell() {
   _config_shell
 }

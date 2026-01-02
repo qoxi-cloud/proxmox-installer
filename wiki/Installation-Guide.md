@@ -91,7 +91,7 @@ The wizard guides you through configuration in 6 screens:
 ### Services
 - **Tailscale** - VPN with optional stealth mode
 - **SSL** - Self-signed or Let's Encrypt
-- **Shell** - ZSH with Powerlevel10k or Bash
+- **Shell** - ZSH with gentoo or Bash
 - **Power Profile** - CPU frequency governor
 - **Security Features** - AppArmor, auditd, AIDE, chkrootkit, lynis, needrestart
 - **Monitoring** - vnstat, Netdata, Promtail

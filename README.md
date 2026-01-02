@@ -46,7 +46,7 @@ Automated Proxmox VE installer for dedicated servers **without console access**.
 - Netdata real-time dashboard
 - Promtail log collector
 - Postfix mail relay (SMTP forwarding for alerts)
-- ZSH with Powerlevel10k or Bash
+- ZSH with gentoo or Bash
 - Optional: yazi file manager, Neovim
 
 **SSL Certificates**

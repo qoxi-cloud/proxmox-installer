@@ -520,7 +520,6 @@ if [[ "{{SHELL_TYPE}}" == "zsh" ]]; then
 	echo "=== ZSH ==="
 	_check_pkg zsh && _ok "zsh package installed"
 	_check_file /home/{{ADMIN_USERNAME}}/.zshrc && _ok "zshrc exists"
-	_check_file /home/{{ADMIN_USERNAME}}/.p10k.zsh && _ok "p10k config exists"
 
 	# Check admin user shell is zsh
 	if getent passwd {{ADMIN_USERNAME}} | grep -q "/bin/zsh\|/usr/bin/zsh"; then
@@ -531,10 +530,6 @@ if [[ "{{SHELL_TYPE}}" == "zsh" ]]; then
 
 	# Check Oh-My-Zsh installed
 	[[ -d /home/{{ADMIN_USERNAME}}/.oh-my-zsh ]] && _ok "Oh-My-Zsh installed" || _warn "Oh-My-Zsh directory missing"
-
-	# Check Powerlevel10k theme
-	[[ -d /home/{{ADMIN_USERNAME}}/.oh-my-zsh/custom/themes/powerlevel10k ]] && _ok "Powerlevel10k theme installed" ||
-		_warn "Powerlevel10k theme missing"
 
 	# Check plugins
 	[[ -d /home/{{ADMIN_USERNAME}}/.oh-my-zsh/custom/plugins/zsh-autosuggestions ]] && _ok "zsh-autosuggestions plugin installed" || _warn "zsh-autosuggestions missing"

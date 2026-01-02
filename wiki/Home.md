@@ -43,7 +43,7 @@ The installer runs a local QEMU VM with the Proxmox ISO inside your server's res
 - **Upgrade without data loss** - Import existing ZFS pool to preserve VMs
 - **Security hardening** - Firewall, AppArmor, auditd, AIDE, and more
 - **Tailscale integration** - Stealth mode for secure remote access
-- **ZSH with Powerlevel10k** - Beautiful terminal out of the box
+- **ZSH with gentoo** - Beautiful terminal out of the box
 
 ## Compatible Providers
 

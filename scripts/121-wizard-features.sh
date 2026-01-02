@@ -3,7 +3,7 @@
 # shell, power_profile, features (security, monitoring, tools)
 
 # Edits default shell for root user.
-# Options: zsh (with Powerlevel10k) or bash.
+# Options: zsh (with gentoo) or bash.
 # Updates SHELL_TYPE global.
 _edit_shell() {
   _wiz_start_edit
@@ -11,7 +11,7 @@ _edit_shell() {
   _wiz_description \
     "  Default shell for root user:" \
     "" \
-    "  {{cyan:ZSH}}:  Modern shell with Powerlevel10k prompt" \
+    "  {{cyan:ZSH}}:  Modern shell with gentoo prompt" \
     "  {{cyan:Bash}}: Standard shell (minimal changes)" \
     ""
 

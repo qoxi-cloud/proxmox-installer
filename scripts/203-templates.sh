@@ -118,7 +118,6 @@ make_templates() {
     "./templates/environment:environment"
     # Shell
     "./templates/zshrc:zshrc"
-    "./templates/p10k.zsh:p10k.zsh"
     "./templates/fastfetch.sh:fastfetch.sh"
     "./templates/bat-config:bat-config"
     # System services

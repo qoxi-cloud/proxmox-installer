@@ -1,12 +1,4 @@
-# Proxmox ZSH Configuration with Oh-My-Zsh and Powerlevel10k
-
-# Suppress instant prompt warning (fastfetch runs via precmd hook)
-typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet
-
-# Enable Powerlevel10k instant prompt (should stay at the top)
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
+# Proxmox ZSH Configuration with Oh-My-Zsh and gentoo theme
 
 # UTF-8 Locale (required for btop and other apps)
 export LANG={{LOCALE}}
@@ -19,8 +11,8 @@ export PATH="/usr/local/sbin:/usr/sbin:/sbin:$PATH"
 # Path to oh-my-zsh installation
 export ZSH="$HOME/.oh-my-zsh"
 
-# Set theme to powerlevel10k
-ZSH_THEME="powerlevel10k/powerlevel10k"
+# Set theme to gentoo
+ZSH_THEME="gentoo"
 
 # Oh-My-Zsh plugins
 plugins=(
@@ -76,10 +68,7 @@ command -v btop &>/dev/null && alias top='btop'
 # Auto-suggestions color (gray)
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=8'
 
-# Load Powerlevel10k config
-[[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh
-
-# Run fastfetch on first prompt (deferred to avoid p10k instant prompt conflict)
+# Run fastfetch on first prompt (deferred via precmd hook)
 if [[ -o interactive ]] && command -v fastfetch &>/dev/null; then
     function _run_fastfetch_once() {
         fastfetch

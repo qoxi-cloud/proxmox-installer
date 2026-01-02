@@ -31,7 +31,7 @@ Installed based on wizard selections:
 
 | Package | When Installed |
 |---------|---------------|
-| `zsh` + Oh-My-Zsh + Powerlevel10k | Shell = ZSH |
+| `zsh` + Oh-My-Zsh + gentoo | Shell = ZSH |
 | `nftables` | Firewall enabled |
 | `fail2ban` | Tailscale disabled |
 | `certbot` | SSL = Let's Encrypt |
@@ -55,7 +55,7 @@ Installed based on wizard selections:
 | Feature | Details |
 |---------|---------|
 | Framework | Oh-My-Zsh |
-| Theme | Powerlevel10k (pre-configured) |
+| Theme | gentoo (pre-configured) |
 | Plugins | autosuggestions, syntax-highlighting, git, sudo, history |
 
 **Features:**

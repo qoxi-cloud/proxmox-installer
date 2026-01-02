@@ -167,7 +167,7 @@ All settings are configured through the interactive wizard. This reference docum
 
 | Option | Description |
 |--------|-------------|
-| ZSH | ZSH with Oh-My-Zsh and Powerlevel10k |
+| ZSH | ZSH with Oh-My-Zsh and gentoo |
 | Bash | Standard bash (minimal changes) |
 
 #### CPU Power Profile
