@@ -4,7 +4,7 @@
 # Install all base system packages in one batch
 install_base_packages() {
   # shellcheck disable=SC2206
-  local packages=(${SYSTEM_UTILITIES} ${OPTIONAL_PACKAGES} locales chrony unattended-upgrades apt-listchanges linux-cpupower)
+  local packages=(${SYSTEM_UTILITIES} ${OPTIONAL_PACKAGES} usrmerge locales chrony unattended-upgrades apt-listchanges linux-cpupower)
   # Add ZSH packages if needed
   [[ ${SHELL_TYPE:-bash} == "zsh" ]] && packages+=(zsh git)
   local pkg_list && printf -v pkg_list '"%s" ' "${packages[@]}"
