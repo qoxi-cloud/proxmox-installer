@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.810-pr.21"
+readonly VERSION="2.0.812-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -679,7 +679,7 @@ fi
 if grep -qE '\{\{[A-Za-z0-9_]+\}\}' "$tmpfile" 2>/dev/null;then
 local remaining
 remaining=$(grep -oE '\{\{[A-Za-z0-9_]+\}\}' "$tmpfile" 2>/dev/null|sort -u|tr '\n' ' ')
-log_warn "Unsubstituted placeholders remain in $file: $remaining"
+log_error "Unsubstituted placeholders remain in $file: $remaining"
 rm -f "$tmpfile"
 return 1
 fi
@@ -1460,7 +1460,7 @@ local feature="$1"
 local pid="$2"
 [[ -z $pid ]]&&return 0
 if ! wait "$pid" 2>/dev/null;then
-log_warn "configure_$feature failed (exit code: $?)"
+log_error "configure_$feature failed (exit code: $?)"
 return 1
 fi
 return 0
