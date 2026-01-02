@@ -115,9 +115,9 @@ start_live_installation() {
   _wiz_clear
   show_banner
 
-  # Chain with existing cleanup handler - restore terminal THEN run global cleanup
-  # shellcheck disable=SC2064
-  trap "tput cnorm 2>/dev/null; tput rmcup 2>/dev/null; cleanup_and_error_handler" EXIT
+  # Chain with existing cleanup handler - capture exit code, restore terminal, then run global cleanup
+  # shellcheck disable=SC2064,SC2154
+  trap 'ec=$?; tput cnorm 2>/dev/null; tput rmcup 2>/dev/null; (exit $ec); cleanup_and_error_handler' EXIT
 }
 
 # Finishes live installation display and restores normal terminal.
