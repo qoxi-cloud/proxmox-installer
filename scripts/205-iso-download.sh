@@ -110,8 +110,9 @@ _download_iso() {
   fi
 
   # Clean up /tmp to free memory (rescue system uses tmpfs)
+  # IMPORTANT: Do NOT delete /tmp/tmp.* - mktemp directories may be in use by parallel_group
   log_info "Cleaning up temporary files in /tmp"
-  rm -rf /tmp/tmp.* /tmp/pve-* 2>/dev/null || true
+  rm -rf /tmp/pve-* /tmp/aria2-* 2>/dev/null || true
   log_info "Temporary files cleaned"
 }
 
