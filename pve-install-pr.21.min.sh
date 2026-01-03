@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.813-pr.21"
+readonly VERSION="2.0.821-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -512,13 +512,6 @@ clear
 show_banner
 _wiz_show_cursor
 }
-print_success(){
-if [[ $# -eq 2 ]];then
-printf '%s\n' "$CLR_CYAN✓$CLR_RESET $1 $CLR_CYAN$2$CLR_RESET"
-else
-printf '%s\n' "$CLR_CYAN✓$CLR_RESET $1"
-fi
-}
 print_error(){
 printf '%s\n' "$CLR_RED✗$CLR_RESET $1"
 }
@@ -581,6 +574,14 @@ local title_spaces=""
 ((title_start>0))&&title_spaces=$(printf '%*s' "$title_start" '')
 printf '%s  %s%s\n' "$banner_pad" "$title_spaces" "$CLR_ORANGE$title$CLR_RESET"
 printf '%s  %s%s%s%s' "$banner_pad" "$CLR_CYAN$left_line" "$CLR_ORANGE●" "$CLR_GRAY$right_line$CLR_RESET" ""
+}
+run_with_progress(){
+local message="$1"
+local done_message="$2"
+shift 2
+("$@"||exit 1) > \
+/dev/null 2>&1&
+show_progress "$!" "$message" "$done_message"
 }
 download_file(){
 local output_file="$1"
@@ -1214,114 +1215,10 @@ raid10)echo "raid10";;
 printf '%s\n' "raid0"
 esac
 }
-show_validation_error(){
-local message="$1"
-_wiz_hide_cursor
-_wiz_error "$message"
-sleep "${WIZARD_MESSAGE_DELAY:-3}"
-}
-install_base_packages(){
-local packages=($SYSTEM_UTILITIES $OPTIONAL_PACKAGES usrmerge locales chrony unattended-upgrades apt-listchanges linux-cpupower)
-[[ ${SHELL_TYPE:-bash} == "zsh" ]]&&packages+=(zsh git)
-local pkg_list&&printf -v pkg_list '"%s" ' "${packages[@]}"
-log_info "Installing base packages: ${packages[*]}"
-remote_run "Installing system packages" "
-    set -e
-    export DEBIAN_FRONTEND=noninteractive
-    # Wait for apt locks (max 5 min)
-    waited=0
-    while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock >/dev/null 2>&1; do
-      [ \$waited -ge 300 ] && { echo 'ERROR: Timeout waiting for apt lock' >&2; exit 1; }
-      sleep 2; waited=\$((waited + 2))
-    done
-    apt-get update -qq
-    apt-get dist-upgrade -yqq
-    apt-get install -yqq $pkg_list
-    apt-get autoremove -yqq
-    apt-get clean
-    set +e
-    pveupgrade 2>/dev/null || echo 'pveupgrade check skipped' >&2
-    pveam update 2>/dev/null || echo 'pveam update skipped' >&2
-  " "System packages installed"
-log_subtasks "${packages[@]}"
-}
-batch_install_packages(){
-local packages=()
-[[ $INSTALL_FIREWALL == "yes" ]]&&packages+=(nftables)
-if [[ $INSTALL_FIREWALL == "yes" && ${FIREWALL_MODE:-standard} != "stealth" ]];then
-packages+=(fail2ban)
-fi
-[[ $INSTALL_APPARMOR == "yes" ]]&&packages+=(apparmor apparmor-utils)
-[[ $INSTALL_AUDITD == "yes" ]]&&packages+=(auditd audispd-plugins)
-[[ $INSTALL_AIDE == "yes" ]]&&packages+=(aide aide-common)
-[[ $INSTALL_CHKROOTKIT == "yes" ]]&&packages+=(chkrootkit binutils)
-[[ $INSTALL_LYNIS == "yes" ]]&&packages+=(lynis)
-[[ $INSTALL_NEEDRESTART == "yes" ]]&&packages+=(needrestart)
-[[ $INSTALL_VNSTAT == "yes" ]]&&packages+=(vnstat)
-[[ $INSTALL_PROMTAIL == "yes" ]]&&packages+=(promtail)
-[[ $INSTALL_NETDATA == "yes" ]]&&packages+=(netdata)
-[[ $INSTALL_NVIM == "yes" ]]&&packages+=(neovim)
-[[ $INSTALL_RINGBUFFER == "yes" ]]&&packages+=(ethtool)
-[[ $INSTALL_YAZI == "yes" ]]&&packages+=(yazi ffmpeg 7zip jq poppler-utils fd-find ripgrep fzf zoxide imagemagick)
-[[ $INSTALL_TAILSCALE == "yes" ]]&&packages+=(tailscale)
-[[ ${SSL_TYPE:-self-signed} == "letsencrypt" ]]&&packages+=(certbot)
-if [[ ${#packages[@]} -eq 0 ]];then
-log_info "No optional packages to install"
-return 0
-fi
-local pkg_list&&printf -v pkg_list '"%s" ' "${packages[@]}"
-log_info "Batch installing packages: ${packages[*]}"
-local repo_setup='
-    DEBIAN_CODENAME=$(grep -oP "VERSION_CODENAME=\K\w+" /etc/os-release 2>/dev/null || echo "bookworm")
-  '
-if [[ $INSTALL_TAILSCALE == "yes" ]];then
-repo_setup+='
-      curl -fsSL "https://pkgs.tailscale.com/stable/debian/${DEBIAN_CODENAME}.noarmor.gpg" | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
-      curl -fsSL "https://pkgs.tailscale.com/stable/debian/${DEBIAN_CODENAME}.tailscale-keyring.list" | tee /etc/apt/sources.list.d/tailscale.list
-    '
-fi
-if [[ $INSTALL_NETDATA == "yes" ]];then
-repo_setup+='
-      curl -fsSL https://repo.netdata.cloud/netdatabot.gpg.key | gpg --dearmor -o /usr/share/keyrings/netdata-archive-keyring.gpg
-      echo "deb [signed-by=/usr/share/keyrings/netdata-archive-keyring.gpg] https://repo.netdata.cloud/repos/stable/debian/ ${DEBIAN_CODENAME}/" > /etc/apt/sources.list.d/netdata.list
-    '
-fi
-if [[ $INSTALL_PROMTAIL == "yes" ]];then
-repo_setup+='
-      curl -fsSL https://apt.grafana.com/gpg.key | gpg --dearmor -o /usr/share/keyrings/grafana-archive-keyring.gpg
-      echo "deb [signed-by=/usr/share/keyrings/grafana-archive-keyring.gpg] https://apt.grafana.com stable main" > /etc/apt/sources.list.d/grafana.list
-    '
-fi
-if [[ $INSTALL_YAZI == "yes" ]];then
-repo_setup+='
-      curl -fsSL https://debian.griffo.io/EA0F721D231FDD3A0A17B9AC7808B4DD62C41256.asc | gpg --dearmor --yes -o /etc/apt/trusted.gpg.d/debian.griffo.io.gpg
-      echo "deb https://debian.griffo.io/apt ${DEBIAN_CODENAME} main" > /etc/apt/sources.list.d/debian.griffo.io.list
-    '
-fi
-remote_run "Installing packages (${#packages[@]})" '
-      set -e
-      export DEBIAN_FRONTEND=noninteractive
-      # Wait for apt locks (max 5 min)
-      waited=0
-      while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock >/dev/null 2>&1; do
-        [ $waited -ge 300 ] && { echo "ERROR: Timeout waiting for apt lock" >&2; exit 1; }
-        sleep 2; waited=$((waited + 2))
-      done
-      '"$repo_setup"'
-      apt-get update -qq
-      apt-get install -yqq '"$pkg_list"'
-    ' "Packages installed"
-log_subtasks "${packages[@]}"
-return 0
-}
 _run_parallel_task(){
 local result_dir="$1"
 local idx="$2"
 local func="$3"
-show_progress(){
-wait "$1" 2>/dev/null
-return $?
-}
 trap "touch '$result_dir/fail_$idx' 2>/dev/null" EXIT
 if "$func" >/dev/null 2>&1;then
 if touch "$result_dir/success_$idx" 2>/dev/null;then
@@ -1399,11 +1296,24 @@ parallel_mark_configured(){
 local feature="$1"
 [[ -n ${PARALLEL_RESULT_DIR:-} ]]&&printf '%s' "$feature" >"$PARALLEL_RESULT_DIR/ran_$BASHPID"
 }
-require_admin_username(){
-if [[ -z ${ADMIN_USERNAME:-} ]];then
-log_error "ADMIN_USERNAME is empty${1:+, cannot $1}"
+start_async_feature(){
+local feature="$1"
+local flag_var="$2"
+local flag_value="${!flag_var:-}"
+REPLY=""
+[[ $flag_value != "yes" ]]&&return 0
+"configure_$feature" >>"$LOG_FILE" 2>&1&
+REPLY="$!"
+}
+wait_async_feature(){
+local feature="$1"
+local pid="$2"
+[[ -z $pid ]]&&return 0
+if ! wait "$pid" 2>/dev/null;then
+log_error "configure_$feature failed (exit code: $?)"
 return 1
 fi
+return 0
 }
 run_batch_copies(){
 local -a pids=()
@@ -1435,6 +1345,59 @@ log_error "Failed to create $log_dir"
 return 1
 }
 }
+deploy_template(){
+local template="$1"
+local dest="$2"
+shift 2
+local staged
+local is_service=false
+[[ $dest == *.service ]]&&is_service=true
+staged=$(mktemp)||{
+log_error "Failed to create temp file for $template"
+return 1
+}
+register_temp_file "$staged"
+cp "$template" "$staged"||{
+log_error "Failed to stage template $template"
+rm -f "$staged"
+return 1
+}
+apply_template_vars "$staged" "$@"||{
+log_error "Template substitution failed for $template"
+rm -f "$staged"
+return 1
+}
+if [[ $is_service == true ]]&&! grep -q "ExecStart=" "$staged" 2>/dev/null;then
+log_error "Service file $dest missing ExecStart after template substitution"
+rm -f "$staged"
+return 1
+fi
+local dest_dir
+dest_dir=$(dirname "$dest")
+remote_exec "mkdir -p '$dest_dir'"||{
+log_error "Failed to create directory $dest_dir"
+rm -f "$staged"
+return 1
+}
+remote_copy "$staged" "$dest"||{
+log_error "Failed to deploy $template to $dest"
+rm -f "$staged"
+return 1
+}
+rm -f "$staged"
+if [[ $dest == /etc/systemd/* || $dest == *.service || $dest == *.timer ]];then
+remote_exec "chmod 644 '$dest'"||{
+log_error "Failed to set permissions on $dest"
+return 1
+}
+fi
+if [[ $is_service == true ]];then
+remote_exec "grep -q 'ExecStart=' '$dest'"||{
+log_error "Remote service file $dest appears corrupted (missing ExecStart)"
+return 1
+}
+fi
+}
 make_feature_wrapper(){
 local feature="$1"
 local flag_var="$2"
@@ -1446,24 +1409,47 @@ local var_name="$2"
 local expected_value="$3"
 eval "configure_$feature() { [[ \${$var_name:-} != \"$expected_value\" ]] && return 0; _config_$feature; }"
 }
-start_async_feature(){
-local feature="$1"
-local flag_var="$2"
-local flag_value="${!flag_var:-}"
-REPLY=""
-[[ $flag_value != "yes" ]]&&return 0
-"configure_$feature" >>"$LOG_FILE" 2>&1&
-REPLY="$!"
-}
-wait_async_feature(){
-local feature="$1"
-local pid="$2"
-[[ -z $pid ]]&&return 0
-if ! wait "$pid" 2>/dev/null;then
-log_error "configure_$feature failed (exit code: $?)"
+deploy_systemd_timer(){
+local timer_name="$1"
+local template_dir="${2:+$2/}"
+remote_copy "templates/$template_dir$timer_name.service" \
+"/etc/systemd/system/$timer_name.service"||{
+log_error "Failed to deploy $timer_name service"
 return 1
-fi
+}
+remote_copy "templates/$template_dir$timer_name.timer" \
+"/etc/systemd/system/$timer_name.timer"||{
+log_error "Failed to deploy $timer_name timer"
+return 1
+}
+remote_exec "chmod 644 /etc/systemd/system/$timer_name.service /etc/systemd/system/$timer_name.timer"||{
+log_warn "Failed to set permissions on $timer_name unit files"
+}
+remote_exec "systemctl daemon-reload && systemctl enable --now $timer_name.timer"||{
+log_error "Failed to enable $timer_name timer"
+return 1
+}
+}
+deploy_systemd_service(){
+local service_name="$1"
+shift
+local template="templates/$service_name.service"
+local dest="/etc/systemd/system/$service_name.service"
+deploy_template "$template" "$dest" "$@"||return 1
+remote_exec "chmod 644 '$dest'"||{
+log_warn "Failed to set permissions on $dest"
+}
+remote_enable_services "$service_name.service"
+}
+remote_enable_services(){
+local services=("$@")
+if [[ ${#services[@]} -eq 0 ]];then
 return 0
+fi
+remote_exec "systemctl daemon-reload && systemctl enable --now ${services[*]}"||{
+log_error "Failed to enable services: ${services[*]}"
+return 1
+}
 }
 deploy_user_config(){
 require_admin_username "deploy user config"||return 1
@@ -1518,103 +1504,6 @@ return 1
 rm -f "$staged"
 remote_exec "chown $ADMIN_USERNAME:$ADMIN_USERNAME '$dest'"||{
 log_error "Failed to set ownership on $dest"
-return 1
-}
-}
-run_with_progress(){
-local message="$1"
-local done_message="$2"
-shift 2
-("$@"||exit 1) > \
-/dev/null 2>&1&
-show_progress "$!" "$message" "$done_message"
-}
-deploy_systemd_timer(){
-local timer_name="$1"
-local template_dir="${2:+$2/}"
-remote_copy "templates/$template_dir$timer_name.service" \
-"/etc/systemd/system/$timer_name.service"||{
-log_error "Failed to deploy $timer_name service"
-return 1
-}
-remote_copy "templates/$template_dir$timer_name.timer" \
-"/etc/systemd/system/$timer_name.timer"||{
-log_error "Failed to deploy $timer_name timer"
-return 1
-}
-remote_exec "chmod 644 /etc/systemd/system/$timer_name.service /etc/systemd/system/$timer_name.timer"||{
-log_warn "Failed to set permissions on $timer_name unit files"
-}
-remote_exec "systemctl daemon-reload && systemctl enable --now $timer_name.timer"||{
-log_error "Failed to enable $timer_name timer"
-return 1
-}
-}
-deploy_template(){
-local template="$1"
-local dest="$2"
-shift 2
-local staged
-local is_service=false
-[[ $dest == *.service ]]&&is_service=true
-staged=$(mktemp)||{
-log_error "Failed to create temp file for $template"
-return 1
-}
-register_temp_file "$staged"
-cp "$template" "$staged"||{
-log_error "Failed to stage template $template"
-rm -f "$staged"
-return 1
-}
-apply_template_vars "$staged" "$@"||{
-log_error "Template substitution failed for $template"
-rm -f "$staged"
-return 1
-}
-if [[ $is_service == true ]]&&! grep -q "ExecStart=" "$staged" 2>/dev/null;then
-log_error "Service file $dest missing ExecStart after template substitution"
-rm -f "$staged"
-return 1
-fi
-local dest_dir
-dest_dir=$(dirname "$dest")
-remote_exec "mkdir -p '$dest_dir'"||{
-log_error "Failed to create directory $dest_dir"
-rm -f "$staged"
-return 1
-}
-remote_copy "$staged" "$dest"||{
-log_error "Failed to deploy $template to $dest"
-rm -f "$staged"
-return 1
-}
-rm -f "$staged"
-if [[ $is_service == true ]];then
-remote_exec "grep -q 'ExecStart=' '$dest'"||{
-log_error "Remote service file $dest appears corrupted (missing ExecStart)"
-return 1
-}
-fi
-}
-deploy_systemd_service(){
-local service_name="$1"
-shift
-local template="templates/$service_name.service"
-local dest="/etc/systemd/system/$service_name.service"
-deploy_template "$template" "$dest" "$@"||return 1
-remote_exec "chmod 644 '$dest'"||{
-log_warn "Failed to set permissions on $dest"
-}
-remote_enable_services "$service_name.service"
-}
-remote_enable_services(){
-local services=("$@")
-if [[ ${#services[@]} -eq 0 ]];then
-return 0
-fi
-remote_exec "systemctl daemon-reload && systemctl enable --now ${services[*]}"||{
-log_error "Failed to enable services: ${services[*]}"
 return 1
 }
 }
@@ -1816,6 +1705,12 @@ generate_interfaces_file(){
 local output="${1:-./templates/interfaces}"
 _generate_interfaces_conf >"$output"
 log_info "Generated interfaces config (mode: ${BRIDGE_MODE:-internal})"
+}
+require_admin_username(){
+if [[ -z ${ADMIN_USERNAME:-} ]];then
+log_error "ADMIN_USERNAME is empty${1:+, cannot $1}"
+return 1
+fi
 }
 validate_hostname(){
 local hostname="$1"
@@ -2181,6 +2076,100 @@ apt-get update -qq >/dev/null 2>&1
 DEBIAN_FRONTEND=noninteractive apt-get install -qq -y "${packages_to_install[@]}" >/dev/null 2>&1
 fi
 wait "$zfs_pid" 2>/dev/null||_install_zfs_apt_fallback
+}
+install_base_packages(){
+local packages=($SYSTEM_UTILITIES $OPTIONAL_PACKAGES usrmerge locales chrony unattended-upgrades apt-listchanges linux-cpupower)
+[[ ${SHELL_TYPE:-bash} == "zsh" ]]&&packages+=(zsh git)
+local pkg_list&&printf -v pkg_list '"%s" ' "${packages[@]}"
+log_info "Installing base packages: ${packages[*]}"
+remote_run "Installing system packages" "
+    set -e
+    export DEBIAN_FRONTEND=noninteractive
+    # Wait for apt locks (max 5 min)
+    waited=0
+    while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock >/dev/null 2>&1; do
+      [ \$waited -ge 300 ] && { echo 'ERROR: Timeout waiting for apt lock' >&2; exit 1; }
+      sleep 2; waited=\$((waited + 2))
+    done
+    apt-get update -qq
+    apt-get dist-upgrade -yqq
+    apt-get install -yqq $pkg_list
+    apt-get autoremove -yqq
+    apt-get clean
+    set +e
+    pveupgrade 2>/dev/null || echo 'pveupgrade check skipped' >&2
+    pveam update 2>/dev/null || echo 'pveam update skipped' >&2
+  " "System packages installed"
+log_subtasks "${packages[@]}"
+}
+batch_install_packages(){
+local packages=()
+[[ $INSTALL_FIREWALL == "yes" ]]&&packages+=(nftables)
+if [[ $INSTALL_FIREWALL == "yes" && ${FIREWALL_MODE:-standard} != "stealth" ]];then
+packages+=(fail2ban)
+fi
+[[ $INSTALL_APPARMOR == "yes" ]]&&packages+=(apparmor apparmor-utils)
+[[ $INSTALL_AUDITD == "yes" ]]&&packages+=(auditd audispd-plugins)
+[[ $INSTALL_AIDE == "yes" ]]&&packages+=(aide aide-common)
+[[ $INSTALL_CHKROOTKIT == "yes" ]]&&packages+=(chkrootkit binutils)
+[[ $INSTALL_LYNIS == "yes" ]]&&packages+=(lynis)
+[[ $INSTALL_NEEDRESTART == "yes" ]]&&packages+=(needrestart)
+[[ $INSTALL_VNSTAT == "yes" ]]&&packages+=(vnstat)
+[[ $INSTALL_PROMTAIL == "yes" ]]&&packages+=(promtail)
+[[ $INSTALL_NETDATA == "yes" ]]&&packages+=(netdata)
+[[ $INSTALL_NVIM == "yes" ]]&&packages+=(neovim)
+[[ $INSTALL_RINGBUFFER == "yes" ]]&&packages+=(ethtool)
+[[ $INSTALL_YAZI == "yes" ]]&&packages+=(yazi ffmpeg 7zip jq poppler-utils fd-find ripgrep fzf zoxide imagemagick)
+[[ $INSTALL_TAILSCALE == "yes" ]]&&packages+=(tailscale)
+[[ ${SSL_TYPE:-self-signed} == "letsencrypt" ]]&&packages+=(certbot)
+if [[ ${#packages[@]} -eq 0 ]];then
+log_info "No optional packages to install"
+return 0
+fi
+local pkg_list&&printf -v pkg_list '"%s" ' "${packages[@]}"
+log_info "Batch installing packages: ${packages[*]}"
+local repo_setup='
+    DEBIAN_CODENAME=$(grep -oP "VERSION_CODENAME=\K\w+" /etc/os-release 2>/dev/null || echo "bookworm")
+  '
+if [[ $INSTALL_TAILSCALE == "yes" ]];then
+repo_setup+='
+      curl -fsSL "https://pkgs.tailscale.com/stable/debian/${DEBIAN_CODENAME}.noarmor.gpg" | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+      curl -fsSL "https://pkgs.tailscale.com/stable/debian/${DEBIAN_CODENAME}.tailscale-keyring.list" | tee /etc/apt/sources.list.d/tailscale.list
+    '
+fi
+if [[ $INSTALL_NETDATA == "yes" ]];then
+repo_setup+='
+      curl -fsSL https://repo.netdata.cloud/netdatabot.gpg.key | gpg --dearmor -o /usr/share/keyrings/netdata-archive-keyring.gpg
+      echo "deb [signed-by=/usr/share/keyrings/netdata-archive-keyring.gpg] https://repo.netdata.cloud/repos/stable/debian/ ${DEBIAN_CODENAME}/" > /etc/apt/sources.list.d/netdata.list
+    '
+fi
+if [[ $INSTALL_PROMTAIL == "yes" ]];then
+repo_setup+='
+      curl -fsSL https://apt.grafana.com/gpg.key | gpg --dearmor -o /usr/share/keyrings/grafana-archive-keyring.gpg
+      echo "deb [signed-by=/usr/share/keyrings/grafana-archive-keyring.gpg] https://apt.grafana.com stable main" > /etc/apt/sources.list.d/grafana.list
+    '
+fi
+if [[ $INSTALL_YAZI == "yes" ]];then
+repo_setup+='
+      curl -fsSL https://debian.griffo.io/EA0F721D231FDD3A0A17B9AC7808B4DD62C41256.asc | gpg --dearmor --yes -o /etc/apt/trusted.gpg.d/debian.griffo.io.gpg
+      echo "deb https://debian.griffo.io/apt ${DEBIAN_CODENAME} main" > /etc/apt/sources.list.d/debian.griffo.io.list
+    '
+fi
+remote_run "Installing packages (${#packages[@]})" '
+      set -e
+      export DEBIAN_FRONTEND=noninteractive
+      # Wait for apt locks (max 5 min)
+      waited=0
+      while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock >/dev/null 2>&1; do
+        [ $waited -ge 300 ] && { echo "ERROR: Timeout waiting for apt lock" >&2; exit 1; }
+        sleep 2; waited=$((waited + 2))
+      done
+      '"$repo_setup"'
+      apt-get update -qq
+      apt-get install -yqq '"$pkg_list"'
+    ' "Packages installed"
+log_subtasks "${packages[@]}"
+return 0
 }
 _check_root_access(){
 if [[ $EUID -ne 0 ]];then
@@ -3173,6 +3162,12 @@ else
 printf '%s\n' "$CLR_GRAY$placeholder$CLR_RESET"
 fi
 }
+show_validation_error(){
+local message="$1"
+_wiz_hide_cursor
+_wiz_error "$message"
+sleep "${WIZARD_MESSAGE_DELAY:-3}"
+}
 WIZ_SCREENS=("Basic" "Proxmox" "Network" "Storage" "Services" "Access")
 WIZ_CURRENT_SCREEN=0
 _NAV_COL_WIDTH=10
@@ -3291,8 +3286,38 @@ else
 declare -g WIZ_KEY="$key"
 fi
 }
-_WIZ_FIELD_COUNT=0
-_WIZ_FIELD_MAP=()
+declare -gA _DSP_MAP=(
+["repo:no-subscription"]="No-subscription (free)"
+["repo:enterprise"]="Enterprise"
+["repo:test"]="Test/Development"
+["ipv6:auto"]="Auto"
+["ipv6:manual"]="Manual"
+["ipv6:disabled"]="Disabled"
+["bridge:external"]="External bridge"
+["bridge:internal"]="Internal NAT"
+["bridge:both"]="Both"
+["firewall:stealth"]="Stealth (Tailscale only)"
+["firewall:strict"]="Strict (SSH only)"
+["firewall:standard"]="Standard (SSH + Web UI)"
+["zfs:single"]="Single disk"
+["zfs:raid0"]="RAID-0 (striped)"
+["zfs:raid1"]="RAID-1 (mirror)"
+["zfs:raidz1"]="RAID-Z1 (parity)"
+["zfs:raidz2"]="RAID-Z2 (double parity)"
+["zfs:raidz3"]="RAID-Z3 (triple parity)"
+["zfs:raid10"]="RAID-10 (striped mirrors)"
+["arc:vm-focused"]="VM-focused (4GB)"
+["arc:balanced"]="Balanced (25-40%)"
+["arc:storage-focused"]="Storage-focused (50%)"
+["ssl:self-signed"]="Self-signed"
+["ssl:letsencrypt"]="Let's Encrypt"
+["shell:zsh"]="ZSH"
+["shell:bash"]="Bash"
+["power:performance"]="Performance"
+["power:ondemand"]="Balanced"
+["power:powersave"]="Balanced"
+["power:schedutil"]="Adaptive"
+["power:conservative"]="Conservative")
 _wiz_config_complete(){
 [[ -z $PVE_HOSTNAME ]]&&return 1
 [[ -z $DOMAIN_SUFFIX ]]&&return 1
@@ -3328,132 +3353,6 @@ if [[ $INSTALL_POSTFIX == "yes" ]];then
 fi
 return 0
 }
-_wiz_render_screen_content(){
-local screen="$1"
-local selection="$2"
-case $screen in
-0)_add_field "Hostname         " "$(_wiz_fmt "$_DSP_HOSTNAME")" "hostname"
-_add_field "Email            " "$(_wiz_fmt "$EMAIL")" "email"
-_add_field "Root Password    " "$(_wiz_fmt "$_DSP_PASS")" "password"
-_add_field "Timezone         " "$(_wiz_fmt "$TIMEZONE")" "timezone"
-_add_field "Keyboard         " "$(_wiz_fmt "$KEYBOARD")" "keyboard"
-_add_field "Country          " "$(_wiz_fmt "$COUNTRY")" "country"
-;;
-1)_add_field "Version          " "$(_wiz_fmt "$_DSP_ISO")" "iso_version"
-_add_field "Repository       " "$(_wiz_fmt "$_DSP_REPO")" "repository"
-;;
-2)if
-[[ ${INTERFACE_COUNT:-1} -gt 1 ]]
-then
-_add_field "Interface        " "$(_wiz_fmt "$INTERFACE_NAME")" "interface"
-fi
-_add_field "Bridge mode      " "$(_wiz_fmt "$_DSP_BRIDGE")" "bridge_mode"
-if [[ $BRIDGE_MODE == "internal" || $BRIDGE_MODE == "both" ]];then
-_add_field "Private subnet   " "$(_wiz_fmt "$PRIVATE_SUBNET")" "private_subnet"
-_add_field "Bridge MTU       " "$(_wiz_fmt "$_DSP_MTU")" "bridge_mtu"
-fi
-_add_field "IPv6             " "$(_wiz_fmt "$_DSP_IPV6")" "ipv6"
-_add_field "Firewall         " "$(_wiz_fmt "$_DSP_FIREWALL")" "firewall"
-;;
-3)_add_field "Wipe disks       " "$(_wiz_fmt "$_DSP_WIPE")" "wipe_disks"
-if [[ $DRIVE_COUNT -gt 1 ]];then
-_add_field "Boot disk        " "$(_wiz_fmt "$_DSP_BOOT")" "boot_disk"
-_add_field "Pool mode        " "$(_wiz_fmt "$_DSP_EXISTING_POOL")" "existing_pool"
-if [[ $USE_EXISTING_POOL != "yes" ]];then
-_add_field "Pool disks       " "$(_wiz_fmt "$_DSP_POOL")" "pool_disks"
-_add_field "ZFS mode         " "$(_wiz_fmt "$_DSP_ZFS")" "zfs_mode"
-fi
-else
-_add_field "ZFS mode         " "$(_wiz_fmt "$_DSP_ZFS")" "zfs_mode"
-fi
-_add_field "ZFS ARC          " "$(_wiz_fmt "$_DSP_ARC")" "zfs_arc"
-;;
-4)_add_field "Tailscale        " "$(_wiz_fmt "$_DSP_TAILSCALE")" "tailscale"
-if [[ $INSTALL_TAILSCALE != "yes" ]];then
-_add_field "SSL Certificate  " "$(_wiz_fmt "$_DSP_SSL")" "ssl"
-fi
-_add_field "Postfix          " "$(_wiz_fmt "$_DSP_POSTFIX")" "postfix"
-_add_field "Shell            " "$(_wiz_fmt "$_DSP_SHELL")" "shell"
-_add_field "Power profile    " "$(_wiz_fmt "$_DSP_POWER")" "power_profile"
-_add_field "Security         " "$(_wiz_fmt "$_DSP_SECURITY")" "security"
-_add_field "Monitoring       " "$(_wiz_fmt "$_DSP_MONITORING")" "monitoring"
-_add_field "Tools            " "$(_wiz_fmt "$_DSP_TOOLS")" "tools"
-;;
-5)_add_field "Admin User       " "$(_wiz_fmt "$_DSP_ADMIN_USER")" "admin_username"
-_add_field "Admin Password   " "$(_wiz_fmt "$_DSP_ADMIN_PASS")" "admin_password"
-_add_field "SSH Key          " "$(_wiz_fmt "$_DSP_SSH")" "ssh_key"
-_add_field "API Token        " "$(_wiz_fmt "$_DSP_API")" "api_token"
-esac
-}
-_wiz_render_menu(){
-local selection="$1"
-local output=""
-local banner_output
-banner_output=$(show_banner)
-_wiz_build_display_values
-output+="$banner_output\n\n$(_wiz_render_nav)\n\n"
-declare -g -a _WIZ_FIELD_MAP=()
-local field_idx=0
-_add_field(){
-local label="$1"
-local value="$2"
-local field_name="$3"
-_WIZ_FIELD_MAP+=("$field_name")
-if [[ $field_idx -eq $selection ]];then
-output+="$CLR_ORANGE›$CLR_RESET $CLR_GRAY$label$CLR_RESET$value\n"
-else
-output+="  $CLR_GRAY$label$CLR_RESET$value\n"
-fi
-((field_idx++))
-}
-_wiz_render_screen_content "$WIZ_CURRENT_SCREEN" "$selection"
-declare -g _WIZ_FIELD_COUNT="$field_idx"
-output+="\n"
-local left_clr right_clr start_clr
-left_clr=$([[ $WIZ_CURRENT_SCREEN -gt 0 ]]&&echo "$CLR_ORANGE"||echo "$CLR_GRAY")
-right_clr=$([[ $WIZ_CURRENT_SCREEN -lt $((${#WIZ_SCREENS[@]}-1)) ]]&&echo "$CLR_ORANGE"||echo "$CLR_GRAY")
-start_clr=$(_wiz_config_complete&&echo "$CLR_ORANGE"||echo "$CLR_GRAY")
-local nav_hint=""
-nav_hint+="[$left_clr←$CLR_GRAY] prev  "
-nav_hint+="[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] edit  "
-nav_hint+="[$right_clr→$CLR_GRAY] next  "
-nav_hint+="[${start_clr}S$CLR_GRAY] start  [${CLR_ORANGE}Q$CLR_GRAY] quit"
-output+="$(_wiz_center "$CLR_GRAY$nav_hint$CLR_RESET")"
-_wiz_clear
-printf '%b' "$output"
-}
-declare -gA _DSP_MAP=(
-["repo:no-subscription"]="No-subscription (free)"
-["repo:enterprise"]="Enterprise"
-["repo:test"]="Test/Development"
-["ipv6:auto"]="Auto"
-["ipv6:manual"]="Manual"
-["ipv6:disabled"]="Disabled"
-["bridge:external"]="External bridge"
-["bridge:internal"]="Internal NAT"
-["bridge:both"]="Both"
-["firewall:stealth"]="Stealth (Tailscale only)"
-["firewall:strict"]="Strict (SSH only)"
-["firewall:standard"]="Standard (SSH + Web UI)"
-["zfs:single"]="Single disk"
-["zfs:raid0"]="RAID-0 (striped)"
-["zfs:raid1"]="RAID-1 (mirror)"
-["zfs:raidz1"]="RAID-Z1 (parity)"
-["zfs:raidz2"]="RAID-Z2 (double parity)"
-["zfs:raidz3"]="RAID-Z3 (triple parity)"
-["zfs:raid10"]="RAID-10 (striped mirrors)"
-["arc:vm-focused"]="VM-focused (4GB)"
-["arc:balanced"]="Balanced (25-40%)"
-["arc:storage-focused"]="Storage-focused (50%)"
-["ssl:self-signed"]="Self-signed"
-["ssl:letsencrypt"]="Let's Encrypt"
-["shell:zsh"]="ZSH"
-["shell:bash"]="Bash"
-["power:performance"]="Performance"
-["power:ondemand"]="Balanced"
-["power:powersave"]="Balanced"
-["power:schedutil"]="Adaptive"
-["power:conservative"]="Conservative")
 _dsp_lookup(){
 local key="$1:$2"
 echo "${_DSP_MAP[$key]:-$2}"
@@ -3602,6 +3501,133 @@ _dsp_storage
 _dsp_services
 _dsp_access
 }
+_WIZ_FIELD_COUNT=0
+_WIZ_FIELD_MAP=()
+_wiz_render_screen_content(){
+local screen="$1"
+local selection="$2"
+case $screen in
+0)_add_field "Hostname         " "$(_wiz_fmt "$_DSP_HOSTNAME")" "hostname"
+_add_field "Email            " "$(_wiz_fmt "$EMAIL")" "email"
+_add_field "Root Password    " "$(_wiz_fmt "$_DSP_PASS")" "password"
+_add_field "Timezone         " "$(_wiz_fmt "$TIMEZONE")" "timezone"
+_add_field "Keyboard         " "$(_wiz_fmt "$KEYBOARD")" "keyboard"
+_add_field "Country          " "$(_wiz_fmt "$COUNTRY")" "country"
+;;
+1)_add_field "Version          " "$(_wiz_fmt "$_DSP_ISO")" "iso_version"
+_add_field "Repository       " "$(_wiz_fmt "$_DSP_REPO")" "repository"
+;;
+2)if
+[[ ${INTERFACE_COUNT:-1} -gt 1 ]]
+then
+_add_field "Interface        " "$(_wiz_fmt "$INTERFACE_NAME")" "interface"
+fi
+_add_field "Bridge mode      " "$(_wiz_fmt "$_DSP_BRIDGE")" "bridge_mode"
+if [[ $BRIDGE_MODE == "internal" || $BRIDGE_MODE == "both" ]];then
+_add_field "Private subnet   " "$(_wiz_fmt "$PRIVATE_SUBNET")" "private_subnet"
+_add_field "Bridge MTU       " "$(_wiz_fmt "$_DSP_MTU")" "bridge_mtu"
+fi
+_add_field "IPv6             " "$(_wiz_fmt "$_DSP_IPV6")" "ipv6"
+_add_field "Firewall         " "$(_wiz_fmt "$_DSP_FIREWALL")" "firewall"
+;;
+3)_add_field "Wipe disks       " "$(_wiz_fmt "$_DSP_WIPE")" "wipe_disks"
+if [[ $DRIVE_COUNT -gt 1 ]];then
+_add_field "Boot disk        " "$(_wiz_fmt "$_DSP_BOOT")" "boot_disk"
+_add_field "Pool mode        " "$(_wiz_fmt "$_DSP_EXISTING_POOL")" "existing_pool"
+if [[ $USE_EXISTING_POOL != "yes" ]];then
+_add_field "Pool disks       " "$(_wiz_fmt "$_DSP_POOL")" "pool_disks"
+_add_field "ZFS mode         " "$(_wiz_fmt "$_DSP_ZFS")" "zfs_mode"
+fi
+else
+_add_field "ZFS mode         " "$(_wiz_fmt "$_DSP_ZFS")" "zfs_mode"
+fi
+_add_field "ZFS ARC          " "$(_wiz_fmt "$_DSP_ARC")" "zfs_arc"
+;;
+4)_add_field "Tailscale        " "$(_wiz_fmt "$_DSP_TAILSCALE")" "tailscale"
+if [[ $INSTALL_TAILSCALE != "yes" ]];then
+_add_field "SSL Certificate  " "$(_wiz_fmt "$_DSP_SSL")" "ssl"
+fi
+_add_field "Postfix          " "$(_wiz_fmt "$_DSP_POSTFIX")" "postfix"
+_add_field "Shell            " "$(_wiz_fmt "$_DSP_SHELL")" "shell"
+_add_field "Power profile    " "$(_wiz_fmt "$_DSP_POWER")" "power_profile"
+_add_field "Security         " "$(_wiz_fmt "$_DSP_SECURITY")" "security"
+_add_field "Monitoring       " "$(_wiz_fmt "$_DSP_MONITORING")" "monitoring"
+_add_field "Tools            " "$(_wiz_fmt "$_DSP_TOOLS")" "tools"
+;;
+5)_add_field "Admin User       " "$(_wiz_fmt "$_DSP_ADMIN_USER")" "admin_username"
+_add_field "Admin Password   " "$(_wiz_fmt "$_DSP_ADMIN_PASS")" "admin_password"
+_add_field "SSH Key          " "$(_wiz_fmt "$_DSP_SSH")" "ssh_key"
+_add_field "API Token        " "$(_wiz_fmt "$_DSP_API")" "api_token"
+esac
+}
+_wiz_render_menu(){
+local selection="$1"
+local output=""
+local banner_output
+banner_output=$(show_banner)
+_wiz_build_display_values
+output+="$banner_output\n\n$(_wiz_render_nav)\n\n"
+declare -g -a _WIZ_FIELD_MAP=()
+local field_idx=0
+_add_field(){
+local label="$1"
+local value="$2"
+local field_name="$3"
+_WIZ_FIELD_MAP+=("$field_name")
+if [[ $field_idx -eq $selection ]];then
+output+="$CLR_ORANGE›$CLR_RESET $CLR_GRAY$label$CLR_RESET$value\n"
+else
+output+="  $CLR_GRAY$label$CLR_RESET$value\n"
+fi
+((field_idx++))
+}
+_wiz_render_screen_content "$WIZ_CURRENT_SCREEN" "$selection"
+declare -g _WIZ_FIELD_COUNT="$field_idx"
+output+="\n"
+local left_clr right_clr start_clr
+left_clr=$([[ $WIZ_CURRENT_SCREEN -gt 0 ]]&&echo "$CLR_ORANGE"||echo "$CLR_GRAY")
+right_clr=$([[ $WIZ_CURRENT_SCREEN -lt $((${#WIZ_SCREENS[@]}-1)) ]]&&echo "$CLR_ORANGE"||echo "$CLR_GRAY")
+start_clr=$(_wiz_config_complete&&echo "$CLR_ORANGE"||echo "$CLR_GRAY")
+local nav_hint=""
+nav_hint+="[$left_clr←$CLR_GRAY] prev  "
+nav_hint+="[$CLR_ORANGE↑↓$CLR_GRAY] navigate  [${CLR_ORANGE}Enter$CLR_GRAY] edit  "
+nav_hint+="[$right_clr→$CLR_GRAY] next  "
+nav_hint+="[${start_clr}S$CLR_GRAY] start  [${CLR_ORANGE}Q$CLR_GRAY] quit"
+output+="$(_wiz_center "$CLR_GRAY$nav_hint$CLR_RESET")"
+_wiz_clear
+printf '%b' "$output"
+}
+_wiz_input_validated(){
+local var_name="$1"
+local validate_func="$2"
+local error_msg="$3"
+shift 3
+while true;do
+_wiz_start_edit
+_show_input_footer
+local value
+value=$(_wiz_input "$@")
+[[ -z $value ]]&&return 1
+if "$validate_func" "$value";then
+declare -g "$var_name=$value"
+return 0
+fi
+show_validation_error "$error_msg"
+done
+}
+_wiz_filter_select(){
+local var_name="$1"
+local prompt="$2"
+local data="$3"
+local height="${4:-6}"
+_wiz_start_edit
+_show_input_footer "filter" "$height"
+local selected
+if ! selected=$(printf '%s' "$data"|_wiz_filter --prompt "$prompt");then
+return 1
+fi
+declare -g "$var_name=$selected"
+}
 _wiz_password_editor(){
 local var_name="$1"
 local header="$2"
@@ -3722,37 +3748,6 @@ declare -g "$var_name=no"
 fi
 done
 return 0
-}
-_wiz_input_validated(){
-local var_name="$1"
-local validate_func="$2"
-local error_msg="$3"
-shift 3
-while true;do
-_wiz_start_edit
-_show_input_footer
-local value
-value=$(_wiz_input "$@")
-[[ -z $value ]]&&return 1
-if "$validate_func" "$value";then
-declare -g "$var_name=$value"
-return 0
-fi
-show_validation_error "$error_msg"
-done
-}
-_wiz_filter_select(){
-local var_name="$1"
-local prompt="$2"
-local data="$3"
-local height="${4:-6}"
-_wiz_start_edit
-_show_input_footer "filter" "$height"
-local selected
-if ! selected=$(printf '%s' "$data"|_wiz_filter --prompt "$prompt");then
-return 1
-fi
-declare -g "$var_name=$selected"
 }
 _country_to_locale(){
 local country="${1:-us}"
@@ -5382,16 +5377,15 @@ get_iso_version(){
 local iso_filename="$1"
 printf '%s\n' "$iso_filename"|sed -E 's/proxmox-ve_([0-9]+\.[0-9]+-[0-9]+)\.iso/\1/'
 }
-download_proxmox_iso(){
+_download_iso(){
 log_info "Starting Proxmox ISO download"
 if [[ -f "pve.iso" ]];then
 log_info "Proxmox ISO already exists, skipping download"
-print_success "Proxmox ISO:" "already exists, skipping download"
 return 0
 fi
 if [[ -z $PROXMOX_ISO_VERSION ]];then
 log_error "PROXMOX_ISO_VERSION not set"
-exit 1
+return 1
 fi
 log_info "Using selected ISO: $PROXMOX_ISO_VERSION"
 declare -g PROXMOX_ISO_URL
@@ -5408,12 +5402,10 @@ log_info "Downloading ISO: $ISO_FILENAME"
 local method_file=""
 method_file=$(mktemp)||{
 log_error "mktemp failed for method_file"
-exit 1
+return 1
 }
 register_temp_file "$method_file"
-_download_iso_with_fallback "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum" "$method_file"&
-show_progress "$!" "Downloading $ISO_FILENAME" "$ISO_FILENAME downloaded"
-wait "$!"
+_download_iso_with_fallback "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum" "$method_file"
 local exit_code="$?"
 declare -g DOWNLOAD_METHOD
 DOWNLOAD_METHOD="$(cat "$method_file" 2>/dev/null)"
@@ -5421,7 +5413,7 @@ rm -f "$method_file"
 if [[ $exit_code -ne 0 ]]||[[ ! -s "pve.iso" ]];then
 log_error "All download methods failed for Proxmox ISO"
 rm -f pve.iso
-exit 1
+return 1
 fi
 log_info "Download successful via $DOWNLOAD_METHOD"
 local iso_size
@@ -5430,46 +5422,27 @@ log_info "ISO file size: $(printf '%s\n' "$iso_size"|awk '{printf "%.1fG", $1/10
 if [[ -n $expected_checksum ]];then
 if [[ $DOWNLOAD_METHOD == "aria2c" ]];then
 log_info "Checksum already verified by aria2c"
-if type live_log_subtask &>/dev/null 2>&1;then
-live_log_subtask "SHA256: OK (verified by aria2c)"
-fi
 else
 log_info "Verifying ISO checksum"
-local actual_checksum checksum_file
-checksum_file=$(mktemp)||{
-log_error "mktemp failed for checksum_file"
-exit 1
-}
-register_temp_file "$checksum_file"
-(actual_checksum=$(sha256sum pve.iso|awk '{print $1}')&&printf '%s\n' "$actual_checksum" >"$checksum_file")&
-local checksum_pid="$!"
-if type show_progress &>/dev/null 2>&1;then
-show_progress "$checksum_pid" "Verifying checksum" "Checksum verified"
-else
-wait "$checksum_pid"
-fi
-actual_checksum="$(cat "$checksum_file" 2>/dev/null)"
-rm -f "$checksum_file"
+local actual_checksum
+actual_checksum=$(sha256sum pve.iso|awk '{print $1}')
 if [[ $actual_checksum != "$expected_checksum" ]];then
 log_error "Checksum mismatch! Expected: $expected_checksum, Got: $actual_checksum"
-if type live_log_subtask &>/dev/null 2>&1;then
-live_log_subtask "SHA256: FAILED"
-fi
 rm -f pve.iso
-exit 1
+return 1
 fi
 log_info "Checksum verification passed"
-if type live_log_subtask &>/dev/null 2>&1;then
-live_log_subtask "SHA256: OK"
-fi
 fi
 else
 log_warn "Could not find checksum for $ISO_FILENAME"
-print_warning "Could not find checksum for $ISO_FILENAME"
 fi
 log_info "Cleaning up temporary files in /tmp"
 rm -rf /tmp/tmp.* /tmp/pve-* 2>/dev/null||true
 log_info "Temporary files cleaned"
+}
+_parallel_download_iso(){
+_download_iso||return 1
+parallel_mark_configured "ISO downloaded"
 }
 validate_answer_toml(){
 local file="$1"
@@ -5497,7 +5470,7 @@ log_warn "proxmox-auto-install-assistant not found, skipping advanced validation
 fi
 return 0
 }
-make_answer_toml(){
+_make_answer_toml(){
 log_info "Creating answer.toml for autoinstall"
 log_debug "ZFS_RAID=$ZFS_RAID, BOOT_DISK=$BOOT_DISK"
 log_debug "ZFS_POOL_DISKS=(${ZFS_POOL_DISKS[*]})"
@@ -5516,11 +5489,14 @@ done
 else
 virtio_pool_disks=("${ZFS_POOL_DISKS[@]}")
 fi
-run_with_progress "Creating disk mapping" "Disk mapping created" \
-create_virtio_mapping "$BOOT_DISK" "${virtio_pool_disks[@]}"
+log_info "Creating virtio disk mapping"
+create_virtio_mapping "$BOOT_DISK" "${virtio_pool_disks[@]}"||{
+log_error "Failed to create virtio mapping"
+return 1
+}
 load_virtio_mapping||{
 log_error "Failed to load virtio mapping"
-exit 1
+return 1
 }
 local FILESYSTEM
 local all_disks=()
@@ -5530,7 +5506,7 @@ all_disks=("$BOOT_DISK")
 if [[ $USE_EXISTING_POOL == "yes" ]];then
 if [[ -z $EXISTING_POOL_NAME ]];then
 log_error "USE_EXISTING_POOL=yes but EXISTING_POOL_NAME is empty"
-exit 1
+return 1
 fi
 log_info "Boot disk mode: ext4 on boot disk, existing pool '$EXISTING_POOL_NAME' will be imported"
 else
@@ -5549,7 +5525,7 @@ declare -g DISK_LIST
 DISK_LIST=$(map_disks_to_virtio "toml_array" "${all_disks[@]}")
 if [[ -z $DISK_LIST ]];then
 log_error "Failed to map disks to virtio devices"
-exit 1
+return 1
 fi
 log_debug "FILESYSTEM=$FILESYSTEM, DISK_LIST=$DISK_LIST"
 log_info "Generating answer.toml for autoinstall"
@@ -5557,7 +5533,7 @@ local escaped_password="$NEW_ROOT_PASSWORD" test_pwd="$NEW_ROOT_PASSWORD"
 for c in $'\t' $'\n' $'\r' $'\b' $'\f';do test_pwd="${test_pwd//$c/}";done
 [[ $test_pwd =~ [[:cntrl:]] ]]&&{
 log_error "Password has unsupported control chars"
-exit 1
+return 1
 }
 escaped_password="${escaped_password//\\/\\\\}"
 escaped_password="${escaped_password//\"/\\\"}"
@@ -5601,16 +5577,14 @@ EOF
 fi
 if ! validate_answer_toml "./answer.toml";then
 log_error "answer.toml validation failed"
-exit 1
+return 1
 fi
 log_info "answer.toml created and validated:"
 sed 's/^\([[:space:]]*root-password[[:space:]]*=[[:space:]]*\).*/\1"[REDACTED]"/' answer.toml >>"$LOG_FILE"
-if type live_log_subtask &>/dev/null 2>&1;then
-local total_disks="${#ZFS_POOL_DISKS[@]}"
-[[ -n $BOOT_DISK ]]&&((total_disks++))
-live_log_subtask "Mapped $total_disks disk(s) to virtio"
-live_log_subtask "Generated answer.toml ($FILESYSTEM)"
-fi
+}
+_parallel_make_toml(){
+_make_answer_toml||return 1
+parallel_mark_configured "answer.toml created"
 }
 make_autoinstall_iso(){
 log_info "Creating autoinstall ISO"
@@ -5931,26 +5905,6 @@ log_warn "Failed to disable rpcbind/nfs-blkmap"
 }
 remote_exec "systemctl mask nfs-blkmap.service 2>/dev/null"||true
 }
-_install_locale_files(){
-remote_copy "templates/locale.sh" "/etc/profile.d/locale.sh"||return 1
-remote_exec "chmod +x /etc/profile.d/locale.sh"||return 1
-remote_copy "templates/default-locale" "/etc/default/locale"||return 1
-remote_copy "templates/environment" "/etc/environment"||return 1
-remote_exec "grep -q 'profile.d/locale.sh' /etc/bash.bashrc || echo '[ -f /etc/profile.d/locale.sh ] && . /etc/profile.d/locale.sh' >> /etc/bash.bashrc"||return 1
-}
-_configure_fastfetch(){
-remote_copy "templates/fastfetch.sh" "/etc/profile.d/fastfetch.sh"||return 1
-remote_exec "chmod +x /etc/profile.d/fastfetch.sh"||return 1
-}
-_configure_bat(){
-remote_exec "ln -sf /usr/bin/batcat /usr/local/bin/bat"||return 1
-deploy_user_config "templates/bat-config" ".config/bat/config"||return 1
-}
-_configure_zsh_files(){
-require_admin_username "configure ZSH files"||return 1
-deploy_user_config "templates/zshrc" ".zshrc" "LOCALE=$LOCALE"||return 1
-remote_exec "chsh -s /bin/zsh $ADMIN_USERNAME"||return 1
-}
 _config_base_system(){
 run_with_progress "Copying configuration files" "Configuration files copied" _copy_config_files
 run_with_progress "Applying sysctl settings" "Sysctl settings applied" remote_exec "sysctl --system"
@@ -6000,49 +5954,15 @@ run_with_progress "Installing locale configuration files" "Locale files installe
 run_with_progress "Configuring fastfetch" "Fastfetch configured" _configure_fastfetch
 run_with_progress "Configuring bat" "Bat configured" _configure_bat
 }
-_config_shell(){
-if [[ $SHELL_TYPE == "zsh" ]];then
-require_admin_username "configure shell"||return 1
-remote_run "Installing Oh-My-Zsh" '
-            set -e
-            export RUNZSH=no
-            export CHSH=no
-            export HOME=/home/'"$ADMIN_USERNAME"'
-            su - '"$ADMIN_USERNAME"' -c "sh -c \"\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\" \"\" --unattended"
-        ' "Oh-My-Zsh installed"
-remote_run "Installing ZSH theme and plugins" '
-            set -e
-            git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions /home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/plugins/zsh-autosuggestions &
-            pid1=$!
-            git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting /home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting &
-            pid2=$!
-            # Wait and check exit codes (set -e doesnt catch background failures)
-            failed=0
-            wait "$pid1" || failed=1
-            wait "$pid2" || failed=1
-            if [[ $failed -eq 1 ]]; then
-              echo "ERROR: Failed to clone ZSH plugins" >&2
-              exit 1
-            fi
-            # Validate directories exist
-            for dir in plugins/zsh-autosuggestions plugins/zsh-syntax-highlighting; do
-              if [[ ! -d "/home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/$dir" ]]; then
-                echo "ERROR: ZSH plugin directory missing: $dir" >&2
-                exit 1
-              fi
-            done
-            chown -R '"$ADMIN_USERNAME"':'"$ADMIN_USERNAME"' /home/'"$ADMIN_USERNAME"'/.oh-my-zsh
-        ' "ZSH theme and plugins installed"
-run_with_progress "Configuring ZSH" "ZSH with gentoo configured" _configure_zsh_files
-else
-add_log "$TREE_BRANCH Default shell: Bash $CLR_CYAN✓$CLR_RESET"
-fi
-}
 configure_base_system(){
 _config_base_system
 }
-configure_shell(){
-_config_shell
+_install_locale_files(){
+remote_copy "templates/locale.sh" "/etc/profile.d/locale.sh"||return 1
+remote_exec "chmod +x /etc/profile.d/locale.sh"||return 1
+remote_copy "templates/default-locale" "/etc/default/locale"||return 1
+remote_copy "templates/environment" "/etc/environment"||return 1
+remote_exec "grep -q 'profile.d/locale.sh' /etc/bash.bashrc || echo '[ -f /etc/profile.d/locale.sh ] && . /etc/profile.d/locale.sh' >> /etc/bash.bashrc"||return 1
 }
 _config_tailscale(){
 remote_run "Starting Tailscale" '
@@ -6102,6 +6022,7 @@ if [[ ${FIREWALL_MODE:-standard} == "stealth" ]];then
 log_info "Deploying disable-openssh.service (FIREWALL_MODE=$FIREWALL_MODE)"
 (log_info "Using pre-downloaded disable-openssh.service, size: $(wc -c <./templates/disable-openssh.service 2>/dev/null||echo 'failed')"
 remote_copy "templates/disable-openssh.service" "/etc/systemd/system/disable-openssh.service"||exit 1
+remote_exec "chmod 644 /etc/systemd/system/disable-openssh.service"||exit 1
 log_info "Copied disable-openssh.service to VM"
 remote_exec "systemctl daemon-reload && systemctl enable disable-openssh.service" >/dev/null||exit 1
 log_info "Enabled disable-openssh.service") \
@@ -6174,6 +6095,7 @@ remote_exec "systemctl enable --now unattended-upgrades"||return 1
 _configure_cpu_governor(){
 local governor="${CPU_GOVERNOR:-performance}"
 remote_copy "templates/cpupower.service" "/etc/systemd/system/cpupower.service"||return 1
+remote_exec "chmod 644 /etc/systemd/system/cpupower.service"||return 1
 remote_exec "
     systemctl daemon-reload
     systemctl enable --now cpupower.service
@@ -6189,28 +6111,58 @@ remote_copy "templates/remove-subscription-nag.sh" "/tmp/remove-subscription-nag
 remote_exec "chmod +x /tmp/remove-subscription-nag.sh && /tmp/remove-subscription-nag.sh && rm -f /tmp/remove-subscription-nag.sh"||return 1
 }
 _config_system_services(){
-run_with_progress "Configuring chrony" "Chrony configured" _configure_chrony
-run_with_progress "Configuring Unattended Upgrades" "Unattended Upgrades configured" _configure_unattended_upgrades
-remote_run "Configuring kernel modules" '
-        for mod in nf_conntrack tcp_bbr; do
-            if ! grep -q "^${mod}$" /etc/modules 2>/dev/null; then
-                echo "$mod" >> /etc/modules
-            fi
-        done
-        modprobe tcp_bbr 2>/dev/null || true
-    ' "Kernel modules configured"
-run_with_progress "Configuring system limits" "System limits configured" \
-remote_copy "templates/99-limits.conf" "/etc/security/limits.d/99-proxmox.conf"
-remote_run "Optimizing APT configuration" '
-        echo "Acquire::Languages \"none\";" > /etc/apt/apt.conf.d/99-disable-translations
-    ' "APT configuration optimized"
+log_info "Configuring chrony"
+_configure_chrony||{
+log_error "Failed to configure chrony"
+return 1
+}
+log_info "Configuring unattended-upgrades"
+_configure_unattended_upgrades||{
+log_error "Failed to configure unattended-upgrades"
+return 1
+}
+log_info "Configuring kernel modules"
+remote_exec '
+    for mod in nf_conntrack tcp_bbr; do
+      if ! grep -q "^${mod}$" /etc/modules 2>/dev/null; then
+        echo "$mod" >> /etc/modules
+      fi
+    done
+    modprobe tcp_bbr 2>/dev/null || true
+  ' >>"$LOG_FILE" 2>&1||{
+log_error "Failed to configure kernel modules"
+return 1
+}
+log_info "Configuring system limits"
+remote_copy "templates/99-limits.conf" "/etc/security/limits.d/99-proxmox.conf"||{
+log_error "Failed to configure system limits"
+return 1
+}
+log_info "Optimizing APT configuration"
+remote_exec 'echo "Acquire::Languages \"none\";" > /etc/apt/apt.conf.d/99-disable-translations' >> \
+"$LOG_FILE" 2>&1||{
+log_error "Failed to optimize APT configuration"
+return 1
+}
 local governor="${CPU_GOVERNOR:-performance}"
-run_with_progress "Configuring CPU governor ($governor)" "CPU governor configured" _configure_cpu_governor
-run_with_progress "Configuring I/O scheduler" "I/O scheduler configured" _configure_io_scheduler
+log_info "Configuring CPU governor ($governor)"
+_configure_cpu_governor||{
+log_error "Failed to configure CPU governor"
+return 1
+}
+log_info "Configuring I/O scheduler"
+_configure_io_scheduler||{
+log_error "Failed to configure I/O scheduler"
+return 1
+}
 if [[ ${PVE_REPO_TYPE:-no-subscription} != "enterprise" ]];then
-log_info "configure_system_services: removing subscription notice (non-enterprise)"
-run_with_progress "Removing Proxmox subscription notice" "Subscription notice removed" _remove_subscription_notice
+log_info "Removing Proxmox subscription notice (non-enterprise)"
+_remove_subscription_notice||{
+log_error "Failed to remove subscription notice"
+return 1
+}
 fi
+parallel_mark_configured "services"
 }
 configure_system_services(){
 _config_system_services
@@ -6559,13 +6511,6 @@ return 1
 parallel_mark_configured "needrestart"
 }
 make_feature_wrapper "needrestart" "INSTALL_NEEDRESTART"
-_config_ringbuffer(){
-remote_copy "templates/network-ringbuffer.sh" "/usr/local/bin/network-ringbuffer.sh"||return 1
-remote_exec "chmod +x /usr/local/bin/network-ringbuffer.sh"||return 1
-deploy_systemd_service "network-ringbuffer"||return 1
-parallel_mark_configured "ringbuffer"
-}
-make_feature_wrapper "ringbuffer" "INSTALL_RINGBUFFER"
 _config_vnstat(){
 local iface="${INTERFACE_NAME:-eth0}"
 deploy_template "templates/vnstat.conf" "/etc/vnstat.conf" "INTERFACE_NAME=$iface"||return 1
@@ -6638,6 +6583,7 @@ parallel_mark_configured "postfix"
 _config_postfix_disable(){
 remote_exec 'systemctl stop postfix 2>/dev/null; systemctl disable postfix 2>/dev/null'||true
 log_info "Postfix disabled"
+parallel_mark_configured "postfix disabled"
 }
 configure_postfix(){
 if [[ $INSTALL_POSTFIX == "yes" ]];then
@@ -6650,6 +6596,13 @@ elif [[ $INSTALL_POSTFIX == "no" ]];then
 _config_postfix_disable
 fi
 }
+_config_ringbuffer(){
+remote_copy "templates/network-ringbuffer.sh" "/usr/local/bin/network-ringbuffer.sh"||return 1
+remote_exec "chmod +x /usr/local/bin/network-ringbuffer.sh"||return 1
+deploy_systemd_service "network-ringbuffer"||return 1
+parallel_mark_configured "ringbuffer"
+}
+make_feature_wrapper "ringbuffer" "INSTALL_RINGBUFFER"
 _config_yazi(){
 remote_exec 'su - '"$ADMIN_USERNAME"' -c "
     ya pkg add kalidyasin/yazi-flavors:tokyonight-night || echo \"WARNING: Failed to install yazi flavor\" >&2
@@ -6685,6 +6638,72 @@ return 1
 parallel_mark_configured "nvim"
 }
 make_feature_wrapper "nvim" "INSTALL_NVIM"
+_configure_fastfetch(){
+remote_copy "templates/fastfetch.sh" "/etc/profile.d/fastfetch.sh"||return 1
+remote_exec "chmod +x /etc/profile.d/fastfetch.sh"||return 1
+}
+_configure_bat(){
+remote_exec "ln -sf /usr/bin/batcat /usr/local/bin/bat"||return 1
+deploy_user_config "templates/bat-config" ".config/bat/config"||return 1
+}
+_configure_zsh_files(){
+require_admin_username "configure ZSH files"||return 1
+deploy_user_config "templates/zshrc" ".zshrc" "LOCALE=$LOCALE"||return 1
+remote_exec "chsh -s /bin/zsh $ADMIN_USERNAME"||return 1
+}
+_config_shell(){
+if [[ $SHELL_TYPE == "zsh" ]];then
+require_admin_username "configure shell"||return 1
+log_info "Installing Oh-My-Zsh for $ADMIN_USERNAME"
+remote_exec '
+      set -e
+      export RUNZSH=no
+      export CHSH=no
+      export HOME=/home/'"$ADMIN_USERNAME"'
+      su - '"$ADMIN_USERNAME"' -c "sh -c \"\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\" \"\" --unattended"
+    ' >>"$LOG_FILE" 2>&1||{
+log_error "Failed to install Oh-My-Zsh"
+return 1
+}
+log_info "Installing ZSH plugins"
+remote_exec '
+      set -e
+      git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions /home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/plugins/zsh-autosuggestions &
+      pid1=$!
+      git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting /home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting &
+      pid2=$!
+      # Wait and check exit codes (set -e doesnt catch background failures)
+      failed=0
+      wait "$pid1" || failed=1
+      wait "$pid2" || failed=1
+      if [[ $failed -eq 1 ]]; then
+        echo "ERROR: Failed to clone ZSH plugins" >&2
+        exit 1
+      fi
+      # Validate directories exist
+      for dir in plugins/zsh-autosuggestions plugins/zsh-syntax-highlighting; do
+        if [[ ! -d "/home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/$dir" ]]; then
+          echo "ERROR: ZSH plugin directory missing: $dir" >&2
+          exit 1
+        fi
+      done
+      chown -R '"$ADMIN_USERNAME"':'"$ADMIN_USERNAME"' /home/'"$ADMIN_USERNAME"'/.oh-my-zsh
+    ' >>"$LOG_FILE" 2>&1||{
+log_error "Failed to install ZSH plugins"
+return 1
+}
+_configure_zsh_files||{
+log_error "Failed to configure ZSH files"
+return 1
+}
+parallel_mark_configured "zsh"
+else
+parallel_mark_configured "bash"
+fi
+}
+configure_shell(){
+_config_shell
+}
 _config_ssl(){
 log_debug "_config_ssl: SSL_TYPE=$SSL_TYPE"
 local cert_domain="${FQDN:-$PVE_HOSTNAME.$DOMAIN_SUFFIX}"
@@ -6693,24 +6712,27 @@ deploy_template "templates/letsencrypt-firstboot.sh" "/tmp/letsencrypt-firstboot
 "CERT_DOMAIN=$cert_domain" "CERT_EMAIL=$EMAIL"||return 1
 remote_copy "templates/letsencrypt-deploy-hook.sh" "/tmp/letsencrypt-deploy-hook.sh"||return 1
 remote_copy "templates/letsencrypt-firstboot.service" "/tmp/letsencrypt-firstboot.service"||return 1
-remote_run "Configuring Let's Encrypt templates" '
-        set -e
-        mkdir -p /etc/letsencrypt/renewal-hooks/deploy
-        mv /tmp/letsencrypt-deploy-hook.sh /etc/letsencrypt/renewal-hooks/deploy/proxmox.sh
-        chmod +x /etc/letsencrypt/renewal-hooks/deploy/proxmox.sh
-        mv /tmp/letsencrypt-firstboot.sh /usr/local/bin/obtain-letsencrypt-cert.sh
-        chmod +x /usr/local/bin/obtain-letsencrypt-cert.sh
-        mv /tmp/letsencrypt-firstboot.service /etc/systemd/system/letsencrypt-firstboot.service
-        systemctl daemon-reload
-        systemctl enable letsencrypt-firstboot.service
-    ' "First-boot certificate service configured"
+log_info "Configuring Let's Encrypt first-boot service"
+remote_exec '
+    set -e
+    mkdir -p /etc/letsencrypt/renewal-hooks/deploy
+    mv /tmp/letsencrypt-deploy-hook.sh /etc/letsencrypt/renewal-hooks/deploy/proxmox.sh
+    chmod +x /etc/letsencrypt/renewal-hooks/deploy/proxmox.sh
+    mv /tmp/letsencrypt-firstboot.sh /usr/local/bin/obtain-letsencrypt-cert.sh
+    chmod +x /usr/local/bin/obtain-letsencrypt-cert.sh
+    mv /tmp/letsencrypt-firstboot.service /etc/systemd/system/letsencrypt-firstboot.service
+    systemctl daemon-reload
+    systemctl enable letsencrypt-firstboot.service
+  ' >>"$LOG_FILE" 2>&1||{
+log_error "Failed to configure Let's Encrypt"
+return 1
+}
 declare -g LETSENCRYPT_DOMAIN="$cert_domain"
 declare -g LETSENCRYPT_FIRSTBOOT=true
+parallel_mark_configured "ssl"
 }
 make_condition_wrapper "ssl" "SSL_TYPE" "letsencrypt"
-configure_ssl_certificate(){ configure_ssl;}
-create_api_token(){
-[[ $INSTALL_API_TOKEN != "yes" ]]&&return 0
+_config_api_token(){
 log_info "Creating Proxmox API token for $ADMIN_USERNAME: $API_TOKEN_NAME"
 local existing
 existing=$(remote_exec "pveum user token list '$ADMIN_USERNAME@pam' 2>/dev/null | grep -q '$API_TOKEN_NAME' && echo 'exists' || echo ''")
@@ -6745,8 +6767,10 @@ EOF
 )
 register_temp_file "$_TEMP_API_TOKEN_FILE"
 log_info "API token created successfully: $API_TOKEN_ID"
+parallel_mark_configured "api-token"
 return 0
 }
+make_feature_wrapper "api_token" "INSTALL_API_TOKEN"
 _config_zfs_arc(){
 log_info "Configuring ZFS ARC memory allocation (mode: $ZFS_ARC_MODE)"
 local total_ram_mb
@@ -6811,10 +6835,12 @@ remote_copy "templates/zfs-scrub.service" "/etc/systemd/system/zfs-scrub@.servic
 log_error "Failed to deploy ZFS scrub service"
 return 1
 }
+remote_exec "chmod 644 /etc/systemd/system/zfs-scrub@.service"||return 1
 remote_copy "templates/zfs-scrub.timer" "/etc/systemd/system/zfs-scrub@.timer"||{
 log_error "Failed to deploy ZFS scrub timer"
 return 1
 }
+remote_exec "chmod 644 /etc/systemd/system/zfs-scrub@.timer"||return 1
 local data_pool="tank"
 if [[ $USE_EXISTING_POOL == "yes" && -n $EXISTING_POOL_NAME ]];then
 data_pool="$EXISTING_POOL_NAME"
@@ -6830,6 +6856,7 @@ log_info "ZFS scrub schedule configured (monthly, 1st Sunday at 2:00 AM)"
 }
 configure_zfs_arc(){
 _config_zfs_arc
+parallel_mark_configured "ZFS ARC $ZFS_ARC_MODE"
 }
 configure_zfs_cachefile(){
 _config_zfs_cachefile
@@ -6989,6 +7016,7 @@ return 0
 configure_lvm_storage(){
 [[ -z $BOOT_DISK ]]&&return 0
 _config_expand_lvm_root
+parallel_mark_configured "LVM root expanded"
 }
 cleanup_installation_logs(){
 remote_run "Cleaning up installation logs" '
@@ -7239,19 +7267,25 @@ configure_base_system||{
 log_error "configure_base_system failed"
 return 1
 }
-configure_shell||{ log_warn "configure_shell failed";}
-configure_system_services||{ log_warn "configure_system_services failed";}
+run_parallel_group "Configuring shell & services" "Shell & services configured" \
+configure_shell \
+configure_system_services
 }
 _phase_storage_configuration(){
-configure_lvm_storage||{ log_warn "configure_lvm_storage failed";}
-configure_zfs_arc||{ log_warn "configure_zfs_arc failed";}
+if [[ -n $BOOT_DISK ]];then
+run_parallel_group "Configuring LVM & ZFS memory" "LVM & ZFS memory configured" \
+configure_lvm_storage \
+configure_zfs_arc
+else
+(configure_zfs_arc)||log_warn "configure_zfs_arc failed"
+fi
 configure_zfs_pool||{
 log_error "configure_zfs_pool failed"
 return 1
 }
-configure_zfs_cachefile||{ log_warn "configure_zfs_cachefile failed";}
-configure_zfs_scrub||{ log_warn "configure_zfs_scrub failed";}
-remote_run "Updating initramfs" "update-initramfs -u -k all"||log_warn "update-initramfs failed"
+(configure_zfs_cachefile)||log_warn "configure_zfs_cachefile failed"
+(configure_zfs_scrub)||log_warn "configure_zfs_scrub failed"
+(remote_run "Updating initramfs" "update-initramfs -u -k all")||log_warn "update-initramfs failed"
 }
 _phase_security_configuration(){
 batch_install_packages
@@ -7286,9 +7320,10 @@ wait_async_feature "netdata" "$netdata_pid"
 wait_async_feature "yazi" "$yazi_pid"
 }
 _phase_ssl_api(){
-configure_ssl_certificate
-if [[ $INSTALL_API_TOKEN == "yes" ]];then
-run_with_progress "Creating API token" "API token created" create_api_token
+if ! run_parallel_group "Configuring SSL & API" "SSL & API configured" \
+configure_ssl \
+configure_api_token;then
+log_warn "SSL/API configuration had failures - check $LOG_FILE for details"
 fi
 }
 _phase_finalization(){
@@ -7297,8 +7332,8 @@ log_error "deploy_ssh_hardening_config failed"
 return 1
 }
 validate_installation||{ log_warn "validate_installation reported issues";}
-configure_efi_fallback_boot||{ log_warn "configure_efi_fallback_boot failed";}
-cleanup_installation_logs||{ log_warn "cleanup_installation_logs failed";}
+(configure_efi_fallback_boot)||log_warn "configure_efi_fallback_boot failed"
+(cleanup_installation_logs)||log_warn "cleanup_installation_logs failed"
 restart_ssh_service||{ log_warn "restart_ssh_service failed";}
 finalize_vm||{ log_warn "finalize_vm did not complete cleanly";}
 }
@@ -7433,11 +7468,14 @@ start_live_installation
 log_info "Step: prepare_packages"
 prepare_packages
 log_metric "packages"
-log_info "Step: download_proxmox_iso"
-download_proxmox_iso
+log_info "Step: prepare_iso_and_toml (parallel)"
+if ! run_parallel_group "Preparing ISO & TOML" "ISO & TOML ready" \
+_parallel_download_iso \
+_parallel_make_toml;then
+log_error "ISO/TOML preparation failed - check $LOG_FILE for details"
+exit 1
+fi
 log_metric "iso_download"
-log_info "Step: make_answer_toml"
-make_answer_toml
 log_info "Step: make_autoinstall_iso"
 make_autoinstall_iso
 log_metric "autoinstall_prep"
