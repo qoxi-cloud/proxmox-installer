@@ -7,9 +7,8 @@ _zfs_functional() {
   zpool version &>/dev/null
 }
 
-# Install ZFS if needed (rescue scripts or apt fallback)
-_install_zfs_if_needed() {
-  # Check if ZFS is actually working, not just wrapper exists
+# Install ZFS via scripts (can run in parallel with apt operations)
+_install_zfs_scripts() {
   if _zfs_functional; then
     log_info "ZFS already installed and functional"
     return 0
@@ -18,7 +17,6 @@ _install_zfs_if_needed() {
   log_info "ZFS not functional, attempting installation..."
 
   # Hetzner rescue: zpool command is a wrapper that compiles ZFS on first run
-  # Need to run it with 'y' to accept license
   if cmd_exists zpool; then
     log_info "Found zpool wrapper, triggering ZFS compilation..."
     echo "y" | zpool version &>/dev/null || true
@@ -47,7 +45,13 @@ _install_zfs_if_needed() {
     fi
   done
 
-  # Fallback: try apt on Debian-based systems
+  return 1 # Signal need for apt fallback
+}
+
+# Install ZFS via apt (must run after other apt operations finish)
+_install_zfs_apt_fallback() {
+  _zfs_functional && return 0
+
   if [[ -f /etc/debian_version ]]; then
     log_info "Trying apt install zfsutils-linux..."
     apt-get install -qq -y zfsutils-linux >/dev/null 2>&1 || true
@@ -86,6 +90,11 @@ _install_required_packages() {
     fi
   done
 
+  # Start ZFS script installation in parallel (non-apt methods)
+  _install_zfs_scripts &
+  local zfs_pid=$!
+
+  # Run apt operations (charm repo setup + package install)
   if [[ $need_charm_repo == true ]]; then
     mkdir -p /etc/apt/keyrings 2>/dev/null
     curl -fsSL https://repo.charm.sh/apt/gpg.key 2>/dev/null | gpg --dearmor -o /etc/apt/keyrings/charm.gpg >/dev/null 2>&1
@@ -97,6 +106,6 @@ _install_required_packages() {
     DEBIAN_FRONTEND=noninteractive apt-get install -qq -y "${packages_to_install[@]}" >/dev/null 2>&1
   fi
 
-  # Install ZFS for pool detection (needed for existing pool feature)
-  _install_zfs_if_needed
+  # Wait for ZFS scripts to finish, then try apt fallback if needed
+  wait "$zfs_pid" 2>/dev/null || _install_zfs_apt_fallback
 }
