@@ -95,3 +95,15 @@ format_wizard_header() {
   printf '%s  %s%s\n' "$banner_pad" "$title_spaces" "${CLR_ORANGE}${title}${CLR_RESET}"
   printf '%s  %s%s%s%s' "$banner_pad" "${CLR_CYAN}${left_line}" "${CLR_ORANGE}●" "${CLR_GRAY}${right_line}${CLR_RESET}" ""
 }
+
+# Run command with progress spinner. $1=message, $2=done_message, $@=command
+run_with_progress() {
+  local message="$1"
+  local done_message="$2"
+  shift 2
+
+  (
+    "$@" || exit 1
+  ) >/dev/null 2>&1 &
+  show_progress "$!" "$message" "$done_message"
+}

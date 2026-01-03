@@ -1,6 +1,14 @@
 # shellcheck shell=bash
 # Basic validation functions (hostname, user, email, password)
 
+# Guard for functions that require ADMIN_USERNAME. $1=context (optional)
+require_admin_username() {
+  if [[ -z ${ADMIN_USERNAME:-} ]]; then
+    log_error "ADMIN_USERNAME is empty${1:+, cannot $1}"
+    return 1
+  fi
+}
+
 # Validate hostname format. $1=hostname
 validate_hostname() {
   local hostname="$1"

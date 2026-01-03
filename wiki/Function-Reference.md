@@ -177,7 +177,7 @@ SSH_PUBLIC_KEY=$(get_rescue_ssh_key)
 
 ---
 
-## Deployment Helpers (`034-deploy-helpers.sh`, `035-deploy-template.sh`)
+## Deployment Helpers (`034-deploy-helpers.sh`, `036-deploy-systemd.sh`, `037-deploy-user-config.sh`)
 
 ### deploy_template
 
@@ -706,7 +706,7 @@ password=$(generate_password 24)   # 24 chars
 
 ---
 
-## Validation UI Functions (`032-validation-helpers.sh`)
+## Validation UI Functions (`101-wizard-ui.sh`)
 
 ### show_validation_error
 

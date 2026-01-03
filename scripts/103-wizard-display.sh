@@ -1,9 +1,7 @@
 # shellcheck shell=bash
 # Configuration Wizard - Display Value Formatters
-# Formats configuration values for display in wizard menu
 
 # Display mapping table (internal value → display text)
-
 declare -gA _DSP_MAP=(
   # Repository types
   ["repo:no-subscription"]="No-subscription (free)"
@@ -55,13 +53,56 @@ declare -gA _DSP_MAP=(
   ["power:conservative"]="Conservative"
 )
 
+# Configuration validation
+
+# Check if all required config fields set. Returns 0=complete, 1=missing
+_wiz_config_complete() {
+  [[ -z $PVE_HOSTNAME ]] && return 1
+  [[ -z $DOMAIN_SUFFIX ]] && return 1
+  [[ -z $EMAIL ]] && return 1
+  [[ -z $NEW_ROOT_PASSWORD ]] && return 1
+  [[ -z $ADMIN_USERNAME ]] && return 1
+  [[ -z $ADMIN_PASSWORD ]] && return 1
+  [[ -z $TIMEZONE ]] && return 1
+  [[ -z $KEYBOARD ]] && return 1
+  [[ -z $COUNTRY ]] && return 1
+  [[ -z $PROXMOX_ISO_VERSION ]] && return 1
+  [[ -z $PVE_REPO_TYPE ]] && return 1
+  [[ -z $INTERFACE_NAME ]] && return 1
+  [[ -z $MAIN_IPV4 ]] && return 1
+  [[ -z $MAIN_IPV4_GW ]] && return 1
+  [[ -z $BRIDGE_MODE ]] && return 1
+  [[ $BRIDGE_MODE != "external" && -z $PRIVATE_SUBNET ]] && return 1
+  [[ -z $IPV6_MODE ]] && return 1
+  # ZFS validation: require raid/disks only when NOT using existing pool
+  if [[ $USE_EXISTING_POOL == "yes" ]]; then
+    [[ -z $EXISTING_POOL_NAME ]] && return 1
+  else
+    [[ -z $ZFS_RAID ]] && return 1
+    [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]] && return 1
+  fi
+  [[ -z $ZFS_ARC_MODE ]] && return 1
+  [[ -z $SHELL_TYPE ]] && return 1
+  [[ -z $CPU_GOVERNOR ]] && return 1
+  [[ -z $SSH_PUBLIC_KEY ]] && return 1
+  # SSL required if Tailscale disabled
+  [[ $INSTALL_TAILSCALE != "yes" && -z $SSL_TYPE ]] && return 1
+  # Stealth firewall requires Tailscale
+  [[ $FIREWALL_MODE == "stealth" && $INSTALL_TAILSCALE != "yes" ]] && return 1
+  # Postfix requires SMTP relay settings when enabled
+  if [[ $INSTALL_POSTFIX == "yes" ]]; then
+    [[ -z $SMTP_RELAY_HOST || -z $SMTP_RELAY_USER || -z $SMTP_RELAY_PASSWORD ]] && return 1
+  fi
+  return 0
+}
+
+# Display value formatters
+
 # Lookup display value. $1=category, $2=internal_value → display_text
 _dsp_lookup() {
   local key="$1:$2"
   echo "${_DSP_MAP[$key]:-$2}"
 }
-
-# Display value formatters (grouped by screen)
 
 # Escape backslashes for safe printf %b display. $1=value
 _dsp_escape() {

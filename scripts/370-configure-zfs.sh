@@ -104,10 +104,12 @@ _config_zfs_scrub() {
     log_error "Failed to deploy ZFS scrub service"
     return 1
   }
+  remote_exec "chmod 644 /etc/systemd/system/zfs-scrub@.service" || return 1
   remote_copy "templates/zfs-scrub.timer" "/etc/systemd/system/zfs-scrub@.timer" || {
     log_error "Failed to deploy ZFS scrub timer"
     return 1
   }
+  remote_exec "chmod 644 /etc/systemd/system/zfs-scrub@.timer" || return 1
 
   # Determine data pool name: existing pool name or "tank"
   local data_pool="tank"

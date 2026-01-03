@@ -21,6 +21,7 @@ _configure_unattended_upgrades() {
 _configure_cpu_governor() {
   local governor="${CPU_GOVERNOR:-performance}"
   remote_copy "templates/cpupower.service" "/etc/systemd/system/cpupower.service" || return 1
+  remote_exec "chmod 644 /etc/systemd/system/cpupower.service" || return 1
   remote_exec "
     systemctl daemon-reload
     systemctl enable --now cpupower.service

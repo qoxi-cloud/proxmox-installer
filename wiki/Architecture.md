@@ -21,7 +21,7 @@ This project is a bash automation framework that installs Proxmox VE on dedicate
 
 1. **Initialization** (000-007) - Load colors, constants, parse CLI args, setup logging
 2. **System Check** (050-056) - Verify requirements (root, RAM, disk, KVM), detect hardware
-3. **Wizard** (100-122) - Interactive configuration via TUI
+3. **Wizard** (100-105, 110-122) - Interactive configuration via TUI
 4. **QEMU Setup** (200-208) - Download ISO, launch VM, wait for SSH
 5. **Installation** (200-208) - Proxmox auto-install via templates
 6. **Configuration** (300-381) - Deploy configs, install packages, harden
@@ -45,12 +45,12 @@ flowchart TD
         F -->|Pass| G[Detect interfaces<br/>052-system-network.sh<br/>Detect disks<br/>053-system-drives.sh]
     end
 
-    subgraph WIZARD["🧙 Interactive Wizard (100-121)"]
+    subgraph WIZARD["🧙 Interactive Wizard (100-105, 110-122)"]
         G --> H[Enter alternate screen<br/>tput smcup]
         H --> I[Hide cursor]
-        
-        I --> J[Render menu<br/>103-wizard-menu.sh]
-        
+
+        I --> J[Render menu<br/>104-wizard-menu.sh]
+
         J --> K{Read key<br/>102-wizard-nav.sh}
         
         K -->|↑↓| L[Change selection]
@@ -147,8 +147,10 @@ sequenceDiagram
     participant Main as 900-main.sh
     participant WizCore as 100-wizard-core.sh
     participant WizNav as 102-wizard-nav.sh
-    participant WizMenu as 103-wizard-menu.sh
+    participant WizDisplay as 103-wizard-display.sh
+    participant WizMenu as 104-wizard-menu.sh
     participant WizUI as 101-wizard-ui.sh
+    participant WizInput as 105-wizard-input.sh
     participant Editors as 110-122 wizard editors
     participant Gum as gum (TUI)
     participant Terminal
@@ -158,35 +160,35 @@ sequenceDiagram
     Main->>Terminal: tput smcup (alternate screen buffer)
     Main->>WizUI: _wiz_hide_cursor()
     Main->>WizCore: show_gum_config_editor()
-    
+
     WizCore->>WizCore: trap cleanup handler (EXIT)
 
     Note over WizCore,Terminal: Main Wizard Loop
 
     loop until config complete
         WizCore->>WizCore: _wizard_main()
-        
+
         loop until 'S' pressed
             WizCore->>WizMenu: _wiz_render_menu(selection)
-            
+
             WizMenu->>WizMenu: _wiz_build_display_values()
             Note right of WizMenu: Build _DSP_* vars from<br/>global config state
-            
+
             WizMenu->>WizUI: show_banner()
-            WizMenu->>WizNav: _wiz_render_nav()
-            
-            WizNav->>WizNav: Build screen tabs
-            WizNav-->>WizMenu: nav header with dots
-            
+            WizMenu->>WizMenu: _wiz_render_nav()
+
+            WizMenu->>WizMenu: Build screen tabs
+            Note right of WizMenu: nav header with dots
+
             WizMenu->>WizMenu: _wiz_render_screen_content()
-            
+
             WizMenu->>WizUI: _wiz_clear() + printf output
             WizMenu-->>Terminal: Atomic screen render
 
-            WizCore->>WizNav: _wiz_read_key()
-            WizNav->>Terminal: read -rsn1 (capture key)
-            Terminal-->>WizNav: key press
-            WizNav-->>WizCore: WIZ_KEY
+            WizCore->>WizMenu: _wiz_read_key()
+            WizMenu->>Terminal: read -rsn1 (capture key)
+            Terminal-->>WizMenu: key press
+            WizMenu-->>WizCore: WIZ_KEY
 
             alt WIZ_KEY = up/down
                 WizCore->>WizCore: selection ± 1
@@ -195,9 +197,9 @@ sequenceDiagram
             else WIZ_KEY = enter
                 WizCore->>WizUI: _wiz_show_cursor()
                 WizCore->>Editors: _edit_{field}()
-                
+
                 Editors->>WizUI: _wiz_start_edit()
-                
+
                 alt Input field
                     Editors->>Gum: _wiz_input()
                     User->>Gum: type value
@@ -212,17 +214,17 @@ sequenceDiagram
                     User->>Gum: toggle + confirm
                     Gum-->>Editors: selections[]
                 end
-                
+
                 Editors-->>WizCore: return
                 WizCore->>WizUI: _wiz_hide_cursor()
-                
+
             else WIZ_KEY = start
                 WizCore-->>WizCore: break loop
             end
         end
-        
+
         WizCore->>WizCore: _validate_config()
-        
+
         alt missing fields
             WizCore->>WizUI: Show missing fields list
             WizCore->>Gum: _wiz_confirm("Return?")
@@ -230,7 +232,7 @@ sequenceDiagram
             WizCore-->>WizCore: break outer loop
         end
     end
-    
+
     WizCore-->>Main: return 0
     Note over Main,Terminal: Proceed to Installation
 ```
@@ -262,12 +264,12 @@ graph LR
     subgraph "030-043 Helpers & Validation"
         M[030-password-utils]
         N[031-zfs-helpers]
-        O[032-validation-helpers]
         P[033-parallel-helpers]
         Q[034-deploy-helpers]
-        Q2[035-deploy-template]
-        R[036-network-generators]
-        R2[037-network-helpers]
+        Q2[035-feature-factory]
+        Q3[036-deploy-systemd]
+        Q4[037-deploy-user-config]
+        R[038-network-config]
         S[040-043 validators]
     end
 
@@ -281,13 +283,13 @@ graph LR
         Z[056-live-logs]
     end
 
-    subgraph "100-121 Wizard"
+    subgraph "100-122 Wizard"
         AA[100-wizard-core]
         AB[101-wizard-ui]
         AC[102-wizard-nav]
-        AD[103-wizard-menu]
-        AD2[104-wizard-display]
-        AD3[105-106-wizard-helpers]
+        AC2[103-wizard-display]
+        AC3[104-wizard-menu]
+        AD[105-wizard-input]
         AE[110-122 editors]
     end
 
@@ -304,12 +306,11 @@ graph LR
     end
 
     subgraph "300-381 Configuration"
-        AK[300-303 base/tailscale/admin/services]
+        AK[300-304 base/locale/tailscale/admin/services]
         AL[310-313 firewall-rules/firewall/fail2ban/apparmor]
         AM[320-324 audit/aide/chkrootkit/lynis/needrestart]
-        AN[330 ringbuffer]
-        AO[340-343 vnstat/promtail/netdata/postfix]
-        AP[350-351 yazi/nvim]
+        AO[340-344 vnstat/promtail/netdata/postfix/ringbuffer]
+        AP[350-354 yazi/nvim/fastfetch/bat/shell]
         AQ[360-361 ssl/api-token]
         AR[370-372 zfs/pool/lvm]
         AS[378-381 cleanup/efi-boot/finalize/phases]
@@ -340,19 +341,19 @@ scripts/
 │   └── 012-utils.sh     # Secure file deletion
 │
 ├── 020-022: Templates & SSH
-│   ├── 020-templates.sh # Template variable substitution
+│   ├── 020-templates.sh    # Template substitution
 │   ├── 021-ssh.sh       # SSH session management
 │   └── 022-ssh-remote.sh# remote_* execution functions
 │
-├── 030-037: Helpers
+├── 030-038: Helpers
 │   ├── 030-password-utils.sh     # Password generation
 │   ├── 031-zfs-helpers.sh        # ZFS RAID mapping
-│   ├── 032-validation-helpers.sh # Validation UI helpers
 │   ├── 033-parallel-helpers.sh   # Parallel execution
-│   ├── 034-deploy-helpers.sh     # Parallel copies, feature wrapper
-│   ├── 035-deploy-template.sh    # Template deployment helpers
-│   ├── 036-network-generators.sh # Network interface section generators
-│   └── 037-network-helpers.sh    # Network config file generator
+│   ├── 034-deploy-helpers.sh     # deploy_template, parallel copies, timer deployment
+│   ├── 035-feature-factory.sh    # Feature wrapper factories
+│   ├── 036-deploy-systemd.sh     # Systemd timer/service deployment
+│   ├── 037-deploy-user-config.sh # User config deployment
+│   └── 038-network-config.sh     # Network interface generators
 │
 ├── 040-043: Validation Layer
 │   ├── 040-validation-basic.sh   # Hostname, user, email, password
@@ -369,14 +370,13 @@ scripts/
 │   ├── 055-system-status.sh      # Status display
 │   └── 056-live-logs.sh          # Live log display
 │
-├── 100-121: Wizard Layer
+├── 100-122: Wizard Layer
 │   ├── 100-wizard-core.sh    # Main wizard loop
 │   ├── 101-wizard-ui.sh      # UI rendering, gum wrappers
-│   ├── 102-wizard-nav.sh     # Navigation logic (screen switching)
-│   ├── 103-wizard-menu.sh    # Menu building and field mapping
-│   ├── 104-wizard-display.sh # Display value formatters
-│   ├── 105-wizard-helpers.sh # Editor helpers (password, checkbox, toggle)
-│   ├── 106-wizard-input-helpers.sh # Input validation, filter select
+│   ├── 102-wizard-nav.sh     # Navigation header rendering, key reading
+│   ├── 103-wizard-display.sh # Display value formatters
+│   ├── 104-wizard-menu.sh    # Menu rendering
+│   ├── 105-wizard-input.sh   # Input helpers, validation, editor helpers
 │   ├── 110-wizard-basic-locale.sh # Country to locale mapping
 │   ├── 111-wizard-basic.sh   # Hostname, email, password, timezone
 │   ├── 112-wizard-proxmox.sh # ISO version, repo type
@@ -404,9 +404,10 @@ scripts/
 │
 ├── 300-381: Configuration Layer
 │   ├── 300-configure-base.sh      # Base system config
-│   ├── 301-configure-tailscale.sh # VPN setup
-│   ├── 302-configure-admin.sh     # Admin user creation
-│   ├── 303-configure-services.sh  # System services
+│   ├── 301-configure-locale.sh    # Locale files
+│   ├── 302-configure-tailscale.sh # VPN setup
+│   ├── 303-configure-admin.sh     # Admin user creation
+│   ├── 304-configure-services.sh  # System services
 │   ├── 310-configure-firewall-rules.sh # nftables rule generators
 │   ├── 311-configure-firewall.sh  # nftables main config
 │   ├── 312-configure-fail2ban.sh  # Intrusion prevention
@@ -416,13 +417,16 @@ scripts/
 │   ├── 322-configure-chkrootkit.sh# Rootkit scanner
 │   ├── 323-configure-lynis.sh     # Security audit
 │   ├── 324-configure-needrestart.sh # Service restart checker
-│   ├── 330-configure-ringbuffer.sh  # Network tuning
 │   ├── 340-configure-vnstat.sh    # Bandwidth monitoring
 │   ├── 341-configure-promtail.sh  # Log collector
 │   ├── 342-configure-netdata.sh   # Real-time monitoring
 │   ├── 343-configure-postfix.sh   # Mail relay
+│   ├── 344-configure-ringbuffer.sh# Network tuning
 │   ├── 350-configure-yazi.sh      # File manager
 │   ├── 351-configure-nvim.sh      # Editor
+│   ├── 352-configure-fastfetch.sh # Shell system info
+│   ├── 353-configure-bat.sh       # Syntax highlighting
+│   ├── 354-configure-shell.sh     # ZSH/Oh-My-Zsh configuration
 │   ├── 360-configure-ssl.sh       # Certificates
 │   ├── 361-configure-api-token.sh # Proxmox API
 │   ├── 370-configure-zfs.sh       # ZFS ARC tuning
@@ -518,9 +522,11 @@ Navigation:
 The wizard is split into modular components:
 
 - **100-wizard-core.sh** - Main loop, event handling
-- **101-wizard-ui.sh** - Gum wrappers, field rendering
-- **102-wizard-nav.sh** - Screen switching, navigation state
-- **103-wizard-menu.sh** - Menu building, field mapping
+- **101-wizard-ui.sh** - Gum wrappers, field formatting, validation error display
+- **102-wizard-nav.sh** - Navigation header rendering, key reading
+- **103-wizard-display.sh** - Display value formatters
+- **104-wizard-menu.sh** - Menu rendering
+- **105-wizard-input.sh** - Input helpers, validation, editor helpers (password, checkbox, toggle)
 
 ### Field Mapping
 
@@ -646,18 +652,17 @@ spec/
 | 000-007   | Core init (colors, constants, wizard opts, init, trap, cli, logging, banner) |
 | 010-012   | Display & utilities                          |
 | 020-022   | Templates & SSH                              |
-| 030-037   | Helpers (password, zfs, validation, parallel, deploy, network) |
+| 030-038   | Helpers (password, zfs, parallel, deploy, feature-factory, systemd, user-config, network) |
 | 040-043   | Validation (basic, network, dns, security)   |
-| 050-056   | System detection (packages, preflight, network, drives, status, live-logs) |
-| 100-106   | Wizard core (main logic, UI, nav, menu, display, helpers) |
+| 050-056   | System detection (packages, preflight, network, drives, wizard-data, status, live-logs) |
+| 100-105   | Wizard core (main loop, UI, nav, display, menu, input) |
 | 110-122   | Wizard editors (screens, postfix)            |
 | 200-208   | Installation (packages, QEMU, templates, ISO, autoinstall, disk wipe) |
-| 300-303   | Base configuration                           |
+| 300-304   | Base configuration (base, locale, tailscale, admin, services) |
 | 310-313   | Security - Firewall & access control         |
 | 320-324   | Security - Auditing & integrity              |
-| 330       | Network & performance (ringbuffer)           |
-| 340-343   | Monitoring & Mail (postfix)                  |
-| 350-351   | Tools                                        |
+| 340-344   | Monitoring & Mail (vnstat, promtail, netdata, postfix, ringbuffer) |
+| 350-354   | Tools (yazi, nvim, fastfetch, bat, shell)    |
 | 360-361   | SSL & API                                    |
 | 370-372   | Storage (ZFS, LVM)                           |
 | 378-381   | Finalization (cleanup, EFI, finalize, phases) |

@@ -5,12 +5,13 @@ Guide for extending and modifying the configuration wizard.
 ## Architecture Overview
 
 ```
-100-wizard-core.sh   # Main loop, event handling
-101-wizard-ui.sh     # UI rendering, gum wrappers
-102-wizard-nav.sh    # Screen switching, navigation state
-103-wizard-menu.sh   # Menu building, field mapping
-104-wizard-display.sh# Display value formatters
-110-122-wizard-*.sh  # Screen-specific editors
+100-wizard-core.sh     # Main loop, event handling
+101-wizard-ui.sh       # UI rendering, gum wrappers, validation error display
+102-wizard-nav.sh      # Navigation header rendering, key reading
+103-wizard-display.sh  # Display value formatters
+104-wizard-menu.sh     # Menu rendering
+105-wizard-input.sh    # Input helpers, validation, editor helpers
+110-122-wizard-*.sh    # Screen-specific editors
 ```
 
 ## Screen Structure
@@ -202,7 +203,7 @@ _edit_my_field2() {
 
 ### 2. Register Screen
 
-In `101-wizard-ui.sh`:
+In `102-wizard-nav.sh`:
 
 ```bash
 # Add to WIZ_SCREENS array:
@@ -211,7 +212,7 @@ WIZ_SCREENS=("Basic" "Proxmox" "Network" "Storage" "Services" "Access" "MyScreen
 
 ### 3. Add Menu Builder Call
 
-In `103-wizard-menu.sh`:
+In `104-wizard-menu.sh`:
 
 ```bash
 _wiz_build_screen_menu() {

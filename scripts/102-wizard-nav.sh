@@ -1,10 +1,7 @@
 # shellcheck shell=bash
-# Configuration Wizard - Navigation Header and Key Input
-# Screen navigation, header rendering, and keyboard handling
+# Configuration Wizard - Navigation Header and Key Reading
 
 # Screen definitions
-
-# Screen names for navigation
 WIZ_SCREENS=("Basic" "Proxmox" "Network" "Storage" "Services" "Access")
 WIZ_CURRENT_SCREEN=0
 
@@ -74,9 +71,7 @@ _nav_line() {
   fi
 }
 
-# Renders the screen navigation header with wizard-style dots.
-# Shows: screen names row + dots with connecting lines row.
-# Uses: CLR_CYAN for completed, CLR_ORANGE for active, CLR_GRAY for pending.
+# Renders the screen navigation header with wizard-style dots
 _wiz_render_nav() {
   local current="$WIZ_CURRENT_SCREEN"
   local total="${#WIZ_SCREENS[@]}"

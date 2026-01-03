@@ -86,6 +86,7 @@ _config_tailscale() {
         (
           log_info "Using pre-downloaded disable-openssh.service, size: $(wc -c <./templates/disable-openssh.service 2>/dev/null || echo 'failed')"
           remote_copy "templates/disable-openssh.service" "/etc/systemd/system/disable-openssh.service" || exit 1
+          remote_exec "chmod 644 /etc/systemd/system/disable-openssh.service" || exit 1
           log_info "Copied disable-openssh.service to VM"
           remote_exec "systemctl daemon-reload && systemctl enable disable-openssh.service" >/dev/null || exit 1
           log_info "Enabled disable-openssh.service"

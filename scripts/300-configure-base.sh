@@ -1,8 +1,6 @@
 # shellcheck shell=bash
 # Base system configuration via SSH
 
-# Helper functions for base system configuration
-
 # Copy config files to remote (hosts, interfaces, sysctl, sources, resolv, journald, pveproxy)
 _copy_config_files() {
   # Create journald config directory if it doesn't exist
@@ -31,37 +29,6 @@ _apply_basic_settings() {
   # Mask nfs-blkmap to prevent it from starting on boot
   remote_exec "systemctl mask nfs-blkmap.service 2>/dev/null" || true
 }
-
-# Copy locale files (locale.sh, default-locale, environment)
-_install_locale_files() {
-  remote_copy "templates/locale.sh" "/etc/profile.d/locale.sh" || return 1
-  remote_exec "chmod +x /etc/profile.d/locale.sh" || return 1
-  remote_copy "templates/default-locale" "/etc/default/locale" || return 1
-  remote_copy "templates/environment" "/etc/environment" || return 1
-  # Also source locale from bash.bashrc for non-login interactive shells
-  remote_exec "grep -q 'profile.d/locale.sh' /etc/bash.bashrc || echo '[ -f /etc/profile.d/locale.sh ] && . /etc/profile.d/locale.sh' >> /etc/bash.bashrc" || return 1
-}
-
-# Configure fastfetch shell integration
-_configure_fastfetch() {
-  remote_copy "templates/fastfetch.sh" "/etc/profile.d/fastfetch.sh" || return 1
-  remote_exec "chmod +x /etc/profile.d/fastfetch.sh" || return 1
-}
-
-# Configure bat with theme and symlink
-_configure_bat() {
-  remote_exec "ln -sf /usr/bin/batcat /usr/local/bin/bat" || return 1
-  deploy_user_config "templates/bat-config" ".config/bat/config" || return 1
-}
-
-# Configure ZSH with .zshrc
-_configure_zsh_files() {
-  require_admin_username "configure ZSH files" || return 1
-  deploy_user_config "templates/zshrc" ".zshrc" "LOCALE=${LOCALE}" || return 1
-  remote_exec "chsh -s /bin/zsh ${ADMIN_USERNAME}" || return 1
-}
-
-# Private implementation functions
 
 # Main base system configuration implementation
 _config_base_system() {
@@ -141,76 +108,7 @@ _config_base_system() {
   run_with_progress "Configuring bat" "Bat configured" _configure_bat
 }
 
-# Configure admin shell (installs Oh-My-Zsh if ZSH)
-# Designed for parallel execution - uses direct remote_exec, no progress display
-_config_shell() {
-  # Configure default shell for admin user (root login is disabled)
-  if [[ $SHELL_TYPE == "zsh" ]]; then
-    require_admin_username "configure shell" || return 1
-
-    # Install Oh-My-Zsh for admin user
-    log_info "Installing Oh-My-Zsh for ${ADMIN_USERNAME}"
-    # shellcheck disable=SC2016 # Single quotes intentional - executed on remote system
-    remote_exec '
-      set -e
-      export RUNZSH=no
-      export CHSH=no
-      export HOME=/home/'"$ADMIN_USERNAME"'
-      su - '"$ADMIN_USERNAME"' -c "sh -c \"\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\" \"\" --unattended"
-    ' >>"$LOG_FILE" 2>&1 || {
-      log_error "Failed to install Oh-My-Zsh"
-      return 1
-    }
-
-    # Parallel git clones for theme and plugins (all independent after Oh-My-Zsh)
-    log_info "Installing ZSH plugins"
-    # shellcheck disable=SC2016 # $pid vars expand on remote; ADMIN_USERNAME uses quote concatenation
-    remote_exec '
-      set -e
-      git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions /home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/plugins/zsh-autosuggestions &
-      pid1=$!
-      git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting /home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting &
-      pid2=$!
-      # Wait and check exit codes (set -e doesnt catch background failures)
-      failed=0
-      wait "$pid1" || failed=1
-      wait "$pid2" || failed=1
-      if [[ $failed -eq 1 ]]; then
-        echo "ERROR: Failed to clone ZSH plugins" >&2
-        exit 1
-      fi
-      # Validate directories exist
-      for dir in plugins/zsh-autosuggestions plugins/zsh-syntax-highlighting; do
-        if [[ ! -d "/home/'"$ADMIN_USERNAME"'/.oh-my-zsh/custom/$dir" ]]; then
-          echo "ERROR: ZSH plugin directory missing: $dir" >&2
-          exit 1
-        fi
-      done
-      chown -R '"$ADMIN_USERNAME"':'"$ADMIN_USERNAME"' /home/'"$ADMIN_USERNAME"'/.oh-my-zsh
-    ' >>"$LOG_FILE" 2>&1 || {
-      log_error "Failed to install ZSH plugins"
-      return 1
-    }
-
-    # Configure ZSH with .zshrc
-    _configure_zsh_files || {
-      log_error "Failed to configure ZSH files"
-      return 1
-    }
-    parallel_mark_configured "zsh"
-  else
-    parallel_mark_configured "bash"
-  fi
-}
-
-# Public wrappers
-
 # Configure base system via SSH into QEMU VM
 configure_base_system() {
   _config_base_system
-}
-
-# Configure default shell (ZSH with Oh-My-Zsh if selected)
-configure_shell() {
-  _config_shell
 }
