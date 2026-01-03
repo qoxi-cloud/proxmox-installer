@@ -1,15 +1,6 @@
 # shellcheck shell=bash
 # Display utilities
 
-# Print success with checkmark. $1=label, $2=value (optional)
-print_success() {
-  if [[ $# -eq 2 ]]; then
-    printf '%s\n' "${CLR_CYAN}✓${CLR_RESET} $1 ${CLR_CYAN}$2${CLR_RESET}"
-  else
-    printf '%s\n' "${CLR_CYAN}✓${CLR_RESET} $1"
-  fi
-}
-
 # Print error with red cross. $1=message
 print_error() {
   printf '%s\n' "${CLR_RED}✗${CLR_RESET} $1"

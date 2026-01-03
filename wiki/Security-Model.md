@@ -244,8 +244,8 @@ Credentials are only shown on the final completion screen:
 # In 380-configure-finalize.sh
 _show_completion_screen() {
   # Display to terminal only, not logged
-  print_success "Root Password" "$NEW_ROOT_PASSWORD"
-  print_success "Admin Password" "$ADMIN_PASSWORD"
+  print_info "Root Password: $NEW_ROOT_PASSWORD"
+  print_info "Admin Password: $ADMIN_PASSWORD"
 }
 ```
 

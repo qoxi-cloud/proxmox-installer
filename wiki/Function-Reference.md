@@ -4,15 +4,6 @@ Complete reference for all public functions in the Proxmox Installer.
 
 ## Display Functions (`010-display.sh`)
 
-### print_success
-
-Prints success message with checkmark.
-
-```bash
-print_success "Operation completed"
-print_success "Files" "15 copied"  # With value
-```
-
 ### print_error
 
 Prints error message with red cross.
