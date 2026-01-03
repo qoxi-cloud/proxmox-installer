@@ -48,6 +48,7 @@ _config_postfix_relay() {
 _config_postfix_disable() {
   remote_exec 'systemctl stop postfix 2>/dev/null; systemctl disable postfix 2>/dev/null' || true
   log_info "Postfix disabled"
+  parallel_mark_configured "postfix disabled"
 }
 
 # Public wrapper - configures or disables Postfix based on INSTALL_POSTFIX
