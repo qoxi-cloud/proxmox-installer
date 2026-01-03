@@ -34,19 +34,18 @@ get_iso_version() {
   printf '%s\n' "$iso_filename" | sed -E 's/proxmox-ve_([0-9]+\.[0-9]+-[0-9]+)\.iso/\1/'
 }
 
-# Download Proxmox ISO with fallback (aria2c→curl→wget) and verify checksum
-download_proxmox_iso() {
+# Internal: Download and verify ISO (silent, for parallel execution)
+_download_iso() {
   log_info "Starting Proxmox ISO download"
 
   if [[ -f "pve.iso" ]]; then
     log_info "Proxmox ISO already exists, skipping download"
-    print_success "Proxmox ISO:" "already exists, skipping download"
     return 0
   fi
 
   if [[ -z $PROXMOX_ISO_VERSION ]]; then
     log_error "PROXMOX_ISO_VERSION not set"
-    exit 1
+    return 1
   fi
 
   log_info "Using selected ISO: $PROXMOX_ISO_VERSION"
@@ -69,13 +68,11 @@ download_proxmox_iso() {
   local method_file=""
   method_file=$(mktemp) || {
     log_error "mktemp failed for method_file"
-    exit 1
+    return 1
   }
   register_temp_file "$method_file"
 
-  _download_iso_with_fallback "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum" "$method_file" &
-  show_progress "$!" "Downloading $ISO_FILENAME" "$ISO_FILENAME downloaded"
-  wait "$!"
+  _download_iso_with_fallback "$PROXMOX_ISO_URL" "pve.iso" "$expected_checksum" "$method_file"
   local exit_code="$?"
   declare -g DOWNLOAD_METHOD
   DOWNLOAD_METHOD="$(cat "$method_file" 2>/dev/null)"
@@ -84,7 +81,7 @@ download_proxmox_iso() {
   if [[ $exit_code -ne 0 ]] || [[ ! -s "pve.iso" ]]; then
     log_error "All download methods failed for Proxmox ISO"
     rm -f pve.iso
-    exit 1
+    return 1
   fi
 
   log_info "Download successful via $DOWNLOAD_METHOD"
@@ -95,50 +92,31 @@ download_proxmox_iso() {
 
   # Verify checksum (if not already verified by aria2c)
   if [[ -n $expected_checksum ]]; then
-    # Skip manual verification if aria2c already validated
     if [[ $DOWNLOAD_METHOD == "aria2c" ]]; then
       log_info "Checksum already verified by aria2c"
-      # Add live log subtask for aria2c auto-verification
-      if type live_log_subtask &>/dev/null 2>&1; then
-        live_log_subtask "SHA256: OK (verified by aria2c)"
-      fi
     else
       log_info "Verifying ISO checksum"
-      local actual_checksum checksum_file
-      checksum_file=$(mktemp) || {
-        log_error "mktemp failed for checksum_file"
-        exit 1
-      }
-      register_temp_file "$checksum_file"
-      (actual_checksum=$(sha256sum pve.iso | awk '{print $1}') && printf '%s\n' "$actual_checksum" >"$checksum_file") &
-      local checksum_pid="$!"
-      if type show_progress &>/dev/null 2>&1; then
-        show_progress "$checksum_pid" "Verifying checksum" "Checksum verified"
-      else
-        wait "$checksum_pid"
-      fi
-      actual_checksum="$(cat "$checksum_file" 2>/dev/null)"
-      rm -f "$checksum_file"
+      local actual_checksum
+      actual_checksum=$(sha256sum pve.iso | awk '{print $1}')
       if [[ $actual_checksum != "$expected_checksum" ]]; then
         log_error "Checksum mismatch! Expected: $expected_checksum, Got: $actual_checksum"
-        if type live_log_subtask &>/dev/null 2>&1; then
-          live_log_subtask "SHA256: FAILED"
-        fi
         rm -f pve.iso
-        exit 1
+        return 1
       fi
       log_info "Checksum verification passed"
-      if type live_log_subtask &>/dev/null 2>&1; then
-        live_log_subtask "SHA256: OK"
-      fi
     fi
   else
     log_warn "Could not find checksum for $ISO_FILENAME"
-    print_warning "Could not find checksum for $ISO_FILENAME"
   fi
 
   # Clean up /tmp to free memory (rescue system uses tmpfs)
   log_info "Cleaning up temporary files in /tmp"
   rm -rf /tmp/tmp.* /tmp/pve-* 2>/dev/null || true
   log_info "Temporary files cleaned"
+}
+
+# Parallel wrapper for run_parallel_group
+_parallel_download_iso() {
+  _download_iso || return 1
+  parallel_mark_configured "ISO downloaded"
 }

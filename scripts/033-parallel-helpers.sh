@@ -129,16 +129,6 @@ _run_parallel_task() {
   local idx="$2"
   local func="$3"
 
-  # Override show_progress to silent waiter to prevent TUI race conditions.
-  # Each subshell has its own copy of LOG_LINES array and live_show_progress
-  # writes to /dev/tty (bypassing >/dev/null). Multiple subshells racing to
-  # redraw causes flickering and corruption. Parent handles group progress.
-  # shellcheck disable=SC2317
-  show_progress() {
-    wait "$1" 2>/dev/null
-    return $?
-  }
-
   # Default to failure marker on ANY exit (handles remote_run's exit 1)
   # shellcheck disable=SC2064
   trap "touch '$result_dir/fail_$idx' 2>/dev/null" EXIT

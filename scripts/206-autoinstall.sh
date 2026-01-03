@@ -37,8 +37,8 @@ validate_answer_toml() {
   return 0
 }
 
-# Create answer.toml for Proxmox autoinstall
-make_answer_toml() {
+# Internal: Create answer.toml (silent, for parallel execution)
+_make_answer_toml() {
   log_info "Creating answer.toml for autoinstall"
   log_debug "ZFS_RAID=$ZFS_RAID, BOOT_DISK=$BOOT_DISK"
   log_debug "ZFS_POOL_DISKS=(${ZFS_POOL_DISKS[*]})"
@@ -66,14 +66,17 @@ make_answer_toml() {
     virtio_pool_disks=("${ZFS_POOL_DISKS[@]}")
   fi
 
-  # Create virtio mapping in background (pass values as args since arrays can't be exported)
-  run_with_progress "Creating disk mapping" "Disk mapping created" \
-    create_virtio_mapping "$BOOT_DISK" "${virtio_pool_disks[@]}"
+  # Create virtio mapping (synchronous for parallel execution)
+  log_info "Creating virtio disk mapping"
+  create_virtio_mapping "$BOOT_DISK" "${virtio_pool_disks[@]}" || {
+    log_error "Failed to create virtio mapping"
+    return 1
+  }
 
   # Load mapping into current shell
   load_virtio_mapping || {
     log_error "Failed to load virtio mapping"
-    exit 1
+    return 1
   }
 
   # Determine filesystem and disk list based on BOOT_DISK mode:
@@ -91,7 +94,7 @@ make_answer_toml() {
       # Validate existing pool name is set
       if [[ -z $EXISTING_POOL_NAME ]]; then
         log_error "USE_EXISTING_POOL=yes but EXISTING_POOL_NAME is empty"
-        exit 1
+        return 1
       fi
       log_info "Boot disk mode: ext4 on boot disk, existing pool '$EXISTING_POOL_NAME' will be imported"
     else
@@ -115,7 +118,7 @@ make_answer_toml() {
   DISK_LIST=$(map_disks_to_virtio "toml_array" "${all_disks[@]}")
   if [[ -z $DISK_LIST ]]; then
     log_error "Failed to map disks to virtio devices"
-    exit 1
+    return 1
   fi
 
   log_debug "FILESYSTEM=$FILESYSTEM, DISK_LIST=$DISK_LIST"
@@ -134,7 +137,7 @@ make_answer_toml() {
   # shellcheck disable=SC2076
   [[ "$test_pwd" =~ [[:cntrl:]] ]] && {
     log_error "Password has unsupported control chars"
-    exit 1
+    return 1
   }
 
   # CRITICAL: Backslashes must be escaped first to avoid double-escaping other sequences
@@ -194,20 +197,18 @@ EOF
   # Validate the generated file
   if ! validate_answer_toml "./answer.toml"; then
     log_error "answer.toml validation failed"
-    exit 1
+    return 1
   fi
 
   log_info "answer.toml created and validated:"
   # Redact password before logging to prevent credential exposure
   sed 's/^\([[:space:]]*root-password[[:space:]]*=[[:space:]]*\).*/\1"[REDACTED]"/' answer.toml >>"$LOG_FILE"
+}
 
-  # Add subtasks for live log display
-  if type live_log_subtask &>/dev/null 2>&1; then
-    local total_disks="${#ZFS_POOL_DISKS[@]}"
-    [[ -n $BOOT_DISK ]] && ((total_disks++))
-    live_log_subtask "Mapped $total_disks disk(s) to virtio"
-    live_log_subtask "Generated answer.toml ($FILESYSTEM)"
-  fi
+# Parallel wrapper for run_parallel_group
+_parallel_make_toml() {
+  _make_answer_toml || return 1
+  parallel_mark_configured "answer.toml created"
 }
 
 # Create autoinstall ISO from Proxmox ISO and answer.toml

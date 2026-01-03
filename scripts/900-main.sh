@@ -1,7 +1,6 @@
 # shellcheck shell=bash
-# Finish and reboot
+# Main orchestrator - installation flow and completion screen
 
-# Render completion screen with credentials and access info
 _render_completion_screen() {
   local output=""
   local banner_output
@@ -204,12 +203,16 @@ log_info "Step: prepare_packages"
 prepare_packages
 log_metric "packages"
 
-log_info "Step: download_proxmox_iso"
-download_proxmox_iso
+# Download ISO and generate TOML in parallel (no shared resources)
+log_info "Step: prepare_iso_and_toml (parallel)"
+if ! run_parallel_group "Preparing ISO & TOML" "ISO & TOML ready" \
+  _parallel_download_iso \
+  _parallel_make_toml; then
+  log_error "ISO/TOML preparation failed - check $LOG_FILE for details"
+  exit 1
+fi
 log_metric "iso_download"
 
-log_info "Step: make_answer_toml"
-make_answer_toml
 log_info "Step: make_autoinstall_iso"
 make_autoinstall_iso
 log_metric "autoinstall_prep"
