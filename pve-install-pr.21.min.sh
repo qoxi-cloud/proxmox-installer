@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.825-pr.21"
+readonly VERSION="2.0.826-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -5426,7 +5426,7 @@ else
 log_warn "Could not find checksum for $ISO_FILENAME"
 fi
 log_info "Cleaning up temporary files in /tmp"
-rm -rf /tmp/tmp.* /tmp/pve-* 2>/dev/null||true
+rm -rf /tmp/pve-* /tmp/aria2-* 2>/dev/null||true
 log_info "Temporary files cleaned"
 }
 _parallel_download_iso(){
