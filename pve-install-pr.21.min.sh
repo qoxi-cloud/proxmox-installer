@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.821-pr.21"
+readonly VERSION="2.0.822-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -3318,41 +3318,6 @@ declare -gA _DSP_MAP=(
 ["power:powersave"]="Balanced"
 ["power:schedutil"]="Adaptive"
 ["power:conservative"]="Conservative")
-_wiz_config_complete(){
-[[ -z $PVE_HOSTNAME ]]&&return 1
-[[ -z $DOMAIN_SUFFIX ]]&&return 1
-[[ -z $EMAIL ]]&&return 1
-[[ -z $NEW_ROOT_PASSWORD ]]&&return 1
-[[ -z $ADMIN_USERNAME ]]&&return 1
-[[ -z $ADMIN_PASSWORD ]]&&return 1
-[[ -z $TIMEZONE ]]&&return 1
-[[ -z $KEYBOARD ]]&&return 1
-[[ -z $COUNTRY ]]&&return 1
-[[ -z $PROXMOX_ISO_VERSION ]]&&return 1
-[[ -z $PVE_REPO_TYPE ]]&&return 1
-[[ -z $INTERFACE_NAME ]]&&return 1
-[[ -z $MAIN_IPV4 ]]&&return 1
-[[ -z $MAIN_IPV4_GW ]]&&return 1
-[[ -z $BRIDGE_MODE ]]&&return 1
-[[ $BRIDGE_MODE != "external" && -z $PRIVATE_SUBNET ]]&&return 1
-[[ -z $IPV6_MODE ]]&&return 1
-if [[ $USE_EXISTING_POOL == "yes" ]];then
-[[ -z $EXISTING_POOL_NAME ]]&&return 1
-else
-[[ -z $ZFS_RAID ]]&&return 1
-[[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]]&&return 1
-fi
-[[ -z $ZFS_ARC_MODE ]]&&return 1
-[[ -z $SHELL_TYPE ]]&&return 1
-[[ -z $CPU_GOVERNOR ]]&&return 1
-[[ -z $SSH_PUBLIC_KEY ]]&&return 1
-[[ $INSTALL_TAILSCALE != "yes" && -z $SSL_TYPE ]]&&return 1
-[[ $FIREWALL_MODE == "stealth" && $INSTALL_TAILSCALE != "yes" ]]&&return 1
-if [[ $INSTALL_POSTFIX == "yes" ]];then
-[[ -z $SMTP_RELAY_HOST || -z $SMTP_RELAY_USER || -z $SMTP_RELAY_PASSWORD ]]&&return 1
-fi
-return 0
-}
 _dsp_lookup(){
 local key="$1:$2"
 echo "${_DSP_MAP[$key]:-$2}"
@@ -3500,6 +3465,41 @@ _dsp_network
 _dsp_storage
 _dsp_services
 _dsp_access
+}
+_wiz_config_complete(){
+[[ -z $PVE_HOSTNAME ]]&&return 1
+[[ -z $DOMAIN_SUFFIX ]]&&return 1
+[[ -z $EMAIL ]]&&return 1
+[[ -z $NEW_ROOT_PASSWORD ]]&&return 1
+[[ -z $ADMIN_USERNAME ]]&&return 1
+[[ -z $ADMIN_PASSWORD ]]&&return 1
+[[ -z $TIMEZONE ]]&&return 1
+[[ -z $KEYBOARD ]]&&return 1
+[[ -z $COUNTRY ]]&&return 1
+[[ -z $PROXMOX_ISO_VERSION ]]&&return 1
+[[ -z $PVE_REPO_TYPE ]]&&return 1
+[[ -z $INTERFACE_NAME ]]&&return 1
+[[ -z $MAIN_IPV4 ]]&&return 1
+[[ -z $MAIN_IPV4_GW ]]&&return 1
+[[ -z $BRIDGE_MODE ]]&&return 1
+[[ $BRIDGE_MODE != "external" && -z $PRIVATE_SUBNET ]]&&return 1
+[[ -z $IPV6_MODE ]]&&return 1
+if [[ $USE_EXISTING_POOL == "yes" ]];then
+[[ -z $EXISTING_POOL_NAME ]]&&return 1
+else
+[[ -z $ZFS_RAID ]]&&return 1
+[[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]]&&return 1
+fi
+[[ -z $ZFS_ARC_MODE ]]&&return 1
+[[ -z $SHELL_TYPE ]]&&return 1
+[[ -z $CPU_GOVERNOR ]]&&return 1
+[[ -z $SSH_PUBLIC_KEY ]]&&return 1
+[[ $INSTALL_TAILSCALE != "yes" && -z $SSL_TYPE ]]&&return 1
+[[ $FIREWALL_MODE == "stealth" && $INSTALL_TAILSCALE != "yes" ]]&&return 1
+if [[ $INSTALL_POSTFIX == "yes" ]];then
+[[ -z $SMTP_RELAY_HOST || -z $SMTP_RELAY_USER || -z $SMTP_RELAY_PASSWORD ]]&&return 1
+fi
+return 0
 }
 _WIZ_FIELD_COUNT=0
 _WIZ_FIELD_MAP=()
