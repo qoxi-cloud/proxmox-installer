@@ -4,12 +4,12 @@
 # Get terminal dimensions. Sets _LOG_TERM_HEIGHT, _LOG_TERM_WIDTH.
 get_terminal_dimensions() {
   if [[ -t 1 && -n ${TERM:-} ]]; then
-    declare -g _LOG_TERM_HEIGHT="$(tput lines 2>/dev/null)" || declare -g _LOG_TERM_HEIGHT=24
-    declare -g _LOG_TERM_WIDTH="$(tput cols 2>/dev/null)" || declare -g _LOG_TERM_WIDTH=80
-  else
-    declare -g _LOG_TERM_HEIGHT=24
-    declare -g _LOG_TERM_WIDTH=80
+    _LOG_TERM_HEIGHT="$(tput lines 2>/dev/null)"
+    _LOG_TERM_WIDTH="$(tput cols 2>/dev/null)"
   fi
+  # Fallback if empty or non-numeric (declare || fallback doesn't work)
+  [[ $_LOG_TERM_HEIGHT =~ ^[0-9]+$ ]] || _LOG_TERM_HEIGHT=24
+  [[ $_LOG_TERM_WIDTH =~ ^[0-9]+$ ]] || _LOG_TERM_WIDTH=80
 }
 
 # Logo height uses BANNER_HEIGHT constant from 003-banner.sh
