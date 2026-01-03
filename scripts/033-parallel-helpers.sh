@@ -89,10 +89,10 @@ run_parallel_group() {
     [[ -f "$f" ]] && configured+=("$(cat "$f")")
   done
 
-  # Show configured features as subtasks
-  if [[ ${#configured[@]} -gt 0 ]]; then
-    log_subtasks "${configured[@]}"
-  fi
+  # Show configured features as subtasks (one per line)
+  for item in "${configured[@]}"; do
+    add_subtask_log "$item"
+  done
 
   # Check for failures
   local failures=0
