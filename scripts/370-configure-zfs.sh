@@ -133,6 +133,7 @@ _config_zfs_scrub() {
 # Public wrapper for ZFS ARC configuration
 configure_zfs_arc() {
   _config_zfs_arc
+  parallel_mark_configured "ZFS ARC ${ZFS_ARC_MODE}"
 }
 
 # Public wrapper for ZFS cachefile import fixes

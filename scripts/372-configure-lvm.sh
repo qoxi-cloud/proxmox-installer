@@ -41,4 +41,5 @@ _config_expand_lvm_root() {
 configure_lvm_storage() {
   [[ -z $BOOT_DISK ]] && return 0
   _config_expand_lvm_root
+  parallel_mark_configured "LVM root expanded"
 }

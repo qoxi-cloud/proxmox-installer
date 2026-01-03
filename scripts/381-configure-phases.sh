@@ -26,19 +26,35 @@ _phase_base_configuration() {
     configure_system_services
 }
 
-# PHASE 2: Storage Configuration (sequential - ZFS dependencies)
+# PHASE 2: Storage Configuration (LVM parallel with ZFS arc, then sequential ZFS chain)
 _phase_storage_configuration() {
-  configure_lvm_storage || { log_warn "configure_lvm_storage failed"; }
-  configure_zfs_arc || { log_warn "configure_zfs_arc failed"; }
+  # LVM and ZFS arc can run in parallel (no dependencies, non-critical)
+  # run_parallel_group properly suppresses progress output (>/dev/null) - no wasted calls
+  # log_info inside functions still writes to $LOG_FILE
+  if [[ -n $BOOT_DISK ]]; then
+    # LVM operates on boot partition, arc sets kernel params - no shared resources
+    run_parallel_group "Configuring LVM & ZFS memory" "LVM & ZFS memory configured" \
+      configure_lvm_storage \
+      configure_zfs_arc
+  else
+    # Subshell catches exit 1 from remote_run, making failure non-fatal
+    # Note: remote_run calls exit 1, not return 1, so || pattern needs subshell
+    (configure_zfs_arc) || log_warn "configure_zfs_arc failed"
+  fi
+
+  # ZFS pool is critical - must succeed for storage to work
   configure_zfs_pool || {
     log_error "configure_zfs_pool failed"
     return 1
   }
-  configure_zfs_cachefile || { log_warn "configure_zfs_cachefile failed"; }
-  configure_zfs_scrub || { log_warn "configure_zfs_scrub failed"; }
+
+  # These depend on pool existing (must run after pool)
+  # Subshell catches exit 1 from remote_run, making failures non-fatal
+  (configure_zfs_cachefile) || log_warn "configure_zfs_cachefile failed"
+  (configure_zfs_scrub) || log_warn "configure_zfs_scrub failed"
 
   # Update initramfs to include ZFS cachefile changes (prevents "cachefile import failed" on boot)
-  remote_run "Updating initramfs" "update-initramfs -u -k all" || log_warn "update-initramfs failed"
+  (remote_run "Updating initramfs" "update-initramfs -u -k all") || log_warn "update-initramfs failed"
 }
 
 # PHASE 3: Security Configuration (parallel after batch install)
@@ -115,10 +131,11 @@ _phase_finalization() {
 
   # Configure EFI fallback boot path (required for QEMU installs without NVRAM persistence)
   # Must run BEFORE cleanup which unmounts /boot/efi
-  configure_efi_fallback_boot || { log_warn "configure_efi_fallback_boot failed"; }
+  # Subshell catches exit 1 from remote_run, making failure non-fatal
+  (configure_efi_fallback_boot) || log_warn "configure_efi_fallback_boot failed"
 
   # Clean up installation logs for fresh first boot
-  cleanup_installation_logs || { log_warn "cleanup_installation_logs failed"; }
+  (cleanup_installation_logs) || log_warn "cleanup_installation_logs failed"
 
   # Restart SSH as the LAST operation - after this, password auth is disabled
   restart_ssh_service || { log_warn "restart_ssh_service failed"; }
