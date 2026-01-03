@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.823-pr.21"
+readonly VERSION="2.0.824-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -2713,12 +2713,11 @@ exit 1
 }
 get_terminal_dimensions(){
 if [[ -t 1 && -n ${TERM:-} ]];then
-declare -g _LOG_TERM_HEIGHT="$(tput lines 2>/dev/null)"||declare -g _LOG_TERM_HEIGHT=24
-declare -g _LOG_TERM_WIDTH="$(tput cols 2>/dev/null)"||declare -g _LOG_TERM_WIDTH=80
-else
-declare -g _LOG_TERM_HEIGHT=24
-declare -g _LOG_TERM_WIDTH=80
+_LOG_TERM_HEIGHT="$(tput lines 2>/dev/null)"
+_LOG_TERM_WIDTH="$(tput cols 2>/dev/null)"
 fi
+[[ $_LOG_TERM_HEIGHT =~ ^[0-9]+$ ]]||_LOG_TERM_HEIGHT=24
+[[ $_LOG_TERM_WIDTH =~ ^[0-9]+$ ]]||_LOG_TERM_WIDTH=80
 }
 LOGO_HEIGHT=${BANNER_HEIGHT:-9}
 HEADER_HEIGHT=4
