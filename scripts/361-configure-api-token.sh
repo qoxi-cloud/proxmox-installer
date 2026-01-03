@@ -3,9 +3,7 @@
 # Configure Proxmox API Token
 
 # Create Proxmox API token for automation (Terraform, Ansible)
-create_api_token() {
-  [[ $INSTALL_API_TOKEN != "yes" ]] && return 0
-
+_config_api_token() {
   log_info "Creating Proxmox API token for ${ADMIN_USERNAME}: ${API_TOKEN_NAME}"
 
   # Note: PAM user and Administrator role are set up in 302-configure-admin.sh
@@ -63,6 +61,5 @@ EOF
   return 0
 }
 
-# Public wrapper for parallel group execution
-# Guard already in create_api_token, just call it
-configure_api_token() { create_api_token; }
+# Public wrapper (generated via factory)
+make_feature_wrapper "api_token" "INSTALL_API_TOKEN"
