@@ -43,46 +43,78 @@ _remove_subscription_notice() {
 # Private implementation
 
 # Configure system services (chrony, upgrades, CPU governor)
+# Designed for parallel execution - uses direct calls, no progress display
 _config_system_services() {
   # Configure NTP time synchronization with chrony (package already installed)
-  run_with_progress "Configuring chrony" "Chrony configured" _configure_chrony
+  log_info "Configuring chrony"
+  _configure_chrony || {
+    log_error "Failed to configure chrony"
+    return 1
+  }
 
   # Configure Unattended Upgrades (package already installed)
-  run_with_progress "Configuring Unattended Upgrades" "Unattended Upgrades configured" _configure_unattended_upgrades
+  log_info "Configuring unattended-upgrades"
+  _configure_unattended_upgrades || {
+    log_error "Failed to configure unattended-upgrades"
+    return 1
+  }
 
   # Configure kernel modules (nf_conntrack, tcp_bbr)
+  log_info "Configuring kernel modules"
   # shellcheck disable=SC2016 # Single quotes intentional - executed on remote
-  remote_run "Configuring kernel modules" '
-        for mod in nf_conntrack tcp_bbr; do
-            if ! grep -q "^${mod}$" /etc/modules 2>/dev/null; then
-                echo "$mod" >> /etc/modules
-            fi
-        done
-        modprobe tcp_bbr 2>/dev/null || true
-    ' "Kernel modules configured"
+  remote_exec '
+    for mod in nf_conntrack tcp_bbr; do
+      if ! grep -q "^${mod}$" /etc/modules 2>/dev/null; then
+        echo "$mod" >> /etc/modules
+      fi
+    done
+    modprobe tcp_bbr 2>/dev/null || true
+  ' >>"$LOG_FILE" 2>&1 || {
+    log_error "Failed to configure kernel modules"
+    return 1
+  }
 
   # Configure system limits (nofile for containers/monitoring)
-  run_with_progress "Configuring system limits" "System limits configured" \
-    remote_copy "templates/99-limits.conf" "/etc/security/limits.d/99-proxmox.conf"
+  log_info "Configuring system limits"
+  remote_copy "templates/99-limits.conf" "/etc/security/limits.d/99-proxmox.conf" || {
+    log_error "Failed to configure system limits"
+    return 1
+  }
 
   # Disable APT translations (saves disk/bandwidth on servers)
-  remote_run "Optimizing APT configuration" '
-        echo "Acquire::Languages \"none\";" > /etc/apt/apt.conf.d/99-disable-translations
-    ' "APT configuration optimized"
+  log_info "Optimizing APT configuration"
+  remote_exec 'echo "Acquire::Languages \"none\";" > /etc/apt/apt.conf.d/99-disable-translations' \
+    >>"$LOG_FILE" 2>&1 || {
+    log_error "Failed to optimize APT configuration"
+    return 1
+  }
 
   # Configure CPU governor using linux-cpupower
   # Governor already validated by wizard (only shows available options)
   local governor="${CPU_GOVERNOR:-performance}"
-  run_with_progress "Configuring CPU governor (${governor})" "CPU governor configured" _configure_cpu_governor
+  log_info "Configuring CPU governor (${governor})"
+  _configure_cpu_governor || {
+    log_error "Failed to configure CPU governor"
+    return 1
+  }
 
   # Configure I/O scheduler udev rules (NVMe: none, SSD: mq-deadline, HDD: bfq)
-  run_with_progress "Configuring I/O scheduler" "I/O scheduler configured" _configure_io_scheduler
+  log_info "Configuring I/O scheduler"
+  _configure_io_scheduler || {
+    log_error "Failed to configure I/O scheduler"
+    return 1
+  }
 
   # Remove Proxmox subscription notice (only for non-enterprise)
   if [[ ${PVE_REPO_TYPE:-no-subscription} != "enterprise" ]]; then
-    log_info "configure_system_services: removing subscription notice (non-enterprise)"
-    run_with_progress "Removing Proxmox subscription notice" "Subscription notice removed" _remove_subscription_notice
+    log_info "Removing Proxmox subscription notice (non-enterprise)"
+    _remove_subscription_notice || {
+      log_error "Failed to remove subscription notice"
+      return 1
+    }
   fi
+
+  parallel_mark_configured "services"
 }
 
 # Public wrapper

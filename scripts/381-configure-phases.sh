@@ -2,7 +2,7 @@
 # Configuration phases for Proxmox post-install
 # Broken out for maintainability and testability
 
-# PHASE 1: Base Configuration (sequential - dependencies)
+# PHASE 1: Base Configuration (sequential then parallel)
 # Must run first - sets up admin user and base system
 _phase_base_configuration() {
   make_templates || {
@@ -17,8 +17,13 @@ _phase_base_configuration() {
     log_error "configure_base_system failed"
     return 1
   }
-  configure_shell || { log_warn "configure_shell failed"; }
-  configure_system_services || { log_warn "configure_system_services failed"; }
+
+  # Shell and system services have no inter-dependencies - run in parallel
+  # configure_shell: Oh-My-Zsh, plugins (operates on user home directory)
+  # configure_system_services: chrony, governors, limits (operates on system configs)
+  run_parallel_group "Configuring shell & services" "Shell & services configured" \
+    configure_shell \
+    configure_system_services
 }
 
 # PHASE 2: Storage Configuration (sequential - ZFS dependencies)
