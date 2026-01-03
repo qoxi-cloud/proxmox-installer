@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.822-pr.21"
+readonly VERSION="2.0.823-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1309,8 +1309,10 @@ wait_async_feature(){
 local feature="$1"
 local pid="$2"
 [[ -z $pid ]]&&return 0
-if ! wait "$pid" 2>/dev/null;then
-log_error "configure_$feature failed (exit code: $?)"
+wait "$pid" 2>/dev/null
+local exit_code=$?
+if [[ $exit_code -ne 0 ]];then
+log_error "configure_$feature failed (exit code: $exit_code)"
 return 1
 fi
 return 0
