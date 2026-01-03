@@ -90,11 +90,14 @@ _phase_monitoring_tools() {
   wait_async_feature "yazi" "$yazi_pid"
 }
 
-# PHASE 5: SSL & API Configuration
+# PHASE 5: SSL & API Configuration (parallel - independent operations)
 _phase_ssl_api() {
-  configure_ssl_certificate
-  if [[ $INSTALL_API_TOKEN == "yes" ]]; then
-    run_with_progress "Creating API token" "API token created" create_api_token
+  # SSL certificate and API token creation are independent - run in parallel
+  # Failures logged but not fatal (user can configure manually post-install)
+  if ! run_parallel_group "Configuring SSL & API" "SSL & API configured" \
+    configure_ssl \
+    configure_api_token; then
+    log_warn "SSL/API configuration had failures - check $LOG_FILE for details"
   fi
 }
 

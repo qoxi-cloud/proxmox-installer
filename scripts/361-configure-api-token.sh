@@ -59,5 +59,10 @@ EOF
   register_temp_file "$_TEMP_API_TOKEN_FILE"
 
   log_info "API token created successfully: ${API_TOKEN_ID}"
+  parallel_mark_configured "api-token"
   return 0
 }
+
+# Public wrapper for parallel group execution
+# Guard already in create_api_token, just call it
+configure_api_token() { create_api_token; }
