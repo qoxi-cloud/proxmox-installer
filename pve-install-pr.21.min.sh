@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.836-pr.21"
+readonly VERSION="2.0.837-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -6106,7 +6106,7 @@ _config_admin_user(){
 require_admin_username "create admin user"||return 1
 remote_exec 'useradd -m -s /bin/bash -G sudo '"$ADMIN_USERNAME"''||return 1
 local encoded_creds
-encoded_creds=$(printf '%s:%s' "$ADMIN_USERNAME" "$ADMIN_PASSWORD"|base64)
+encoded_creds=$(printf '%s:%s' "$ADMIN_USERNAME" "$ADMIN_PASSWORD"|base64|tr -d '\n')
 remote_exec "echo '$encoded_creds' | base64 -d | chpasswd"||return 1
 remote_exec "mkdir -p /home/$ADMIN_USERNAME/.ssh && chmod 700 /home/$ADMIN_USERNAME/.ssh"||return 1
 local escaped_key="${SSH_PUBLIC_KEY//\'/\'\\\'\'}"
