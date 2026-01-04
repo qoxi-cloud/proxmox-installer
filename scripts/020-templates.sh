@@ -88,6 +88,14 @@ apply_template_vars() {
     local size_after
     size_after=$(wc -c <"$file" 2>/dev/null || echo "?")
     log_debug "Finished $file (${size_after} bytes)"
+  else
+    # No substitutions requested - still validate no placeholders exist
+    if grep -qE '\{\{[A-Za-z0-9_]+\}\}' "$file" 2>/dev/null; then
+      local remaining
+      remaining=$(grep -oE '\{\{[A-Za-z0-9_]+\}\}' "$file" 2>/dev/null | sort -u | tr '\n' ' ')
+      log_error "Unsubstituted placeholders remain in $file: $remaining"
+      return 1
+    fi
   fi
 
   return 0
