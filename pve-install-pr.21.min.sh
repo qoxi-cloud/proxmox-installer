@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.857-pr.21"
+readonly VERSION="2.0.858-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1286,7 +1286,8 @@ sleep "${PROGRESS_POLL_INTERVAL:-0.2}"
 done
 for ((j=0; j<count; j++));do
 [[ -f "$result_dir/fail_$j" ]]&&exit 1
-done) \
+done
+exit 0) \
 &
 show_progress "$!" "$group_name" "$done_msg"
 wait
