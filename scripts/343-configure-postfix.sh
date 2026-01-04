@@ -9,7 +9,7 @@ _config_postfix_relay() {
   local relay_pass="${SMTP_RELAY_PASSWORD}"
 
   # Deploy main.cf configuration
-  deploy_template "postfix-main.cf.tmpl" "/etc/postfix/main.cf" \
+  deploy_template "templates/postfix-main.cf" "/etc/postfix/main.cf" \
     "SMTP_RELAY_HOST=${relay_host}" \
     "SMTP_RELAY_PORT=${relay_port}" \
     "HOSTNAME=${PVE_HOSTNAME}" \

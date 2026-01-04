@@ -13,22 +13,21 @@ The project is a modular bash framework. Individual scripts in `scripts/` are co
 | **000-007** | Core: colors, constants, wizard opts, init, trap, cli, logging, banner |
 | **010-012** | Display & utilities |
 | **020-022** | Templates & SSH (session, remote) |
-| **030-037** | Helpers: password, zfs, validation, parallel, deploy, network |
+| **030-038** | Helpers: password, zfs, parallel, deploy, feature-factory, systemd, user-config, network |
 | **040-043** | Validation: basic, network, dns, security |
 | **050-056** | System: packages, preflight, network, drives, wizard-data, status, live-logs |
-| **100-104** | Wizard: core, ui, navigation, menu, display |
+| **100-105** | Wizard: core, ui, navigation, display, menu, input |
 | **110-122** | Wizard: editors (locale, basic, proxmox, network, storage, ssl, tailscale, access, ssh, disks, features, postfix) |
 | **200-208** | Installation: packages, QEMU config/release, templates, ISO download, autoinstall, qemu-install, disk-wipe |
-| **300-303** | Configuration: base, tailscale, admin user, services |
+| **300-304** | Configuration: base, locale, tailscale, admin user, services |
 | **310-313** | Security: firewall-rules, firewall, fail2ban, apparmor |
 | **320-324** | Security: auditd, aide, chkrootkit, lynis, needrestart |
-| **330** | Network: ringbuffer tuning |
-| **340-343** | Monitoring & Mail: vnstat, promtail, netdata, postfix |
-| **350-351** | Tools: yazi, nvim |
+| **340-344** | Monitoring & Mail: vnstat, promtail, netdata, postfix, ringbuffer |
+| **350-354** | Tools: yazi, nvim, fastfetch, bat, shell |
 | **360-361** | SSL & API token |
 | **370-372** | Storage: ZFS ARC, pool creation/import, LVM |
 | **378-381** | Finalization: cleanup, EFI boot, validation, phases |
-| **900** | Main orchestrator |
+| **998-999** | Completion screen, main orchestrator |
 
 ### Data Flow
 
@@ -44,10 +43,10 @@ Templates use `{{VARIABLE}}` syntax:
 
 ```bash
 # Apply variables to template
-apply_template_vars "./templates/config.tmpl" "VAR1=${VALUE1}" "VAR2=${VALUE2}"
+apply_template_vars "./templates/config" "VAR1=${VALUE1}" "VAR2=${VALUE2}"
 
-# Deploy template to remote
-deploy_template "source.tmpl" "/target/path" "VAR1=val" "VAR2=val"
+# Deploy template to remote (without .tmpl - files are downloaded without extension)
+deploy_template "templates/source" "/target/path" "VAR1=val" "VAR2=val"
 ```
 
 ## Local Development
@@ -189,13 +188,13 @@ remote_copy "/local/path" "/remote/path"
 ### Template Deployment
 
 ```bash
-deploy_template "source.tmpl" "/target/path" "VAR1=val"
+deploy_template "templates/source" "/target/path" "VAR1=val"
 deploy_systemd_timer "feature"  # Deploys .service and .timer
 ```
 
 ## Templates
 
-All templates use `.tmpl` extension in `templates/` directory.
+Template files in the repository use `.tmpl` extension. At runtime, templates are downloaded without the extension and `deploy_template` uses paths without `.tmpl`.
 
 Common templates:
 - System config: `sshd_config.tmpl`, `hosts.tmpl`, `resolv.conf.tmpl`

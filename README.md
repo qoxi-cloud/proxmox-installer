@@ -10,7 +10,6 @@
 
   <br/>
 
-  <!-- TODO: Replace with actual terminal recording -->
   <img src="https://github.com/qoxi-cloud/proxmox-installer/raw/main/icons/demo.gif" alt="Installation Demo" width="800" />
 
 </div>
