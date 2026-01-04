@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.853-pr.21"
+readonly VERSION="2.0.855-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -2961,6 +2961,7 @@ else
 [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]]&&missing_fields+=("Pool disks")
 validate_pool_disk_conflict&&missing_fields+=("Pool disks (boot disk conflict)")
 validate_raid_disk_count&&missing_fields+=("ZFS mode (requires $(get_raid_min_disks "$ZFS_RAID")+ disks)")
+_pool_disks_have_mixed_sizes&&missing_fields+=("Pool disks (different sizes - use separate boot disk)")
 fi
 [[ -z $ZFS_ARC_MODE ]]&&missing_fields+=("ZFS ARC")
 [[ -z $SHELL_TYPE ]]&&missing_fields+=("Shell")
@@ -2971,7 +2972,6 @@ fi
 if [[ $INSTALL_POSTFIX == "yes" ]];then
 [[ -z $SMTP_RELAY_HOST || -z $SMTP_RELAY_USER || -z $SMTP_RELAY_PASSWORD ]]&&missing_fields+=("Postfix SMTP relay settings")
 fi
-[[ $USE_EXISTING_POOL != "yes" ]]&&_pool_disks_have_mixed_sizes&&missing_fields+=("Pool disks (different sizes - use separate boot disk)")
 if [[ ${#missing_fields[@]} -gt 0 ]];then
 _wiz_start_edit
 _wiz_hide_cursor
@@ -3039,6 +3039,8 @@ local output=""
 for line in "$@";do
 line="${line//\{\{cyan:/$CLR_CYAN}"
 line="${line//\{\{yellow:/$CLR_YELLOW}"
+line="${line//\{\{red:/$CLR_RED}"
+line="${line//\{\{orange:/$CLR_ORANGE}"
 line="${line//\}\}/$CLR_GRAY}"
 output+="$CLR_GRAY$line$CLR_RESET\n"
 done
