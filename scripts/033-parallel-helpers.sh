@@ -80,6 +80,10 @@ run_parallel_group() {
       [[ $done_count -eq $count ]] && break
       sleep "${PROGRESS_POLL_INTERVAL:-0.2}"
     done
+    # Exit non-zero if any task failed (for correct progress indicator)
+    for ((j = 0; j < count; j++)); do
+      [[ -f "$result_dir/fail_$j" ]] && exit 1
+    done
   ) &
   show_progress "$!" "$group_name" "$done_msg"
 
