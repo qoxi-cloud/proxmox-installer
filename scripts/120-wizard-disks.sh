@@ -34,7 +34,6 @@ _edit_boot_disk() {
   fi
 
   if [[ -n $selected ]]; then
-    local old_boot_disk="$BOOT_DISK"
     if [[ $selected == "None (all in pool)" ]]; then
       declare -g BOOT_DISK=""
     else
@@ -42,20 +41,6 @@ _edit_boot_disk() {
       declare -g BOOT_DISK="/dev/${disk_name}"
     fi
     _rebuild_pool_disks
-
-    # Validate that pool is not empty after rebuild
-    if [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]]; then
-      _wiz_start_edit
-      _wiz_hide_cursor
-      _wiz_description \
-        "  {{red:✗ Cannot use this boot disk: No disks left for ZFS pool}}" \
-        "" \
-        "  At least one disk must remain for the ZFS pool."
-      sleep "${WIZARD_MESSAGE_DELAY:-3}"
-      # Restore previous boot disk selection
-      declare -g BOOT_DISK="$old_boot_disk"
-      _rebuild_pool_disks
-    fi
   fi
 }
 
