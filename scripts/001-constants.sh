@@ -54,7 +54,8 @@ readonly DNS_LOOKUP_TIMEOUT=5
 # Retry delays (seconds)
 readonly DNS_RETRY_DELAY=10
 
-# QEMU boot timeouts (seconds)
+# QEMU timeouts (seconds)
+readonly QEMU_INSTALL_TIMEOUT=300   # Max wait for Proxmox installation (5 min)
 readonly QEMU_BOOT_TIMEOUT=300      # Max wait for QEMU to boot and expose SSH port
 readonly QEMU_PORT_CHECK_INTERVAL=3 # Interval between port availability checks
 readonly QEMU_SSH_READY_TIMEOUT=120 # Max wait for SSH to be fully ready

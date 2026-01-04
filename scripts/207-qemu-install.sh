@@ -91,12 +91,33 @@ EOF
     exit 1
   fi
 
-  show_progress "$qemu_pid" "Installing Proxmox VE" "Proxmox VE installed"
+  # Wait for QEMU with timeout (kills QEMU if installation hangs)
+  local install_timeout="${QEMU_INSTALL_TIMEOUT:-300}"
+  local check_interval=5
+  (
+    elapsed=0
+    while kill -0 "$qemu_pid" 2>/dev/null && ((elapsed < install_timeout)); do
+      sleep "$check_interval"
+      ((elapsed += check_interval))
+    done
+    # If QEMU still running after timeout, kill it
+    if kill -0 "$qemu_pid" 2>/dev/null; then
+      log_error "Installation timeout after ${install_timeout}s - killing QEMU"
+      kill -TERM "$qemu_pid" 2>/dev/null
+      sleep 2
+      kill -KILL "$qemu_pid" 2>/dev/null
+      exit 1
+    fi
+    exit 0
+  ) &
+  local wait_pid="$!"
+
+  show_progress "$wait_pid" "Installing Proxmox VE" "Proxmox VE installed"
   local exit_code="$?"
 
   # Verify installation completed (QEMU exited cleanly)
   if [[ $exit_code -ne 0 ]]; then
-    log_error "QEMU installation failed with exit code $exit_code"
+    log_error "QEMU installation failed (timeout or error)"
     log_info "QEMU install log:"
     cat qemu_install.log >>"$LOG_FILE" 2>&1
     exit 1
