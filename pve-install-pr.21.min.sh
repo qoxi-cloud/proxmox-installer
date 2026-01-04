@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.838-pr.21"
+readonly VERSION="2.0.839-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -697,6 +697,13 @@ fi
 local size_after
 size_after=$(wc -c <"$file" 2>/dev/null||echo "?")
 log_debug "Finished $file ($size_after bytes)"
+else
+if grep -qE '\{\{[A-Za-z0-9_]+\}\}' "$file" 2>/dev/null;then
+local remaining
+remaining=$(grep -oE '\{\{[A-Za-z0-9_]+\}\}' "$file" 2>/dev/null|sort -u|tr '\n' ' ')
+log_error "Unsubstituted placeholders remain in $file: $remaining"
+return 1
+fi
 fi
 return 0
 }
