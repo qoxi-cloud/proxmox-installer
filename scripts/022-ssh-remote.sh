@@ -17,8 +17,14 @@ _sanitize_script_for_log() {
   # Handle escaped quotes in double-quoted strings: "([^"\\]|\\.)*" matches "foo\"bar"
   script=$(printf '%s\n' "$script" | sed -E "s${d}(PASSWORD|password|PASSWD|passwd|SECRET|secret|TOKEN|token|KEY|key)=('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^[:space:]'\";]+)${d}\\1=[REDACTED]${d}g")
 
-  # Pattern: echo "user:password" | chpasswd
-  script=$(printf '%s\n' "$script" | sed -E "s${d}(echo[[:space:]]+['\"]?[^:]+:)[^|'\"]*${d}\\1[REDACTED]${d}g")
+  # Pattern: echo "user:password" | chpasswd (double-quoted, handles | and escaped chars)
+  script=$(printf '%s\n' "$script" | sed -E "s${d}(echo[[:space:]]+\"[^:]+:)([^\"\\\\]|\\\\.)*(\")${d}\\1[REDACTED]\\3${d}g")
+
+  # Pattern: echo 'user:password' | chpasswd (single-quoted, handles | in password)
+  script=$(printf '%s\n' "$script" | sed -E "s${d}(echo[[:space:]]+'[^:]+:)[^']*(')${d}\\1[REDACTED]\\2${d}g")
+
+  # Pattern: echo user:password | chpasswd (unquoted - | is pipe delimiter, not in password)
+  script=$(printf '%s\n' "$script" | sed -E "s${d}(echo[[:space:]]+[^:\"'[:space:]]+:)[^|[:space:]]*${d}\\1[REDACTED]${d}g")
 
   # Pattern: --authkey='...' or --authkey="..." or --authkey=...
   script=$(printf '%s\n' "$script" | sed -E "s${d}(--authkey=)('[^']*'|\"[^\"]*\"|[^[:space:]'\";]+)${d}\\1[REDACTED]${d}g")
