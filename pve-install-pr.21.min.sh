@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.846-pr.21"
+readonly VERSION="2.0.850-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -979,7 +979,9 @@ _sanitize_script_for_log(){
 local script="$1"
 local d=$'\x01'
 script=$(printf '%s\n' "$script"|sed -E "s$d(PASSWORD|password|PASSWD|passwd|SECRET|secret|TOKEN|token|KEY|key)=('[^']*'|\"([^\"\\\\]|\\\\.)*\"|[^[:space:]'\";]+)$d\\1=[REDACTED]${d}g")
-script=$(printf '%s\n' "$script"|sed -E "s$d(echo[[:space:]]+['\"]?[^:]+:)[^|'\"]*$d\\1[REDACTED]${d}g")
+script=$(printf '%s\n' "$script"|sed -E "s$d(echo[[:space:]]+\"[^:]+:)([^\"\\\\]|\\\\.)*(\")$d\\1[REDACTED]\\3${d}g")
+script=$(printf '%s\n' "$script"|sed -E "s$d(echo[[:space:]]+'[^:]+:)[^']*(')$d\\1[REDACTED]\\2${d}g")
+script=$(printf '%s\n' "$script"|sed -E "s$d(echo[[:space:]]+[^:\"'[:space:]]+:)[^|[:space:]]*$d\\1[REDACTED]${d}g")
 script=$(printf '%s\n' "$script"|sed -E "s$d(--authkey=)('[^']*'|\"[^\"]*\"|[^[:space:]'\";]+)$d\\1[REDACTED]${d}g")
 script=$(printf '%s\n' "$script"|sed -E "s$d(echo[[:space:]]+['\"]?)[A-Za-z0-9+/=]+(['\"]?[[:space:]]*\\|[[:space:]]*base64[[:space:]]+-d)$d\\1[REDACTED]\\2${d}g")
 printf '%s\n' "$script"
@@ -1456,7 +1458,7 @@ deploy_template "$template" "$dest" "$@"||return 1
 remote_exec "chmod 644 '$dest'"||{
 log_warn "Failed to set permissions on $dest"
 }
-remote_enable_services "$service_name.service"
+remote_enable_services "$service_name.service"||return 1
 }
 remote_enable_services(){
 local services=("$@")
@@ -6426,7 +6428,7 @@ remote_copy "templates/fail2ban-proxmox.conf" "/etc/fail2ban/filter.d/proxmox.co
 log_error "Failed to deploy fail2ban filter"
 return 1
 }
-remote_enable_services "fail2ban"
+remote_enable_services "fail2ban"||return 1
 parallel_mark_configured "fail2ban"
 }
 configure_fail2ban(){
@@ -6547,7 +6549,7 @@ deploy_template "templates/promtail.yml" "/etc/promtail/promtail.yml" \
 "HOSTNAME=$PVE_HOSTNAME"||return 1
 deploy_template "templates/promtail.service" "/etc/systemd/system/promtail.service"||return 1
 remote_exec 'mkdir -p /var/lib/promtail'||return 1
-remote_enable_services "promtail"
+remote_enable_services "promtail"||return 1
 parallel_mark_configured "promtail"
 }
 make_feature_wrapper "promtail" "INSTALL_PROMTAIL"
@@ -6560,7 +6562,8 @@ deploy_template "templates/netdata.conf" "/etc/netdata/netdata.conf" \
 "NETDATA_BIND_TO=$bind_to"||return 1
 deploy_template "templates/journald-netdata.conf" \
 "/etc/systemd/journald@netdata.conf"||return 1
-remote_enable_services "netdata"
+remote_enable_services "netdata"||return 1
+parallel_mark_configured "netdata"
 }
 make_feature_wrapper "netdata" "INSTALL_NETDATA"
 _config_postfix_relay(){
@@ -6635,6 +6638,7 @@ deploy_user_configs \
 log_error "Failed to deploy yazi configs"
 return 1
 }
+parallel_mark_configured "yazi"
 }
 make_feature_wrapper "yazi" "INSTALL_YAZI"
 _config_nvim(){
