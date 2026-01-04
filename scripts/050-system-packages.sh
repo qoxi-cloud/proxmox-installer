@@ -95,7 +95,7 @@ _install_required_packages() {
 
   if [[ ${#packages_to_install[@]} -gt 0 ]]; then
     apt-get update -qq >/dev/null 2>&1
-    DEBIAN_FRONTEND=noninteractive apt-get install -qq -y "${packages_to_install[@]}" >/dev/null 2>&1
+    DEBIAN_FRONTEND=noninteractive timeout 120 apt-get install -qq -y "${packages_to_install[@]}" >/dev/null 2>&1
   fi
 
   # Install ZFS for pool detection (needed for existing pool feature)
