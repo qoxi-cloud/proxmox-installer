@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.843-pr.21"
+readonly VERSION="2.0.844-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -4635,10 +4635,13 @@ break
 done
 }
 _rebuild_pool_disks(){
-declare -g -a ZFS_POOL_DISKS=()
-for drive in "${DRIVES[@]}";do
-[[ -z $BOOT_DISK || $drive != "$BOOT_DISK" ]]&&ZFS_POOL_DISKS+=("$drive")
+if [[ -n $BOOT_DISK ]];then
+local -a new_pool=()
+for disk in "${ZFS_POOL_DISKS[@]}";do
+[[ $disk != "$BOOT_DISK" ]]&&new_pool+=("$disk")
 done
+declare -g -a ZFS_POOL_DISKS=("${new_pool[@]}")
+fi
 _update_zfs_mode_options
 }
 _update_zfs_mode_options(){
