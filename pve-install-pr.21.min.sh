@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.858-pr.21"
+readonly VERSION="2.0.859-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -4187,6 +4187,12 @@ fi
 }
 _edit_zfs_mode(){
 _wiz_start_edit
+if [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]];then
+_wiz_hide_cursor
+_wiz_description "  {{yellow:⚠ No disks selected for ZFS pool}}" "" \
+"  Select pool disks first, then configure RAID level."
+sleep "${WIZARD_MESSAGE_DELAY:-3}"&&return
+fi
 _wiz_description \
 "  ZFS RAID level for data pool:" \
 "" \
