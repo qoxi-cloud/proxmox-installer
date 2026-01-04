@@ -19,6 +19,7 @@ _config_netdata() {
     "/etc/systemd/journald@netdata.conf" || return 1
 
   remote_enable_services "netdata" || return 1
+  parallel_mark_configured "netdata"
 }
 
 # Public wrapper (generated via factory)
