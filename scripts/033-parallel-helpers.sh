@@ -123,12 +123,14 @@ run_parallel_group() {
 }
 
 # Mark feature as configured in parallel group. $1=feature name
-# Safe to call outside parallel groups - becomes a no-op
+# Safe to call outside parallel groups - becomes a no-op (always returns 0)
 parallel_mark_configured() {
   local feature="$1"
   # Only write if directory exists (protects against stale PARALLEL_RESULT_DIR)
-  [[ -n ${PARALLEL_RESULT_DIR:-} && -d $PARALLEL_RESULT_DIR ]] \
-    && printf '%s' "$feature" >"$PARALLEL_RESULT_DIR/ran_$BASHPID"
+  if [[ -n ${PARALLEL_RESULT_DIR:-} && -d $PARALLEL_RESULT_DIR ]]; then
+    printf '%s' "$feature" >"$PARALLEL_RESULT_DIR/ran_$BASHPID"
+  fi
+  return 0
 }
 
 # Async feature execution helpers
