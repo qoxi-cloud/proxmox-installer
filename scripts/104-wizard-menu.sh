@@ -28,6 +28,7 @@ _wiz_config_complete() {
     [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]] && return 1
     validate_pool_disk_conflict && return 1
     validate_raid_disk_count && return 1
+    _pool_disks_have_mixed_sizes && return 1
   fi
   [[ -z $ZFS_ARC_MODE ]] && return 1
   [[ -z $SHELL_TYPE ]] && return 1

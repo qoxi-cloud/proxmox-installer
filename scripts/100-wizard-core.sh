@@ -186,38 +186,23 @@ _validate_config() {
     [[ -z $SMTP_RELAY_HOST || -z $SMTP_RELAY_USER || -z $SMTP_RELAY_PASSWORD ]] && missing_fields+=("Postfix SMTP relay settings")
   fi
 
-  # Collect warnings (non-blocking)
-  local warnings=()
+  # Mixed disk sizes is a blocking error
   [[ $USE_EXISTING_POOL != "yes" ]] && _pool_disks_have_mixed_sizes \
-    && warnings+=("Pool disks have different sizes (ZFS uses smallest capacity)")
+    && missing_fields+=("Pool disks (different sizes - use separate boot disk)")
 
-  # Show missing fields and/or warnings
-  if [[ ${#missing_fields[@]} -gt 0 || ${#warnings[@]} -gt 0 ]]; then
+  # Show missing fields
+  if [[ ${#missing_fields[@]} -gt 0 ]]; then
     _wiz_start_edit
     _wiz_hide_cursor
-    if [[ ${#missing_fields[@]} -gt 0 ]]; then
-      _wiz_error --bold "Configuration incomplete!"
-      _wiz_blank_line
-      _wiz_warn "Required fields:"
-      for field in "${missing_fields[@]}"; do printf '%s\n' "  ${CLR_CYAN}•${CLR_RESET} $field"; done
-    fi
-    if [[ ${#warnings[@]} -gt 0 ]]; then
-      [[ ${#missing_fields[@]} -gt 0 ]] && _wiz_blank_line
-      _wiz_warn "Warnings:"
-      for warn in "${warnings[@]}"; do printf '%s\n' "  ${CLR_YELLOW}⚠${CLR_RESET} $warn"; done
-    fi
+    _wiz_error --bold "Configuration incomplete!"
+    _wiz_blank_line
+    _wiz_warn "Required fields:"
+    for field in "${missing_fields[@]}"; do printf '%s\n' "  ${CLR_CYAN}•${CLR_RESET} $field"; done
     _wiz_blank_line
     _wiz_show_cursor
-    if [[ ${#missing_fields[@]} -gt 0 ]]; then
-      _wiz_confirm "Return to configuration?" --default=true || exit 1
-      _wiz_hide_cursor
-      return 1
-    fi
-    _wiz_confirm "Continue with installation?" --default=true || {
-      _wiz_hide_cursor
-      return 1
-    }
+    _wiz_confirm "Return to configuration?" --default=true || exit 1
     _wiz_hide_cursor
+    return 1
   fi
   return 0
 }
