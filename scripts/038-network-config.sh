@@ -243,6 +243,6 @@ EOF
 # Generate interfaces config to file. $1=output_path
 generate_interfaces_file() {
   local output="${1:-./templates/interfaces}"
-  _generate_interfaces_conf >"$output"
+  _generate_interfaces_conf >"$output" || return 1
   log_info "Generated interfaces config (mode: ${BRIDGE_MODE:-internal})"
 }
