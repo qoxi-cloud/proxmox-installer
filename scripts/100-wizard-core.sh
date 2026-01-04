@@ -174,6 +174,7 @@ _validate_config() {
     [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]] && missing_fields+=("Pool disks")
     validate_pool_disk_conflict && missing_fields+=("Pool disks (boot disk conflict)")
     validate_raid_disk_count && missing_fields+=("ZFS mode (requires $(get_raid_min_disks "$ZFS_RAID")+ disks)")
+    _pool_disks_have_mixed_sizes && missing_fields+=("Pool disks (different sizes - use separate boot disk)")
   fi
   [[ -z $ZFS_ARC_MODE ]] && missing_fields+=("ZFS ARC")
   [[ -z $SHELL_TYPE ]] && missing_fields+=("Shell")
@@ -185,10 +186,6 @@ _validate_config() {
   if [[ $INSTALL_POSTFIX == "yes" ]]; then
     [[ -z $SMTP_RELAY_HOST || -z $SMTP_RELAY_USER || -z $SMTP_RELAY_PASSWORD ]] && missing_fields+=("Postfix SMTP relay settings")
   fi
-
-  # Mixed disk sizes is a blocking error
-  [[ $USE_EXISTING_POOL != "yes" ]] && _pool_disks_have_mixed_sizes \
-    && missing_fields+=("Pool disks (different sizes - use separate boot disk)")
 
   # Show missing fields
   if [[ ${#missing_fields[@]} -gt 0 ]]; then
