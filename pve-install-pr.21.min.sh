@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.855-pr.21"
+readonly VERSION="2.0.856-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -2977,8 +2977,14 @@ _wiz_start_edit
 _wiz_hide_cursor
 _wiz_error --bold "Configuration incomplete!"
 _wiz_blank_line
+printf 'DEBUG: missing_fields count=%d\n' "${#missing_fields[@]}"
+printf 'DEBUG: missing_fields=(%s)\n' "${missing_fields[*]}"
+_pool_disks_have_mixed_sizes&&printf 'DEBUG: mixed_sizes=YES\n'||printf 'DEBUG: mixed_sizes=NO\n'
+_wiz_blank_line
 _wiz_warn "Required fields:"
 for field in "${missing_fields[@]}";do printf '%s\n' "  $CLR_CYAN•$CLR_RESET $field";done
+_wiz_blank_line
+_wiz_blank_line
 _wiz_blank_line
 _wiz_show_cursor
 _wiz_confirm "Return to configuration?" --default=true||exit 1
