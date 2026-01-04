@@ -82,6 +82,7 @@ run_parallel_group() {
     for ((j = 0; j < count; j++)); do
       [[ -f "$result_dir/fail_$j" ]] && exit 1
     done
+    exit 0
   ) &
   show_progress "$!" "$group_name" "$done_msg"
 

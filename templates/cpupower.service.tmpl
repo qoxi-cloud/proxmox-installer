@@ -4,7 +4,7 @@ After=local-fs.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/cpupower frequency-set -g {{CPU_GOVERNOR}}
+ExecStart=-/usr/bin/cpupower frequency-set -g {{CPU_GOVERNOR}}
 RemainAfterExit=yes
 
 [Install]
