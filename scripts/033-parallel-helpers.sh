@@ -102,6 +102,7 @@ run_parallel_group() {
 
   # Cleanup before return (not using RETURN trap - it overwrites exit status)
   rm -rf "$result_dir"
+  unset PARALLEL_RESULT_DIR
 
   if [[ $failures -gt 0 ]]; then
     log_error "$failures/$count functions failed in group '$group_name'"
@@ -112,9 +113,12 @@ run_parallel_group() {
 }
 
 # Mark feature as configured in parallel group. $1=feature name
+# Safe to call outside parallel groups - becomes a no-op
 parallel_mark_configured() {
   local feature="$1"
-  [[ -n ${PARALLEL_RESULT_DIR:-} ]] && printf '%s' "$feature" >"$PARALLEL_RESULT_DIR/ran_$BASHPID"
+  # Only write if directory exists (protects against stale PARALLEL_RESULT_DIR)
+  [[ -n ${PARALLEL_RESULT_DIR:-} && -d $PARALLEL_RESULT_DIR ]] \
+    && printf '%s' "$feature" >"$PARALLEL_RESULT_DIR/ran_$BASHPID"
 }
 
 # Async feature execution helpers
