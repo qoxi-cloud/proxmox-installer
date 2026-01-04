@@ -18,8 +18,9 @@ _config_admin_user() {
 
   # Set admin password using base64 to safely handle special chars
   # chpasswd expects "user:password" format - colons/quotes in password would break it
+  # Use tr -d '\n' to ensure single-line output (GNU base64 wraps at 76 chars)
   local encoded_creds
-  encoded_creds=$(printf '%s:%s' "$ADMIN_USERNAME" "$ADMIN_PASSWORD" | base64)
+  encoded_creds=$(printf '%s:%s' "$ADMIN_USERNAME" "$ADMIN_PASSWORD" | base64 | tr -d '\n')
   remote_exec "echo '${encoded_creds}' | base64 -d | chpasswd" || return 1
 
   # Set up SSH directory for admin
