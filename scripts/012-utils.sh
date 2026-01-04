@@ -18,6 +18,12 @@ cmd_exists() {
   [[ "${_CMD_CACHE[$cmd]}" -eq 1 ]]
 }
 
+# Clear command cache (call after installing packages)
+cmd_cache_clear() {
+  _CMD_CACHE=()
+  hash -r
+}
+
 # Get file size in bytes (cross-platform: GNU and BSD stat, wc fallback). $1=file → size
 _get_file_size() {
   local file="$1"
