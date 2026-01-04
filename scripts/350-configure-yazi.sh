@@ -29,6 +29,8 @@ _config_yazi() {
     log_error "Failed to deploy yazi configs"
     return 1
   }
+
+  parallel_mark_configured "yazi"
 }
 
 # Public wrapper (generated via factory)
