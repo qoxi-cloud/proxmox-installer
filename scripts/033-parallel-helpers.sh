@@ -50,8 +50,10 @@ run_parallel_group() {
   # NOTE: Each subshell gets its own copy of variables at fork time.
   local i=0
   local running=0
+  local -a task_pids=()
   for func in "${funcs[@]}"; do
     _run_parallel_task "$result_dir" "$i" "$func" &
+    task_pids+=("$!")
     ((i++))
     ((running++))
 
@@ -86,8 +88,10 @@ run_parallel_group() {
   ) &
   show_progress "$!" "$group_name" "$done_msg"
 
-  # Reap background task processes to prevent zombies
-  wait
+  # Reap background task processes to prevent zombies (wait for specific PIDs only)
+  for pid in "${task_pids[@]}"; do
+    wait "$pid" 2>/dev/null || true
+  done
 
   # Collect configured features for display
   local configured=()
