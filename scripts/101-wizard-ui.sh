@@ -62,13 +62,15 @@ _wiz_dim() {
   gum style --foreground "$HEX_GRAY" "${flags[@]}" "${WIZ_NOTIFY_INDENT}$*"
 }
 
-# Display description block with {{cyan:text}} highlight syntax. $@=lines
+# Display description block with {{color:text}} highlight syntax. $@=lines
 _wiz_description() {
   local output=""
   for line in "$@"; do
     # Replace {{color:text}} with actual color codes
     line="${line//\{\{cyan:/${CLR_CYAN}}"
     line="${line//\{\{yellow:/${CLR_YELLOW}}"
+    line="${line//\{\{red:/${CLR_RED}}"
+    line="${line//\{\{orange:/${CLR_ORANGE}}"
     line="${line//\}\}/${CLR_GRAY}}"
     output+="${CLR_GRAY}${line}${CLR_RESET}\n"
   done
