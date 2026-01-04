@@ -14,7 +14,7 @@ _config_fail2ban() {
     return 1
   }
 
-  remote_enable_services "fail2ban"
+  remote_enable_services "fail2ban" || return 1
   parallel_mark_configured "fail2ban"
 }
 

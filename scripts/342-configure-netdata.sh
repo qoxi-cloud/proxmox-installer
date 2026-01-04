@@ -18,7 +18,7 @@ _config_netdata() {
   deploy_template "templates/journald-netdata.conf" \
     "/etc/systemd/journald@netdata.conf" || return 1
 
-  remote_enable_services "netdata"
+  remote_enable_services "netdata" || return 1
 }
 
 # Public wrapper (generated via factory)

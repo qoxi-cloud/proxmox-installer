@@ -16,7 +16,7 @@ _config_promtail() {
   remote_exec 'mkdir -p /var/lib/promtail' || return 1
 
   # Enable and start service
-  remote_enable_services "promtail"
+  remote_enable_services "promtail" || return 1
   parallel_mark_configured "promtail"
 }
 

@@ -45,7 +45,7 @@ deploy_systemd_service() {
     log_warn "Failed to set permissions on $dest"
   }
 
-  remote_enable_services "${service_name}.service"
+  remote_enable_services "${service_name}.service" || return 1
 }
 
 # Enable multiple systemd services (with daemon-reload). $@=service names
