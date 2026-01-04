@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.861-pr.21"
+readonly VERSION="2.0.862-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -6467,13 +6467,19 @@ remote_exec '
     mkdir -p /var/log/audit
     # Create directories that audit rules will watch (rules fail if paths dont exist)
     mkdir -p /etc/ssh/sshd_config.d /root/.ssh /etc/network/interfaces.d
-    mkdir -p /etc/pve/firewall /var/lib/pve-cluster
     mkdir -p /etc/modprobe.d /etc/cron.d /etc/cron.daily /etc/cron.hourly
     mkdir -p /etc/cron.monthly /etc/cron.weekly /var/spool/cron/crontabs
     mkdir -p /etc/sudoers.d /etc/pam.d /etc/security /etc/init.d
     mkdir -p /etc/systemd/system /etc/fail2ban
     mkdir -p /home/'"$ADMIN_USERNAME"'/.ssh
     chmod 700 /root/.ssh /home/'"$ADMIN_USERNAME"'/.ssh
+    # audit-rules.service must start AFTER pve-cluster mounts /etc/pve (FUSE filesystem)
+    mkdir -p /etc/systemd/system/audit-rules.service.d
+    cat > /etc/systemd/system/audit-rules.service.d/after-pve.conf << "DROPIN"
+[Unit]
+After=pve-cluster.service
+Wants=pve-cluster.service
+DROPIN
     # Remove ALL default/conflicting rules before our rules
     find /etc/audit/rules.d -name "*.rules" ! -name "proxmox.rules" -delete 2>/dev/null || true
     rm -f /etc/audit/audit.rules 2>/dev/null || true
