@@ -32,7 +32,7 @@ readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
 
 # Version (MAJOR only - MINOR.PATCH added by CI from git tags/commits)
-readonly VERSION="2.0.864"
+readonly VERSION="2.0.0"
 
 # Terminal width for centering (wizard UI, headers, etc.)
 readonly TERM_WIDTH=80
