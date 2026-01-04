@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
   pull_request:
     branches:
       - main
@@ -127,6 +129,16 @@ jobs:
       - name: Calculate version
         id: version
         run: |
+          # Check if current commit has a tag
+          EXACT_TAG=$(git describe --exact-match --tags HEAD 2>/dev/null || echo "")
+          if [[ -n "$EXACT_TAG" ]]; then
+            # Use version from tag (strip 'v' prefix)
+            VERSION="${EXACT_TAG#v}"
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            echo "Using tag version: ${VERSION}"
+            exit 0
+          fi
+
           # Get MAJOR version from source file
           MAJOR=$(grep -oP 'VERSION="\K[0-9]+' scripts/000-colors.sh)
 
