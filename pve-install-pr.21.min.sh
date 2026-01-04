@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.840-pr.21"
+readonly VERSION="2.0.841-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -2084,7 +2084,7 @@ printf '%s\n' "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh
 fi
 if [[ ${#packages_to_install[@]} -gt 0 ]];then
 apt-get update -qq >/dev/null 2>&1
-DEBIAN_FRONTEND=noninteractive apt-get install -qq -y "${packages_to_install[@]}" >/dev/null 2>&1
+DEBIAN_FRONTEND=noninteractive timeout 120 apt-get install -qq -y "${packages_to_install[@]}" >/dev/null 2>&1
 fi
 _install_zfs_if_needed
 }
