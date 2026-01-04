@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.837-pr.21"
+readonly VERSION="2.0.838-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -2010,7 +2010,7 @@ return 1
 _zfs_functional(){
 zpool version &>/dev/null
 }
-_install_zfs_scripts(){
+_install_zfs_if_needed(){
 if _zfs_functional;then
 log_info "ZFS already installed and functional"
 return 0
@@ -2039,10 +2039,6 @@ return 0
 fi
 fi
 done
-return 1
-}
-_install_zfs_apt_fallback(){
-_zfs_functional&&return 0
 if [[ -f /etc/debian_version ]];then
 log_info "Trying apt install zfsutils-linux..."
 apt-get install -qq -y zfsutils-linux >/dev/null 2>&1||true
@@ -2074,8 +2070,6 @@ packages_to_install+=("${required_commands[$cmd]}")
 [[ $cmd == "gum" ]]&&need_charm_repo=true
 fi
 done
-_install_zfs_scripts&
-local zfs_pid=$!
 if [[ $need_charm_repo == true ]];then
 mkdir -p /etc/apt/keyrings 2>/dev/null
 curl -fsSL https://repo.charm.sh/apt/gpg.key 2>/dev/null|gpg --dearmor -o /etc/apt/keyrings/charm.gpg >/dev/null 2>&1
@@ -2085,7 +2079,7 @@ if [[ ${#packages_to_install[@]} -gt 0 ]];then
 apt-get update -qq >/dev/null 2>&1
 DEBIAN_FRONTEND=noninteractive apt-get install -qq -y "${packages_to_install[@]}" >/dev/null 2>&1
 fi
-wait "$zfs_pid" 2>/dev/null||_install_zfs_apt_fallback
+_install_zfs_if_needed
 }
 install_base_packages(){
 local packages=($SYSTEM_UTILITIES $OPTIONAL_PACKAGES usrmerge locales chrony unattended-upgrades apt-listchanges linux-cpupower)
