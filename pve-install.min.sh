@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.0"
+readonly VERSION="2.1.3"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -5249,6 +5249,7 @@ local -a template_list=(
 "./templates/journald-netdata.conf:journald-netdata.conf"
 "./templates/promtail.yml:promtail.yml"
 "./templates/promtail.service:promtail.service"
+"./templates/postfix-main.cf:postfix-main.cf"
 "./templates/yazi.toml:yazi.toml"
 "./templates/yazi-theme.toml:yazi-theme.toml"
 "./templates/yazi-init.lua:yazi-init.lua"
@@ -6582,7 +6583,7 @@ local relay_host="$SMTP_RELAY_HOST"
 local relay_port="${SMTP_RELAY_PORT:-587}"
 local relay_user="$SMTP_RELAY_USER"
 local relay_pass="$SMTP_RELAY_PASSWORD"
-deploy_template "postfix-main.cf.tmpl" "/etc/postfix/main.cf" \
+deploy_template "templates/postfix-main.cf" "/etc/postfix/main.cf" \
 "SMTP_RELAY_HOST=$relay_host" \
 "SMTP_RELAY_PORT=$relay_port" \
 "HOSTNAME=$PVE_HOSTNAME" \

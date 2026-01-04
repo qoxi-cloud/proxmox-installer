@@ -32,7 +32,7 @@ readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
 
 # Version (MAJOR only - MINOR.PATCH added by CI from git tags/commits)
-readonly VERSION="2.0.0"
+readonly VERSION="2.1.3"
 
 # Terminal width for centering (wizard UI, headers, etc.)
 readonly TERM_WIDTH=80
@@ -7634,6 +7634,8 @@ make_templates() {
     # Monitoring - Promtail
     "./templates/promtail.yml:promtail.yml"
     "./templates/promtail.service:promtail.service"
+    # Mail - Postfix
+    "./templates/postfix-main.cf:postfix-main.cf"
     # Tools - Yazi
     "./templates/yazi.toml:yazi.toml"
     "./templates/yazi-theme.toml:yazi-theme.toml"
@@ -9620,7 +9622,7 @@ _config_postfix_relay() {
   local relay_pass="${SMTP_RELAY_PASSWORD}"
 
   # Deploy main.cf configuration
-  deploy_template "postfix-main.cf.tmpl" "/etc/postfix/main.cf" \
+  deploy_template "templates/postfix-main.cf" "/etc/postfix/main.cf" \
     "SMTP_RELAY_HOST=${relay_host}" \
     "SMTP_RELAY_PORT=${relay_port}" \
     "HOSTNAME=${PVE_HOSTNAME}" \
