@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.845-pr.21"
+readonly VERSION="2.0.846-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1782,6 +1782,34 @@ elif ! is_ascii_printable "$password";then
 printf '%s\n' "Password contains invalid characters (Cyrillic or non-ASCII). Only Latin letters, digits, and special characters are allowed."
 fi
 }
+validate_pool_disk_conflict(){
+[[ -z $BOOT_DISK ]]&&return 1
+for disk in "${ZFS_POOL_DISKS[@]}";do
+[[ $disk == "$BOOT_DISK" ]]&&return 0
+done
+return 1
+}
+validate_raid_disk_count(){
+local pool_count="${#ZFS_POOL_DISKS[@]}"
+case "$ZFS_RAID" in
+single)[[ $pool_count -ne 1 ]]&&return 0;;
+raid0|raid1)[[ $pool_count -lt 2 ]]&&return 0;;
+raidz1)[[ $pool_count -lt 3 ]]&&return 0;;
+raid10|raidz2)[[ $pool_count -lt 4 ]]&&return 0;;
+raidz3)[[ $pool_count -lt 5 ]]&&return 0
+esac
+return 1
+}
+get_raid_min_disks(){
+case "$1" in
+single)echo 1;;
+raid0|raid1)echo 2;;
+raidz1)echo 3;;
+raid10|raidz2)echo 4;;
+raidz3)echo 5;;
+*)echo 1
+esac
+}
 validate_subnet(){
 local subnet="$1"
 if [[ ! $subnet =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}/([0-9]|[12][0-9]|3[0-2])$ ]];then
@@ -2929,19 +2957,8 @@ if [[ $USE_EXISTING_POOL == "yes" ]];then
 else
 [[ -z $ZFS_RAID ]]&&missing_fields+=("ZFS mode")
 [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]]&&missing_fields+=("Pool disks")
-if [[ -n $BOOT_DISK ]];then
-for disk in "${ZFS_POOL_DISKS[@]}";do
-[[ $disk == "$BOOT_DISK" ]]&&missing_fields+=("Pool disks (boot disk conflict)")
-done
-fi
-local pool_count="${#ZFS_POOL_DISKS[@]}"
-case "$ZFS_RAID" in
-single)[[ $pool_count -ne 1 ]]&&missing_fields+=("ZFS mode (requires 1 disk)");;
-raid0|raid1)[[ $pool_count -lt 2 ]]&&missing_fields+=("ZFS mode (requires 2+ disks)");;
-raidz1)[[ $pool_count -lt 3 ]]&&missing_fields+=("ZFS mode (requires 3+ disks)");;
-raid10|raidz2)[[ $pool_count -lt 4 ]]&&missing_fields+=("ZFS mode (requires 4+ disks)");;
-raidz3)[[ $pool_count -lt 5 ]]&&missing_fields+=("ZFS mode (requires 5+ disks)")
-esac
+validate_pool_disk_conflict&&missing_fields+=("Pool disks (boot disk conflict)")
+validate_raid_disk_count&&missing_fields+=("ZFS mode (requires $(get_raid_min_disks "$ZFS_RAID")+ disks)")
 fi
 [[ -z $ZFS_ARC_MODE ]]&&missing_fields+=("ZFS ARC")
 [[ -z $SHELL_TYPE ]]&&missing_fields+=("Shell")
@@ -3447,19 +3464,8 @@ if [[ $USE_EXISTING_POOL == "yes" ]];then
 else
 [[ -z $ZFS_RAID ]]&&return 1
 [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]]&&return 1
-if [[ -n $BOOT_DISK ]];then
-for disk in "${ZFS_POOL_DISKS[@]}";do
-[[ $disk == "$BOOT_DISK" ]]&&return 1
-done
-fi
-local pool_count="${#ZFS_POOL_DISKS[@]}"
-case "$ZFS_RAID" in
-single)[[ $pool_count -ne 1 ]]&&return 1;;
-raid0|raid1)[[ $pool_count -lt 2 ]]&&return 1;;
-raidz1)[[ $pool_count -lt 3 ]]&&return 1;;
-raid10|raidz2)[[ $pool_count -lt 4 ]]&&return 1;;
-raidz3)[[ $pool_count -lt 5 ]]&&return 1
-esac
+validate_pool_disk_conflict&&return 1
+validate_raid_disk_count&&return 1
 fi
 [[ -z $ZFS_ARC_MODE ]]&&return 1
 [[ -z $SHELL_TYPE ]]&&return 1
