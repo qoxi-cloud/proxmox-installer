@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.841-pr.21"
+readonly VERSION="2.0.842-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -2465,81 +2465,12 @@ DRIVE_SIZES+=("$size")
 DRIVE_MODELS+=("$model")
 done
 }
-_get_existing_pool_disks(){
-[[ ${#DETECTED_POOLS[@]} -eq 0 ]]&&return 0
-local pool_disks=()
-for pool_info in "${DETECTED_POOLS[@]}";do
-local disks_csv="${pool_info##*|}"
-IFS=',' read -ra disks <<<"$disks_csv"
-pool_disks+=("${disks[@]}")
-done
-printf '%s\n' "${pool_disks[@]}"
-}
-_disk_in_existing_pool(){
-local disk="$1"
-local pool_disk
-while IFS= read -r pool_disk;do
-[[ $pool_disk == "$disk" ]]&&return 0
-done < <(_get_existing_pool_disks)
-return 1
-}
 detect_disk_roles(){
 [[ $DRIVE_COUNT -eq 0 ]]&&return 1
-local size_bytes=()
-for size in "${DRIVE_SIZES[@]}";do
-local bytes
-if [[ $size =~ ([0-9.]+)T ]];then
-bytes=$(awk "BEGIN {printf \"%.0f\", ${BASH_REMATCH[1]} * 1099511627776}")
-elif [[ $size =~ ([0-9.]+)G ]];then
-bytes=$(awk "BEGIN {printf \"%.0f\", ${BASH_REMATCH[1]} * 1073741824}")
-else
-bytes=0
-fi
-size_bytes+=("$bytes")
-done
-local min_size="${size_bytes[0]}"
-local max_size="${size_bytes[0]}"
-for size in "${size_bytes[@]}";do
-[[ $size -lt $min_size ]]&&min_size=$size
-[[ $size -gt $max_size ]]&&max_size=$size
-done
-local size_diff="$((max_size-min_size))"
-local threshold="$((min_size/10))"
-if [[ $size_diff -le $threshold ]];then
-log_info "All disks same size, using all for ZFS pool"
 declare -g BOOT_DISK=""
-declare -g -a ZFS_POOL_DISKS=("${DRIVES[@]}")
-else
-log_info "Mixed disk sizes, selecting boot disk"
-local smallest_idx=-1
-local smallest_size=0
-for i in "${!size_bytes[@]}";do
-local drive="${DRIVES[$i]}"
-local drive_size="${size_bytes[$i]}"
-if _disk_in_existing_pool "$drive";then
-log_info "  $drive: ${DRIVE_SIZES[$i]} (skipped - part of existing pool)"
-continue
-fi
-if [[ $smallest_idx -eq -1 ]]||[[ $drive_size -lt $smallest_size ]];then
-smallest_idx=$i
-smallest_size=$drive_size
-fi
-done
-if [[ $smallest_idx -eq -1 ]];then
-log_warn "All disks belong to existing pools, no automatic boot disk selection"
-declare -g BOOT_DISK=""
-declare -g -a ZFS_POOL_DISKS=("${DRIVES[@]}")
-else
-declare -g BOOT_DISK="${DRIVES[$smallest_idx]}"
-log_info "Boot disk: $BOOT_DISK (smallest available, ${DRIVE_SIZES[$smallest_idx]})"
 declare -g -a ZFS_POOL_DISKS=()
-for i in "${!DRIVES[@]}";do
-[[ $i -ne $smallest_idx ]]&&ZFS_POOL_DISKS+=("${DRIVES[$i]}")
-done
-fi
-fi
-log_info "Boot disk: ${BOOT_DISK:-all in pool}"
-log_info "Pool disks: ${ZFS_POOL_DISKS[*]}"
+log_info "Disk roles initialized (user selection required)"
+log_info "Available drives: ${DRIVES[*]}"
 }
 detect_existing_pools(){
 if ! cmd_exists zpool;then
@@ -3396,6 +3327,10 @@ done
 fi
 if [[ $USE_EXISTING_POOL == "yes" ]];then
 declare -g _DSP_POOL="(existing pool)"
+elif [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]];then
+declare -g _DSP_POOL="$CLR_YELLOW(select disks)$CLR_RESET"
+elif _pool_disks_have_mixed_sizes;then
+declare -g _DSP_POOL="${#ZFS_POOL_DISKS[@]} disks $CLR_YELLOW⚠ different sizes$CLR_RESET"
 else
 declare -g _DSP_POOL="${#ZFS_POOL_DISKS[@]} disks"
 fi
@@ -4628,6 +4563,35 @@ _has_mixed_disk_sizes(){
 [[ ${#DRIVES[@]} -lt 2 ]]&&return 1
 local -a size_bytes=()
 for i in "${!DRIVES[@]}";do
+local size_str="${DRIVE_SIZES[$i]}"
+local num="${size_str%[TGMK]*}"
+local unit="${size_str##*[0-9.]}"
+case "$unit" in
+T)size_bytes+=("$(echo "$num * 1099511627776"|bc|cut -d. -f1)");;
+G)size_bytes+=("$(echo "$num * 1073741824"|bc|cut -d. -f1)");;
+M)size_bytes+=("$(echo "$num * 1048576"|bc|cut -d. -f1)");;
+*)size_bytes+=("$num")
+esac
+done
+local min_size="${size_bytes[0]}" max_size="${size_bytes[0]}"
+for size in "${size_bytes[@]}";do
+((size<min_size))&&min_size="$size"
+((size>max_size))&&max_size="$size"
+done
+local size_diff="$((max_size-min_size))"
+local threshold="$((min_size/10))"
+((size_diff>threshold))
+}
+_pool_disks_have_mixed_sizes(){
+[[ ${#ZFS_POOL_DISKS[@]} -lt 2 ]]&&return 1
+local -A pool_disk_indices=()
+for pool_disk in "${ZFS_POOL_DISKS[@]}";do
+for i in "${!DRIVES[@]}";do
+[[ ${DRIVES[$i]} == "$pool_disk" ]]&&pool_disk_indices[$i]=1
+done
+done
+local -a size_bytes=()
+for i in "${!pool_disk_indices[@]}";do
 local size_str="${DRIVE_SIZES[$i]}"
 local num="${size_str%[TGMK]*}"
 local unit="${size_str##*[0-9.]}"
