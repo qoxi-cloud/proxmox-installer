@@ -1,14 +1,36 @@
 #!/bin/bash
 # Deploy renewed certificate to Proxmox
-# Find first certificate directory (excluding README)
+# Called by certbot after successful renewal
+
 for dir in /etc/letsencrypt/live/*/; do
-    DOMAIN=$(basename "$dir")
-    if [[ "$DOMAIN" != "README" ]]; then
-        cp "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" /etc/pve/local/pveproxy-ssl.pem
-        cp "/etc/letsencrypt/live/$DOMAIN/privkey.pem" /etc/pve/local/pveproxy-ssl.key
-        chmod 640 /etc/pve/local/pveproxy-ssl.pem
-        chmod 600 /etc/pve/local/pveproxy-ssl.key
-        systemctl restart pveproxy
-        break
-    fi
+	[[ -d "$dir" ]] || continue
+	DOMAIN=$(basename "$dir")
+	[[ "$DOMAIN" == "README" ]] && continue
+
+	FULLCHAIN="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+	PRIVKEY="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
+
+	# Verify source files exist
+	if [[ ! -f "$FULLCHAIN" ]] || [[ ! -f "$PRIVKEY" ]]; then
+		echo "ERROR: Certificate files not found for $DOMAIN"
+		exit 1
+	fi
+
+	# Deploy to Proxmox
+	if ! cp "$FULLCHAIN" /etc/pve/local/pveproxy-ssl.pem; then
+		echo "ERROR: Failed to copy certificate"
+		exit 1
+	fi
+	if ! cp "$PRIVKEY" /etc/pve/local/pveproxy-ssl.key; then
+		echo "ERROR: Failed to copy private key"
+		exit 1
+	fi
+	# Note: /etc/pve uses pmxcfs which manages permissions automatically
+
+	systemctl restart pveproxy
+	echo "Certificate renewed and deployed for $DOMAIN"
+	exit 0
 done
+
+echo "ERROR: No valid certificate found in /etc/letsencrypt/live/"
+exit 1

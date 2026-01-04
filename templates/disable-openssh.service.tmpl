@@ -8,7 +8,14 @@ Type=oneshot
 RemainAfterExit=yes
 
 # Wait for Tailscale to fully initialize and connect
-ExecStartPre=/bin/bash -c 'for i in {1..60}; do tailscale status --json 2>/dev/null | grep -q "Online.*true" && exit 0; sleep 5; done; exit 1'
+ExecStartPre=/bin/bash -c '\
+  for i in {1..60}; do \
+    tailscale status --json 2>/dev/null | grep -q "Online.*true" && exit 0; \
+    sleep 5; \
+  done; \
+  echo "ERROR: Tailscale not online after 5 minutes - SSH will remain enabled" | systemd-cat -t disable-openssh -p err; \
+  echo "Tailscale status: $(tailscale status 2>&1)" | systemd-cat -t disable-openssh -p warning; \
+  exit 1'
 
 # Stop and disable OpenSSH
 ExecStart=/bin/bash -c 'systemctl stop ssh.service ssh.socket sshd.service sshd.socket 2>/dev/null || true'

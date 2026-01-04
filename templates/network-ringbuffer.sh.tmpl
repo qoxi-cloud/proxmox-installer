@@ -1,0 +1,44 @@
+#!/bin/bash
+# Network ring buffer tuning script
+# Maximizes RX/TX ring buffer for all physical interfaces
+
+# Tune ring buffer for a single interface
+tune_interface() {
+  local iface="$1"
+
+  local max_rx max_tx
+  max_rx=$(ethtool -g "$iface" 2>/dev/null | grep -A4 "Pre-set maximums" | grep "RX:" | awk '{print $2}')
+  max_tx=$(ethtool -g "$iface" 2>/dev/null | grep -A4 "Pre-set maximums" | grep "TX:" | awk '{print $2}')
+
+  if [ -z "$max_rx" ] || [ -z "$max_tx" ]; then
+    echo "SKIP: $iface - no ring buffer support"
+    return 0
+  fi
+
+  if ! [[ "$max_rx" =~ ^[0-9]+$ ]] || ! [[ "$max_tx" =~ ^[0-9]+$ ]]; then
+    echo "SKIP: $iface - invalid values (RX=$max_rx, TX=$max_tx)"
+    return 0
+  fi
+
+  if ethtool -G "$iface" rx "$max_rx" tx "$max_tx" 2>/dev/null; then
+    echo "OK: $iface RX=$max_rx TX=$max_tx"
+  else
+    echo "SKIP: $iface - ethtool failed"
+  fi
+}
+
+# Find physical interfaces (exclude virtual: lo, vmbr*, tap*, veth*, docker*, virbr*)
+mapfile -t interfaces < <(
+  find /sys/class/net -maxdepth 1 -type l -exec basename {} \; 2>/dev/null |
+    grep -vE '^(lo|vmbr|tap|veth|docker|virbr|br-)' |
+    sort
+)
+
+if [ ${#interfaces[@]} -eq 0 ]; then
+  echo "No physical interfaces found"
+  exit 0
+fi
+
+for iface in "${interfaces[@]}"; do
+  tune_interface "$iface"
+done

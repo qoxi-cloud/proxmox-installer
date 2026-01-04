@@ -1,0 +1,50 @@
+[Unit]
+Description=Promtail Log Collector
+Documentation=https://grafana.com/docs/loki/latest/clients/promtail/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+
+# Filesystem restrictions
+ProtectSystem=full
+ProtectHome=yes
+PrivateTmp=yes
+ReadOnlyPaths=/etc
+ReadWritePaths=/var/lib/promtail
+
+# Privilege restrictions
+NoNewPrivileges=yes
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH
+AmbientCapabilities=CAP_DAC_READ_SEARCH
+
+# Process restrictions
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+MemoryDenyWriteExecute=yes
+
+# Network restrictions (only needs outbound to Loki)
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+# System call filtering
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+ExecStartPre=/bin/mkdir -p /var/lib/promtail
+ExecStart=/usr/bin/promtail -config.file=/etc/promtail/promtail.yml
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,26 @@
+#!/bin/sh
+# initramfs hook to copy ZFS cachefile
+# Ensures /etc/zfs/zpool.cache is included in initramfs
+# Prevents "cachefile import failed" errors during early boot
+
+PREREQ=""
+
+prereqs()
+{
+    echo "$PREREQ"
+}
+
+case "$1" in
+    prereqs)
+        prereqs
+        exit 0
+        ;;
+esac
+
+. /usr/share/initramfs-tools/hook-functions
+
+# Copy ZFS cachefile if it exists
+if [ -f /etc/zfs/zpool.cache ]; then
+    mkdir -p "${DESTDIR}/etc/zfs"
+    cp -p /etc/zfs/zpool.cache "${DESTDIR}/etc/zfs/zpool.cache"
+fi

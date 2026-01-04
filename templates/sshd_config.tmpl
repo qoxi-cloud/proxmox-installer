@@ -4,11 +4,9 @@
 
 # Basic settings
 Port 22
-AddressFamily inet
+AddressFamily any
 ListenAddress 0.0.0.0
-
-# Protocol
-Protocol 2
+ListenAddress ::
 
 # Host keys
 HostKey /etc/ssh/ssh_host_rsa_key
@@ -18,8 +16,11 @@ HostKey /etc/ssh/ssh_host_ed25519_key
 # ------------------------------------------
 # Authentication: Hardened settings
 # ------------------------------------------
-# Disable root password login, only allow key-based
-PermitRootLogin prohibit-password
+# Disable root login completely - use admin user with sudo
+PermitRootLogin no
+
+# Restrict SSH access to admin user only
+AllowUsers {{ADMIN_USERNAME}}
 
 # Disable password authentication entirely
 PasswordAuthentication no
@@ -30,8 +31,7 @@ PubkeyAuthentication yes
 # Disable empty passwords
 PermitEmptyPasswords no
 
-# Disable challenge-response authentication
-ChallengeResponseAuthentication no
+# Disable keyboard-interactive authentication
 KbdInteractiveAuthentication no
 
 # Enable PAM for session management (MOTD, limits, accounting)
@@ -99,4 +99,3 @@ PrintMotd no
 PrintLastLog yes
 TCPKeepAlive yes
 Compression no
-UseDNS no

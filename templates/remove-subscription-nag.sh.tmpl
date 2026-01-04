@@ -4,7 +4,28 @@
 
 PROXMOX_LIB="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
 
-if [ -f "$PROXMOX_LIB" ]; then
-    sed -Ezi.bak "s/(Ext.Msg.show\(\{\s+title: gettext\('No valid sub)/void\(\{ \/\/\1/g" "$PROXMOX_LIB"
+if [ ! -f "$PROXMOX_LIB" ]; then
+    exit 0
+fi
+
+# Skip if already patched
+if grep -q "void({ //Ext.Msg.show" "$PROXMOX_LIB"; then
+    exit 0
+fi
+
+# Verify pattern exists before modification
+if ! grep -qE "Ext\.Msg\.show\(\{" "$PROXMOX_LIB"; then
+    echo "Warning: Subscription dialog pattern not found - Proxmox version may have changed" >&2
+    exit 0
+fi
+
+# Apply patch with flexible whitespace matching (\s* instead of \s+)
+sed -Ezi.bak "s/(Ext\.Msg\.show\(\{\s*title:\s*gettext\(['\"]No valid sub)/void\(\{ \/\/\1/g" "$PROXMOX_LIB"
+
+# Restart only if patch was successfully applied
+if grep -q "void({ //Ext.Msg.show" "$PROXMOX_LIB"; then
     systemctl restart pveproxy.service
+else
+    echo "Warning: Subscription nag patch failed - pattern may have changed" >&2
+    [ -f "${PROXMOX_LIB}.bak" ] && mv "${PROXMOX_LIB}.bak" "$PROXMOX_LIB"
 fi
