@@ -179,13 +179,16 @@ _edit_pool_disks() {
   done
 }
 
-# Rebuilds ZFS_POOL_DISKS array after boot disk change.
-# Rebuild pool disks (all except boot). Updates ZFS_POOL_DISKS.
+# Removes boot disk from ZFS_POOL_DISKS if present. Does not auto-populate.
 _rebuild_pool_disks() {
-  declare -g -a ZFS_POOL_DISKS=()
-  for drive in "${DRIVES[@]}"; do
-    [[ -z $BOOT_DISK || $drive != "$BOOT_DISK" ]] && ZFS_POOL_DISKS+=("$drive")
-  done
+  # Only remove boot disk from current selection, don't auto-populate
+  if [[ -n $BOOT_DISK ]]; then
+    local -a new_pool=()
+    for disk in "${ZFS_POOL_DISKS[@]}"; do
+      [[ $disk != "$BOOT_DISK" ]] && new_pool+=("$disk")
+    done
+    declare -g -a ZFS_POOL_DISKS=("${new_pool[@]}")
+  fi
   _update_zfs_mode_options
 }
 
