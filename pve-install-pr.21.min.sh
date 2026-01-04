@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.835-pr.21"
+readonly VERSION="2.0.836-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -7387,87 +7387,6 @@ validate_installation||{ log_warn "validate_installation reported issues";}
 restart_ssh_service||{ log_warn "restart_ssh_service failed";}
 finalize_vm||{ log_warn "finalize_vm did not complete cleanly";}
 }
-log_info "==================== Qoxi Automated Installer v$VERSION ===================="
-log_debug "QEMU_RAM_OVERRIDE=$QEMU_RAM_OVERRIDE QEMU_CORES_OVERRIDE=$QEMU_CORES_OVERRIDE"
-log_debug "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription} SSL_TYPE=${SSL_TYPE:-self-signed}"
-metrics_start
-log_info "Step: collect_system_info"
-show_banner_animated_start 0.1
-SYSTEM_INFO_CACHE=$(mktemp)||{
-log_error "Failed to create temp file"
-exit 1
-}
-register_temp_file "$SYSTEM_INFO_CACHE"
-{
-collect_system_info
-log_info "Step: prefetch_proxmox_iso_info"
-prefetch_proxmox_iso_info
-declare -p|grep -E "^declare -[^ ]* (PREFLIGHT_|DRIVE_|INTERFACE_|CURRENT_INTERFACE|PREDICTABLE_NAME|DEFAULT_INTERFACE|AVAILABLE_|MAC_ADDRESS|MAIN_IPV|IPV6_|FIRST_IPV6_|_ISO_|_CHECKSUM_|WIZ_TIMEZONES|WIZ_COUNTRIES|TZ_TO_COUNTRY|DETECTED_POOLS)" >"$SYSTEM_INFO_CACHE.tmp"&&mv "$SYSTEM_INFO_CACHE.tmp" "$SYSTEM_INFO_CACHE"
-} >/dev/null 2>&1&
-wait "$!"
-cmd_cache_clear
-_missing_cmds=()
-for _cmd in gum jq aria2c curl;do
-command -v "$_cmd" &>/dev/null||_missing_cmds+=("$_cmd")
-done
-if [[ ${#_missing_cmds[@]} -gt 0 ]];then
-log_error "Required packages not installed: ${_missing_cmds[*]}"
-print_error "Required packages not installed: ${_missing_cmds[*]}"
-exit 1
-fi
-unset _missing_cmds _cmd
-show_banner_animated_stop
-if [[ -s $SYSTEM_INFO_CACHE ]];then
-if grep -qvE '^declare -' "$SYSTEM_INFO_CACHE";then
-log_error "SYSTEM_INFO_CACHE contains invalid content, skipping import"
-else
-source "$SYSTEM_INFO_CACHE"
-fi
-rm -f "$SYSTEM_INFO_CACHE"
-fi
-log_info "Step: show_system_status"
-show_system_status
-log_metric "system_info"
-log_info "Step: show_gum_config_editor"
-show_gum_config_editor
-log_metric "config_wizard"
-start_live_installation
-log_info "Step: prepare_packages"
-prepare_packages
-log_metric "packages"
-log_info "Step: prepare_iso_and_toml (parallel)"
-if ! run_parallel_group "Preparing ISO & TOML" "ISO & TOML ready" \
-_parallel_download_iso \
-_parallel_make_toml;then
-log_error "ISO/TOML preparation failed - check $LOG_FILE for details"
-exit 1
-fi
-log_metric "iso_download"
-log_info "Step: make_autoinstall_iso"
-make_autoinstall_iso
-log_metric "autoinstall_prep"
-log_info "Step: wipe_installation_disks"
-run_with_progress "Wiping disks" "Disks wiped" wipe_installation_disks
-log_metric "disk_wipe"
-log_info "Step: install_proxmox"
-install_proxmox
-log_metric "proxmox_install"
-log_info "Step: boot_proxmox_with_port_forwarding"
-boot_proxmox_with_port_forwarding||{
-log_error "Failed to boot Proxmox with port forwarding"
-exit 1
-}
-log_metric "qemu_boot"
-log_info "Step: configure_proxmox_via_ssh"
-configure_proxmox_via_ssh||{
-log_error "configure_proxmox_via_ssh failed"
-exit 1
-}
-log_metric "system_config"
-metrics_finish
-INSTALL_COMPLETED=true
-log_info "Step: reboot_to_main_os"
-reboot_to_main_os
 _render_completion_screen(){
 local output=""
 local banner_output
@@ -7562,3 +7481,84 @@ reboot_to_main_os(){
 finish_live_installation
 _completion_screen_input
 }
+log_info "==================== Qoxi Automated Installer v$VERSION ===================="
+log_debug "QEMU_RAM_OVERRIDE=$QEMU_RAM_OVERRIDE QEMU_CORES_OVERRIDE=$QEMU_CORES_OVERRIDE"
+log_debug "PVE_REPO_TYPE=${PVE_REPO_TYPE:-no-subscription} SSL_TYPE=${SSL_TYPE:-self-signed}"
+metrics_start
+log_info "Step: collect_system_info"
+show_banner_animated_start 0.1
+SYSTEM_INFO_CACHE=$(mktemp)||{
+log_error "Failed to create temp file"
+exit 1
+}
+register_temp_file "$SYSTEM_INFO_CACHE"
+{
+collect_system_info
+log_info "Step: prefetch_proxmox_iso_info"
+prefetch_proxmox_iso_info
+declare -p|grep -E "^declare -[^ ]* (PREFLIGHT_|DRIVE_|INTERFACE_|CURRENT_INTERFACE|PREDICTABLE_NAME|DEFAULT_INTERFACE|AVAILABLE_|MAC_ADDRESS|MAIN_IPV|IPV6_|FIRST_IPV6_|_ISO_|_CHECKSUM_|WIZ_TIMEZONES|WIZ_COUNTRIES|TZ_TO_COUNTRY|DETECTED_POOLS)" >"$SYSTEM_INFO_CACHE.tmp"&&mv "$SYSTEM_INFO_CACHE.tmp" "$SYSTEM_INFO_CACHE"
+} >/dev/null 2>&1&
+wait "$!"
+cmd_cache_clear
+_missing_cmds=()
+for _cmd in gum jq aria2c curl;do
+command -v "$_cmd" &>/dev/null||_missing_cmds+=("$_cmd")
+done
+if [[ ${#_missing_cmds[@]} -gt 0 ]];then
+log_error "Required packages not installed: ${_missing_cmds[*]}"
+print_error "Required packages not installed: ${_missing_cmds[*]}"
+exit 1
+fi
+unset _missing_cmds _cmd
+show_banner_animated_stop
+if [[ -s $SYSTEM_INFO_CACHE ]];then
+if grep -qvE '^declare -' "$SYSTEM_INFO_CACHE";then
+log_error "SYSTEM_INFO_CACHE contains invalid content, skipping import"
+else
+source "$SYSTEM_INFO_CACHE"
+fi
+rm -f "$SYSTEM_INFO_CACHE"
+fi
+log_info "Step: show_system_status"
+show_system_status
+log_metric "system_info"
+log_info "Step: show_gum_config_editor"
+show_gum_config_editor
+log_metric "config_wizard"
+start_live_installation
+log_info "Step: prepare_packages"
+prepare_packages
+log_metric "packages"
+log_info "Step: prepare_iso_and_toml (parallel)"
+if ! run_parallel_group "Preparing ISO & TOML" "ISO & TOML ready" \
+_parallel_download_iso \
+_parallel_make_toml;then
+log_error "ISO/TOML preparation failed - check $LOG_FILE for details"
+exit 1
+fi
+log_metric "iso_download"
+log_info "Step: make_autoinstall_iso"
+make_autoinstall_iso
+log_metric "autoinstall_prep"
+log_info "Step: wipe_installation_disks"
+run_with_progress "Wiping disks" "Disks wiped" wipe_installation_disks
+log_metric "disk_wipe"
+log_info "Step: install_proxmox"
+install_proxmox
+log_metric "proxmox_install"
+log_info "Step: boot_proxmox_with_port_forwarding"
+boot_proxmox_with_port_forwarding||{
+log_error "Failed to boot Proxmox with port forwarding"
+exit 1
+}
+log_metric "qemu_boot"
+log_info "Step: configure_proxmox_via_ssh"
+configure_proxmox_via_ssh||{
+log_error "configure_proxmox_via_ssh failed"
+exit 1
+}
+log_metric "system_config"
+metrics_finish
+INSTALL_COMPLETED=true
+log_info "Step: reboot_to_main_os"
+reboot_to_main_os
