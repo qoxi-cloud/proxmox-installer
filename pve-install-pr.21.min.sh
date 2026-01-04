@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.850-pr.21"
+readonly VERSION="2.0.851-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -4559,7 +4559,6 @@ if ! selected=$(printf '%s\n' "$options"|_wiz_choose --header="Boot disk:");then
 return
 fi
 if [[ -n $selected ]];then
-local old_boot_disk="$BOOT_DISK"
 if [[ $selected == "None (all in pool)" ]];then
 declare -g BOOT_DISK=""
 else
@@ -4567,17 +4566,6 @@ local disk_name="${selected%% -*}"
 declare -g BOOT_DISK="/dev/$disk_name"
 fi
 _rebuild_pool_disks
-if [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]];then
-_wiz_start_edit
-_wiz_hide_cursor
-_wiz_description \
-"  {{red:✗ Cannot use this boot disk: No disks left for ZFS pool}}" \
-"" \
-"  At least one disk must remain for the ZFS pool."
-sleep "${WIZARD_MESSAGE_DELAY:-3}"
-declare -g BOOT_DISK="$old_boot_disk"
-_rebuild_pool_disks
-fi
 fi
 }
 _pool_disks_have_mixed_sizes(){
