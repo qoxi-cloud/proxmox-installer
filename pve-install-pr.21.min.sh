@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.827-pr.21"
+readonly VERSION="2.0.828-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1286,6 +1286,7 @@ for ((j=0; j<count; j++));do
 [[ -f "$result_dir/fail_$j" ]]&&((failures++))
 done
 rm -rf "$result_dir"
+unset PARALLEL_RESULT_DIR
 if [[ $failures -gt 0 ]];then
 log_error "$failures/$count functions failed in group '$group_name'"
 return $failures
@@ -1294,7 +1295,7 @@ return 0
 }
 parallel_mark_configured(){
 local feature="$1"
-[[ -n ${PARALLEL_RESULT_DIR:-} ]]&&printf '%s' "$feature" >"$PARALLEL_RESULT_DIR/ran_$BASHPID"
+[[ -n ${PARALLEL_RESULT_DIR:-} && -d $PARALLEL_RESULT_DIR ]]&&printf '%s' "$feature" >"$PARALLEL_RESULT_DIR/ran_$BASHPID"
 }
 start_async_feature(){
 local feature="$1"
