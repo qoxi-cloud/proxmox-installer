@@ -198,7 +198,7 @@ download_template() {
       fi
       ;;
     *.service)
-      # Systemd service files must have [Service] section with ExecStart or Type=oneshot
+      # Systemd service files must have [Service] section and ExecStart directive
       if ! grep -q "\[Service\]" "$local_path" 2>/dev/null; then
         print_error "Template $remote_file appears corrupted (missing [Service] section)"
         log_error "Template $remote_file corrupted - missing [Service] section"
