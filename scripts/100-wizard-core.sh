@@ -193,8 +193,15 @@ _validate_config() {
     _wiz_hide_cursor
     _wiz_error --bold "Configuration incomplete!"
     _wiz_blank_line
+    # DEBUG: show array info
+    printf 'DEBUG: missing_fields count=%d\n' "${#missing_fields[@]}"
+    printf 'DEBUG: missing_fields=(%s)\n' "${missing_fields[*]}"
+    _pool_disks_have_mixed_sizes && printf 'DEBUG: mixed_sizes=YES\n' || printf 'DEBUG: mixed_sizes=NO\n'
+    _wiz_blank_line
     _wiz_warn "Required fields:"
     for field in "${missing_fields[@]}"; do printf '%s\n' "  ${CLR_CYAN}•${CLR_RESET} $field"; done
+    _wiz_blank_line
+    _wiz_blank_line
     _wiz_blank_line
     _wiz_show_cursor
     _wiz_confirm "Return to configuration?" --default=true || exit 1
