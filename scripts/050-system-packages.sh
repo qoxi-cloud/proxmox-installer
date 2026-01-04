@@ -18,10 +18,10 @@ _install_zfs_if_needed() {
   log_info "ZFS not functional, attempting installation..."
 
   # Hetzner rescue: zpool command is a wrapper that compiles ZFS on first run
-  # Need to run it with 'y' to accept license
+  # Need to run it with 'y' to accept license (timeout 90s for compilation)
   if cmd_exists zpool; then
     log_info "Found zpool wrapper, triggering ZFS compilation..."
-    echo "y" | zpool version &>/dev/null || true
+    timeout 90 bash -c 'echo "y" | zpool version' &>/dev/null || true
     if _zfs_functional; then
       log_info "ZFS compiled successfully via wrapper"
       return 0
@@ -39,7 +39,8 @@ _install_zfs_if_needed() {
   for script in "${zfs_scripts[@]}"; do
     if [[ -x $script ]]; then
       log_info "Running ZFS install script: $script"
-      echo "y" | "$script" >/dev/null 2>&1 || true
+      # shellcheck disable=SC2016
+      timeout 90 bash -c 'echo "y" | "$1"' _ "$script" >/dev/null 2>&1 || true
       if _zfs_functional; then
         log_info "ZFS installed successfully via $script"
         return 0
@@ -47,10 +48,10 @@ _install_zfs_if_needed() {
     fi
   done
 
-  # Fallback: try apt on Debian-based systems
+  # Fallback: try apt on Debian-based systems (timeout 120s)
   if [[ -f /etc/debian_version ]]; then
     log_info "Trying apt install zfsutils-linux..."
-    apt-get install -qq -y zfsutils-linux >/dev/null 2>&1 || true
+    timeout 120 apt-get install -qq -y zfsutils-linux >/dev/null 2>&1 || true
     if _zfs_functional; then
       log_info "ZFS installed via apt"
       return 0
