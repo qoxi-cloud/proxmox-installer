@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.831-pr.21"
+readonly VERSION="2.0.833-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -47,6 +47,7 @@ readonly DEFAULT_PASSWORD_LENGTH=16
 readonly QEMU_MIN_RAM_RESERVE=2048
 readonly DNS_LOOKUP_TIMEOUT=5
 readonly DNS_RETRY_DELAY=10
+readonly QEMU_INSTALL_TIMEOUT=300
 readonly QEMU_BOOT_TIMEOUT=300
 readonly QEMU_PORT_CHECK_INTERVAL=3
 readonly QEMU_SSH_READY_TIMEOUT=120
@@ -4587,6 +4588,19 @@ fi
 if [[ -n $selected ]];then
 local old_boot_disk="$BOOT_DISK"
 if [[ $selected == "None (all in pool)" ]];then
+if _has_mixed_disk_sizes;then
+_wiz_start_edit
+_wiz_hide_cursor
+_wiz_description \
+"  {{yellow:⚠ Warning: Disks have different sizes}}" \
+"" \
+"  ZFS will use the smallest disk's capacity for all disks." \
+"  Consider using a separate boot disk to maximize storage." \
+"" \
+"  {{cyan:Enter}} to continue anyway, {{cyan:Esc}} to cancel"
+read -rsn1 key
+[[ $key == $'\e' ]]&&return
+fi
 declare -g BOOT_DISK=""
 else
 local disk_name="${selected%% -*}"
@@ -4605,6 +4619,29 @@ declare -g BOOT_DISK="$old_boot_disk"
 _rebuild_pool_disks
 fi
 fi
+}
+_has_mixed_disk_sizes(){
+[[ ${#DRIVES[@]} -lt 2 ]]&&return 1
+local -a size_bytes=()
+for i in "${!DRIVES[@]}";do
+local size_str="${DRIVE_SIZES[$i]}"
+local num="${size_str%[TGMK]*}"
+local unit="${size_str##*[0-9.]}"
+case "$unit" in
+T)size_bytes+=("$(echo "$num * 1099511627776"|bc|cut -d. -f1)");;
+G)size_bytes+=("$(echo "$num * 1073741824"|bc|cut -d. -f1)");;
+M)size_bytes+=("$(echo "$num * 1048576"|bc|cut -d. -f1)");;
+*)size_bytes+=("$num")
+esac
+done
+local min_size="${size_bytes[0]}" max_size="${size_bytes[0]}"
+for size in "${size_bytes[@]}";do
+((size<min_size))&&min_size="$size"
+((size>max_size))&&max_size="$size"
+done
+local size_diff="$((max_size-min_size))"
+local threshold="$((min_size/10))"
+((size_diff>threshold))
 }
 _edit_pool_disks(){
 while true;do
@@ -5664,10 +5701,27 @@ log_info "QEMU install log:"
 cat qemu_install.log >>"$LOG_FILE" 2>&1
 exit 1
 fi
-show_progress "$qemu_pid" "Installing Proxmox VE" "Proxmox VE installed"
+local install_timeout="${QEMU_INSTALL_TIMEOUT:-300}"
+local check_interval=5
+(elapsed=0
+while kill -0 "$qemu_pid" 2>/dev/null&&((elapsed<install_timeout));do
+sleep "$check_interval"
+((elapsed+=check_interval))
+done
+if kill -0 "$qemu_pid" 2>/dev/null;then
+log_error "Installation timeout after ${install_timeout}s - killing QEMU"
+kill -TERM "$qemu_pid" 2>/dev/null
+sleep 2
+kill -KILL "$qemu_pid" 2>/dev/null
+exit 1
+fi
+exit 0) \
+&
+local wait_pid="$!"
+show_progress "$wait_pid" "Installing Proxmox VE" "Proxmox VE installed"
 local exit_code="$?"
 if [[ $exit_code -ne 0 ]];then
-log_error "QEMU installation failed with exit code $exit_code"
+log_error "QEMU installation failed (timeout or error)"
 log_info "QEMU install log:"
 cat qemu_install.log >>"$LOG_FILE" 2>&1
 exit 1
