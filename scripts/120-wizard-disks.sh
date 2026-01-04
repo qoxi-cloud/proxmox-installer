@@ -101,6 +101,44 @@ _has_mixed_disk_sizes() {
   ((size_diff > threshold))
 }
 
+# Check if ZFS_POOL_DISKS have mixed sizes (>10% difference). Returns 0=mixed, 1=same
+_pool_disks_have_mixed_sizes() {
+  [[ ${#ZFS_POOL_DISKS[@]} -lt 2 ]] && return 1
+
+  # Build lookup from pool disks to drive indices
+  local -A pool_disk_indices=()
+  for pool_disk in "${ZFS_POOL_DISKS[@]}"; do
+    for i in "${!DRIVES[@]}"; do
+      [[ ${DRIVES[$i]} == "$pool_disk" ]] && pool_disk_indices[$i]=1
+    done
+  done
+
+  # Parse sizes to bytes for comparison
+  local -a size_bytes=()
+  for i in "${!pool_disk_indices[@]}"; do
+    local size_str="${DRIVE_SIZES[$i]}"
+    local num="${size_str%[TGMK]*}"
+    local unit="${size_str##*[0-9.]}"
+    case "$unit" in
+      T) size_bytes+=("$(echo "$num * 1099511627776" | bc | cut -d. -f1)") ;;
+      G) size_bytes+=("$(echo "$num * 1073741824" | bc | cut -d. -f1)") ;;
+      M) size_bytes+=("$(echo "$num * 1048576" | bc | cut -d. -f1)") ;;
+      *) size_bytes+=("$num") ;;
+    esac
+  done
+
+  # Find min/max
+  local min_size="${size_bytes[0]}" max_size="${size_bytes[0]}"
+  for size in "${size_bytes[@]}"; do
+    ((size < min_size)) && min_size="$size"
+    ((size > max_size)) && max_size="$size"
+  done
+
+  local size_diff="$((max_size - min_size))"
+  local threshold="$((min_size / 10))"
+  ((size_diff > threshold))
+}
+
 # Edits ZFS pool disk selection via multi-select checkbox.
 # Excludes boot disk if set. Requires at least one disk.
 # Updates ZFS_POOL_DISKS array and adjusts ZFS_RAID if needed.

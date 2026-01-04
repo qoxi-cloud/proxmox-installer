@@ -7,7 +7,6 @@ declare -gA _DSP_MAP=(
   ["repo:no-subscription"]="No-subscription (free)"
   ["repo:enterprise"]="Enterprise"
   ["repo:test"]="Test/Development"
-
   # IPv6 modes
   ["ipv6:auto"]="Auto"
   ["ipv6:manual"]="Manual"
@@ -146,6 +145,10 @@ _dsp_storage() {
 
   if [[ $USE_EXISTING_POOL == "yes" ]]; then
     declare -g _DSP_POOL="(existing pool)"
+  elif [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]]; then
+    declare -g _DSP_POOL="${CLR_YELLOW}(select disks)${CLR_RESET}"
+  elif _pool_disks_have_mixed_sizes; then
+    declare -g _DSP_POOL="${#ZFS_POOL_DISKS[@]} disks ${CLR_YELLOW}⚠ different sizes${CLR_RESET}"
   else
     declare -g _DSP_POOL="${#ZFS_POOL_DISKS[@]} disks"
   fi
