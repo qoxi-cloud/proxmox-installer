@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.839-pr.21"
+readonly VERSION="2.0.840-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -2025,7 +2025,7 @@ fi
 log_info "ZFS not functional, attempting installation..."
 if cmd_exists zpool;then
 log_info "Found zpool wrapper, triggering ZFS compilation..."
-echo "y"|zpool version &>/dev/null||true
+timeout 90 bash -c 'echo "y" | zpool version' &>/dev/null||true
 if _zfs_functional;then
 log_info "ZFS compiled successfully via wrapper"
 return 0
@@ -2039,7 +2039,7 @@ local zfs_scripts=(
 for script in "${zfs_scripts[@]}";do
 if [[ -x $script ]];then
 log_info "Running ZFS install script: $script"
-echo "y"|"$script" >/dev/null 2>&1||true
+timeout 90 bash -c 'echo "y" | "$1"' _ "$script" >/dev/null 2>&1||true
 if _zfs_functional;then
 log_info "ZFS installed successfully via $script"
 return 0
@@ -2048,7 +2048,7 @@ fi
 done
 if [[ -f /etc/debian_version ]];then
 log_info "Trying apt install zfsutils-linux..."
-apt-get install -qq -y zfsutils-linux >/dev/null 2>&1||true
+timeout 120 apt-get install -qq -y zfsutils-linux >/dev/null 2>&1||true
 if _zfs_functional;then
 log_info "ZFS installed via apt"
 return 0
