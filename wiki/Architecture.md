@@ -144,7 +144,7 @@ flowchart TD
 sequenceDiagram
     autonumber
     participant User
-    participant Main as 900-main.sh
+    participant Main as 999-main.sh
     participant WizCore as 100-wizard-core.sh
     participant WizNav as 102-wizard-nav.sh
     participant WizDisplay as 103-wizard-display.sh
@@ -316,8 +316,9 @@ graph LR
         AS[378-381 cleanup/efi-boot/finalize/phases]
     end
 
-    subgraph "900 Orchestration"
-        AT[900-main.sh]
+    subgraph "998-999 Orchestration"
+        AT[998-completion.sh]
+        AU[999-main.sh]
     end
 ```
 
@@ -437,8 +438,9 @@ scripts/
 │   ├── 380-configure-finalize.sh  # SSH, validation, finalization
 │   └── 381-configure-phases.sh    # Configuration phases
 │
-└── 900-999: Orchestration
-    └── 900-main.sh  # Main entry point
+└── 998-999: Orchestration
+    ├── 998-completion.sh  # Completion screen
+    └── 999-main.sh  # Main entry point
 ```
 
 ## Data Flow
@@ -666,5 +668,5 @@ spec/
 | 360-361   | SSL & API                                    |
 | 370-372   | Storage (ZFS, LVM)                           |
 | 378-381   | Finalization (cleanup, EFI, finalize, phases) |
-| 900       | Main orchestrator                            |
+| 998-999   | Completion screen, main orchestrator         |
 

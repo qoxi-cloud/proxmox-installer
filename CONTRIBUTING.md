@@ -45,7 +45,8 @@ proxmox-installer/
 │   ├── 005-cli.sh     # CLI argument parsing
 │   ├── 006-logging.sh # Logging and metrics
 │   ├── ...
-│   └── 900-main.sh    # Main orchestrator
+│   ├── 998-completion.sh # Completion screen
+│   └── 999-main.sh    # Main orchestrator
 ├── templates/         # 54 configuration templates (.tmpl extension)
 ├── wiki/              # User documentation (synced to GitHub Wiki)
 ├── spec/              # ShellSpec unit tests
@@ -66,7 +67,7 @@ proxmox-installer/
 | 110-122 | Wizard editors (screens, postfix)                 |
 | 200-208 | Installation (packages, QEMU, templates, ISO, autoinstall, disk-wipe) |
 | 300-381 | Configuration (base, security, monitoring, finalize, phases) |
-| 900     | Main orchestrator                                 |
+| 998-999 | Completion screen, main orchestrator              |
 
 ## Making Changes
 

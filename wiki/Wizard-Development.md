@@ -225,7 +225,7 @@ _wiz_build_screen_menu() {
 
 ### 4. Source Script
 
-In `900-main.sh`:
+In `999-main.sh`:
 
 ```bash
 source "$SCRIPT_DIR/122-wizard-myscreen.sh"
