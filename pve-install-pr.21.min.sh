@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.852-pr.21"
+readonly VERSION="2.0.853-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -2971,34 +2971,19 @@ fi
 if [[ $INSTALL_POSTFIX == "yes" ]];then
 [[ -z $SMTP_RELAY_HOST || -z $SMTP_RELAY_USER || -z $SMTP_RELAY_PASSWORD ]]&&missing_fields+=("Postfix SMTP relay settings")
 fi
-local warnings=()
-[[ $USE_EXISTING_POOL != "yes" ]]&&_pool_disks_have_mixed_sizes&&warnings+=("Pool disks have different sizes (ZFS uses smallest capacity)")
-if [[ ${#missing_fields[@]} -gt 0 || ${#warnings[@]} -gt 0 ]];then
+[[ $USE_EXISTING_POOL != "yes" ]]&&_pool_disks_have_mixed_sizes&&missing_fields+=("Pool disks (different sizes - use separate boot disk)")
+if [[ ${#missing_fields[@]} -gt 0 ]];then
 _wiz_start_edit
 _wiz_hide_cursor
-if [[ ${#missing_fields[@]} -gt 0 ]];then
 _wiz_error --bold "Configuration incomplete!"
 _wiz_blank_line
 _wiz_warn "Required fields:"
 for field in "${missing_fields[@]}";do printf '%s\n' "  $CLR_CYAN•$CLR_RESET $field";done
-fi
-if [[ ${#warnings[@]} -gt 0 ]];then
-[[ ${#missing_fields[@]} -gt 0 ]]&&_wiz_blank_line
-_wiz_warn "Warnings:"
-for warn in "${warnings[@]}";do printf '%s\n' "  $CLR_YELLOW⚠$CLR_RESET $warn";done
-fi
 _wiz_blank_line
 _wiz_show_cursor
-if [[ ${#missing_fields[@]} -gt 0 ]];then
 _wiz_confirm "Return to configuration?" --default=true||exit 1
 _wiz_hide_cursor
 return 1
-fi
-_wiz_confirm "Continue with installation?" --default=true||{
-_wiz_hide_cursor
-return 1
-}
-_wiz_hide_cursor
 fi
 return 0
 }
@@ -3481,6 +3466,7 @@ else
 [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]]&&return 1
 validate_pool_disk_conflict&&return 1
 validate_raid_disk_count&&return 1
+_pool_disks_have_mixed_sizes&&return 1
 fi
 [[ -z $ZFS_ARC_MODE ]]&&return 1
 [[ -z $SHELL_TYPE ]]&&return 1
