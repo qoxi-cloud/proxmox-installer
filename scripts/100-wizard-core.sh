@@ -172,6 +172,21 @@ _validate_config() {
   else
     [[ -z $ZFS_RAID ]] && missing_fields+=("ZFS mode")
     [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]] && missing_fields+=("Pool disks")
+    # Boot disk must not be in pool disks
+    if [[ -n $BOOT_DISK ]]; then
+      for disk in "${ZFS_POOL_DISKS[@]}"; do
+        [[ $disk == "$BOOT_DISK" ]] && missing_fields+=("Pool disks (boot disk conflict)")
+      done
+    fi
+    # RAID mode must match disk count
+    local pool_count="${#ZFS_POOL_DISKS[@]}"
+    case "$ZFS_RAID" in
+      single) [[ $pool_count -ne 1 ]] && missing_fields+=("ZFS mode (requires 1 disk)") ;;
+      raid0 | raid1) [[ $pool_count -lt 2 ]] && missing_fields+=("ZFS mode (requires 2+ disks)") ;;
+      raidz1) [[ $pool_count -lt 3 ]] && missing_fields+=("ZFS mode (requires 3+ disks)") ;;
+      raid10 | raidz2) [[ $pool_count -lt 4 ]] && missing_fields+=("ZFS mode (requires 4+ disks)") ;;
+      raidz3) [[ $pool_count -lt 5 ]] && missing_fields+=("ZFS mode (requires 5+ disks)") ;;
+    esac
   fi
   [[ -z $ZFS_ARC_MODE ]] && missing_fields+=("ZFS ARC")
   [[ -z $SHELL_TYPE ]] && missing_fields+=("Shell")

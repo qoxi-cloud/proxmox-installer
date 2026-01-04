@@ -26,6 +26,21 @@ _wiz_config_complete() {
   else
     [[ -z $ZFS_RAID ]] && return 1
     [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]] && return 1
+    # Boot disk must not be in pool disks
+    if [[ -n $BOOT_DISK ]]; then
+      for disk in "${ZFS_POOL_DISKS[@]}"; do
+        [[ $disk == "$BOOT_DISK" ]] && return 1
+      done
+    fi
+    # RAID mode must match disk count
+    local pool_count="${#ZFS_POOL_DISKS[@]}"
+    case "$ZFS_RAID" in
+      single) [[ $pool_count -ne 1 ]] && return 1 ;;
+      raid0 | raid1) [[ $pool_count -lt 2 ]] && return 1 ;;
+      raidz1) [[ $pool_count -lt 3 ]] && return 1 ;;
+      raid10 | raidz2) [[ $pool_count -lt 4 ]] && return 1 ;;
+      raidz3) [[ $pool_count -lt 5 ]] && return 1 ;;
+    esac
   fi
   [[ -z $ZFS_ARC_MODE ]] && return 1
   [[ -z $SHELL_TYPE ]] && return 1
