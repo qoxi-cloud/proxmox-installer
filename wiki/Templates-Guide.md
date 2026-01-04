@@ -43,7 +43,7 @@ Use double curly braces: `{{VARIABLE_NAME}}`
 ```bash
 # Copy template to temp, substitute, deploy
 local staged=$(mktemp)
-cp "templates/config.tmpl" "$staged"
+cp "templates/config" "$staged"
 apply_template_vars "$staged" \
   "HOSTNAME=${PVE_HOSTNAME}" \
   "PORT=8080"
@@ -51,12 +51,14 @@ remote_copy "$staged" "/etc/app/config"
 rm -f "$staged"
 ```
 
+> **Note:** Template files in the repository have `.tmpl` extension (e.g., `sshd_config.tmpl`), but at runtime they are downloaded without the extension (e.g., `./templates/sshd_config`). The `deploy_template` function works with the downloaded files without `.tmpl` suffix.
+
 ### Using deploy_template Helper
 
 Combines the above pattern in one call:
 
 ```bash
-deploy_template "templates/nginx.conf.tmpl" "/etc/nginx/nginx.conf" \
+deploy_template "templates/nginx.conf" "/etc/nginx/nginx.conf" \
   "SERVER_NAME=${FQDN}" \
   "PORT=${PORT_PROXMOX_UI}"
 ```
@@ -67,7 +69,7 @@ For templates using common network/system variables:
 
 ```bash
 local staged=$(mktemp)
-cp "templates/interfaces.tmpl" "$staged"
+cp "templates/interfaces" "$staged"
 apply_common_template_vars "$staged"
 remote_copy "$staged" "/etc/network/interfaces"
 ```
@@ -84,6 +86,8 @@ remote_copy "$staged" "/etc/network/interfaces"
 
 ### 1. Create Template File
 
+Create the file in `templates/` with `.tmpl` extension:
+
 ```bash
 # templates/myapp.conf.tmpl
 [server]
@@ -95,12 +99,22 @@ port = {{MYAPP_PORT}}
 admin_email = {{EMAIL}}
 ```
 
-### 2. Deploy in Configure Script
+### 2. Add to Download List
+
+Add the template to `203-templates.sh` in `template_list`:
+
+```bash
+"./templates/myapp.conf:myapp.conf"
+```
+
+### 3. Deploy in Configure Script
+
+Use the path **without** `.tmpl` suffix (templates are downloaded without extension):
 
 ```bash
 # scripts/3XX-configure-myapp.sh
 _config_myapp() {
-  deploy_template "templates/myapp.conf.tmpl" "/etc/myapp/config.conf" \
+  deploy_template "templates/myapp.conf" "/etc/myapp/config.conf" \
     "HOSTNAME=${PVE_HOSTNAME}" \
     "MAIN_IPV4=${MAIN_IPV4}" \
     "MYAPP_PORT=${MYAPP_PORT:-8080}" \
@@ -108,7 +122,7 @@ _config_myapp() {
 }
 ```
 
-### 3. Add Global Variable (if needed)
+### 4. Add Global Variable (if needed)
 
 ```bash
 # scripts/003-init.sh (or 001-constants.sh for constants)
@@ -182,11 +196,11 @@ deploy_systemd_service "myapp" "ADMIN_USERNAME=${ADMIN_USERNAME}"
 
 ### Unsubstituted Placeholders
 
-`apply_template_vars` warns about remaining placeholders:
+`apply_template_vars` fails if placeholders remain:
 
 ```bash
 # If {{MISSING_VAR}} not substituted:
-# Log: WARNING: Unsubstituted placeholders remain in /tmp/xxx: {{MISSING_VAR}}
+# Log: ERROR: Unsubstituted placeholders remain in /tmp/xxx: {{MISSING_VAR}}
 # Returns: 1
 ```
 
@@ -330,7 +344,7 @@ Complete mapping of which templates use which variables.
 
 #### Templates Without Variables
 
-These use static configuration (44 templates):
+These use static configuration (39 templates):
 - All `.timer.tmpl` files
 - `fail2ban-jail.local.tmpl`
 - `nftables.conf.tmpl` (generated dynamically)
@@ -401,9 +415,9 @@ INSTALL_YAZI         INSTALL_NEEDRESTART  INSTALL_VNSTAT
 
 ### Summary Statistics
 
-- **Total template files:** 55
+- **Total template files:** 54
 - **Templates with variables:** 15
-- **Templates without variables:** 40
+- **Templates without variables:** 39
 - **Unique variables:** 32
 - **Most variables in one template:** 18 (validation.sh.tmpl)
 

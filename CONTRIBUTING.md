@@ -60,10 +60,10 @@ proxmox-installer/
 | 000-007 | Core init (colors, constants, wizard opts, init, trap, cli, logging, banner) |
 | 010-012 | Display & utilities                               |
 | 020-022 | Templates & SSH (session, remote)                 |
-| 030-037 | Helpers (password, zfs, validation, parallel, deploy, network) |
+| 030-038 | Helpers (password, zfs, parallel, deploy, feature-factory, systemd, user-config, network) |
 | 040-043 | Validation (basic, network, dns, security)        |
 | 050-056 | System detection (packages, preflight, network, drives, wizard-data, status, live-logs) |
-| 100-106 | Wizard core (main loop, UI, nav, menu, display, helpers) |
+| 100-105 | Wizard core (main loop, UI, nav, display, menu, input) |
 | 110-122 | Wizard editors (screens, postfix)                 |
 | 200-208 | Installation (packages, QEMU, templates, ISO, autoinstall, disk-wipe) |
 | 300-381 | Configuration (base, security, monitoring, finalize, phases) |

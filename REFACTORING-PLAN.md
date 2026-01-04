@@ -269,10 +269,10 @@ Delete: 032-validation-helpers.sh
 | 030-038 | Helpers | password, zfs, ~~validation~~, parallel, deploy, feature-factory, deploy-systemd, network-config |
 | 040-043 | Validation | basic (+require_admin), network, dns, security |
 | 050-056 | System detection | packages (+batch_install), preflight, network, drives, zfs-detection, wizard-data, status, live-logs |
-| 100-103 | Wizard core | core, ui, menu, input |
+| 100-105 | Wizard core | core, ui, nav, display, menu, input |
 | 110-122 | Wizard editors | (unchanged) |
 | 200-208 | Installation | (unchanged) |
-| 300-303 | Base config | base, locale, tailscale, admin, services |
+| 300-304 | Base config | base, locale, tailscale, admin, services |
 | 310-313 | Security firewall | (unchanged) |
 | 320-324 | Security audit | (unchanged) |
 | 340-344 | Monitoring | vnstat, promtail, netdata, postfix, ringbuffer |
@@ -280,7 +280,7 @@ Delete: 032-validation-helpers.sh
 | 360-361 | SSL & API | (unchanged) |
 | 370-372 | Storage | (unchanged) |
 | 378-381 | Finalization | (unchanged) |
-| 900 | Main | (unchanged) |
+| 998-999 | Main | completion, main orchestrator |
 
 ---
 

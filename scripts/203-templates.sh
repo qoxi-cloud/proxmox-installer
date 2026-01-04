@@ -164,6 +164,8 @@ make_templates() {
     # Monitoring - Promtail
     "./templates/promtail.yml:promtail.yml"
     "./templates/promtail.service:promtail.service"
+    # Mail - Postfix
+    "./templates/postfix-main.cf:postfix-main.cf"
     # Tools - Yazi
     "./templates/yazi.toml:yazi.toml"
     "./templates/yazi-theme.toml:yazi-theme.toml"

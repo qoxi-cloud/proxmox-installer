@@ -103,10 +103,10 @@ flowchart TD
         AH --> AI[run_parallel_group<br/>Security features]
         
         AJ --> AK[run_parallel_group<br/>Monitoring]
-        AK --> AL[340-343: vnstat/promtail/netdata/postfix]
-        
+        AK --> AL[340-344: vnstat/promtail/netdata/postfix/ringbuffer]
+
         AL --> AM[run_parallel_group<br/>Tools]
-        AM --> AN[350-351: Yazi/Nvim]
+        AM --> AN[350-354: Yazi/Nvim/Fastfetch/Bat/Shell]
         
         AN --> AO[Tailscale config<br/>301-configure-tailscale.sh]
         AO --> AP[Admin user<br/>302-configure-admin.sh]
