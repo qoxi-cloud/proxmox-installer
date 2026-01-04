@@ -94,3 +94,37 @@ get_password_error() {
     printf '%s\n' "Password contains invalid characters (Cyrillic or non-ASCII). Only Latin letters, digits, and special characters are allowed."
   fi
 }
+
+# Check if boot disk conflicts with pool disks. Returns 0=conflict, 1=ok
+validate_pool_disk_conflict() {
+  [[ -z $BOOT_DISK ]] && return 1
+  for disk in "${ZFS_POOL_DISKS[@]}"; do
+    [[ $disk == "$BOOT_DISK" ]] && return 0
+  done
+  return 1
+}
+
+# Check if RAID mode matches disk count. Returns 0=mismatch, 1=ok
+validate_raid_disk_count() {
+  local pool_count="${#ZFS_POOL_DISKS[@]}"
+  case "$ZFS_RAID" in
+    single) [[ $pool_count -ne 1 ]] && return 0 ;;
+    raid0 | raid1) [[ $pool_count -lt 2 ]] && return 0 ;;
+    raidz1) [[ $pool_count -lt 3 ]] && return 0 ;;
+    raid10 | raidz2) [[ $pool_count -lt 4 ]] && return 0 ;;
+    raidz3) [[ $pool_count -lt 5 ]] && return 0 ;;
+  esac
+  return 1
+}
+
+# Get required disk count for RAID mode. $1=raid_mode → count
+get_raid_min_disks() {
+  case "$1" in
+    single) echo 1 ;;
+    raid0 | raid1) echo 2 ;;
+    raidz1) echo 3 ;;
+    raid10 | raidz2) echo 4 ;;
+    raidz3) echo 5 ;;
+    *) echo 1 ;;
+  esac
+}
