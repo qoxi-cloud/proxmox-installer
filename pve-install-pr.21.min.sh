@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.0.859-pr.21"
+readonly VERSION="2.0.860-pr.21"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -1260,8 +1260,10 @@ register_temp_file "$result_dir"
 export PARALLEL_RESULT_DIR="$result_dir"
 local i=0
 local running=0
+local -a task_pids=()
 for func in "${funcs[@]}";do
 _run_parallel_task "$result_dir" "$i" "$func"&
+task_pids+=("$!")
 ((i++))
 ((running++))
 while ((running>=max_jobs));do
@@ -1290,7 +1292,9 @@ done
 exit 0) \
 &
 show_progress "$!" "$group_name" "$done_msg"
-wait
+for pid in "${task_pids[@]}";do
+wait "$pid" 2>/dev/null||true
+done
 local configured=()
 for f in "$result_dir"/ran_*;do
 [[ -f $f ]]&&configured+=("$(cat "$f")")
