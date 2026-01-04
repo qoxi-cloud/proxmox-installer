@@ -158,6 +158,14 @@ _edit_existing_pool() {
 _edit_zfs_mode() {
   _wiz_start_edit
 
+  # Require pool disks to be selected first
+  if [[ ${#ZFS_POOL_DISKS[@]} -eq 0 ]]; then
+    _wiz_hide_cursor
+    _wiz_description "  {{yellow:⚠ No disks selected for ZFS pool}}" "" \
+      "  Select pool disks first, then configure RAID level."
+    sleep "${WIZARD_MESSAGE_DELAY:-3}" && return
+  fi
+
   _wiz_description \
     "  ZFS RAID level for data pool:" \
     "" \
