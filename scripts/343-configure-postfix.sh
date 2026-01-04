@@ -36,10 +36,8 @@ _config_postfix_relay() {
     chown root:root /etc/postfix/sasl_passwd.db
   ' || return 1
 
-  # Restart Postfix
-  remote_run "Restarting Postfix" \
-    'systemctl restart postfix' \
-    "Postfix relay configured"
+  # Restart Postfix (no progress - called from parallel group)
+  remote_exec 'systemctl restart postfix' || return 1
 
   parallel_mark_configured "postfix"
 }
@@ -55,7 +53,7 @@ _config_postfix_disable() {
 configure_postfix() {
   if [[ $INSTALL_POSTFIX == "yes" ]]; then
     if [[ -n $SMTP_RELAY_HOST && -n $SMTP_RELAY_USER && -n $SMTP_RELAY_PASSWORD ]]; then
-      _config_postfix_relay
+      _config_postfix_relay || return 1
     else
       log_warn "Postfix enabled but SMTP relay not configured, skipping"
     fi

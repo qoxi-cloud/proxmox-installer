@@ -7,7 +7,7 @@ _run_parallel_task() {
   local idx="$2"
   local func="$3"
 
-  # Default to failure marker on ANY exit (handles remote_run's exit 1)
+  # Default to failure marker on ANY exit (trap fires when subshell exits)
   # shellcheck disable=SC2064
   trap "touch '$result_dir/fail_$idx' 2>/dev/null" EXIT
 
