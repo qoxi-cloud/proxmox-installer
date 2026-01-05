@@ -539,10 +539,6 @@ local done_message="${3:-$message}"
 local silent=false
 [[ ${3:-} == "--silent" || ${4:-} == "--silent" ]]&&silent=true
 [[ ${3:-} == "--silent" ]]&&done_message="$message"
-if [[ -n ${_IN_PARALLEL_SUBSHELL:-} ]];then
-wait "$pid" 2>/dev/null
-return $?
-fi
 local poll_interval="${PROGRESS_POLL_INTERVAL:-0.2}"
 gum spin --spinner meter --spinner.foreground "#ff8700" --title "$message" -- bash -c "
     while kill -0 \"$pid\" 2>/dev/null; do
@@ -1237,7 +1233,6 @@ _run_parallel_task(){
 local result_dir="$1"
 local idx="$2"
 local func="$3"
-export _IN_PARALLEL_SUBSHELL=1
 trap "touch '$result_dir/fail_$idx' 2>/dev/null" EXIT
 if "$func" >/dev/null 2>&1;then
 if touch "$result_dir/success_$idx" 2>/dev/null;then
@@ -2763,10 +2758,6 @@ add_log "$TREE_VERT   $color$message$CLR_RESET"
 }
 start_live_installation(){
 show_progress(){
-if [[ -n ${_IN_PARALLEL_SUBSHELL:-} ]];then
-wait "$1" 2>/dev/null
-return $?
-fi
 live_show_progress "$@"
 }
 calculate_log_area
@@ -6613,9 +6604,7 @@ remote_exec '
     chmod 600 /etc/postfix/sasl_passwd.db
     chown root:root /etc/postfix/sasl_passwd.db
   '||return 1
-remote_run "Restarting Postfix" \
-'systemctl restart postfix' \
-"Postfix relay configured"
+remote_exec 'systemctl restart postfix'||return 1
 parallel_mark_configured "postfix"
 }
 _config_postfix_disable(){
@@ -6839,12 +6828,12 @@ return 1
 esac
 local arc_max_bytes="$((arc_max_mb*1024*1024))"
 log_info "ZFS ARC: ${arc_max_mb}MB (Total RAM: ${total_ram_mb}MB, Mode: $ZFS_ARC_MODE)"
-remote_run "Configuring ZFS ARC memory" "
+remote_exec "
     echo 'options zfs zfs_arc_max=$arc_max_bytes' >/etc/modprobe.d/zfs.conf
     if [[ -f /sys/module/zfs/parameters/zfs_arc_max ]]; then
       echo '$arc_max_bytes' >/sys/module/zfs/parameters/zfs_arc_max 2>/dev/null || true
     fi
-  "
+  "||return 1
 log_info "ZFS ARC memory limit configured: ${arc_max_mb}MB"
 }
 _config_zfs_cachefile(){
@@ -7024,7 +7013,7 @@ _config_zfs_pool
 }
 _config_expand_lvm_root(){
 log_info "Expanding LVM root to use all disk space"
-if ! remote_run "Expanding LVM root filesystem" '
+if ! remote_exec '
     set -e
     if ! vgs pve &>/dev/null; then
       echo "No pve VG found - not LVM install"
@@ -7047,7 +7036,7 @@ if ! remote_run "Expanding LVM root filesystem" '
       echo "No free space in VG - root already uses all space"
     fi
     pvesm set local --content iso,vztmpl,backup,snippets,images,rootdir 2>/dev/null || true
-  ' "LVM root filesystem expanded";then
+  ';then
 log_warn "LVM expansion had issues, continuing"
 fi
 return 0
@@ -7316,7 +7305,8 @@ run_parallel_group "Configuring LVM & ZFS memory" "LVM & ZFS memory configured" 
 configure_lvm_storage \
 configure_zfs_arc
 else
-(configure_zfs_arc)||log_warn "configure_zfs_arc failed"
+run_with_progress "Configuring ZFS ARC memory" "ZFS ARC configured" \
+configure_zfs_arc||log_warn "configure_zfs_arc failed"
 fi
 configure_zfs_pool||{
 log_error "configure_zfs_pool failed"
