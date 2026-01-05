@@ -32,7 +32,7 @@ readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
 
 # Version (MAJOR only - MINOR.PATCH added by CI from git tags/commits)
-readonly VERSION="2.1.3"
+readonly VERSION="2.0.4"
 
 # Terminal width for centering (wizard UI, headers, etc.)
 readonly TERM_WIDTH=80
@@ -1924,7 +1924,7 @@ _run_parallel_task() {
   local idx="$2"
   local func="$3"
 
-  # Default to failure marker on ANY exit (handles remote_run's exit 1)
+  # Default to failure marker on ANY exit (trap fires when subshell exits)
   # shellcheck disable=SC2064
   trap "touch '$result_dir/fail_$idx' 2>/dev/null" EXIT
 
@@ -9649,10 +9649,8 @@ _config_postfix_relay() {
     chown root:root /etc/postfix/sasl_passwd.db
   ' || return 1
 
-  # Restart Postfix
-  remote_run "Restarting Postfix" \
-    'systemctl restart postfix' \
-    "Postfix relay configured"
+  # Restart Postfix (no progress - called from parallel group)
+  remote_exec 'systemctl restart postfix' || return 1
 
   parallel_mark_configured "postfix"
 }
@@ -9668,7 +9666,7 @@ _config_postfix_disable() {
 configure_postfix() {
   if [[ $INSTALL_POSTFIX == "yes" ]]; then
     if [[ -n $SMTP_RELAY_HOST && -n $SMTP_RELAY_USER && -n $SMTP_RELAY_PASSWORD ]]; then
-      _config_postfix_relay
+      _config_postfix_relay || return 1
     else
       log_warn "Postfix enabled but SMTP relay not configured, skipping"
     fi
@@ -10015,12 +10013,13 @@ _config_zfs_arc() {
   log_info "ZFS ARC: ${arc_max_mb}MB (Total RAM: ${total_ram_mb}MB, Mode: $ZFS_ARC_MODE)"
 
   # Set ZFS ARC limit in modprobe config (persistent) and apply to running kernel
-  remote_run "Configuring ZFS ARC memory" "
+  # No progress display - called from parallel group (sequential calls wrapped externally)
+  remote_exec "
     echo 'options zfs zfs_arc_max=$arc_max_bytes' >/etc/modprobe.d/zfs.conf
     if [[ -f /sys/module/zfs/parameters/zfs_arc_max ]]; then
       echo '$arc_max_bytes' >/sys/module/zfs/parameters/zfs_arc_max 2>/dev/null || true
     fi
-  "
+  " || return 1
 
   log_info "ZFS ARC memory limit configured: ${arc_max_mb}MB"
 }
@@ -10100,7 +10099,7 @@ _config_zfs_scrub() {
 
 # Public wrapper for ZFS ARC configuration
 configure_zfs_arc() {
-  _config_zfs_arc
+  _config_zfs_arc || return 1
   parallel_mark_configured "ZFS ARC ${ZFS_ARC_MODE}"
 }
 
@@ -10286,11 +10285,12 @@ configure_zfs_pool() {
 
 # Expands LVM root to use all disk space (ext4 boot mode only).
 # Removes local-lvm data LV and extends root LV to 100% free.
+# No progress display - called from parallel group.
 _config_expand_lvm_root() {
   log_info "Expanding LVM root to use all disk space"
 
   # shellcheck disable=SC2016
-  if ! remote_run "Expanding LVM root filesystem" '
+  if ! remote_exec '
     set -e
     if ! vgs pve &>/dev/null; then
       echo "No pve VG found - not LVM install"
@@ -10313,7 +10313,7 @@ _config_expand_lvm_root() {
       echo "No free space in VG - root already uses all space"
     fi
     pvesm set local --content iso,vztmpl,backup,snippets,images,rootdir 2>/dev/null || true
-  ' "LVM root filesystem expanded"; then
+  '; then
     log_warn "LVM expansion had issues, continuing"
   fi
   return 0
@@ -10660,17 +10660,16 @@ _phase_base_configuration() {
 # PHASE 2: Storage Configuration (LVM parallel with ZFS arc, then sequential ZFS chain)
 _phase_storage_configuration() {
   # LVM and ZFS arc can run in parallel (no dependencies, non-critical)
-  # run_parallel_group properly suppresses progress output (>/dev/null) - no wasted calls
-  # log_info inside functions still writes to $LOG_FILE
+  # Functions use remote_exec (no progress) - group shows single progress indicator
   if [[ -n $BOOT_DISK ]]; then
     # LVM operates on boot partition, arc sets kernel params - no shared resources
     run_parallel_group "Configuring LVM & ZFS memory" "LVM & ZFS memory configured" \
       configure_lvm_storage \
       configure_zfs_arc
   else
-    # Subshell catches exit 1 from remote_run, making failure non-fatal
-    # Note: remote_run calls exit 1, not return 1, so || pattern needs subshell
-    (configure_zfs_arc) || log_warn "configure_zfs_arc failed"
+    # Sequential call - wrap with progress display
+    run_with_progress "Configuring ZFS ARC memory" "ZFS ARC configured" \
+      configure_zfs_arc || log_warn "configure_zfs_arc failed"
   fi
 
   # ZFS pool is critical - must succeed for storage to work

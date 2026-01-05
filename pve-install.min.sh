@@ -19,7 +19,7 @@ readonly HEX_ORANGE="#ff8700"
 readonly HEX_GRAY="#585858"
 readonly HEX_WHITE="#ffffff"
 readonly HEX_NONE="7"
-readonly VERSION="2.1.3"
+readonly VERSION="2.0.4"
 readonly TERM_WIDTH=80
 readonly BANNER_WIDTH=51
 GITHUB_REPO="${GITHUB_REPO:-qoxi-cloud/proxmox-installer}"
@@ -6604,9 +6604,7 @@ remote_exec '
     chmod 600 /etc/postfix/sasl_passwd.db
     chown root:root /etc/postfix/sasl_passwd.db
   '||return 1
-remote_run "Restarting Postfix" \
-'systemctl restart postfix' \
-"Postfix relay configured"
+remote_exec 'systemctl restart postfix'||return 1
 parallel_mark_configured "postfix"
 }
 _config_postfix_disable(){
@@ -6617,7 +6615,7 @@ parallel_mark_configured "postfix disabled"
 configure_postfix(){
 if [[ $INSTALL_POSTFIX == "yes" ]];then
 if [[ -n $SMTP_RELAY_HOST && -n $SMTP_RELAY_USER && -n $SMTP_RELAY_PASSWORD ]];then
-_config_postfix_relay
+_config_postfix_relay||return 1
 else
 log_warn "Postfix enabled but SMTP relay not configured, skipping"
 fi
@@ -6830,12 +6828,12 @@ return 1
 esac
 local arc_max_bytes="$((arc_max_mb*1024*1024))"
 log_info "ZFS ARC: ${arc_max_mb}MB (Total RAM: ${total_ram_mb}MB, Mode: $ZFS_ARC_MODE)"
-remote_run "Configuring ZFS ARC memory" "
+remote_exec "
     echo 'options zfs zfs_arc_max=$arc_max_bytes' >/etc/modprobe.d/zfs.conf
     if [[ -f /sys/module/zfs/parameters/zfs_arc_max ]]; then
       echo '$arc_max_bytes' >/sys/module/zfs/parameters/zfs_arc_max 2>/dev/null || true
     fi
-  "
+  "||return 1
 log_info "ZFS ARC memory limit configured: ${arc_max_mb}MB"
 }
 _config_zfs_cachefile(){
@@ -6885,7 +6883,7 @@ remote_run "Enabling ZFS scrub timers" '
 log_info "ZFS scrub schedule configured (monthly, 1st Sunday at 2:00 AM)"
 }
 configure_zfs_arc(){
-_config_zfs_arc
+_config_zfs_arc||return 1
 parallel_mark_configured "ZFS ARC $ZFS_ARC_MODE"
 }
 configure_zfs_cachefile(){
@@ -7015,7 +7013,7 @@ _config_zfs_pool
 }
 _config_expand_lvm_root(){
 log_info "Expanding LVM root to use all disk space"
-if ! remote_run "Expanding LVM root filesystem" '
+if ! remote_exec '
     set -e
     if ! vgs pve &>/dev/null; then
       echo "No pve VG found - not LVM install"
@@ -7038,7 +7036,7 @@ if ! remote_run "Expanding LVM root filesystem" '
       echo "No free space in VG - root already uses all space"
     fi
     pvesm set local --content iso,vztmpl,backup,snippets,images,rootdir 2>/dev/null || true
-  ' "LVM root filesystem expanded";then
+  ';then
 log_warn "LVM expansion had issues, continuing"
 fi
 return 0
@@ -7307,7 +7305,8 @@ run_parallel_group "Configuring LVM & ZFS memory" "LVM & ZFS memory configured" 
 configure_lvm_storage \
 configure_zfs_arc
 else
-(configure_zfs_arc)||log_warn "configure_zfs_arc failed"
+run_with_progress "Configuring ZFS ARC memory" "ZFS ARC configured" \
+configure_zfs_arc||log_warn "configure_zfs_arc failed"
 fi
 configure_zfs_pool||{
 log_error "configure_zfs_pool failed"
