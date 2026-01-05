@@ -6615,7 +6615,7 @@ parallel_mark_configured "postfix disabled"
 configure_postfix(){
 if [[ $INSTALL_POSTFIX == "yes" ]];then
 if [[ -n $SMTP_RELAY_HOST && -n $SMTP_RELAY_USER && -n $SMTP_RELAY_PASSWORD ]];then
-_config_postfix_relay
+_config_postfix_relay||return 1
 else
 log_warn "Postfix enabled but SMTP relay not configured, skipping"
 fi
@@ -6883,7 +6883,7 @@ remote_run "Enabling ZFS scrub timers" '
 log_info "ZFS scrub schedule configured (monthly, 1st Sunday at 2:00 AM)"
 }
 configure_zfs_arc(){
-_config_zfs_arc
+_config_zfs_arc||return 1
 parallel_mark_configured "ZFS ARC $ZFS_ARC_MODE"
 }
 configure_zfs_cachefile(){
