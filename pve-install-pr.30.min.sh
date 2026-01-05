@@ -539,6 +539,10 @@ local done_message="${3:-$message}"
 local silent=false
 [[ ${3:-} == "--silent" || ${4:-} == "--silent" ]]&&silent=true
 [[ ${3:-} == "--silent" ]]&&done_message="$message"
+if [[ -n ${_IN_PARALLEL_SUBSHELL:-} ]];then
+wait "$pid" 2>/dev/null
+return $?
+fi
 local poll_interval="${PROGRESS_POLL_INTERVAL:-0.2}"
 gum spin --spinner meter --spinner.foreground "#ff8700" --title "$message" -- bash -c "
     while kill -0 \"$pid\" 2>/dev/null; do
@@ -1033,14 +1037,8 @@ register_temp_file "$output_file"
 local cmd_timeout="${SSH_COMMAND_TIMEOUT:-$SSH_DEFAULT_TIMEOUT}"
 printf '%s\n' "$script"|timeout "$cmd_timeout" sshpass -f "$passfile" ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" root@localhost 'bash -s' >"$output_file" 2>&1&
 local pid="$!"
-local exit_code
-if [[ -n ${_IN_PARALLEL_SUBSHELL:-} ]];then
-wait "$pid" 2>/dev/null
-exit_code="$?"
-else
 show_progress "$pid" "$message" "$done_message"
-exit_code="$?"
-fi
+local exit_code="$?"
 local exclude_pattern='(lib.*error|error-perl|\.deb|Unpacking|Setting up|Selecting|grub-probe|/sys/bus/usb|bInterface)'
 if grep -iE '\b(error|failed|cannot|unable|fatal)\b' "$output_file" 2>/dev/null|grep -qivE "$exclude_pattern";then
 log_warn "Potential errors in remote command output:"
@@ -2765,6 +2763,10 @@ add_log "$TREE_VERT   $color$message$CLR_RESET"
 }
 start_live_installation(){
 show_progress(){
+if [[ -n ${_IN_PARALLEL_SUBSHELL:-} ]];then
+wait "$1" 2>/dev/null
+return $?
+fi
 live_show_progress "$@"
 }
 calculate_log_area
