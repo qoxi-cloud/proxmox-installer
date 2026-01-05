@@ -3,11 +3,12 @@
 
 # Expands LVM root to use all disk space (ext4 boot mode only).
 # Removes local-lvm data LV and extends root LV to 100% free.
+# No progress display - called from parallel group.
 _config_expand_lvm_root() {
   log_info "Expanding LVM root to use all disk space"
 
   # shellcheck disable=SC2016
-  if ! remote_run "Expanding LVM root filesystem" '
+  if ! remote_exec '
     set -e
     if ! vgs pve &>/dev/null; then
       echo "No pve VG found - not LVM install"
@@ -30,7 +31,7 @@ _config_expand_lvm_root() {
       echo "No free space in VG - root already uses all space"
     fi
     pvesm set local --content iso,vztmpl,backup,snippets,images,rootdir 2>/dev/null || true
-  ' "LVM root filesystem expanded"; then
+  '; then
     log_warn "LVM expansion had issues, continuing"
   fi
   return 0

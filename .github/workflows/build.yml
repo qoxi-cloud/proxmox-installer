@@ -33,17 +33,18 @@ jobs:
       - name: Calculate version
         id: version
         run: |
-          # Get MAJOR version from source file
-          MAJOR=$(grep -oP 'VERSION="\K[0-9]+' scripts/000-colors.sh)
-
-          # Count tags matching vMAJOR.* for MINOR
-          MINOR=$(git tag -l "v${MAJOR}.*" 2>/dev/null | wc -l | tr -d ' ')
-
-          # Count commits since last tag for PATCH
+          # Get latest tag and extract MAJOR.MINOR from it
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           if [[ -n "$LATEST_TAG" ]]; then
+            # Extract version from tag (strip 'v' prefix)
+            TAG_VERSION="${LATEST_TAG#v}"
+            MAJOR=$(echo "$TAG_VERSION" | cut -d. -f1)
+            MINOR=$(echo "$TAG_VERSION" | cut -d. -f2)
             PATCH=$(git rev-list "${LATEST_TAG}..HEAD" --count)
           else
+            # No tags - use MAJOR from source, start at 0.0
+            MAJOR=$(grep -oP 'VERSION="\K[0-9]+' scripts/000-colors.sh)
+            MINOR=0
             PATCH=$(git rev-list HEAD --count)
           fi
 
@@ -139,17 +140,18 @@ jobs:
             exit 0
           fi
 
-          # Get MAJOR version from source file
-          MAJOR=$(grep -oP 'VERSION="\K[0-9]+' scripts/000-colors.sh)
-
-          # Count tags matching vMAJOR.* for MINOR
-          MINOR=$(git tag -l "v${MAJOR}.*" 2>/dev/null | wc -l | tr -d ' ')
-
-          # Count commits since last tag for PATCH
+          # Get latest tag and extract MAJOR.MINOR from it
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           if [[ -n "$LATEST_TAG" ]]; then
+            # Extract version from tag (strip 'v' prefix)
+            TAG_VERSION="${LATEST_TAG#v}"
+            MAJOR=$(echo "$TAG_VERSION" | cut -d. -f1)
+            MINOR=$(echo "$TAG_VERSION" | cut -d. -f2)
             PATCH=$(git rev-list "${LATEST_TAG}..HEAD" --count)
           else
+            # No tags - use MAJOR from source, start at 0.0
+            MAJOR=$(grep -oP 'VERSION="\K[0-9]+' scripts/000-colors.sh)
+            MINOR=0
             PATCH=$(git rev-list HEAD --count)
           fi
 

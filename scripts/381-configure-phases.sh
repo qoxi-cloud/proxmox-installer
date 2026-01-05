@@ -29,17 +29,16 @@ _phase_base_configuration() {
 # PHASE 2: Storage Configuration (LVM parallel with ZFS arc, then sequential ZFS chain)
 _phase_storage_configuration() {
   # LVM and ZFS arc can run in parallel (no dependencies, non-critical)
-  # run_parallel_group properly suppresses progress output (>/dev/null) - no wasted calls
-  # log_info inside functions still writes to $LOG_FILE
+  # Functions use remote_exec (no progress) - group shows single progress indicator
   if [[ -n $BOOT_DISK ]]; then
     # LVM operates on boot partition, arc sets kernel params - no shared resources
     run_parallel_group "Configuring LVM & ZFS memory" "LVM & ZFS memory configured" \
       configure_lvm_storage \
       configure_zfs_arc
   else
-    # Subshell catches exit 1 from remote_run, making failure non-fatal
-    # Note: remote_run calls exit 1, not return 1, so || pattern needs subshell
-    (configure_zfs_arc) || log_warn "configure_zfs_arc failed"
+    # Sequential call - wrap with progress display
+    run_with_progress "Configuring ZFS ARC memory" "ZFS ARC configured" \
+      configure_zfs_arc || log_warn "configure_zfs_arc failed"
   fi
 
   # ZFS pool is critical - must succeed for storage to work

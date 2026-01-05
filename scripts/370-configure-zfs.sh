@@ -49,12 +49,13 @@ _config_zfs_arc() {
   log_info "ZFS ARC: ${arc_max_mb}MB (Total RAM: ${total_ram_mb}MB, Mode: $ZFS_ARC_MODE)"
 
   # Set ZFS ARC limit in modprobe config (persistent) and apply to running kernel
-  remote_run "Configuring ZFS ARC memory" "
+  # No progress display - called from parallel group (sequential calls wrapped externally)
+  remote_exec "
     echo 'options zfs zfs_arc_max=$arc_max_bytes' >/etc/modprobe.d/zfs.conf
     if [[ -f /sys/module/zfs/parameters/zfs_arc_max ]]; then
       echo '$arc_max_bytes' >/sys/module/zfs/parameters/zfs_arc_max 2>/dev/null || true
     fi
-  "
+  " || return 1
 
   log_info "ZFS ARC memory limit configured: ${arc_max_mb}MB"
 }
@@ -134,7 +135,7 @@ _config_zfs_scrub() {
 
 # Public wrapper for ZFS ARC configuration
 configure_zfs_arc() {
-  _config_zfs_arc
+  _config_zfs_arc || return 1
   parallel_mark_configured "ZFS ARC ${ZFS_ARC_MODE}"
 }
 
